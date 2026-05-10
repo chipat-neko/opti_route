@@ -393,6 +393,7 @@ class _Body extends StatelessWidget {
         const SizedBox(height: AppSpacing.x16),
         _StatRow(
           arretsCount: stops.length,
+          colisTotal: stops.fold<int>(0, (sum, s) => sum + s.nbColis),
           distanceMeters: tournee.distanceTotaleM,
           durationSeconds: tournee.dureeTotaleS,
         ),
@@ -474,11 +475,13 @@ class _Header extends StatelessWidget {
 class _StatRow extends StatelessWidget {
   const _StatRow({
     required this.arretsCount,
+    required this.colisTotal,
     this.distanceMeters,
     this.durationSeconds,
   });
 
   final int arretsCount;
+  final int colisTotal;
   final int? distanceMeters;
   final int? durationSeconds;
 
@@ -499,6 +502,8 @@ class _StatRow extends StatelessWidget {
       child: Row(
         children: [
           _StatTile(label: 'Arrets', value: '$arretsCount'),
+          const _StatDivider(),
+          _StatTile(label: 'Colis', value: '$colisTotal'),
           const _StatDivider(),
           _StatTile(
             label: 'Distance',
@@ -921,6 +926,10 @@ class _ProgressBanner extends StatelessWidget {
     final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
     final total = stops.length;
     final restants = total - livres - echecs;
+    final colisLivres = stops
+        .where((s) => s.statutLivraison == 'livre')
+        .fold<int>(0, (sum, s) => sum + s.nbColis);
+    final colisTotal = stops.fold<int>(0, (sum, s) => sum + s.nbColis);
 
     final bg = tourneeTerminee ? AppColors.emerald : AppColors.paper;
     final fg = tourneeTerminee ? AppColors.paper : AppColors.ink;
@@ -950,16 +959,27 @@ class _ProgressBanner extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.x8),
-              Text(
-                tourneeTerminee
-                    ? 'Tournee terminee'
-                    : 'Avancement : $livres / $total',
-                style: TextStyle(
-                  color: fg,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  tourneeTerminee
+                      ? 'Tournee terminee'
+                      : 'Avancement : $livres / $total',
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
+              if (colisTotal > 0)
+                Text(
+                  '$colisLivres / $colisTotal colis',
+                  style: appMonoStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: tourneeTerminee ? AppColors.lime : AppColors.emerald,
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.x10),
