@@ -238,6 +238,8 @@ class _SuggestionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasNumber = suggestion.houseNumber != null &&
+        suggestion.houseNumber!.isNotEmpty;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.r14),
@@ -252,13 +254,13 @@ class _SuggestionTile extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: AppColors.lime,
+                color: hasNumber ? AppColors.lime : AppColors.creamSoft,
                 borderRadius: BorderRadius.circular(AppRadius.r8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.place_outlined,
                 size: 16,
-                color: AppColors.ink,
+                color: hasNumber ? AppColors.ink : AppColors.textMute,
               ),
             ),
             const SizedBox(width: AppSpacing.x12),
@@ -287,6 +289,29 @@ class _SuggestionTile extends StatelessWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  if (!hasNumber)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(AppRadius.r6),
+                        ),
+                        child: Text(
+                          'SANS NUMERO',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                            color: AppColors.amber.withValues(alpha: 0.95),
+                          ),
+                        ),
                       ),
                     ),
                 ],

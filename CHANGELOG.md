@@ -50,6 +50,12 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Géocodage plus précis
+- **Détection du numéro de rue** dans la requête (regex tolérante : `14`, `14 bis`, `12 ter`, etc.) → si présent, double appel Nominatim **en parallèle** : recherche libre (`?q=...`) + recherche structurée (`?street=...&city=...`). Les résultats sont mergés et dédupliqués par lat/lng.
+- **Re-ranking** des suggestions : numéro exact en tête, puis suggestions avec n'importe quel `house_number`, puis le reste. Empêche Nominatim de privilégier la rue entière quand l'adresse précise existe.
+- **Limite** passée de 5 à 8 pour mieux capturer le bon résultat.
+- **Badge visuel `SANS NUMERO`** (ambre) sur les suggestions sans `house_number` pour que l'utilisateur sache qu'elles sont approximatives. L'icône pin est aussi grisée dans ce cas (vs lime quand le numéro est précis).
+
 ### Carte (jalon 6)
 - **`CarteScreen`** : nouvelle vue carte plein écran utilisant `flutter_map` + tuiles OpenStreetMap (User-Agent identifiable). Affiche un pin de dépôt (lime + icône entrepôt) et un pin par arrêt géoréférencé, avec **auto-fit** sur l'ensemble des points au chargement.
 - **Markers stylisés** alignés sur le handoff `screen-map.jsx` : pending = paper outline ink avec index mono, livré = emerald + ✓, échec = rouge + !, dépôt = lime.
