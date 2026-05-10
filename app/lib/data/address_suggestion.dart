@@ -66,6 +66,31 @@ class AddressSuggestion {
     return parts.join(' ');
   }
 
+  /// Adresse postale propre, **sans le nom du commerce**, pour
+  /// stockage dans `Stop.adresseBrute`.
+  ///
+  /// Le `displayName` contient typiquement "BCI CHARTRES (BCI), LE BOIS
+  /// DE PARIS IMPASSE, 28000 CHARTRES" -- redondant avec `nomClient`
+  /// quand on l'affiche en titre. On ne veut que l'adresse postale.
+  ///
+  /// Strategie :
+  /// 1. Si on a road + city : reconstruction propre "{n} {rue}, {cp} {ville}".
+  /// 2. Sinon, fallback sur displayName.
+  String get adressePostale {
+    final rueLine = road != null && road!.isNotEmpty
+        ? (houseNumber != null && houseNumber!.isNotEmpty
+            ? '$houseNumber $road'
+            : road!)
+        : null;
+    final localityLine = secondaryLabel;
+    if (rueLine != null && localityLine.isNotEmpty) {
+      return '$rueLine, $localityLine';
+    }
+    if (rueLine != null) return rueLine;
+    if (localityLine.isNotEmpty) return localityLine;
+    return displayName;
+  }
+
   factory AddressSuggestion.fromJson(Map<String, dynamic> json) {
     final address = (json['address'] as Map?)?.cast<String, dynamic>();
     return AddressSuggestion(
