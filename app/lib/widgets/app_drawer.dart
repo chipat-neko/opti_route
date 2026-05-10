@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/carnet_adresses_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/tournees_list_screen.dart';
 import '../theme/app_tokens.dart';
@@ -65,6 +66,18 @@ class AppDrawer extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const TourneesListScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bookmark_outline),
+              title: const Text('Carnet d\'adresses'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CarnetAdressesScreen(),
                   ),
                 );
               },

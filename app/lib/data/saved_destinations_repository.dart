@@ -151,6 +151,43 @@ class SavedDestinationsRepository {
         .go();
   }
 
+  Future<SavedDestination?> getById(int id) {
+    return (_db.select(_db.savedDestinations)..where((d) => d.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  /// Edition manuelle d'une entree du carnet. On ne met a jour que les
+  /// champs fournis, sans toucher a `useCount` ni `creeLe`.
+  Future<int> update(
+    int id, {
+    String? nomClient,
+    String? adresseDisplay,
+    double? lat,
+    double? lng,
+    String? rue,
+    String? codePostal,
+    String? ville,
+  }) {
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
+        .write(SavedDestinationsCompanion(
+      nomClient: nomClient == null
+          ? const Value.absent()
+          : Value(nomClient.isEmpty ? null : nomClient),
+      adresseDisplay: adresseDisplay == null
+          ? const Value.absent()
+          : Value(adresseDisplay),
+      lat: lat == null ? const Value.absent() : Value(lat),
+      lng: lng == null ? const Value.absent() : Value(lng),
+      rue: rue == null ? const Value.absent() : Value(rue.isEmpty ? null : rue),
+      codePostal: codePostal == null
+          ? const Value.absent()
+          : Value(codePostal.isEmpty ? null : codePostal),
+      ville: ville == null
+          ? const Value.absent()
+          : Value(ville.isEmpty ? null : ville),
+    ));
+  }
+
   Future<int> count() async {
     final rows = await _db.select(_db.savedDestinations).get();
     return rows.length;
