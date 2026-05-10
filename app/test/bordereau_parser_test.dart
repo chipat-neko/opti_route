@@ -473,6 +473,65 @@ void main() {
     });
   });
 
+  group('BordereauParser - bordereau portrait OCR tres degrade '
+      '(GARAGE AGUILAR)', () {
+    /// Dump OCR du bordereau GARAGE AGUILAR scanne en mode portrait.
+    /// L'OCR est tres degrade : "Lieu de livraison" -> "Lies de
+    /// liraison" (typo), "AVENUE" -> "ArsUE" sur l'une des deux lignes
+    /// rue. "GARAGE AGUILAR" n'apparait qu'une fois (ligne 13).
+    /// "LOUIS PASTEUR" apparait deux fois MAIS uniquement dans des
+    /// rues numerotees (L22 + L24) -> il ne doit PAS etre extrait
+    /// comme nom de destinataire.
+    final portraitLines = [
+      'FLACEPR',
+      'Fégime',
+      'e',
+      'Dae eéSterCert',
+      'LEHAPDECAGER PD23',
+      'RZSES LESLEMANS',
+      'Coac ere',
+      '30425',
+      'ALPR',
+      'Desinatzire',
+      'L687',
+      'Nature de ie marchandise',
+      'MARCHAND SES',
+      'GARAGE AGUILAR',
+      '51 AVENUE D ORLEANNS',
+      '28000 CHARTRES',
+      'Lies de liraison',
+      'Ireson de Iivraison-Documert de suiÍ',
+      'ComngloeTtranspoter iirey',
+      'Eure er Loir Acherninement',
+      'Vol / Lg',
+      'EreeLo Ateinemert',
+      'Z4 ArsUE LOUIS PASTEUR',
+      'areTnn n4441Siret:97880271800012 Tel : 02 3784 44 41',
+      '24 AVENUE LOUIS PASTEUR',
+      '20630 GELLAINNLLE',
+      'Tort',
+      'pay',
+      'Sderrdey',
+      'errise des cohs',
+      'condiois oénérales',
+      'RE',
+      'conmerc)',
+    ];
+
+    test('NE prend PAS LOUIS PASTEUR comme nom (occurrences uniquement '
+        'dans des rues)', () {
+      final result = BordereauParser().parse(portraitLines);
+      expect(result.nomDestinataire?.toLowerCase() ?? '',
+          isNot(contains('pasteur')));
+    });
+
+    test('NE retourne PAS confidence=high (pas de nom fiable + rue '
+        'fausse risque)', () {
+      final result = BordereauParser().parse(portraitLines);
+      expect(result.confidence, isNot(ExtractionConfidence.high));
+    });
+  });
+
   group('BordereauParser - cas limites', () {
     test('liste vide -> tout null', () {
       final result = BordereauParser().parse([]);
