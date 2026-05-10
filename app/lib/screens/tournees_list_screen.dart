@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 
 import '../data/database.dart';
 import '../providers/database_providers.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
 
 class TourneesListScreen extends ConsumerWidget {
@@ -95,48 +97,179 @@ class _TourneesList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dateFormat = DateFormat('EEEE d MMMM y', 'fr');
+    // Tri en 2 sections : actives en haut (brouillon / optimisee /
+    // en_cours), terminees en bas (statut == 'terminee'). A l'interieur
+    // de chaque section, ordre par date decroissante.
+    final actives = tournees
+        .where((t) => t.statut != 'terminee')
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    final terminees = tournees
+        .where((t) => t.statut == 'terminee')
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: tournees.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final t = tournees[index];
-        return Dismissible(
-          key: ValueKey(t.id),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: Theme.of(context).colorScheme.errorContainer,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Icon(
-              Icons.delete_outline,
-              color: Theme.of(context).colorScheme.onErrorContainer,
-            ),
+    final items = <Widget>[];
+    if (actives.isNotEmpty) {
+      items.add(const _SectionHeader('En cours / a venir'));
+      for (final t in actives) {
+        items.add(_TourneeRow(tournee: t));
+      }
+    }
+    if (terminees.isNotEmpty) {
+      items.add(const _SectionHeader('Terminees'));
+      for (final t in terminees) {
+        items.add(_TourneeRow(tournee: t));
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x14,
+        vertical: AppSpacing.x10,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, i) => items[i],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x6,
+        AppSpacing.x14,
+        AppSpacing.x6,
+        AppSpacing.x8,
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: appMonoStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textMute,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+class _TourneeRow extends ConsumerWidget {
+  const _TourneeRow({required this.tournee});
+
+  final Tournee tournee;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dateFormat = DateFormat('EEE d MMM', 'fr');
+    final isTerminee = tournee.statut == 'terminee';
+    final hasStats = isTerminee &&
+        tournee.distanceTotaleM != null &&
+        tournee.dureeTotaleS != null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+      child: Dismissible(
+        key: ValueKey('tournee-${tournee.id}'),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          decoration: BoxDecoration(
+            color: AppColors.red.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppRadius.r14),
           ),
-          confirmDismiss: (_) => _confirmDelete(context, t),
-          onDismissed: (_) async {
-            await ref.read(tourneesRepositoryProvider).delete(t.id);
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Tournee "${t.nom}" supprimee')),
-            );
-          },
-          child: ListTile(
-            leading: _StatutBadge(statut: t.statut),
-            title: Text(t.nom),
-            subtitle: Text(dateFormat.format(t.date)),
-            trailing: const Icon(Icons.chevron_right),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x22),
+          child: const Icon(Icons.delete_outline, color: AppColors.red),
+        ),
+        confirmDismiss: (_) => _confirmDelete(context, tournee),
+        onDismissed: (_) async {
+          await ref.read(tourneesRepositoryProvider).delete(tournee.id);
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Tournee "${tournee.nom}" supprimee')),
+          );
+        },
+        child: Material(
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(AppRadius.r14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.r14),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => TourneeFormScreen(initial: t),
+                builder: (_) => TourneeDuJourScreen(tournee: tournee),
+              ),
+            ),
+            onLongPress: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => TourneeFormScreen(initial: tournee),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x14),
+              child: Row(
+                children: [
+                  _StatutBadge(statut: tournee.statut),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tournee.nom,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          dateFormat.format(tournee.date),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMute,
+                          ),
+                        ),
+                        if (hasStats) ...[
+                          const SizedBox(height: AppSpacing.x6),
+                          Text(
+                            '${(tournee.distanceTotaleM! / 1000).toStringAsFixed(1)} km · ${_formatDuration(tournee.dureeTotaleS!)}',
+                            style: appMonoStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.emerald,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textFaint,
+                  ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  static String _formatDuration(int totalSeconds) {
+    final h = totalSeconds ~/ 3600;
+    final m = (totalSeconds % 3600) ~/ 60;
+    if (h == 0) return '${m}min';
+    return '${h}h${m.toString().padLeft(2, '0')}';
   }
 
   Future<bool?> _confirmDelete(BuildContext context, Tournee t) {
