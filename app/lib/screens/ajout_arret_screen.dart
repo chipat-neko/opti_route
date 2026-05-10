@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/address_suggestion.dart';
+import '../data/bordereau_extraction.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
+import '../providers/geocoding_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
@@ -323,17 +325,57 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   }
 
   Future<void> _scanBordereau() async {
-    final result = await Navigator.of(context).push<String?>(
+    final extraction = await Navigator.of(context).push<BordereauExtraction?>(
       MaterialPageRoute(
         builder: (_) => const ScanBordereauScreen(),
       ),
     );
-    if (result == null || result.trim().isEmpty || !mounted) return;
+    if (extraction == null || !mounted) return;
+
+    // Pre-remplit nom client et nb colis si presents.
+    if (extraction.nomDestinataire != null &&
+        extraction.nomDestinataire!.isNotEmpty) {
+      _nomClientCtrl.text = extraction.nomDestinataire!;
+    }
+    if (extraction.nbColis != null && extraction.nbColis! > 0) {
+      _nbColisCtrl.text = extraction.nbColis!.toString();
+    }
+
+    // Recherche d'adresse en 2 temps (demande explicite de Noah) :
+    // 1) D'abord par nom d'entreprise + ville (SIRENE, Photon).
+    // 2) Si rien, fallback sur l'adresse postale (BAN).
+    AddressSuggestion? found;
+    final service = ref.read(geocodingServiceProvider);
+
+    final nomQuery = extraction.rechercheParNom;
+    if (nomQuery != null && nomQuery.length >= 3) {
+      try {
+        final r = await service.search(nomQuery);
+        if (r.isNotEmpty) found = r.first;
+      } catch (_) {/* on tente l'adresse */}
+    }
+
+    final addrQuery = extraction.adressePostale;
+    if (found == null && addrQuery != null && addrQuery.length >= 3) {
+      try {
+        final r = await service.search(addrQuery);
+        if (r.isNotEmpty) found = r.first;
+      } catch (_) {/* tant pis */}
+    }
+
+    if (!mounted) return;
     setState(() {
-      _scannedAddress = result.trim();
-      _address = null;
-      // On force le widget AddressAutocomplete a se reconstruire pour
-      // declencher une recherche initiale sur le texte scanne.
+      if (found != null) {
+        // Adresse validee directement : on a les coordonnees + le label.
+        _address = found;
+        _scannedAddress = null;
+      } else {
+        // Aucun match : on met le scan en string libre dans le champ
+        // adresse, l'utilisateur affinera (suggestions s'afficheront
+        // automatiquement grace au declenchement de la recherche).
+        _scannedAddress = addrQuery ?? nomQuery;
+        _address = null;
+      }
       _addressFieldVersion++;
     });
   }
