@@ -114,6 +114,19 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 29. Signing config release (#67)
+
+`android/app/build.gradle.kts` cherche maintenant un fichier `android/key.properties` (gitignored). Si présent → utilise la keystore release de Noah pour signer l'APK/AAB. Si absent → fallback automatique sur les clés debug (comportement actuel, permet de continuer à `flutter run --release` localement sans demander la keystore).
+
+Procédure de génération documentée dans `docs/keystore-release.md` :
+1. `keytool -genkey` pour créer `upload-keystore.jks`
+2. `key.properties` qui pointe dessus + mots de passe
+3. `flutter build appbundle --release` → AAB signé prêt pour Play Console
+
+`.gitignore` mis à jour : `key.properties`, `*.jks`, `*.keystore` jamais commités.
+
+À faire le jour de la publication : Noah génère sa keystore, sauve un backup hors-repo, et active **Play App Signing** dès le premier upload (filet de sécurité en cas de perte de la clé locale).
+
 ## 28. Privacy policy + CGU + écran Mentions légales (#66)
 
 Pré-requis Play Store + transparence utilisateur :
