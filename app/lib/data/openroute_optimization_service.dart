@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 
@@ -21,6 +22,12 @@ class OpenRouteOptimizationService implements OptimizationService {
 
   static final _endpoint =
       Uri.parse('https://api.openrouteservice.org/optimization');
+
+  /// Endpoint Directions pour calculer la distance/duree exactes d'une
+  /// sequence de waypoints. Utilise apres VROOM pour avoir le total
+  /// reel sur toute la tournee (firsts + flexibles + lasts + retour).
+  static final _directionsEndpoint =
+      Uri.parse('https://api.openrouteservice.org/v2/directions/driving-car');
 
   final String apiKey;
   final http.Client _client;
@@ -58,18 +65,20 @@ class OpenRouteOptimizationService implements OptimizationService {
             s.priorite != 'obligatoire_dernier')
         .toList(growable: false);
 
-    // 2. Cas degeneres : pas besoin d'appeler VROOM si tous les arrets
-    //    sont en ordre fixe (firsts + lasts uniquement).
+    // 2. Cas degeneres : tous les arrets sont en ordre fixe (firsts +
+    //    lasts uniquement). On saute VROOM mais on appelle quand meme
+    //    Directions pour avoir un total realiste.
     if (flexibles.isEmpty) {
+      final orderedIds = <int>[
+        for (final s in firsts) s.id,
+        for (final s in lasts) s.id,
+      ];
+      final orderedStops = [...firsts, ...lasts];
+      final totals = await _computeTotals(tournee, orderedStops);
       return OptimizationResult(
-        orderedStopIds: [
-          for (final s in firsts) s.id,
-          for (final s in lasts) s.id,
-        ],
-        // Pas d'API call -> pas de distance/duree calculees ici. Le
-        // caller verra 0 et affichera "—" comme avant.
-        totalDistanceMeters: 0,
-        totalDurationSeconds: 0,
+        orderedStopIds: orderedIds,
+        totalDistanceMeters: totals.distance,
+        totalDurationSeconds: totals.duration,
       );
     }
 
@@ -168,24 +177,104 @@ class OpenRouteOptimizationService implements OptimizationService {
       for (final s in lasts) s.id,
     ];
 
-    final summary = (raw['summary'] as Map?)?.cast<String, dynamic>();
-    final duration = (route['duration'] as num?)?.toInt() ??
-        (summary?['duration'] as num?)?.toInt() ??
-        0;
-    final distance = (route['distance'] as num?)?.toInt() ??
-        (summary?['distance'] as num?)?.toInt() ??
-        0;
+    // 5. Calcul du total exact sur l'ordre final complet (depot ->
+    //    firsts -> flexibles -> lasts -> depot) via /directions. La
+    //    reponse VROOM ne couvre que le segment vroomStart -> vroomEnd.
+    final orderedStops = [
+      ...firsts,
+      for (final id in flexiblesOrdered)
+        flexibles.firstWhere((s) => s.id == id),
+      ...lasts,
+    ];
+    final totals = await _computeTotals(tournee, orderedStops);
 
-    // Note : la distance/duree retournees ici concernent uniquement le
-    // segment VROOM (entre vroomStart et vroomEnd). Les segments
-    // firsts/lasts ne sont pas factures dans le total. C'est une
-    // approximation volontaire pour eviter un 2e appel ORS.
     return OptimizationResult(
       orderedStopIds: orderedIds,
-      totalDistanceMeters: distance,
-      totalDurationSeconds: duration,
+      totalDistanceMeters: totals.distance,
+      totalDurationSeconds: totals.duration,
     );
   }
+
+  /// Calcule la distance et la duree totales (en metres et secondes)
+  /// pour la sequence depot -> stops[0] -> ... -> stops[N-1] -> depot.
+  /// Utilise l'endpoint Directions d'OpenRouteService.
+  ///
+  /// En cas d'echec (reseau, quota, etc.), on tombe sur un fallback
+  /// approximatif a vol d'oiseau pour ne pas casser l'optimisation
+  /// (l'utilisateur verra un total approximatif plutot que rien).
+  Future<({int distance, int duration})> _computeTotals(
+    Tournee tournee,
+    List<Stop> orderedStops,
+  ) async {
+    if (orderedStops.isEmpty) return (distance: 0, duration: 0);
+
+    final coords = <List<double>>[
+      [tournee.pointDepartLng, tournee.pointDepartLat],
+      for (final s in orderedStops) [s.lng!, s.lat!],
+      [tournee.pointDepartLng, tournee.pointDepartLat],
+    ];
+
+    try {
+      final response = await _client.post(
+        _directionsEndpoint,
+        headers: {
+          'Authorization': apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'coordinates': coords}),
+      );
+      if (response.statusCode != 200) {
+        return _haversineFallback(coords);
+      }
+      final raw = jsonDecode(response.body);
+      if (raw is! Map<String, dynamic>) return _haversineFallback(coords);
+      final routes = raw['routes'];
+      if (routes is! List || routes.isEmpty) {
+        return _haversineFallback(coords);
+      }
+      final summary =
+          ((routes.first as Map)['summary'] as Map?)?.cast<String, dynamic>();
+      final distance = (summary?['distance'] as num?)?.toInt() ?? 0;
+      final duration = (summary?['duration'] as num?)?.toInt() ?? 0;
+      return (distance: distance, duration: duration);
+    } catch (_) {
+      return _haversineFallback(coords);
+    }
+  }
+
+  /// Fallback : somme des distances haversine (vol d'oiseau) entre
+  /// waypoints, et duree estimee a 50 km/h moyenne (urbain + extra-urbain).
+  ({int distance, int duration}) _haversineFallback(
+    List<List<double>> coords,
+  ) {
+    var total = 0.0;
+    for (var i = 1; i < coords.length; i++) {
+      total += _haversineMeters(
+        coords[i - 1][1], coords[i - 1][0],
+        coords[i][1], coords[i][0],
+      );
+    }
+    final dist = total.round();
+    final dur = (total / (50000 / 3600)).round();
+    return (distance: dist, duration: dur);
+  }
+
+  static double _haversineMeters(
+      double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371000.0;
+    final dLat = _deg2rad(lat2 - lat1);
+    final dLon = _deg2rad(lon2 - lon1);
+    final a = (math.sin(dLat / 2)) * (math.sin(dLat / 2)) +
+        math.cos(_deg2rad(lat1)) *
+            math.cos(_deg2rad(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return r * c;
+  }
+
+  static double _deg2rad(double d) => d * 3.141592653589793 / 180.0;
 
   /// Tri par `ordrePriorite` croissant. Null tombe a la fin (cas
   /// migration : un arret deja marque "EN 1ER" avant la v6 n'a pas
