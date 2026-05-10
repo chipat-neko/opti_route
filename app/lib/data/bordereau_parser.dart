@@ -51,7 +51,9 @@ class BordereauParser {
     final colisIdx = _findIndex(lines, _markersTotalColis);
     final contactIdx = _findIndex(lines, _markersContact);
 
-    // Bloc destinataire : lignes apres "Destinataire", jusqu'au prochain marqueur.
+    // Strategie 1 : bloc destinataire structure (label "Destinataire"
+    // suivi du contenu). Marche quand l'OCR retourne les lignes dans
+    // un ordre logique (top-to-bottom).
     String? nomDest;
     String? rue;
     if (destIdx >= 0) {
@@ -62,6 +64,18 @@ class BordereauParser {
         if (block.length > 1) {
           rue = block.skip(1).join(' · ');
         }
+      }
+    }
+
+    // Strategie 2 (fallback) : si la strategie structurelle a rate ou
+    // si le nom est probablement faux (trop court, contient un label),
+    // on cherche par OCCURRENCES. Le destinataire est mentionne 2 fois
+    // sur le bordereau (dans "Contact destinataire" + dans le bloc
+    // Destinataire), alors que l'expediteur est mentionne 1 fois.
+    if (_looksUnreliable(nomDest)) {
+      final byOccurrence = _findNomByOccurrences(lines);
+      if (byOccurrence != null) {
+        nomDest = byOccurrence;
       }
     }
 
@@ -152,16 +166,108 @@ class BordereauParser {
   }
 
   /// "Destinataire" tout seul, en excluant "Contact destinataire" qui
-  /// est un autre marqueur dans le format MESEXP.
+  /// est un autre marqueur dans le format MESEXP. Tolerance OCR :
+  /// accepte aussi "desinataire" (sans le 't') que ML Kit produit
+  /// parfois.
   static int _findDestinataireIndex(List<String> lines) {
     for (var i = 0; i < lines.length; i++) {
       final lower = lines[i].toLowerCase().trim();
-      if (!lower.contains('destinataire')) continue;
+      // Tolerance OCR : "destinataire" ou "desinataire" (sans 't')
+      if (!lower.contains('estinataire')) continue;
       if (lower.contains('contact')) continue;
       if (lower.contains('ref')) continue; // "Ref. dest."
       return i;
     }
     return -1;
+  }
+
+  /// Heuristique : le nom du destinataire apparait 2 fois ou plus sur
+  /// le bordereau (dans "Contact destinataire" + dans le bloc
+  /// Destinataire), alors que l'expediteur est mentionne 1 seule fois.
+  /// On cherche donc les segments en MAJUSCULES qui apparaissent
+  /// plusieurs fois, et on prend celui qui apparait le plus.
+  static String? _findNomByOccurrences(List<String> lines) {
+    // Pattern : 2+ mots en MAJUSCULES, longueur totale >= 10.
+    final pattern = RegExp(r"([A-Z][A-Z\-']+(?:\s+[A-Z][A-Z\-']+)+)");
+    final candidates = <String>{};
+    for (final line in lines) {
+      for (final m in pattern.allMatches(line)) {
+        final s = m.group(1)!.trim();
+        if (s.length < 10) continue;
+        // Exclure les fragments evidemment non-noms (labels, codes...)
+        if (_isObviousLabel(s)) continue;
+        candidates.add(s);
+      }
+    }
+
+    String? best;
+    int bestCount = 0;
+    for (final cand in candidates) {
+      var count = 0;
+      for (final line in lines) {
+        if (line.contains(cand)) count++;
+      }
+      // En cas d'egalite, on prefere le plus long (plus specifique).
+      if (count > bestCount ||
+          (count == bestCount && best != null && cand.length > best.length)) {
+        bestCount = count;
+        best = cand;
+      }
+    }
+
+    // Au moins 2 mentions pour etre confident.
+    return bestCount >= 2 ? best : null;
+  }
+
+  /// Vrai si le nom semble peu fiable (trop court, ou contient un
+  /// libelle technique).
+  static bool _looksUnreliable(String? name) {
+    if (name == null || name.isEmpty) return true;
+    if (name.length < 5) return true;
+    final lower = name.toLowerCase();
+    const technicalWords = [
+      'lettre',
+      'voiture',
+      'matieres',
+      'matières',
+      'marchandise',
+      'transporteur',
+      'commissionnaire',
+      'siret',
+      'tel',
+      'facture',
+      'colis',
+    ];
+    for (final w in technicalWords) {
+      if (lower.contains(w)) return true;
+    }
+    return false;
+  }
+
+  static bool _isObviousLabel(String s) {
+    final lower = s.toLowerCase();
+    const labels = [
+      'lettre de voiture',
+      'matieres dangereuses',
+      'matières dangereuses',
+      'transporteur',
+      'commissionnaire',
+      'instruction de livraison',
+      'document de suivi',
+      'lieu de livraison',
+      'contact destinataire',
+      'expediteur',
+      'expéditeur',
+      'destinataire',
+      'desinataire',
+      'mesexp',
+      'messagerie express',
+      'nature de la marchandise',
+    ];
+    for (final l in labels) {
+      if (lower.contains(l)) return true;
+    }
+    return false;
   }
 
   static int _findNextStopIndex(List<String> lines, int from) {

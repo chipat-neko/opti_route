@@ -120,6 +120,113 @@ void main() {
     });
   });
 
+  group('BordereauParser - vraies lignes ML Kit (Noah, 2026-05-10)', () {
+    /// 70 lignes telles que retournees par ML Kit sur le vrai bordereau
+    /// MESEXP de Noah, capturees via `adb logcat -s flutter:V | grep
+    /// OCRDUMP`. L'ordre est chaotique parce que la photo etait prise
+    /// tete-beche : c'est exactement ce que le parser doit gerer en
+    /// production.
+    final realLines = [
+      'décret avril',
+      '1999 sont applicables. du 6',
+      'Transports :A',
+      'défaut',
+      'de',
+      'contrat',
+      'spécifique : entre les puzies, Tes dispositions issues du',
+      'les 3 jours sulvant la réception seront recevables (art lL33-3 ou code de commerce).',
+      'Sur demande). seules les réserves précisées et confirmées par lettre recommandée dans',
+      "La remise des colis entraine l'acceptatios de nos conditions générales (exte intégral remis",
+      'Nom, Signature et Cachet obligatoire',
+      'Siret: 44760810000015 Tel: 02 38 88 26 15Siret: 97880271800012 Tel : 02 37 84 44 41',
+      '45140 |NGRE',
+      '16 RUE DE LA MOUCHETIERE',
+      'FA45 TRANSPORTS',
+      '28630 GELLAINVILLE',
+      '24 AVENUE LOUIS PASTEUR',
+      'Eure et Loir Acheminement',
+      'COmmissionnaire Ou transporteur principalTransporteur livreur',
+      'Le:',
+      'total colis: 1',
+      'Marchandise reçue en bon état',
+      'heures',
+      'Instruction de livraison - Document de suivi',
+      'FA450000395356',
+      'Tel : 0681250 794 HYDRO ALUMINIUM EXTRUSION SERVICES',
+      'Contact destinataire',
+      'Lieu de livraison',
+      'Ref. dest.',
+      '28110 LUCE',
+      'Ref. exped. 147863/ 19',
+      'FR 45140 SAINT JEAN DE LA RUELLE',
+      '20 RUE EMILE LECONTE',
+      'BP 10077',
+      'RE',
+      'Débour',
+      'Port TTC',
+      'T.V.A',
+      'Port HT',
+      'TRANSMANUCENTRE',
+      '42 RUE DE LA BEAUCE',
+      'HYDRO ALUMINIUM EXTRUSION SERVICES',
+      'Facture',
+      'Expéditeur',
+      'Dest',
+      'Desinataire', // Faute OCR : il manque le 't'
+      'LETTRE DE VOITURE',
+      'Messagerie Express',
+      'GALET',
+      'MESEXP',
+      'TO1. 2',
+      'Régime',
+      'Nature de la marchandise',
+      'Ligne',
+      'MatiercS dangereuses ADR',
+      '06/05/2026',
+      'FA45',
+      '1',
+      '45109476',
+      '2',
+      'payé',
+      'N° récépissé',
+      'Date expedition',
+      'Client',
+      'U.M.',
+      'Poids',
+      'Vol / Lg',
+      'Port',
+      'Contre-remboursement',
+      'sOuhaitée',
+    ];
+
+    test('extrait nom destinataire HYDRO ALUMINIUM EXTRUSION SERVICES',
+        () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.nomDestinataire, contains('HYDRO ALUMINIUM EXTRUSION'));
+    });
+
+    test('extrait CP destinataire 28110', () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.codePostal, '28110');
+    });
+
+    test('extrait ville LUCE', () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.ville, 'LUCE');
+    });
+
+    test('extrait total colis 1', () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.nbColis, 1);
+    });
+
+    test('NE prend PAS TRANSMANUCENTRE comme nom (c\'est l\'expediteur)',
+        () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.nomDestinataire, isNot(contains('TRANSMANUCENTRE')));
+    });
+  });
+
   group('BordereauParser - cas limites', () {
     test('liste vide -> tout null', () {
       final result = BordereauParser().parse([]);
