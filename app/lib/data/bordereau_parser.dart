@@ -79,6 +79,16 @@ class BordereauParser {
       }
     }
 
+    // Strategie pour la rue : si on a un nom destinataire mais pas de
+    // rue (cas frequent quand l'OCR sort les lignes dans un ordre
+    // chaotique), on cherche la rue **adjacente au nom** dans le flux
+    // OCR. ML Kit groupe les lignes du meme bloc visuel ensemble, donc
+    // la rue est typiquement a +/- 1 ligne du nom, meme si le label
+    // "Destinataire" est ailleurs.
+    if (rue == null && nomDest != null) {
+      rue = _findRueAdjacenteNom(lines, nomDest);
+    }
+
     // Bloc Lieu de livraison : on regarde les 3 lignes suivantes,
     // **une par une** (concatener les lignes ferait deborder la regex
     // ville sur "Nature de la marchandise GALET" par ex).
@@ -242,6 +252,58 @@ class BordereauParser {
       if (lower.contains(w)) return true;
     }
     return false;
+  }
+
+  /// Cherche la rue du destinataire **adjacente** au nom dans le flux
+  /// OCR. ML Kit groupe les lignes du meme bloc visuel ensemble : la
+  /// rue est donc typiquement a +/- 1 ligne du nom, meme si l'ordre
+  /// global des blocs est chaotique.
+  ///
+  /// On scanne en cercles concentriques autour de chaque occurrence
+  /// du nom (rayon 1, puis 2, ..., 8 pour la BP). On prend la 1ere rue
+  /// trouvee et on accole la BP si elle est proche aussi.
+  static String? _findRueAdjacenteNom(List<String> lines, String nomDest) {
+    final ruePattern = RegExp(
+      r"^\d+\s*(?:bis|ter|quater)?\s+(?:RUE|AVENUE|AV\.?|BD|BOULEVARD|CHEMIN|PLACE|IMPASSE|ALLEE|ALL[EÉ]E|VOIE|ROUTE|RTE|QUAI|COURS|PASSAGE|FAUBOURG|FBG)\b",
+      caseSensitive: false,
+    );
+    final bpPattern = RegExp(r"^BP\s*\d+", caseSensitive: false);
+
+    final nomIndices = <int>[];
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].contains(nomDest)) nomIndices.add(i);
+    }
+    if (nomIndices.isEmpty) return null;
+
+    String? rue;
+    int rueDist = 999;
+    String? bp;
+    int bpDist = 999;
+
+    // Rayon 8 (englobe la BP qui est souvent plus eloignee que la rue).
+    for (final nomIdx in nomIndices) {
+      for (var offset = 1; offset <= 8; offset++) {
+        for (final i in [nomIdx - offset, nomIdx + offset]) {
+          if (i < 0 || i >= lines.length) continue;
+          final line = lines[i].trim();
+          if (rue == null || offset < rueDist) {
+            if (ruePattern.hasMatch(line)) {
+              rue = line;
+              rueDist = offset;
+            }
+          }
+          if (bp == null || offset < bpDist) {
+            if (bpPattern.hasMatch(line)) {
+              bp = line;
+              bpDist = offset;
+            }
+          }
+        }
+      }
+    }
+
+    if (rue == null && bp == null) return null;
+    return [?rue, ?bp].join(' · ');
   }
 
   static bool _isObviousLabel(String s) {

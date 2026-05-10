@@ -225,6 +225,29 @@ void main() {
       final result = BordereauParser().parse(realLines);
       expect(result.nomDestinataire, isNot(contains('TRANSMANUCENTRE')));
     });
+
+    test('extrait la rue 42 RUE DE LA BEAUCE (adjacente au nom)', () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.rue, isNotNull);
+      expect(result.rue, contains('42 RUE DE LA BEAUCE'));
+    });
+
+    test('inclut aussi BP 10077 si trouvee a proximite', () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.rue, contains('BP 10077'));
+    });
+
+    test('NE prend PAS la rue de l\'expediteur (20 RUE EMILE LECONTE)',
+        () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.rue, isNot(contains('20 RUE EMILE LECONTE')));
+    });
+
+    test('adressePostale complete', () {
+      final result = BordereauParser().parse(realLines);
+      expect(result.adressePostale, contains('42 RUE DE LA BEAUCE'));
+      expect(result.adressePostale, contains('28110 LUCE'));
+    });
   });
 
   group('BordereauParser - cas limites', () {
