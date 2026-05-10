@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Bloque les push directs vers les branches protegees.
+# Usage : automatique, declenche par git push.
+# Convention : tout changement de main doit passer par une Pull Request.
+# Pour bypasser ponctuellement (rare), utiliser : git push --no-verify
+
+set -e
+
+PROTECTED_BRANCHES=("main")
+ZERO_SHA="0000000000000000000000000000000000000000"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # Cas suppression de branche distante (local_sha = 0) : on laisse passer
+    if [[ "$local_sha" == "$ZERO_SHA" ]]; then
+        continue
+    fi
+
+    for protected in "${PROTECTED_BRANCHES[@]}"; do
+        if [[ "$remote_ref" == "refs/heads/$protected" ]]; then
+            cat <<MSG >&2
+
+  ERREUR : push direct vers '$protected' bloque par .githooks/pre-push
+
+  Convention du projet : main est mise a jour uniquement via Pull Request.
+
+  Marche a suivre :
+    git switch -c feat/ma-feature   # ou fix/, chore/, docs/, refactor/, test/
+    git push -u origin feat/ma-feature
+    gh pr create
+
+  En cas d'urgence absolue (a justifier dans le commit) :
+    git push --no-verify
+
+MSG
+            exit 1
+        fi
+    done
+done
+
+exit 0

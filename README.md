@@ -51,9 +51,13 @@ Le projet suit un workflow **trunk-based avec Pull Requests** :
 ```powershell
 # Cloner
 git clone https://github.com/chipat-neko/opti_route.git
-cd opti_route\app
+cd opti_route
+
+# Activer les hooks Git versionnés (bloque le push direct vers main)
+git config core.hooksPath .githooks
 
 # Vérifier l'environnement Flutter
+cd app
 flutter doctor
 
 # Installer les dépendances
@@ -62,6 +66,8 @@ flutter pub get
 # Lancer sur un appareil Android connecté
 flutter run
 ```
+
+> ⚠️ **Important** : le `git config core.hooksPath .githooks` doit être lancé une seule fois après le clone. Il active le hook `pre-push` qui interdit les push directs vers `main` (cf. convention plus haut). Le hook est versionné dans `.githooks/` pour rester partagé.
 
 ## Licence
 
