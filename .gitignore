@@ -1,0 +1,26 @@
+# IDE / éditeurs
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# Système
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Outils
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Artefacts de build PDF (docs/_build_pdf.py)
+docs/_*_temp.html
+docs/_*.tmp
+
+# Logs locaux
+*.log
+
+# Le sous-projet app/ a son propre .gitignore (Flutter)
