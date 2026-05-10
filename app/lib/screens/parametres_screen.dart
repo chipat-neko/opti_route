@@ -15,32 +15,21 @@ class ParametresScreen extends ConsumerStatefulWidget {
 }
 
 class _ParametresScreenState extends ConsumerState<ParametresScreen> {
-  final _keyCtrl = TextEditingController();
   final _orsKeyCtrl = TextEditingController();
-  bool _obscure = true;
   bool _obscureOrs = true;
   bool _saving = false;
-  bool _initialized = false;
   bool _orsInitialized = false;
 
   @override
   void dispose() {
-    _keyCtrl.dispose();
     _orsKeyCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final apiKeyAsync = ref.watch(tomtomApiKeyProvider);
     final orsKeyAsync = ref.watch(orsApiKeyProvider);
 
-    apiKeyAsync.whenData((value) {
-      if (!_initialized && value != null) {
-        _keyCtrl.text = value;
-        _initialized = true;
-      }
-    });
     orsKeyAsync.whenData((value) {
       if (!_orsInitialized && value != null) {
         _orsKeyCtrl.text = value;
@@ -48,7 +37,6 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
       }
     });
 
-    final hasKey = apiKeyAsync.asData?.value?.isNotEmpty ?? false;
     final hasOrsKey = orsKeyAsync.asData?.value?.isNotEmpty ?? false;
 
     return Scaffold(
@@ -58,76 +46,30 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x18),
         children: [
-          _SectionTitle('Geocodage'),
+          const _SectionTitle('Geocodage'),
           const SizedBox(height: AppSpacing.x10),
-          _ProviderStatusCard(active: hasKey ? 'TomTom' : 'Photon'),
-          const SizedBox(height: AppSpacing.x18),
-          Text(
-            'Cle API TomTom',
-            style: Theme.of(context).textTheme.titleSmall,
+          const _StatusCard(
+            highlight: true,
+            icon: Icons.verified_outlined,
+            title: 'Sources officielles France',
+            subtitle:
+                'BAN (api-adresse.data.gouv.fr) pour les adresses · '
+                'Recherche-Entreprises (recherche-entreprises.api.gouv.fr) '
+                'pour les commerces. Aucune cle, aucune limite stricte.',
           ),
-          const SizedBox(height: AppSpacing.x6),
-          const Text(
-            'Cree gratuitement un compte sur developer.tomtom.com '
-            '(2500 requetes/jour, sans carte de credit), copie ta cle '
-            'API et colle-la ici. Si vide, on utilise Photon en fallback.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: AppColors.textMute,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          TextField(
-            controller: _keyCtrl,
-            obscureText: _obscure,
-            decoration: InputDecoration(
-              labelText: 'Cle API',
-              hintText: '32 caracteres alphanumeriques',
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscure ? Icons.visibility : Icons.visibility_off,
-                ),
-                onPressed: () => setState(() => _obscure = !_obscure),
-                tooltip: _obscure ? 'Afficher' : 'Masquer',
-              ),
-            ),
-            autocorrect: false,
-            enableSuggestions: false,
-          ),
-          const SizedBox(height: AppSpacing.x18),
-          FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: _saving
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.lime,
-                    ),
-                  )
-                : const Icon(Icons.check),
-            label: const Text('Enregistrer'),
-          ),
-          if (hasKey) ...[
-            const SizedBox(height: AppSpacing.x10),
-            OutlinedButton.icon(
-              onPressed: _saving ? null : _clear,
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Effacer la cle (revenir a Photon)'),
-            ),
-          ],
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Optimisation de tournee'),
           const SizedBox(height: AppSpacing.x10),
-          _ProviderStatusCard(
-            active: hasOrsKey ? 'OpenRouteService' : 'Aucun',
-            label: hasOrsKey ? 'ORS est actif' : 'Optimisation desactivee',
-            sub: hasOrsKey
-                ? '500 optimisations/jour, gratuit.'
+          _StatusCard(
+            highlight: hasOrsKey,
+            icon: hasOrsKey ? Icons.check_circle : Icons.bolt_outlined,
+            title: hasOrsKey
+                ? 'OpenRouteService est actif'
+                : 'Optimisation desactivee',
+            subtitle: hasOrsKey
+                ? '500 optimisations/jour, gratuit, sans CB.'
                 : 'Saisis une cle ORS pour activer le bouton "Optimiser".',
           ),
           const SizedBox(height: AppSpacing.x18),
@@ -166,7 +108,16 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x18),
           FilledButton.icon(
             onPressed: _saving ? null : _saveOrs,
-            icon: const Icon(Icons.check),
+            icon: _saving
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.lime,
+                    ),
+                  )
+                : const Icon(Icons.check),
             label: const Text('Enregistrer la cle ORS'),
           ),
           if (hasOrsKey) ...[
@@ -189,8 +140,9 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           ),
           const SizedBox(height: AppSpacing.x6),
           const Text(
-            'Force toutes les recherches d\'adresse a re-interroger le '
-            'fournisseur. Utile apres avoir change de fournisseur.',
+            'Force toutes les recherches d\'adresse a re-interroger les '
+            'sources. Utile si tu as modifie une adresse ou que tu veux '
+            'reessayer une saisie qui a echoue.',
             style: TextStyle(
               fontSize: 12,
               color: AppColors.textMute,
@@ -200,47 +152,6 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _save() async {
-    final value = _keyCtrl.text.trim();
-    setState(() => _saving = true);
-    try {
-      if (value.isEmpty) {
-        await ref.read(parametresRepositoryProvider).clearTomTomApiKey();
-      } else {
-        await ref.read(parametresRepositoryProvider).setTomTomApiKey(value);
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(value.isEmpty
-              ? 'Cle effacee, retour a Photon'
-              : 'Cle TomTom enregistree'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  Future<void> _clear() async {
-    setState(() => _saving = true);
-    try {
-      await ref.read(parametresRepositoryProvider).clearTomTomApiKey();
-      _keyCtrl.clear();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cle effacee, retour a Photon')),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
   }
 
   Future<void> _saveOrs() async {
@@ -287,9 +198,8 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
   Future<void> _purgeCache() async {
     setState(() => _saving = true);
     try {
-      final removed = await ref
-          .read(geocodeCacheRepositoryProvider)
-          .purgeExpired();
+      final removed =
+          await ref.read(geocodeCacheRepositoryProvider).purgeExpired();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -324,31 +234,21 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _ProviderStatusCard extends StatelessWidget {
-  const _ProviderStatusCard({
-    required this.active,
-    this.label,
-    this.sub,
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.highlight,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
   });
 
-  final String active;
-  final String? label;
-  final String? sub;
+  final bool highlight;
+  final IconData icon;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
-    final highlight = active != 'Photon' && active != 'Aucun';
-    final defaultLabel = switch (active) {
-      'TomTom' => 'TomTom est actif',
-      'Photon' => 'Photon (par defaut)',
-      _ => 'Inactif',
-    };
-    final defaultSub = switch (active) {
-      'TomTom' => 'Qualite maximale, 2500 requetes/jour.',
-      'Photon' =>
-        'Pas de cle API. Saisis-en une pour passer a TomTom.',
-      _ => '',
-    };
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
@@ -356,30 +256,28 @@ class _ProviderStatusCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.r14),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            highlight ? Icons.check_circle : Icons.public,
-            color: AppColors.ink,
-          ),
+          Icon(icon, color: AppColors.ink),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label ?? defaultLabel,
+                  title,
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
                     color: AppColors.ink,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  sub ?? defaultSub,
+                  subtitle,
                   style: appMonoStyle(
                     fontSize: 11,
-                    color: AppColors.ink.withValues(alpha: 0.7),
+                    color: AppColors.ink.withValues(alpha: 0.75),
                   ),
                 ),
               ],

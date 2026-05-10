@@ -28,11 +28,6 @@ final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
   return ParametresRepository(ref.watch(appDatabaseProvider));
 });
 
-/// Stream de la cle API TomTom (null si non configuree).
-final tomtomApiKeyProvider = StreamProvider<String?>((ref) {
-  return ref.watch(parametresRepositoryProvider).watchTomTomApiKey();
-});
-
 /// Stream des arrets pour une tournee donnee.
 final stopsByTourneeProvider =
     StreamProvider.family<List<Stop>, int>((ref, tourneeId) {

@@ -10,15 +10,7 @@ class ParametresRepository {
   final AppDatabase _db;
 
   // ─── Cles connues (constantes) ───────────────────────────────────
-  static const _kTomTomApiKey = 'tomtom_api_key';
   static const _kOrsApiKey = 'ors_api_key';
-
-  /// Cle API TomTom (peut etre null = non configure).
-  Future<String?> getTomTomApiKey() => _readKey(_kTomTomApiKey);
-  Stream<String?> watchTomTomApiKey() => _watchKey(_kTomTomApiKey);
-  Future<void> setTomTomApiKey(String value) =>
-      _write(_kTomTomApiKey, value.trim());
-  Future<void> clearTomTomApiKey() => _delete(_kTomTomApiKey);
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
