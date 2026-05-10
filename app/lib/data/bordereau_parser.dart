@@ -84,9 +84,9 @@ class BordereauParser {
       if (nomDest != null) {
         rue = _findRueAdjacenteNom(lines, nomDest);
       }
-    } else if (rue == null) {
+    } else {
       // Nom de la strategie 1 OK mais pas de rue : tenter l'adjacence.
-      rue = _findRueAdjacenteNom(lines, nomDest);
+      rue ??= _findRueAdjacenteNom(lines, nomDest);
     }
 
     // Bloc Lieu de livraison : on regarde les 3 lignes suivantes,
@@ -167,6 +167,25 @@ class BordereauParser {
       telephone = m?.group(1)?.replaceAll(RegExp(r'[\s.\-]'), '');
     }
 
+    // Score de confiance :
+    // - high : on a un nom + au moins (rue ou cp+ville)
+    // - low : on a quelque chose mais c'est partiel ou ambigu
+    // - none : aucun champ utile
+    final ExtractionConfidence confidence;
+    final hasNom = nomDest != null && nomDest.isNotEmpty;
+    final hasRue = rue != null && rue.isNotEmpty;
+    final hasVille = (cp != null && cp.isNotEmpty) ||
+        (ville != null && ville.isNotEmpty);
+    final hasColisOrTel = nbColis != null || telephone != null;
+
+    if (hasNom && (hasRue || hasVille)) {
+      confidence = ExtractionConfidence.high;
+    } else if (hasNom || hasRue || hasVille || hasColisOrTel) {
+      confidence = ExtractionConfidence.low;
+    } else {
+      confidence = ExtractionConfidence.none;
+    }
+
     return BordereauExtraction(
       nomDestinataire: nomDest,
       rue: rue,
@@ -174,6 +193,7 @@ class BordereauParser {
       ville: ville,
       telephone: telephone,
       nbColis: nbColis,
+      confidence: confidence,
     );
   }
 
@@ -208,16 +228,21 @@ class BordereauParser {
   /// Destinataire), alors que l'expediteur est mentionne 1 seule fois.
   /// On cherche donc les segments en MAJUSCULES qui apparaissent
   /// plusieurs fois, et on prend celui qui apparait le plus.
+  ///
+  /// Filtres anti-faux-positifs :
+  /// - `_isObviousLabel` : exclut les labels techniques.
+  /// - `_looksLikeStreet` : exclut les rues (commencent par AVENUE/RUE/etc).
+  /// - `_looksLikeTransporter` : exclut les transporteurs courants.
   static String? _findNomByOccurrences(List<String> lines) {
-    // Pattern : 2+ mots en MAJUSCULES, longueur totale >= 10.
     final pattern = RegExp(r"([A-Z][A-Z\-']+(?:\s+[A-Z][A-Z\-']+)+)");
     final candidates = <String>{};
     for (final line in lines) {
       for (final m in pattern.allMatches(line)) {
         final s = m.group(1)!.trim();
         if (s.length < 10) continue;
-        // Exclure les fragments evidemment non-noms (labels, codes...)
         if (_isObviousLabel(s)) continue;
+        if (_looksLikeStreet(s)) continue;
+        if (_looksLikeTransporter(s)) continue;
         candidates.add(s);
       }
     }
@@ -229,7 +254,6 @@ class BordereauParser {
       for (final line in lines) {
         if (line.contains(cand)) count++;
       }
-      // En cas d'egalite, on prefere le plus long (plus specifique).
       if (count > bestCount ||
           (count == bestCount && best != null && cand.length > best.length)) {
         bestCount = count;
@@ -237,8 +261,57 @@ class BordereauParser {
       }
     }
 
-    // Au moins 2 mentions pour etre confident.
+    // Strict : au moins 2 mentions pour etre confident. Sinon on
+    // retourne null et l'UI affichera une carte "incertain".
     return bestCount >= 2 ? best : null;
+  }
+
+  /// Vrai si le candidat ressemble a une rue (commence ou contient un
+  /// mot de rue francais). Evite de prendre "AVENUE LOUIS PASTEUR"
+  /// comme nom d'entreprise.
+  static bool _looksLikeStreet(String s) {
+    final lower = s.toLowerCase();
+    const streetWords = [
+      'rue ',
+      'avenue ',
+      'boulevard ',
+      ' bd ',
+      'impasse ',
+      'place ',
+      'chemin ',
+      'voie ',
+      'route ',
+      'allee ',
+      'allée ',
+      'cours ',
+      'quai ',
+      'passage ',
+      'faubourg ',
+      'fbg ',
+    ];
+    final padded = ' ${lower.toLowerCase()} ';
+    for (final w in streetWords) {
+      if (padded.contains(w)) return true;
+    }
+    return false;
+  }
+
+  /// Vrai si le candidat ressemble a un nom de transporteur courant.
+  /// Evite de prendre "EURE ET LOIR ACHEMINEMENT" ou "FA45 TRANSPORTS"
+  /// comme destinataire.
+  static bool _looksLikeTransporter(String s) {
+    final lower = s.toLowerCase();
+    const transporterWords = [
+      'acheminement',
+      'transports',
+      'transporteur',
+      'logistique',
+      'messagerie',
+    ];
+    for (final w in transporterWords) {
+      if (lower.contains(w)) return true;
+    }
+    return false;
   }
 
   /// Vrai si le nom semble peu fiable (trop court, ou contient un

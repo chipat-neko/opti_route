@@ -157,7 +157,11 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
   Widget _buildResult() {
     final lines = _ocr!.lines;
     final extraction = _extraction;
-    final hasAutoExtraction = extraction != null && extraction.hasUsefulData;
+    // Carte verte uniquement si confidence = high. Sinon carte orange
+    // (confidence = low) ou aucune carte (confidence = none).
+    final hasAutoExtraction = extraction != null &&
+        extraction.hasUsefulData &&
+        extraction.confidence == ExtractionConfidence.high;
     return Column(
       children: [
         Expanded(
@@ -180,6 +184,10 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                   extraction: extraction,
                   onUse: () => _confirmExtraction(extraction),
                 ),
+              ] else if (extraction != null &&
+                  extraction.confidence == ExtractionConfidence.low) ...[
+                const SizedBox(height: AppSpacing.x14),
+                _UncertainDetectionCard(extraction: extraction),
               ],
               const SizedBox(height: AppSpacing.x14),
               Row(
@@ -387,6 +395,92 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
   /// Confirmation depuis la detection auto : on retourne tout.
   void _confirmExtraction(BordereauExtraction extraction) {
     Navigator.of(context).pop(extraction);
+  }
+}
+
+/// Carte orange quand le parser a trouve quelque chose mais n'est
+/// pas confiant : il y a des champs detectes mais soit incomplets,
+/// soit ambigus. On invite l'utilisateur a verifier manuellement
+/// au lieu de pre-remplir automatiquement.
+class _UncertainDetectionCard extends StatelessWidget {
+  const _UncertainDetectionCard({required this.extraction});
+
+  final BordereauExtraction extraction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(AppRadius.r14),
+        border: Border.all(color: AppColors.amber, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_outlined,
+                color: AppColors.ink,
+                size: 18,
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Text(
+                'DETECTION INCERTAINE',
+                style: appMonoStyle(
+                  fontSize: 11,
+                  color: AppColors.ink,
+                  letterSpacing: 0.6,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          const Text(
+            'Le bordereau ne suit pas un format que je reconnais '
+            'parfaitement. Verifie les bonnes lignes manuellement '
+            'ci-dessous pour eviter une mauvaise adresse.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.ink,
+              height: 1.4,
+            ),
+          ),
+          if (extraction.codePostal != null ||
+              extraction.ville != null ||
+              extraction.nbColis != null) ...[
+            const SizedBox(height: AppSpacing.x10),
+            Text(
+              'Champs detectes (a verifier) :',
+              style: appMonoStyle(
+                fontSize: 10,
+                color: AppColors.ink.withValues(alpha: 0.7),
+                letterSpacing: 0.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            if (extraction.codePostal != null || extraction.ville != null)
+              _ExtractedRow(
+                label: 'VILLE?',
+                value: [
+                  if (extraction.codePostal != null) extraction.codePostal!,
+                  if (extraction.ville != null) extraction.ville!,
+                ].join(' '),
+              ),
+            if (extraction.nbColis != null)
+              _ExtractedRow(
+                label: 'COLIS?',
+                value: '${extraction.nbColis}',
+                mono: true,
+              ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

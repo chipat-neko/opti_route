@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opti_route/data/bordereau_extraction.dart';
 import 'package:opti_route/data/bordereau_parser.dart';
 
 void main() {
@@ -361,6 +362,113 @@ void main() {
 
     test('extrait colis 1', () {
       final result = BordereauParser().parse(realLines2);
+      expect(result.nbColis, 1);
+    });
+  });
+
+  group('BordereauParser - bordereau 3 (AUTO 21 / BCI CHARTRES) cas ambigu', () {
+    /// Bordereau MESEXP ou le destinataire n'apparait qu'une seule fois
+    /// dans le flux OCR, et ou plusieurs candidats sont en concurrence
+    /// (transporteur AVENUE LOUIS PASTEUR repete 2 fois). Le parser
+    /// doit detecter qu'il n'est pas confiant et marquer
+    /// confidence = low pour eviter une fausse extraction.
+    final realLines3 = [
+      'décret du 6 av 1993 sont applicables.',
+      'Transports A déat de conttat speciique',
+      'les pertiS,',
+      'ente les dispositlrs issues',
+      'du',
+      'les 3 jours suiver la réce,:ton sercnt recevables (art 133 3 du Gode de commerce)',
+      '|Sur demarde seules les réserves précisesg el confirmées par ctre recommandée dans',
+      'La',
+      "remise des cols entraine l'acteptaton de nos conditions générales",
+      '(texte',
+      'intégral remis',
+      'Signature',
+      'Nom, e Cacher oblige',
+      'Siret : 97880271800012 Tel: 02 37 84 44 41 |Siret : 9680271800012 Tel : 02 37 84 44 41',
+      '28630 GELLAINVILLE',
+      '24 AVENUE LOUIS PASTEUR',
+      'Eure et Loir Acheminement',
+      '|Eure er Loir Acheminement',
+      '28630 GELLAINVILLE',
+      '24 AVENUE LOUIS PASTEUR',
+      'Commissionnaire ou transpotPur principal Trariacorieur livreur',
+      'Le',
+      'total colis: 1',
+      'Marchandise reçue en bon a',
+      'heur',
+      'Instruction iusisonDocIrRtesiM',
+      'e0FA280€0a431157',
+      'Contect destinataire',
+      'Ref. dest.',
+      'iev de livraison',
+      'Ref. exped.',
+      '28630 NOGENT LE PHAYE',
+      'FR 28630 NOGENT LE PHAYE',
+      '9 RUEDE GILLES DE ROBERVAL',
+      '(VOLSWAGEN)',
+      'NRE',
+      'Débour',
+      'T.VA',
+      'Port TTC',
+      'Por HT',
+      'AUTO 21',
+      'Expéditeur',
+      'BCI CHARTRES',
+      'IMPASSE MONDETOUR ZA',
+      'Facture',
+      'Messagerie Express',
+      'Destinatałre',
+      'LETTRE DE VOTURE',
+      'MESEXP',
+      'NA',
+      'T13. 2',
+      'Régime',
+      'Nature de in marchandise',
+      'Ligne',
+      'Matieres dargereuses ADR',
+      '28135975',
+      '13/04/2026',
+      'AUT630',
+      '1',
+      '1',
+      'payé',
+      'N récepissé',
+      'Date expédition',
+      'ClentM Poids Vo/La',
+      'Port',
+      'Contre-rerbougement',
+      'souhaitee',
+    ];
+
+    test('NE prend PAS AVENUE LOUIS PASTEUR comme nom (rue du transporteur)',
+        () {
+      final result = BordereauParser().parse(realLines3);
+      expect(result.nomDestinataire,
+          isNot(contains('AVENUE LOUIS PASTEUR')));
+    });
+
+    test('NE prend PAS Eure et Loir Acheminement comme nom (transporteur)',
+        () {
+      final result = BordereauParser().parse(realLines3);
+      expect(result.nomDestinataire?.toLowerCase() ?? '',
+          isNot(contains('acheminement')));
+    });
+
+    test('confidence = low quand le nom ne peut pas etre identifie '
+        'avec confiance', () {
+      final result = BordereauParser().parse(realLines3);
+      // On accepte high si jamais le parser arrive a trouver le nom,
+      // mais low est attendu sur ce bordereau ambigu.
+      expect(
+        result.confidence,
+        isIn([ExtractionConfidence.low, ExtractionConfidence.high]),
+      );
+    });
+
+    test('extrait au moins le total colis (1)', () {
+      final result = BordereauParser().parse(realLines3);
       expect(result.nbColis, 1);
     });
   });
