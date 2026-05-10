@@ -50,6 +50,15 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Carte (jalon 6)
+- **`CarteScreen`** : nouvelle vue carte plein écran utilisant `flutter_map` + tuiles OpenStreetMap (User-Agent identifiable). Affiche un pin de dépôt (lime + icône entrepôt) et un pin par arrêt géoréférencé, avec **auto-fit** sur l'ensemble des points au chargement.
+- **Markers stylisés** alignés sur le handoff `screen-map.jsx` : pending = paper outline ink avec index mono, livré = emerald + ✓, échec = rouge + !, dépôt = lime.
+- **Tap sur un pin** d'arrêt → **bottom sheet** avec radius 28 (selon design) : numéro mono dans une chip, nom client, adresse complète, notes en cream-soft, chips info (colis, fenêtre horaire mono).
+- **FAB recentrer** (bottom-right) qui re-fit les bounds.
+- Action **carte** dans l'AppBar de `TourneeDuJourScreen` (icône `map_outlined`) à côté du crayon d'édition.
+- Empty state si aucun arrêt géoréférencé.
+- Dépendances : `flutter_map ^8.x` + `latlong2 ^0.9.x`.
+
 ### Géocodage finalisé (jalon 5)
 - **Cache local des géocodages** : nouvelle table `geocode_cache` (PK = requête normalisée, TTL 30 jours par défaut). `NominatimService` interroge le cache avant de taper Nominatim ; les requêtes répétées (même mot-clé) ne consomment plus le rate-limit public. Best-effort à l'écriture (un échec de cache n'invalide pas le résultat).
 - **`schemaVersion` 2 → 3** avec `MigrationStrategy.onUpgrade` qui crée la nouvelle table sur les bases existantes.
