@@ -5,6 +5,10 @@
          builds release. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- OCR : pour scanner les bordereaux avec la camera. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
     <application
         android:label="opti_route"
         android:name="${applicationName}"

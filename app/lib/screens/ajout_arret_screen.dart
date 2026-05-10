@@ -8,6 +8,7 @@ import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import 'scan_bordereau_screen.dart';
 
 /// Ajout (potentiellement multiple) d'arrets a une tournee, avec
 /// imperatifs sur la meme page :
@@ -43,10 +44,12 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   late TextEditingController _notesCtrl;
 
   AddressSuggestion? _address;
+  String? _scannedAddress;
   String _priorite = 'flexible';
   TimeOfDay? _fenetreDebut;
   TimeOfDay? _fenetreFin;
   bool _saving = false;
+  int _addressFieldVersion = 0;
 
   bool get _isEdit => widget.initial != null;
 
@@ -114,12 +117,23 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           padding: const EdgeInsets.all(AppSpacing.x18),
           children: [
             AddressAutocompleteField(
-              key: ValueKey('address-${widget.initial?.id ?? "new"}'),
+              key: ValueKey(
+                'address-${widget.initial?.id ?? "new"}-$_addressFieldVersion',
+              ),
               labelText: 'Adresse',
               hintText: 'Tape la rue, la ville...',
               initialSuggestion: _address,
-              initialDisplayText: _address?.displayName,
+              initialDisplayText: _scannedAddress ?? _address?.displayName,
               onSuggestionSelected: (s) => setState(() => _address = s),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _scanBordereau,
+              icon: const Icon(Icons.document_scanner_outlined),
+              label: const Text('Scanner un bordereau'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
             ),
             const SizedBox(height: AppSpacing.x22),
             const _SectionTitle('Client / Enseigne (optionnel)'),
@@ -306,6 +320,22 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     final n = int.tryParse(s);
     if (n == null || n < 0) return 'Entier positif';
     return null;
+  }
+
+  Future<void> _scanBordereau() async {
+    final result = await Navigator.of(context).push<String?>(
+      MaterialPageRoute(
+        builder: (_) => const ScanBordereauScreen(),
+      ),
+    );
+    if (result == null || result.trim().isEmpty || !mounted) return;
+    setState(() {
+      _scannedAddress = result.trim();
+      _address = null;
+      // On force le widget AddressAutocomplete a se reconstruire pour
+      // declencher une recherche initiale sur le texte scanne.
+      _addressFieldVersion++;
+    });
   }
 
   Future<void> _save({required bool addAnother}) async {

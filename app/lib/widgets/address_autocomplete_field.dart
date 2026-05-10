@@ -57,10 +57,18 @@ class _AddressAutocompleteFieldState
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(
-      text: widget.initialDisplayText ?? '',
-    );
+    final initial = widget.initialDisplayText ?? '';
+    _controller = TextEditingController(text: initial);
     _selected = widget.initialSuggestion;
+
+    // Si on a un texte initial mais pas de suggestion validee
+    // (typiquement : retour d'un scan OCR), on lance automatiquement
+    // l'autocomplete dessus.
+    if (widget.initialSuggestion == null && initial.trim().length >= 3) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _runSearch(initial);
+      });
+    }
   }
 
   @override
