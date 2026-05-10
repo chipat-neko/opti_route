@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
+import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -15,29 +16,40 @@ class ParametresScreen extends ConsumerStatefulWidget {
 
 class _ParametresScreenState extends ConsumerState<ParametresScreen> {
   final _keyCtrl = TextEditingController();
+  final _orsKeyCtrl = TextEditingController();
   bool _obscure = true;
+  bool _obscureOrs = true;
   bool _saving = false;
   bool _initialized = false;
+  bool _orsInitialized = false;
 
   @override
   void dispose() {
     _keyCtrl.dispose();
+    _orsKeyCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final apiKeyAsync = ref.watch(tomtomApiKeyProvider);
+    final orsKeyAsync = ref.watch(orsApiKeyProvider);
 
-    // Pre-remplit le champ avec la cle existante a la 1ere lecture.
     apiKeyAsync.whenData((value) {
       if (!_initialized && value != null) {
         _keyCtrl.text = value;
         _initialized = true;
       }
     });
+    orsKeyAsync.whenData((value) {
+      if (!_orsInitialized && value != null) {
+        _orsKeyCtrl.text = value;
+        _orsInitialized = true;
+      }
+    });
 
     final hasKey = apiKeyAsync.asData?.value?.isNotEmpty ?? false;
+    final hasOrsKey = orsKeyAsync.asData?.value?.isNotEmpty ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -109,7 +121,66 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          _SectionTitle('Cache'),
+          const _SectionTitle('Optimisation de tournee'),
+          const SizedBox(height: AppSpacing.x10),
+          _ProviderStatusCard(
+            active: hasOrsKey ? 'OpenRouteService' : 'Aucun',
+            label: hasOrsKey ? 'ORS est actif' : 'Optimisation desactivee',
+            sub: hasOrsKey
+                ? '500 optimisations/jour, gratuit.'
+                : 'Saisis une cle ORS pour activer le bouton "Optimiser".',
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          Text(
+            'Cle API OpenRouteService',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          const Text(
+            'Cree gratuitement un compte sur openrouteservice.org/dev '
+            '(500 optimisations/jour, sans carte de credit), puis colle '
+            'ta cle ici. Sans cle, le bouton "Optimiser" reste desactive.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(
+            controller: _orsKeyCtrl,
+            obscureText: _obscureOrs,
+            decoration: InputDecoration(
+              labelText: 'Cle API ORS',
+              hintText: 'Environ 40 caracteres',
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureOrs ? Icons.visibility : Icons.visibility_off,
+                ),
+                onPressed: () => setState(() => _obscureOrs = !_obscureOrs),
+              ),
+            ),
+            autocorrect: false,
+            enableSuggestions: false,
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          FilledButton.icon(
+            onPressed: _saving ? null : _saveOrs,
+            icon: const Icon(Icons.check),
+            label: const Text('Enregistrer la cle ORS'),
+          ),
+          if (hasOrsKey) ...[
+            const SizedBox(height: AppSpacing.x10),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _clearOrs,
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Effacer la cle ORS'),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Cache'),
           const SizedBox(height: AppSpacing.x10),
           OutlinedButton.icon(
             onPressed: _saving ? null : _purgeCache,
@@ -172,6 +243,47 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     }
   }
 
+  Future<void> _saveOrs() async {
+    final value = _orsKeyCtrl.text.trim();
+    setState(() => _saving = true);
+    try {
+      if (value.isEmpty) {
+        await ref.read(parametresRepositoryProvider).clearOrsApiKey();
+      } else {
+        await ref.read(parametresRepositoryProvider).setOrsApiKey(value);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(value.isEmpty
+              ? 'Cle ORS effacee'
+              : 'Cle ORS enregistree, optimisation activee'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _clearOrs() async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(parametresRepositoryProvider).clearOrsApiKey();
+      _orsKeyCtrl.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cle ORS effacee')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _purgeCache() async {
     setState(() => _saving = true);
     try {
@@ -213,22 +325,40 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _ProviderStatusCard extends StatelessWidget {
-  const _ProviderStatusCard({required this.active});
+  const _ProviderStatusCard({
+    required this.active,
+    this.label,
+    this.sub,
+  });
+
   final String active;
+  final String? label;
+  final String? sub;
 
   @override
   Widget build(BuildContext context) {
-    final isTomTom = active == 'TomTom';
+    final highlight = active != 'Photon' && active != 'Aucun';
+    final defaultLabel = switch (active) {
+      'TomTom' => 'TomTom est actif',
+      'Photon' => 'Photon (par defaut)',
+      _ => 'Inactif',
+    };
+    final defaultSub = switch (active) {
+      'TomTom' => 'Qualite maximale, 2500 requetes/jour.',
+      'Photon' =>
+        'Pas de cle API. Saisis-en une pour passer a TomTom.',
+      _ => '',
+    };
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        color: isTomTom ? AppColors.lime : AppColors.creamSoft,
+        color: highlight ? AppColors.lime : AppColors.creamSoft,
         borderRadius: BorderRadius.circular(AppRadius.r14),
       ),
       child: Row(
         children: [
           Icon(
-            isTomTom ? Icons.check_circle : Icons.public,
+            highlight ? Icons.check_circle : Icons.public,
             color: AppColors.ink,
           ),
           const SizedBox(width: AppSpacing.x12),
@@ -237,9 +367,7 @@ class _ProviderStatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isTomTom
-                      ? 'TomTom est actif'
-                      : 'Photon (par defaut)',
+                  label ?? defaultLabel,
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
@@ -248,9 +376,7 @@ class _ProviderStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isTomTom
-                      ? 'Qualite maximale, 2500 requetes/jour.'
-                      : 'Pas de cle API. Saisis-en une pour passer a TomTom.',
+                  sub ?? defaultSub,
                   style: appMonoStyle(
                     fontSize: 11,
                     color: AppColors.ink.withValues(alpha: 0.7),

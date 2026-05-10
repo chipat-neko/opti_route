@@ -13,6 +13,9 @@ class Tournees extends Table {
   IntColumn get vehiculeCapaciteColis =>
       integer().withDefault(const Constant(0))();
   TextColumn get statut => text().withDefault(const Constant('brouillon'))();
+  IntColumn get distanceTotaleM => integer().nullable()();
+  IntColumn get dureeTotaleS => integer().nullable()();
+  DateTimeColumn get optimiseeLe => dateTime().nullable()();
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -86,7 +89,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -99,6 +102,11 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 3) {
             await m.createTable(geocodeCache);
+          }
+          if (from < 4) {
+            await m.addColumn(tournees, tournees.distanceTotaleM);
+            await m.addColumn(tournees, tournees.dureeTotaleS);
+            await m.addColumn(tournees, tournees.optimiseeLe);
           }
         },
         beforeOpen: (details) async {

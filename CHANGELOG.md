@@ -50,6 +50,23 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Optimisation de tournée (jalon 7)
+- **`OptimizationService`** (interface) + **`OpenRouteOptimizationService`** : appel à `POST https://api.openrouteservice.org/optimization` (VROOM en backend). Plan free 500 optimisations/jour, sans CB.
+- **Mapping métier → solveur** :
+  - Coordonnées dépôt = `start` + `end` du véhicule (retour au dépôt en fin de tournée).
+  - Chaque stop devient un `job` avec `service` (durée d'arrêt en secondes), `location` (lon, lat), `priority` (0-100 selon priorité métier), `time_windows` (HH:mm convertis en secondes depuis 00:00) si fenêtre horaire définie.
+  - Mapping priorités : `obligatoire_premier` → priority 100, `flexible` → 50, `eviter_si_possible` → 10, `obligatoire_dernier` → 0.
+- **Migration DB v3 → v4** : ajout sur `tournees` des colonnes `distance_totale_m`, `duree_totale_s`, `optimisee_le` (toutes nullable).
+- **`StopsRepository.applyOptimizedOrder(orderedIds)`** : transaction qui écrit `ordre_optimise = 1..N` selon l'ordre retourné par le solveur.
+- **`ParametresScreen`** étendu avec un champ « Clé API ORS » + carte d'état + boutons enregistrer/effacer.
+- **`TourneeDuJourScreen`** : nouvelle action `bolt` dans l'AppBar (désactivée si pas de clé ORS) qui :
+  - Lance l'appel ORS (loader pendant la requête).
+  - Applique l'ordre optimisé aux stops (rangement automatique de la liste via le stream drift).
+  - Met à jour `tournees.statut='optimisee'` + `distance_totale_m` + `duree_totale_s` + `optimisee_le`.
+  - SnackBar de succès « Tournée optimisée : X km · Y h Z min » sur fond emerald.
+- **Bannière « Itinéraire optimisé »** entre header et stat row quand `statut == 'optimisee'` (carte ink + icône bolt lime, alignée sur `screen-list.jsx` du handoff).
+- **Stat row** maintenant alimentée par les vraies distance/durée totales après optimisation.
+
 ### Géocodage : ajout TomTom (qualité maximale, gratuit avec inscription)
 - **`TomTomService`** (`lib/data/tomtom_service.dart`) — nouveau fournisseur, qualité référence pour la livraison/logistique. Connaît les numéros précis, les commerces, tolère les fautes. Plan free TomTom : 2 500 requêtes/jour, sans carte de crédit. Filtrage par pays (France) et langue (`fr-FR`) par défaut.
 - **`ParametresRepository`** (`lib/data/parametres_repository.dart`) — wrapper type-safe sur la table `parametres`. Expose `getTomTomApiKey`, `setTomTomApiKey`, `clearTomTomApiKey`, et un stream `watchTomTomApiKey`.
