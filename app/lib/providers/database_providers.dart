@@ -53,6 +53,17 @@ final hasTourneeEnCoursProvider = Provider<bool>((ref) {
   return list.any((t) => t.statut == 'en_cours');
 });
 
+/// Toutes les tournees datees d'aujourd'hui (peu importe leur statut).
+/// Sert a afficher un bandeau "X autres tournees aujourd'hui" quand
+/// le livreur en a planifie plusieurs (matin/aprem) le meme jour.
+final tourneesDuJourProvider = Provider<List<Tournee>>((ref) {
+  final list = ref.watch(tourneesStreamProvider).asData?.value ?? const [];
+  final today = DateTime.now();
+  bool isToday(DateTime d) =>
+      d.year == today.year && d.month == today.month && d.day == today.day;
+  return list.where((t) => isToday(t.date)).toList();
+});
+
 /// Tournee active du jour, ou null si rien aujourd'hui.
 ///
 /// Regles de selection :

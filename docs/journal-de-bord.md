@@ -114,6 +114,12 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 19. Multi-tournées par jour — bandeau de switch (#57)
+
+Quand le livreur a plusieurs tournées datées d'aujourd'hui (matin/aprem ou plusieurs secteurs), un bandeau cliquable apparaît sous le header de la tournée courante : `1 autre tournée aujourd'hui` (ou `N autres`). Tap → bottom sheet listant les autres tournées du jour avec leur statut (en cours / optimisée / terminée), tap sur une → switch.
+
+Implémentation : nouveau provider `tourneesDuJourProvider` qui retourne toutes les tournées datées d'aujourd'hui + widget `_AutresTourneesDuJourBanner` qui s'auto-cache si une seule tournée du jour.
+
 ## 18. Recherche dans la liste des arrêts (#56)
 
 Champ de recherche au-dessus de la liste, visible uniquement à partir de 5 arrêts. Filtre par nom client + adresse + adresse normalisée + notes, avec normalisation des accents (Lucé == luce). Compteur `X / Y arrêts` quand on filtre. Pendant la recherche, le drag-and-drop est désactivé (l'ordre n'a pas de sens sur une liste partielle) et la poignée de drag est masquée.

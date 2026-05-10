@@ -402,6 +402,7 @@ class _Body extends StatelessWidget {
       ),
       children: [
         _Header(tournee: tournee),
+        _AutresTourneesDuJourBanner(currentTourneeId: tournee.id),
         const SizedBox(height: AppSpacing.x16),
         _StatRow(
           arretsCount: stops.length,
@@ -549,6 +550,186 @@ class _StopsSectionState extends State<_StopsSection> {
     }
     return buf.toString();
   }
+}
+
+/// Bandeau cliquable qui apparait quand le livreur a plusieurs
+/// tournees datees d'aujourd'hui (typiquement matin/aprem ou plusieurs
+/// secteurs). Tap -> bottom sheet listant les autres tournees du jour
+/// avec leur statut, tap sur l'une -> switch vers cette tournee.
+class _AutresTourneesDuJourBanner extends ConsumerWidget {
+  const _AutresTourneesDuJourBanner({required this.currentTourneeId});
+
+  final int currentTourneeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final all = ref.watch(tourneesDuJourProvider);
+    final autres = all.where((t) => t.id != currentTourneeId).toList();
+    if (autres.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.x10),
+      child: Material(
+        color: AppColors.creamSoft,
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.r10),
+          onTap: () => _showSwitcher(context, autres),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x12,
+              vertical: AppSpacing.x10,
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.swap_horiz,
+                  color: AppColors.ink,
+                  size: 18,
+                ),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(
+                  child: Text(
+                    autres.length == 1
+                        ? '1 autre tournee aujourd\'hui'
+                        : '${autres.length} autres tournees aujourd\'hui',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textMute,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSwitcher(
+    BuildContext context,
+    List<Tournee> autres,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x18,
+            AppSpacing.x14,
+            AppSpacing.x18,
+            AppSpacing.x18,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x14),
+                  decoration: BoxDecoration(
+                    color: AppColors.inkLine,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Text(
+                'Autres tournees du jour',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              for (final t in autres) ...[
+                Material(
+                  color: AppColors.paper,
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute<void>(
+                          builder: (_) => TourneeDuJourScreen(tournee: t),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.x12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  t.nom,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _statutLabel(t.statut),
+                                  style: appMonoStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _statutColor(t.statut),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: AppColors.textMute,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x8),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _statutLabel(String s) => switch (s) {
+        'brouillon' => 'BROUILLON',
+        'optimisee' => 'OPTIMISEE',
+        'en_cours' => 'EN COURS',
+        'terminee' => 'TERMINEE',
+        _ => s.toUpperCase(),
+      };
+
+  static Color _statutColor(String s) => switch (s) {
+        'en_cours' => AppColors.emerald,
+        'terminee' => AppColors.emerald,
+        'optimisee' => AppColors.ink,
+        _ => AppColors.textMute,
+      };
 }
 
 class _Header extends StatelessWidget {
