@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/parametres_repository.dart';
+import '../data/saved_destinations_repository.dart';
 import '../data/sheets_repository.dart';
 import '../data/stops_repository.dart';
 import '../data/tournees_repository.dart';
@@ -22,6 +23,11 @@ final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
   return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+final savedDestinationsRepositoryProvider =
+    Provider<SavedDestinationsRepository>((ref) {
+  return SavedDestinationsRepository(ref.watch(appDatabaseProvider));
 });
 
 final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {

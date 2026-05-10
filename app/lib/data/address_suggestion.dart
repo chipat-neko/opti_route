@@ -14,7 +14,12 @@ class AddressSuggestion {
     this.city,
     this.country,
     this.poiName,
+    this.fromCarnet = false,
   });
+
+  /// Vrai si la suggestion vient du carnet d'adresses local
+  /// (un client deja livre). L'UI peut afficher un badge "DEJA LIVRE".
+  final bool fromCarnet;
 
   /// Reponse complete de Nominatim (`display_name`).
   /// Ex: "14, Rue du Faubourg Saint-Antoine, Saint-Marcel, ..., 75011, France".
