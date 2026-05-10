@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'address_suggestion.dart';
+import 'geocode_cache_repository.dart';
 
 /// Client minimal pour l'API publique de Nominatim (OpenStreetMap).
 ///
@@ -13,14 +14,21 @@ import 'address_suggestion.dart';
 ///   chaque frappe), pas ici.
 /// - Pas de scraping massif — on utilise pour de l'autocomplete et
 ///   du geocodage individuel uniquement.
+///
+/// Cache : si un [GeocodeCacheRepository] est injecte, chaque recherche
+/// passe d'abord par le cache local (TTL 30 jours). Les requetes deja
+/// resolues ne tapent plus Nominatim.
 class NominatimService {
-  NominatimService({http.Client? client}) : _client = client ?? http.Client();
+  NominatimService({http.Client? client, GeocodeCacheRepository? cache})
+      : _client = client ?? http.Client(),
+        _cache = cache;
 
   static const _base = 'https://nominatim.openstreetmap.org';
   static const _userAgent =
       'opti_route/0.1 (https://github.com/chipat-neko/opti_route)';
 
   final http.Client _client;
+  final GeocodeCacheRepository? _cache;
 
   /// Recherche d'adresses libres (autocomplete).
   /// Retourne une liste vide si la requete fait moins de 3 caracteres.
@@ -32,6 +40,13 @@ class NominatimService {
     final q = query.trim();
     if (q.length < 3) return const [];
 
+    // 1) Lookup cache.
+    if (_cache != null) {
+      final cached = await _cache.read(q);
+      if (cached != null) return cached;
+    }
+
+    // 2) Fallback HTTP.
     final uri = Uri.parse('$_base/search').replace(queryParameters: {
       'q': q,
       'format': 'json',
@@ -55,10 +70,21 @@ class NominatimService {
     if (raw is! List) {
       throw const NominatimException('Reponse JSON inattendue');
     }
-    return raw
+    final results = raw
         .whereType<Map<String, dynamic>>()
         .map(AddressSuggestion.fromJson)
         .toList(growable: false);
+
+    // 3) Ecriture cache (best-effort, n'echoue pas la requete).
+    if (_cache != null) {
+      try {
+        await _cache.write(q, results);
+      } catch (_) {
+        // Volontaire : un echec d'ecriture cache n'invalide pas le resultat.
+      }
+    }
+
+    return results;
   }
 
   void close() => _client.close();

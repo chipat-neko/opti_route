@@ -67,13 +67,26 @@ class Sheets extends Table {
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }
 
-@DriftDatabase(tables: [Tournees, Stops, Parametres, Sheets])
+/// Cache local des reponses Nominatim (et plus tard d'autres APIs).
+/// Cle = la requete normalisee (ex: "14 rue foo paris").
+/// `expire_le` permet d'invalider apres N jours sans avoir a tout
+/// purger.
+class GeocodeCache extends Table {
+  TextColumn get query => text()();
+  TextColumn get responseJson => text()();
+  DateTimeColumn get expireLe => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {query};
+}
+
+@DriftDatabase(tables: [Tournees, Stops, Parametres, Sheets, GeocodeCache])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -83,6 +96,9 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(sheets);
+          }
+          if (from < 3) {
+            await m.createTable(geocodeCache);
           }
         },
         beforeOpen: (details) async {

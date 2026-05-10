@@ -2347,6 +2347,279 @@ class SheetsCompanion extends UpdateCompanion<Sheet> {
   }
 }
 
+class $GeocodeCacheTable extends GeocodeCache
+    with TableInfo<$GeocodeCacheTable, GeocodeCacheData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GeocodeCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _queryMeta = const VerificationMeta('query');
+  @override
+  late final GeneratedColumn<String> query = GeneratedColumn<String>(
+    'query',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _responseJsonMeta = const VerificationMeta(
+    'responseJson',
+  );
+  @override
+  late final GeneratedColumn<String> responseJson = GeneratedColumn<String>(
+    'response_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expireLeMeta = const VerificationMeta(
+    'expireLe',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expireLe = GeneratedColumn<DateTime>(
+    'expire_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [query, responseJson, expireLe];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'geocode_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GeocodeCacheData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('query')) {
+      context.handle(
+        _queryMeta,
+        query.isAcceptableOrUnknown(data['query']!, _queryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_queryMeta);
+    }
+    if (data.containsKey('response_json')) {
+      context.handle(
+        _responseJsonMeta,
+        responseJson.isAcceptableOrUnknown(
+          data['response_json']!,
+          _responseJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_responseJsonMeta);
+    }
+    if (data.containsKey('expire_le')) {
+      context.handle(
+        _expireLeMeta,
+        expireLe.isAcceptableOrUnknown(data['expire_le']!, _expireLeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_expireLeMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {query};
+  @override
+  GeocodeCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GeocodeCacheData(
+      query: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}query'],
+      )!,
+      responseJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}response_json'],
+      )!,
+      expireLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expire_le'],
+      )!,
+    );
+  }
+
+  @override
+  $GeocodeCacheTable createAlias(String alias) {
+    return $GeocodeCacheTable(attachedDatabase, alias);
+  }
+}
+
+class GeocodeCacheData extends DataClass
+    implements Insertable<GeocodeCacheData> {
+  final String query;
+  final String responseJson;
+  final DateTime expireLe;
+  const GeocodeCacheData({
+    required this.query,
+    required this.responseJson,
+    required this.expireLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['query'] = Variable<String>(query);
+    map['response_json'] = Variable<String>(responseJson);
+    map['expire_le'] = Variable<DateTime>(expireLe);
+    return map;
+  }
+
+  GeocodeCacheCompanion toCompanion(bool nullToAbsent) {
+    return GeocodeCacheCompanion(
+      query: Value(query),
+      responseJson: Value(responseJson),
+      expireLe: Value(expireLe),
+    );
+  }
+
+  factory GeocodeCacheData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GeocodeCacheData(
+      query: serializer.fromJson<String>(json['query']),
+      responseJson: serializer.fromJson<String>(json['responseJson']),
+      expireLe: serializer.fromJson<DateTime>(json['expireLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'query': serializer.toJson<String>(query),
+      'responseJson': serializer.toJson<String>(responseJson),
+      'expireLe': serializer.toJson<DateTime>(expireLe),
+    };
+  }
+
+  GeocodeCacheData copyWith({
+    String? query,
+    String? responseJson,
+    DateTime? expireLe,
+  }) => GeocodeCacheData(
+    query: query ?? this.query,
+    responseJson: responseJson ?? this.responseJson,
+    expireLe: expireLe ?? this.expireLe,
+  );
+  GeocodeCacheData copyWithCompanion(GeocodeCacheCompanion data) {
+    return GeocodeCacheData(
+      query: data.query.present ? data.query.value : this.query,
+      responseJson: data.responseJson.present
+          ? data.responseJson.value
+          : this.responseJson,
+      expireLe: data.expireLe.present ? data.expireLe.value : this.expireLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GeocodeCacheData(')
+          ..write('query: $query, ')
+          ..write('responseJson: $responseJson, ')
+          ..write('expireLe: $expireLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(query, responseJson, expireLe);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GeocodeCacheData &&
+          other.query == this.query &&
+          other.responseJson == this.responseJson &&
+          other.expireLe == this.expireLe);
+}
+
+class GeocodeCacheCompanion extends UpdateCompanion<GeocodeCacheData> {
+  final Value<String> query;
+  final Value<String> responseJson;
+  final Value<DateTime> expireLe;
+  final Value<int> rowid;
+  const GeocodeCacheCompanion({
+    this.query = const Value.absent(),
+    this.responseJson = const Value.absent(),
+    this.expireLe = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GeocodeCacheCompanion.insert({
+    required String query,
+    required String responseJson,
+    required DateTime expireLe,
+    this.rowid = const Value.absent(),
+  }) : query = Value(query),
+       responseJson = Value(responseJson),
+       expireLe = Value(expireLe);
+  static Insertable<GeocodeCacheData> custom({
+    Expression<String>? query,
+    Expression<String>? responseJson,
+    Expression<DateTime>? expireLe,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (query != null) 'query': query,
+      if (responseJson != null) 'response_json': responseJson,
+      if (expireLe != null) 'expire_le': expireLe,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GeocodeCacheCompanion copyWith({
+    Value<String>? query,
+    Value<String>? responseJson,
+    Value<DateTime>? expireLe,
+    Value<int>? rowid,
+  }) {
+    return GeocodeCacheCompanion(
+      query: query ?? this.query,
+      responseJson: responseJson ?? this.responseJson,
+      expireLe: expireLe ?? this.expireLe,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (query.present) {
+      map['query'] = Variable<String>(query.value);
+    }
+    if (responseJson.present) {
+      map['response_json'] = Variable<String>(responseJson.value);
+    }
+    if (expireLe.present) {
+      map['expire_le'] = Variable<DateTime>(expireLe.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GeocodeCacheCompanion(')
+          ..write('query: $query, ')
+          ..write('responseJson: $responseJson, ')
+          ..write('expireLe: $expireLe, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2354,6 +2627,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StopsTable stops = $StopsTable(this);
   late final $ParametresTable parametres = $ParametresTable(this);
   late final $SheetsTable sheets = $SheetsTable(this);
+  late final $GeocodeCacheTable geocodeCache = $GeocodeCacheTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2363,6 +2637,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     stops,
     parametres,
     sheets,
+    geocodeCache,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3933,6 +4208,170 @@ typedef $$SheetsTableProcessedTableManager =
       Sheet,
       PrefetchHooks Function({bool stopId})
     >;
+typedef $$GeocodeCacheTableCreateCompanionBuilder =
+    GeocodeCacheCompanion Function({
+      required String query,
+      required String responseJson,
+      required DateTime expireLe,
+      Value<int> rowid,
+    });
+typedef $$GeocodeCacheTableUpdateCompanionBuilder =
+    GeocodeCacheCompanion Function({
+      Value<String> query,
+      Value<String> responseJson,
+      Value<DateTime> expireLe,
+      Value<int> rowid,
+    });
+
+class $$GeocodeCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $GeocodeCacheTable> {
+  $$GeocodeCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get query => $composableBuilder(
+    column: $table.query,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get responseJson => $composableBuilder(
+    column: $table.responseJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expireLe => $composableBuilder(
+    column: $table.expireLe,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GeocodeCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $GeocodeCacheTable> {
+  $$GeocodeCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get query => $composableBuilder(
+    column: $table.query,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get responseJson => $composableBuilder(
+    column: $table.responseJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get expireLe => $composableBuilder(
+    column: $table.expireLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GeocodeCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GeocodeCacheTable> {
+  $$GeocodeCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get query =>
+      $composableBuilder(column: $table.query, builder: (column) => column);
+
+  GeneratedColumn<String> get responseJson => $composableBuilder(
+    column: $table.responseJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get expireLe =>
+      $composableBuilder(column: $table.expireLe, builder: (column) => column);
+}
+
+class $$GeocodeCacheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GeocodeCacheTable,
+          GeocodeCacheData,
+          $$GeocodeCacheTableFilterComposer,
+          $$GeocodeCacheTableOrderingComposer,
+          $$GeocodeCacheTableAnnotationComposer,
+          $$GeocodeCacheTableCreateCompanionBuilder,
+          $$GeocodeCacheTableUpdateCompanionBuilder,
+          (
+            GeocodeCacheData,
+            BaseReferences<_$AppDatabase, $GeocodeCacheTable, GeocodeCacheData>,
+          ),
+          GeocodeCacheData,
+          PrefetchHooks Function()
+        > {
+  $$GeocodeCacheTableTableManager(_$AppDatabase db, $GeocodeCacheTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GeocodeCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GeocodeCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GeocodeCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> query = const Value.absent(),
+                Value<String> responseJson = const Value.absent(),
+                Value<DateTime> expireLe = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GeocodeCacheCompanion(
+                query: query,
+                responseJson: responseJson,
+                expireLe: expireLe,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String query,
+                required String responseJson,
+                required DateTime expireLe,
+                Value<int> rowid = const Value.absent(),
+              }) => GeocodeCacheCompanion.insert(
+                query: query,
+                responseJson: responseJson,
+                expireLe: expireLe,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GeocodeCacheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GeocodeCacheTable,
+      GeocodeCacheData,
+      $$GeocodeCacheTableFilterComposer,
+      $$GeocodeCacheTableOrderingComposer,
+      $$GeocodeCacheTableAnnotationComposer,
+      $$GeocodeCacheTableCreateCompanionBuilder,
+      $$GeocodeCacheTableUpdateCompanionBuilder,
+      (
+        GeocodeCacheData,
+        BaseReferences<_$AppDatabase, $GeocodeCacheTable, GeocodeCacheData>,
+      ),
+      GeocodeCacheData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3945,4 +4384,6 @@ class $AppDatabaseManager {
       $$ParametresTableTableManager(_db, _db.parametres);
   $$SheetsTableTableManager get sheets =>
       $$SheetsTableTableManager(_db, _db.sheets);
+  $$GeocodeCacheTableTableManager get geocodeCache =>
+      $$GeocodeCacheTableTableManager(_db, _db.geocodeCache);
 }

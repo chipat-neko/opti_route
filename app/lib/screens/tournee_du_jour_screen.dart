@@ -362,55 +362,65 @@ class _StopRow extends StatelessWidget {
         onDelete();
         return false; // on gere via le dialog, pas de dismiss instant
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x14,
-          vertical: AppSpacing.x14,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AjoutArretScreen(
+              tourneeId: stop.tourneeId,
+              initial: stop,
+            ),
+          ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _IndexChip(index: index, priorite: stop.priorite),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _primaryLine(stop),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.ink,
-                      height: 1.3,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (_secondaryLine(stop) != null) ...[
-                    const SizedBox(height: 2),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x14,
+            vertical: AppSpacing.x14,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _IndexChip(index: index, priorite: stop.priorite),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      _secondaryLine(stop)!,
-                      style: appMonoStyle(
-                        fontSize: 11,
-                        color: AppColors.textMute,
+                      _primaryLine(stop),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                        height: 1.3,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (_secondaryLine(stop) != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        _secondaryLine(stop)!,
+                        style: appMonoStyle(
+                          fontSize: 11,
+                          color: AppColors.textMute,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (tags.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.x8),
+                      Wrap(
+                        spacing: AppSpacing.x6,
+                        runSpacing: AppSpacing.x4,
+                        children: tags,
+                      ),
+                    ],
                   ],
-                  if (tags.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.x8),
-                    Wrap(
-                      spacing: AppSpacing.x6,
-                      runSpacing: AppSpacing.x4,
-                      children: tags,
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
