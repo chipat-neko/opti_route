@@ -35,3 +35,11 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/nominatim_service.dart` : client HTTP avec User-Agent identifiable (requis par la policy publique de Nominatim).
 - `lib/widgets/address_autocomplete_field.dart` : widget réutilisable (sera réutilisé pour la saisie d'arrêts au jalon suivant).
 - Permission `INTERNET` ajoutée au `AndroidManifest.xml` principal (était seulement dans debug/profile).
+
+### Architecture
+- **Home refactorée en architecture hybride** : la home n'est plus la liste des tournées, mais directement la **tournée du jour** (selon décision Noah). Si aucune tournée pour aujourd'hui, un empty state propose la création.
+- `lib/screens/home_screen.dart` : dispatcher qui choisit entre `TourneeDuJourScreen` (tournée active présente) et `_NoTourTodayScreen` (sinon).
+- `lib/screens/tournee_du_jour_screen.dart` : nouvelle vue principale, alignée sur `screen-list.jsx` du handoff (header avec date, big title, sous-titre, stat row Arrêts/Distance/Restant en JetBrains Mono, placeholder pour la future liste des arrêts).
+- `currentTourneeProvider` (Riverpod) : sélectionne automatiquement la tournée active selon les règles `en_cours > optimisée > brouillon`, datée d'aujourd'hui.
+- `lib/widgets/app_drawer.dart` : drawer commun avec entrées « Tournée du jour » et « Historique des tournées » — l'historique reste accessible mais ne pollue plus l'accueil.
+- `TourneesListScreen` repositionné comme **écran d'historique** (titre AppBar « Historique des tournées », accessible via le drawer).

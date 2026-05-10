@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'screens/tournees_list_screen.dart';
+import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -28,7 +28,7 @@ class OptiRouteApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('fr', 'FR')],
       locale: const Locale('fr', 'FR'),
-      home: const TourneesListScreen(),
+      home: const HomeScreen(),
     );
   }
 }
