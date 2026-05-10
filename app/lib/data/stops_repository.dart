@@ -47,6 +47,38 @@ class StopsRepository {
     return (_db.delete(_db.stops)..where((s) => s.id.equals(id))).go();
   }
 
+  /// Marque un arret comme livre. Reset la raison d'echec si elle
+  /// avait ete remplie precedemment.
+  Future<int> markLivre(int id) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
+      const StopsCompanion(
+        statutLivraison: Value('livre'),
+        raisonEchec: Value(null),
+      ),
+    );
+  }
+
+  /// Marque un arret en echec avec une raison ('absent', 'refuse',
+  /// 'adresse_fausse', 'autre').
+  Future<int> markEchec(int id, String raison) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
+      StopsCompanion(
+        statutLivraison: const Value('echec'),
+        raisonEchec: Value(raison),
+      ),
+    );
+  }
+
+  /// Annule un statut deja pose : remet en 'a_livrer'.
+  Future<int> markAaLivrer(int id) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
+      const StopsCompanion(
+        statutLivraison: Value('a_livrer'),
+        raisonEchec: Value(null),
+      ),
+    );
+  }
+
   Future<int> countByTournee(int tourneeId) async {
     final result = await getByTournee(tourneeId);
     return result.length;

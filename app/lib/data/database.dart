@@ -36,6 +36,9 @@ class Stops extends Table {
   TextColumn get nomClient => text().nullable()();
   TextColumn get statutLivraison =>
       text().withDefault(const Constant('a_livrer'))();
+  /// Raison de l'echec quand `statutLivraison == 'echec'` :
+  /// 'absent' / 'refuse' / 'adresse_fausse' / 'autre'. Null sinon.
+  TextColumn get raisonEchec => text().nullable()();
   IntColumn get ordreOptimise => integer().nullable()();
   /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
   /// priorite egale (obligatoire_premier ou obligatoire_dernier).
@@ -129,7 +132,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -153,6 +156,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 6) {
             await m.addColumn(stops, stops.ordrePriorite);
+          }
+          if (from < 7) {
+            await m.addColumn(stops, stops.raisonEchec);
           }
         },
         beforeOpen: (details) async {
