@@ -4,20 +4,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/bordereau_extraction.dart';
+import '../data/bordereau_parser.dart';
 import '../data/ocr_service.dart';
 import '../providers/ocr_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
-/// Ecran de scan de bordereau de livraison :
+/// Ecran de scan de bordereau de livraison.
+///
+/// Flow :
 /// 1. Capture photo (camera ou galerie).
 /// 2. OCR via ML Kit (on-device, hors ligne).
-/// 3. Affiche les lignes detectees, surligne celles qui ressemblent a
-///    une adresse (code postal francais).
-/// 4. L'utilisateur tape sur les lignes a inclure dans l'adresse.
-/// 5. Bouton "Utiliser cette adresse" -> pop avec la string concatenee.
+/// 3. Le BordereauParser tente une extraction automatique (nom
+///    destinataire, adresse, ville, CP, nb colis) en utilisant les
+///    marqueurs typiques (`Destinataire`, `Lieu de livraison`,
+///    `Total colis`).
+/// 4. Si l'extraction trouve quelque chose -> carte "Detection auto"
+///    en haut avec bouton "Utiliser ces infos" qui pop le
+///    [BordereauExtraction].
+/// 5. Toujours possible de selectionner manuellement les lignes en
+///    dessous (mode fallback). Auquel cas on pop un
+///    [BordereauExtraction] avec uniquement `rue` rempli.
 ///
-/// Returns via Navigator.pop : `String?` (null si annule).
+/// Returns via Navigator.pop : `BordereauExtraction?` (null si annule).
 class ScanBordereauScreen extends ConsumerStatefulWidget {
   const ScanBordereauScreen({super.key});
 
@@ -31,6 +41,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
 
   File? _imageFile;
   OcrResult? _ocr;
+  BordereauExtraction? _extraction;
   final Set<int> _selectedLineIndices = {};
   bool _processing = false;
   String? _errorMessage;
@@ -144,6 +155,8 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
 
   Widget _buildResult() {
     final lines = _ocr!.lines;
+    final extraction = _extraction;
+    final hasAutoExtraction = extraction != null && extraction.hasUsefulData;
     return Column(
       children: [
         Expanded(
@@ -160,12 +173,21 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                     fit: BoxFit.cover,
                   ),
                 ),
+              if (hasAutoExtraction) ...[
+                const SizedBox(height: AppSpacing.x14),
+                _AutoDetectionCard(
+                  extraction: extraction,
+                  onUse: () => _confirmExtraction(extraction),
+                ),
+              ],
               const SizedBox(height: AppSpacing.x14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'TEXTE DETECTE · ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}',
+                    hasAutoExtraction
+                        ? 'OU SELECTION MANUELLE · ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}'
+                        : 'TEXTE DETECTE · ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}',
                     style: appMonoStyle(
                       fontSize: 11,
                       color: AppColors.textMute,
@@ -179,10 +201,13 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.x6),
-              const Text(
-                'Tape sur les lignes qui composent l\'adresse '
-                '(les lignes avec un code postal sont surlignees).',
-                style: TextStyle(
+              Text(
+                hasAutoExtraction
+                    ? 'Si la detection auto ci-dessus est incomplete, '
+                        'compose l\'adresse en cochant les bonnes lignes.'
+                    : 'Tape sur les lignes qui composent l\'adresse '
+                        '(les lignes avec un code postal sont surlignees).',
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textMute,
                   height: 1.4,
@@ -292,9 +317,11 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       final result = await ref.read(ocrServiceProvider).extractFromFile(file);
 
       if (!mounted) return;
+      final extraction = BordereauParser().parse(result.lines);
       setState(() {
         _imageFile = file;
         _ocr = result;
+        _extraction = extraction;
         _selectedLineIndices.clear();
         // Pre-selection : si une ligne ressemble a une adresse, on la coche.
         for (var i = 0; i < result.lines.length; i++) {
@@ -319,6 +346,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
     setState(() {
       _imageFile = null;
       _ocr = null;
+      _extraction = null;
       _selectedLineIndices.clear();
     });
   }
@@ -337,9 +365,161 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
     return ordered.map((i) => lines[i]).join(', ');
   }
 
+  /// Confirmation depuis la selection manuelle : on retourne un
+  /// extraction avec juste `rue` rempli (l'utilisateur affinera dans
+  /// le formulaire si besoin).
   void _confirm() {
     final composed = _composeAddress();
-    Navigator.of(context).pop(composed);
+    Navigator.of(context).pop(BordereauExtraction(rue: composed));
+  }
+
+  /// Confirmation depuis la detection auto : on retourne tout.
+  void _confirmExtraction(BordereauExtraction extraction) {
+    Navigator.of(context).pop(extraction);
+  }
+}
+
+/// Carte affichee en haut quand le parser a reussi a extraire au
+/// moins un champ. Permet a l'utilisateur de tout valider en 1 tap.
+class _AutoDetectionCard extends StatelessWidget {
+  const _AutoDetectionCard({
+    required this.extraction,
+    required this.onUse,
+  });
+
+  final BordereauExtraction extraction;
+  final VoidCallback onUse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(
+        color: AppColors.lime,
+        borderRadius: BorderRadius.circular(AppRadius.r14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: AppColors.ink, size: 18),
+              const SizedBox(width: AppSpacing.x8),
+              Text(
+                'DETECTION AUTOMATIQUE',
+                style: appMonoStyle(
+                  fontSize: 11,
+                  color: AppColors.ink,
+                  letterSpacing: 0.6,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          if (extraction.nomDestinataire != null)
+            _ExtractedRow(
+              label: 'CLIENT',
+              value: extraction.nomDestinataire!,
+              bold: true,
+            ),
+          if (extraction.rue != null)
+            _ExtractedRow(label: 'RUE', value: extraction.rue!),
+          if (extraction.codePostal != null || extraction.ville != null)
+            _ExtractedRow(
+              label: 'VILLE',
+              value: [
+                if (extraction.codePostal != null) extraction.codePostal!,
+                if (extraction.ville != null) extraction.ville!,
+              ].join(' '),
+            ),
+          if (extraction.nbColis != null)
+            _ExtractedRow(
+              label: 'COLIS',
+              value: '${extraction.nbColis}',
+              mono: true,
+            ),
+          if (extraction.telephone != null)
+            _ExtractedRow(
+              label: 'TEL',
+              value: extraction.telephone!,
+              mono: true,
+            ),
+          const SizedBox(height: AppSpacing.x12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onUse,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.ink,
+                foregroundColor: AppColors.lime,
+                minimumSize: const Size(0, 48),
+              ),
+              icon: const Icon(Icons.check),
+              label: const Text('Utiliser ces infos'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExtractedRow extends StatelessWidget {
+  const _ExtractedRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+    this.mono = false,
+  });
+
+  final String label;
+  final String value;
+  final bool bold;
+  final bool mono;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 56,
+            child: Text(
+              label,
+              style: appMonoStyle(
+                fontSize: 10,
+                color: AppColors.ink.withValues(alpha: 0.6),
+                letterSpacing: 0.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Text(
+              value,
+              style: mono
+                  ? appMonoStyle(
+                      fontSize: 13,
+                      color: AppColors.ink,
+                      fontWeight:
+                          bold ? FontWeight.w800 : FontWeight.w700,
+                    )
+                  : TextStyle(
+                      fontSize: 13,
+                      color: AppColors.ink,
+                      fontWeight:
+                          bold ? FontWeight.w800 : FontWeight.w600,
+                      height: 1.3,
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
