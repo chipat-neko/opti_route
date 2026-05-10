@@ -82,7 +82,10 @@ class RechercheEntreprisesService implements GeocodingService {
         .whereType<AddressSuggestion>()
         .toList(growable: false);
 
-    if (_cache != null) {
+    // On ne cache pas les resultats vides : si une recherche n'a rien
+    // retourne, on prefere retaper l'API la prochaine fois (peut-etre
+    // les donnees auront ete mises a jour, ou le bug etait cote client).
+    if (_cache != null && suggestions.isNotEmpty) {
       try {
         await _cache.write('$providerKey:$q', suggestions);
       } catch (_) {
@@ -97,8 +100,10 @@ class RechercheEntreprisesService implements GeocodingService {
     final siege = (result['siege'] as Map?)?.cast<String, dynamic>();
     if (siege == null) return null;
 
-    final lat = (siege['latitude'] as num?)?.toDouble();
-    final lon = (siege['longitude'] as num?)?.toDouble();
+    // L'API renvoie latitude/longitude comme **string** ("48.4220...").
+    // Cast direct en `num` retourne null. On parse explicitement.
+    final lat = _parseDouble(siege['latitude']);
+    final lon = _parseDouble(siege['longitude']);
     if (lat == null || lon == null) return null;
 
     final nomComplet = result['nom_complet'] as String? ??
@@ -111,7 +116,10 @@ class RechercheEntreprisesService implements GeocodingService {
         ? '$typeVoie $libelleVoie'.trim()
         : libelleVoie ?? siege['adresse'] as String?;
     final postcode = siege['code_postal'] as String?;
-    final city = siege['commune'] as String?;
+
+    // ATTENTION : `commune` contient le **code INSEE** ("28158"), pas
+    // le nom. Le nom est dans `libelle_commune`.
+    final city = siege['libelle_commune'] as String?;
     final country = siege['pays'] as String? ?? 'France';
 
     final addressLine = siege['adresse'] as String? ?? '';
@@ -138,6 +146,15 @@ class RechercheEntreprisesService implements GeocodingService {
       country: country,
       poiName: nomComplet,
     );
+  }
+
+  /// L'API recherche-entreprises retourne latitude/longitude en
+  /// string. On gere aussi le cas num au cas ou (robustesse).
+  double? _parseDouble(Object? value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   @override

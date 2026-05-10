@@ -199,14 +199,14 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     setState(() => _saving = true);
     try {
       final removed =
-          await ref.read(geocodeCacheRepositoryProvider).purgeExpired();
+          await ref.read(geocodeCacheRepositoryProvider).purgeAll();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             removed > 0
-                ? '$removed entree(s) expiree(s) supprimee(s)'
-                : 'Aucune entree expiree',
+                ? '$removed entree(s) supprimee(s) du cache'
+                : 'Cache deja vide',
           ),
         ),
       );
