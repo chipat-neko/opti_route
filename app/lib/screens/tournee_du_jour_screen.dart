@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -238,6 +240,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           .read(stopsRepositoryProvider)
           .applyOptimizedOrder(result.orderedStopIds);
 
+      // On serialise la geometry GeoJSON en string JSON pour stockage
+      // SQLite. La carte la decodera en LineString a l'affichage.
+      final traceJson = result.routeGeometry == null
+          ? null
+          : jsonEncode(result.routeGeometry);
       await ref.read(tourneesRepositoryProvider).update(
             widget.tournee.id,
             TourneesCompanion(
@@ -245,6 +252,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               distanceTotaleM: Value(result.totalDistanceMeters),
               dureeTotaleS: Value(result.totalDurationSeconds),
               optimiseeLe: Value(DateTime.now()),
+              traceGeojson: Value(traceJson),
             ),
           );
 
