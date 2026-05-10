@@ -332,6 +332,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     setState(() => _saving = true);
     try {
       await ref.read(stopsRepositoryProvider).delete(widget.initial!.id);
+      await ref
+          .read(tourneesRepositoryProvider)
+          .invalidateOptimization(widget.tourneeId);
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
@@ -437,6 +440,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           nomClient: Value(_orNull(_nomClientCtrl.text)),
         );
         await repo.update(widget.initial!.id, companion);
+        await ref
+            .read(tourneesRepositoryProvider)
+            .invalidateOptimization(widget.tourneeId);
       } else {
         final companion = StopsCompanion.insert(
           tourneeId: widget.tourneeId,
@@ -453,6 +459,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           nomClient: Value(_orNull(_nomClientCtrl.text)),
         );
         await repo.create(companion);
+        await ref
+            .read(tourneesRepositoryProvider)
+            .invalidateOptimization(widget.tourneeId);
       }
 
       // Carnet d'adresses : on enregistre (ou rafraichit) silencieusement.

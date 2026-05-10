@@ -238,7 +238,17 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
 
     try {
       if (_isEdit) {
-        await repo.update(widget.initial!.id, companion);
+        // Le point de depart a-t-il bouge ? Si oui, l'itineraire
+        // optimise n'est plus valide -- on invalide pour reactiver le
+        // bouton "Optimiser". Un simple changement de nom ou de
+        // capacite ne touche pas a la geometrie de la tournee.
+        final initial = widget.initial!;
+        final departChanged = initial.pointDepartLat != _depart!.lat ||
+            initial.pointDepartLng != _depart!.lon;
+        await repo.update(initial.id, companion);
+        if (departChanged) {
+          await repo.invalidateOptimization(initial.id);
+        }
       } else {
         await repo.create(companion);
       }
