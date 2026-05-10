@@ -50,6 +50,24 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Géocodage 100% officiel France (BAN + Recherche-Entreprises)
+**Décision Noah** : on bascule sur les **deux APIs officielles de l'État français** et on supprime TomTom et Photon. Plus simple, plus fiable, source de vérité = État.
+
+- **`BanGeocodingService`** (`api-adresse.data.gouv.fr/search/`) : Base Adresse Nationale, ~25 millions d'adresses (IGN + La Poste + DGFiP). Couverture quasi exhaustive France métropolitaine + DOM-TOM. Inclut tous les numéros de rue (cadastre DGFiP).
+- **`RechercheEntreprisesService`** (`recherche-entreprises.api.gouv.fr/search`) : base SIRENE/INSEE, 30+ millions d'entreprises françaises déclarées. Adresse du siège social + lat/lon + SIREN + activité + nom complet (`poiName`).
+- **`FranceGeocodingService`** : cascade intelligente.
+  - Détection : si la requête commence par un nombre (`14`, `12 bis`...) → **BAN** d'abord, **Recherche-Entreprises** en fallback.
+  - Sinon → **Recherche-Entreprises** d'abord, **BAN** en fallback.
+  - Si le primaire trouve un résultat précis (`house_number` ou `poiName`), on s'arrête (pas de 2ᵉ requête inutile).
+  - Sinon merge + dédup par lat/lng (5 décimales).
+- **Aucune clé API**, aucun compte, aucune CB, aucune limite stricte.
+
+### Suppressions
+- **`TomTomService`**, **`PhotonService`**, **`CascadingGeocodingService`** : supprimés (~500 lignes) — ne sont plus utilisés depuis la bascule sur les APIs officielles France.
+- **`tomtomApiKeyProvider`** retiré de `database_providers.dart`.
+- Méthodes TomTom retirées de `ParametresRepository`.
+- **`ParametresScreen`** simplifié : section *Géocodage* devient une simple carte d'info statique « Sources officielles France ». Le champ clé TomTom et tous ses contrôles sont retirés. La section *Optimisation de tournée* (clé ORS) reste inchangée.
+
 ### Recherche par nom d'entreprise / commerce (POI)
 - **Bascule de l'endpoint TomTom** de `/search/2/geocode/` vers `/search/2/search/` (Fuzzy Search) : retourne maintenant aussi les POIs (commerces, entreprises, sites). Tu peux taper *« Carrosserie Coculo Fontenay sur Eure »* et obtenir l'adresse exacte de l'entreprise.
 - **`AddressSuggestion.poiName`** ajouté : nom du POI quand le résultat est une entreprise/commerce. `primaryLabel` retourne le nom du POI à la place de l'adresse quand présent.
