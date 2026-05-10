@@ -9,6 +9,7 @@ import '../data/database.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
 import '../data/stops_repository.dart';
+import '../data/tournee_pdf_service.dart';
 import '../data/tournees_repository.dart';
 import '../providers/database_providers.dart';
 import '../providers/location_providers.dart';
@@ -93,8 +94,17 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             tooltip: 'Plus',
             onSelected: (value) {
               if (value == 'delete') _confirmDeleteTournee();
+              if (value == 'export_pdf') _onExportPdfPressed();
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'export_pdf',
+                child: ListTile(
+                  leading: Icon(Icons.picture_as_pdf_outlined),
+                  title: Text('Exporter en PDF'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               PopupMenuItem(
                 value: 'delete',
                 child: ListTile(
@@ -161,6 +171,24 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur lors de la suppression : $e')),
+      );
+    }
+  }
+
+  Future<void> _onExportPdfPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final stops =
+          await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
+      final service = TourneePdfService();
+      await service.exportAndShare(
+        tournee: widget.tournee,
+        stops: stops,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'export PDF : $e')),
       );
     }
   }
