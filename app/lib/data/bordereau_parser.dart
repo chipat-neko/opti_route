@@ -35,7 +35,9 @@ class BordereauParser {
   ];
 
   static final _cpVilleRegex = RegExp(
-    r"(\d{5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-']+)",
+    // \b en debut pour eviter de matcher au milieu d'un long numero
+    // (ex: "0237911586 THEODORE CHARTRES" matchait "11586 THEODORE").
+    r"\b(\d{5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-']+)",
   );
   static final _cpRegex = RegExp(r'\b(\d{5})\b');
   static final _telRegex = RegExp(r'\b(0\d[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2})\b');
@@ -53,13 +55,15 @@ class BordereauParser {
 
     // Strategie 1 : bloc destinataire structure (label "Destinataire"
     // suivi du contenu). Marche quand l'OCR retourne les lignes dans
-    // un ordre logique (top-to-bottom).
+    // un ordre logique. **Tout ou rien** : si le nom de la strategie
+    // 1 est suspect (label technique), on rejette aussi sa rue (elle
+    // vient du meme bloc fautif).
     String? nomDest;
     String? rue;
     if (destIdx >= 0) {
       final endIdx = _findNextStopIndex(lines, destIdx + 1);
       final block = lines.sublist(destIdx + 1, endIdx);
-      if (block.isNotEmpty) {
+      if (block.isNotEmpty && !_looksUnreliable(block.first)) {
         nomDest = block.first;
         if (block.length > 1) {
           rue = block.skip(1).join(' · ');
@@ -67,25 +71,21 @@ class BordereauParser {
       }
     }
 
-    // Strategie 2 (fallback) : si la strategie structurelle a rate ou
-    // si le nom est probablement faux (trop court, contient un label),
-    // on cherche par OCCURRENCES. Le destinataire est mentionne 2 fois
-    // sur le bordereau (dans "Contact destinataire" + dans le bloc
-    // Destinataire), alors que l'expediteur est mentionne 1 fois.
-    if (_looksUnreliable(nomDest)) {
-      final byOccurrence = _findNomByOccurrences(lines);
-      if (byOccurrence != null) {
-        nomDest = byOccurrence;
+    // Strategie 2 (fallback) : nom par OCCURRENCES.
+    // Le destinataire est mentionne 2 fois sur le bordereau (dans
+    // "Contact destinataire" + dans le bloc Destinataire), alors que
+    // l'expediteur est mentionne 1 fois.
+    if (nomDest == null) {
+      nomDest = _findNomByOccurrences(lines);
+      // Si on bascule sur le fallback, on cherche la rue par adjacence
+      // au nom (la rue de la strategie 1 vient du meme bloc fautif et
+      // doit etre ignoree -- mais elle est deja a null grace au reset
+      // ci-dessus).
+      if (nomDest != null) {
+        rue = _findRueAdjacenteNom(lines, nomDest);
       }
-    }
-
-    // Strategie pour la rue : si on a un nom destinataire mais pas de
-    // rue (cas frequent quand l'OCR sort les lignes dans un ordre
-    // chaotique), on cherche la rue **adjacente au nom** dans le flux
-    // OCR. ML Kit groupe les lignes du meme bloc visuel ensemble, donc
-    // la rue est typiquement a +/- 1 ligne du nom, meme si le label
-    // "Destinataire" est ailleurs.
-    if (rue == null && nomDest != null) {
+    } else if (rue == null) {
+      // Nom de la strategie 1 OK mais pas de rue : tenter l'adjacence.
       rue = _findRueAdjacenteNom(lines, nomDest);
     }
 
@@ -111,12 +111,24 @@ class BordereauParser {
       }
     }
 
-    // Fallback : si pas de CP, on cherche dans tout le bordereau, en
-    // privilegiant un CP qui n'est PAS celui de l'expediteur.
+    // Fallback 1 : adjacence au nom destinataire avec bonus si la
+    // ville matche un mot du nom (ex: "CHARTRES" dans "THEODORE
+    // CHARTRES" -> on prefere "28000 CHARTRES" meme si un autre CP
+    // est plus proche en distance).
+    if (cp == null && nomDest != null) {
+      final adj = _findCpAdjacentNom(lines, nomDest);
+      if (adj != null) {
+        cp = adj.cp;
+        ville = adj.ville;
+      }
+    }
+
+    // Fallback 2 : 1er CP trouve apres le label Destinataire (ancien
+    // comportement). Risque de prendre le CP du transporteur si l'ordre
+    // OCR est chaotique.
     if (cp == null) {
       cp = _findReceiverCp(lines, destIdx);
       if (cp != null) {
-        // Re-chercher la ville accolee
         for (final line in lines) {
           if (line.contains(cp)) {
             final m = RegExp(r"(\d{5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-']+)")
@@ -252,6 +264,72 @@ class BordereauParser {
       if (lower.contains(w)) return true;
     }
     return false;
+  }
+
+  /// Cherche le CP+ville du destinataire par adjacence au nom dans le
+  /// flux OCR, avec un **bonus** si le nom de ville apparait dans le
+  /// nom du destinataire (cas typique : "THEODORE CHARTRES" -> "28000
+  /// CHARTRES" est preferee meme si un autre CP est plus proche en
+  /// distance).
+  static ({String cp, String? ville})? _findCpAdjacentNom(
+    List<String> lines,
+    String nomDest,
+  ) {
+    final nomIndices = <int>[];
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].contains(nomDest)) nomIndices.add(i);
+    }
+    if (nomIndices.isEmpty) return null;
+
+    final nomWords = nomDest
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length >= 4)
+        .map((w) => w.toLowerCase())
+        .toList();
+
+    // Trouver toutes les lignes contenant un CP+ville
+    final candidates = <({int idx, String cp, String? ville})>[];
+    for (var i = 0; i < lines.length; i++) {
+      final m = _cpVilleRegex.firstMatch(lines[i]);
+      if (m != null) {
+        candidates.add((
+          idx: i,
+          cp: m.group(1)!,
+          ville: _cleanVille(m.group(2)),
+        ));
+      } else {
+        final cpOnly = _cpRegex.firstMatch(lines[i]);
+        if (cpOnly != null) {
+          candidates.add((idx: i, cp: cpOnly.group(1)!, ville: null));
+        }
+      }
+    }
+    if (candidates.isEmpty) return null;
+
+    ({int idx, String cp, String? ville})? best;
+    int bestScore = 999999;
+    for (final c in candidates) {
+      var minDist = 999;
+      for (final nomIdx in nomIndices) {
+        final d = (c.idx - nomIdx).abs();
+        if (d < minDist) minDist = d;
+      }
+      var score = minDist;
+      // Bonus -1000 si la ville contient un mot du nom destinataire.
+      final villeLower = c.ville?.toLowerCase() ?? '';
+      for (final w in nomWords) {
+        if (villeLower.contains(w)) {
+          score -= 1000;
+          break;
+        }
+      }
+      if (score < bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+
+    return best == null ? null : (cp: best.cp, ville: best.ville);
   }
 
   /// Cherche la rue du destinataire **adjacente** au nom dans le flux

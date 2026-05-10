@@ -250,6 +250,121 @@ void main() {
     });
   });
 
+  group('BordereauParser - bordereau 2 (THEODORE CHARTRES) Noah 2026-05-10', () {
+    /// 68 lignes ML Kit reelles d'un 2e bordereau MESEXP. Contexte
+    /// piege : le destinataire (THEODORE CHARTRES, 28000 CHARTRES)
+    /// est cite avec "CHARTRES" qui matche un mot du nom -> heuristique
+    /// "ville matche nom" doit l'identifier preferentiellement.
+    final realLines2 = [
+      'ldécret du 6 avril 1999 sont applicables,',
+      'Ttansports :A défaut de contrat spécifique entre les parties, les dispositions issues du',
+      'les 3 jours suivant la réception seront recevabies',
+      '(art 133-3 du code de commerce)',
+      'Sur demande). seules les réserves précisées et confirmées par lettre reconmandée dans',
+      'La remise des colis entraine lacceptation de nos Conditions générales (texte intégial remis',
+      'Nom, Signature et Cachet obligatoire',
+      'Siret: 44760810000015 Tel: 02 38 88 26 15Siret: 97880271800012 Tel: 02 37 84 44 41',
+      '26 RUE DE LA MOUCHETIERE',
+      '45140 INGRE',
+      'FA45 TRANSPORTS',
+      '28630 GELLAINVILLE',
+      '24 AVENUE LOUIS PASTEUR',
+      'Eure et Loir Acheminement',
+      'Commissionnaire ou transporteur principal Transporteur livreur',
+      'total colis : 1',
+      'Le:',
+      'Marchandise reçue en bon état',
+      'heures',
+      'Instruction de livraison- Document de suivi',
+      'Tel: 0237911586 THEODORE CHARTRES',
+      'FA4500 90395188',
+      'Contact destinataire',
+      'Lieu de livraison.',
+      'Ref. dest.',
+      'Ref.',
+      'exped.',
+      '28000 CHARTRES',
+      'FR 45800 ST JEAN DE BRAYE',
+      '55 RUE DE LA BURELLE',
+      'LIVRE',
+      'THEODORE MAISON DE PEINTURE',
+      'Débour',
+      'TVA',
+      'Port TTC',
+      'ESPACE OCEAM',
+      "53 AVENUE D'ORLEANS",
+      'THEODORE CHARTRES',
+      'HAMELIN DECOR',
+      'Port',
+      'HT',
+      'Expéditeut',
+      'Destinataire',
+      'Facture',
+      'Messagerie Express',
+      'LETTRE DE VÕITURE',
+      'MESEXP',
+      'Régime',
+      'NA',
+      'TO1. 1',
+      'Nature de la marchandise',
+      '45109451',
+      '06/05/2026',
+      'Ligne',
+      'FA45',
+      'Matieres dangereuses ADR',
+      '1',
+      '5',
+      'N° récépisse',
+      'Date expédlton',
+      'payé',
+      'Clent',
+      'U.M.',
+      'Poids',
+      'Vol! Lg',
+      'Port',
+      'Contre-remsoursemert',
+      'sOuhaitée',
+    ];
+
+    test('extrait nom THEODORE CHARTRES (occurrences 2)', () {
+      final result = BordereauParser().parse(realLines2);
+      expect(result.nomDestinataire, contains('THEODORE CHARTRES'));
+    });
+
+    test('extrait CP 28000 CHARTRES (ville matche nom)', () {
+      final result = BordereauParser().parse(realLines2);
+      expect(result.codePostal, '28000');
+      expect(result.ville, 'CHARTRES');
+    });
+
+    test('NE prend PAS 45140 INGRE (transporteur)', () {
+      final result = BordereauParser().parse(realLines2);
+      expect(result.codePostal, isNot('45140'));
+    });
+
+    test('NE prend PAS 45800 ST JEAN DE BRAYE (expediteur)', () {
+      final result = BordereauParser().parse(realLines2);
+      expect(result.codePostal, isNot('45800'));
+    });
+
+    test("extrait la rue 53 AVENUE D'ORLEANS (adjacente au nom)", () {
+      final result = BordereauParser().parse(realLines2);
+      expect(result.rue, contains("53 AVENUE D'ORLEANS"));
+    });
+
+    test('NE prend PAS la garbage du bloc structurel (Messagerie Express, etc)',
+        () {
+      final result = BordereauParser().parse(realLines2);
+      expect(result.rue, isNot(contains('Messagerie Express')));
+      expect(result.rue, isNot(contains('LETTRE DE')));
+    });
+
+    test('extrait colis 1', () {
+      final result = BordereauParser().parse(realLines2);
+      expect(result.nbColis, 1);
+    });
+  });
+
   group('BordereauParser - cas limites', () {
     test('liste vide -> tout null', () {
       final result = BordereauParser().parse([]);
