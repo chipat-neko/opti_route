@@ -50,6 +50,13 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Suppression depuis les écrans
+- **Menu overflow** (3 points) dans l'AppBar de `TourneeDuJourScreen` avec une action *Supprimer la tournée* (confirmation modale avant suppression). Après confirmation, le `HomeScreen` détecte automatiquement qu'il n'y a plus de tournée du jour et bascule sur l'empty state.
+- **Bouton danger rouge** dans `TourneeFormScreen` (mode édition seulement) : *Supprimer cette tournée* en bas du formulaire, séparé par un divider, avec sous-texte explicatif (« tous les arrêts seront supprimés »).
+- **Bouton danger rouge** dans `AjoutArretScreen` (mode édition seulement) : *Supprimer cet arrêt*. Confirmation modale qui affiche le nom du client + l'adresse pour éviter les erreurs.
+- Les 3 nouvelles actions utilisent le même style (`AppColors.red`, outlined, radius 14, hauteur 52) pour rester visuellement cohérent avec le design.
+- Les chemins existants restent : swipe-to-delete dans la liste d'historique et sur les arrêts de la tournée du jour fonctionnent toujours.
+
 ### Optimisation de tournée (jalon 7)
 - **`OptimizationService`** (interface) + **`OpenRouteOptimizationService`** : appel à `POST https://api.openrouteservice.org/optimization` (VROOM en backend). Plan free 500 optimisations/jour, sans CB.
 - **Mapping métier → solveur** :

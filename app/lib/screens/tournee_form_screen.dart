@@ -116,10 +116,66 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
                   : const Icon(Icons.check),
               label: Text(_isEdit ? 'Enregistrer' : 'Creer la tournee'),
             ),
+            if (_isEdit) ...[
+              const SizedBox(height: AppSpacing.x18),
+              const Divider(),
+              const SizedBox(height: AppSpacing.x18),
+              _DangerButton(
+                label: 'Supprimer cette tournee',
+                onPressed: _saving ? null : _confirmDelete,
+              ),
+              const SizedBox(height: AppSpacing.x6),
+              const Text(
+                'Tous les arrets de cette tournee seront supprimes definitivement.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMute),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete() async {
+    if (widget.initial == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Supprimer cette tournee ?'),
+        content: Text(
+          '"${widget.initial!.nom}" et tous ses arrets seront supprimes '
+          'definitivement.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red.withValues(alpha: 0.15),
+              foregroundColor: AppColors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(tourneesRepositoryProvider).delete(widget.initial!.id);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+      );
+    }
   }
 
   String? _validateNom(String? v) {
@@ -183,5 +239,32 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
         SnackBar(content: Text('Erreur lors de l\'enregistrement : $e')),
       );
     }
+  }
+}
+
+class _DangerButton extends StatelessWidget {
+  const _DangerButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.red,
+          side: const BorderSide(color: AppColors.red, width: 1.5),
+          minimumSize: const Size(0, 52),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(AppRadius.r14)),
+          ),
+        ),
+        icon: const Icon(Icons.delete_outline),
+        label: Text(label),
+      ),
+    );
   }
 }

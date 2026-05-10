@@ -68,6 +68,22 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               ),
             ),
           ),
+          PopupMenuButton<String>(
+            tooltip: 'Plus',
+            onSelected: (value) {
+              if (value == 'delete') _confirmDeleteTournee();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  leading: Icon(Icons.delete_outline, color: AppColors.red),
+                  title: Text('Supprimer la tournee'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: stopsAsync.when(
@@ -85,6 +101,46 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         label: const Text('Ajouter un arret'),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteTournee() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Supprimer cette tournee ?'),
+        content: Text(
+          '"${widget.tournee.nom}" et tous ses arrets seront supprimes '
+          'definitivement.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red.withValues(alpha: 0.15),
+              foregroundColor: AppColors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref.read(tourneesRepositoryProvider).delete(widget.tournee.id);
+      if (!mounted) return;
+      // Le HomeScreen va detecter qu'il n'y a plus de tournee du jour
+      // et basculer sur l'empty state — pas besoin de pop manuellement.
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+      );
+    }
   }
 
   Future<void> _onOptimizePressed() async {
