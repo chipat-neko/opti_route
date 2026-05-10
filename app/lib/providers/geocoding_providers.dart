@@ -4,6 +4,7 @@ import '../data/ban_geocoding_service.dart';
 import '../data/france_geocoding_service.dart';
 import '../data/geocode_cache_repository.dart';
 import '../data/geocoding_service.dart';
+import '../data/photon_service.dart';
 import '../data/recherche_entreprises_service.dart';
 import 'database_providers.dart';
 
@@ -11,17 +12,20 @@ final geocodeCacheRepositoryProvider = Provider<GeocodeCacheRepository>((ref) {
   return GeocodeCacheRepository(ref.watch(appDatabaseProvider));
 });
 
-/// Geocodage officiel France : BAN + Recherche-Entreprises en cascade
-/// intelligente (BAN d'abord pour les adresses, Recherche-Entreprises
-/// d'abord pour les noms d'entreprise).
+/// Geocodage hybride 3 sources optimise livraison France :
+/// - BAN (cadastre officiel) : adresses postales, tous les numeros.
+/// - Recherche-Entreprises (SIRENE) : nom legal des entreprises FR.
+/// - Photon (OSM) : enseignes / marques commerciales (Citroen,
+///   Carrefour, McDo...) que SIRENE ne connait pas par leur enseigne.
 ///
-/// Aucune cle API requise, aucune CB, sources officielles francaises.
+/// Aucune cle API requise, aucune CB.
 final geocodingServiceProvider = Provider<GeocodingService>((ref) {
   final cache = ref.watch(geocodeCacheRepositoryProvider);
 
   final service = FranceGeocodingService(
     ban: BanGeocodingService(cache: cache),
     entreprises: RechercheEntreprisesService(cache: cache),
+    photon: PhotonService(cache: cache),
   );
 
   ref.onDispose(service.close);
