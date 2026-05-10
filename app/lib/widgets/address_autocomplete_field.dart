@@ -3,11 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:latlong2/latlong.dart';
+
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
 import '../data/geocoding_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
+import '../screens/pointer_carte_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -256,9 +259,53 @@ class _AddressAutocompleteFieldState
               ),
             ],
           ),
+        ] else ...[
+          // Quand pas (encore) de selection : bouton de fallback pour
+          // pointer manuellement sur la carte. Indispensable quand
+          // l'autocomplete n'a rien (lieu sans adresse postale, hangar
+          // industriel, contremarque mal indexee...).
+          const SizedBox(height: AppSpacing.x6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _openPointerCarte,
+              icon: const Icon(Icons.touch_app_outlined, size: 16),
+              label: const Text(
+                'Pointer sur la carte',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.ink,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x10,
+                  vertical: 4,
+                ),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
         ],
       ],
     );
+  }
+
+  Future<void> _openPointerCarte() async {
+    // Si on a deja une suggestion locale, on centre la carte dessus
+    // pour eviter a Noah de re-zoomer depuis la France entiere.
+    LatLng? initialCenter;
+    if (_selected != null) {
+      initialCenter = LatLng(_selected!.lat, _selected!.lon);
+    } else if (_suggestions.isNotEmpty) {
+      final s = _suggestions.first;
+      initialCenter = LatLng(s.lat, s.lon);
+    }
+    final result = await Navigator.of(context).push<AddressSuggestion>(
+      MaterialPageRoute(
+        builder: (_) => PointerCarteScreen(initialCenter: initialCenter),
+      ),
+    );
+    if (result == null || !mounted) return;
+    _selectSuggestion(result);
   }
 
   Widget? _buildSuffix(bool isValid) {
