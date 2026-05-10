@@ -233,6 +233,10 @@ class BordereauParser {
   /// - `_isObviousLabel` : exclut les labels techniques.
   /// - `_looksLikeStreet` : exclut les rues (commencent par AVENUE/RUE/etc).
   /// - `_looksLikeTransporter` : exclut les transporteurs courants.
+  /// - `_lineIsStreet` : ne compte pas une occurrence si la ligne
+  ///   complete est une rue numerotee (ex: "LOUIS PASTEUR" dans
+  ///   "24 AVENUE LOUIS PASTEUR" est juste un nom de saint, pas un
+  ///   destinataire).
   static String? _findNomByOccurrences(List<String> lines) {
     final pattern = RegExp(r"([A-Z][A-Z\-']+(?:\s+[A-Z][A-Z\-']+)+)");
     final candidates = <String>{};
@@ -252,7 +256,11 @@ class BordereauParser {
     for (final cand in candidates) {
       var count = 0;
       for (final line in lines) {
-        if (line.contains(cand)) count++;
+        if (!line.contains(cand)) continue;
+        // Si l'occurrence est dans une ligne qui est manifestement
+        // une rue numerotee, on ne la compte pas.
+        if (_lineIsStreet(line)) continue;
+        count++;
       }
       if (count > bestCount ||
           (count == bestCount && best != null && cand.length > best.length)) {
@@ -264,6 +272,19 @@ class BordereauParser {
     // Strict : au moins 2 mentions pour etre confident. Sinon on
     // retourne null et l'UI affichera une carte "incertain".
     return bestCount >= 2 ? best : null;
+  }
+
+  /// Vrai si la ligne entiere est une rue numerotee (commence par un
+  /// chiffre suivi d'un mot de voirie). Sert a ignorer les occurrences
+  /// d'un candidat dans une rue (ex: "LOUIS PASTEUR" dans "24 AVENUE
+  /// LOUIS PASTEUR").
+  static final _streetLineRegex = RegExp(
+    r"^\d+\s*(?:bis|ter|quater)?\s+(?:RUE|AVENUE|AV\.?|BD|BOULEVARD|CHEMIN|PLACE|IMPASSE|ALL[EÉ]E|VOIE|ROUTE|RTE|QUAI|COURS|PASSAGE|FAUBOURG|FBG)\b",
+    caseSensitive: false,
+  );
+
+  static bool _lineIsStreet(String line) {
+    return _streetLineRegex.hasMatch(line.trim());
   }
 
   /// Vrai si le candidat ressemble a une rue (commence ou contient un
