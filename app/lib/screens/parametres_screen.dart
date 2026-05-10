@@ -51,11 +51,11 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const _StatusCard(
             highlight: true,
             icon: Icons.verified_outlined,
-            title: 'Sources officielles France',
+            title: 'Geocodage 3 sources',
             subtitle:
-                'BAN (api-adresse.data.gouv.fr) pour les adresses · '
-                'Recherche-Entreprises (recherche-entreprises.api.gouv.fr) '
-                'pour les commerces. Aucune cle, aucune limite stricte.',
+                'BAN (cadastre officiel) · Recherche-Entreprises '
+                '(SIRENE/INSEE) · Photon/OSM (enseignes & marques). '
+                'Aucune cle, aucune limite stricte.',
           ),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),

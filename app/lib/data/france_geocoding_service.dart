@@ -1,27 +1,38 @@
 import 'address_suggestion.dart';
 import 'ban_geocoding_service.dart';
 import 'geocoding_service.dart';
+import 'photon_service.dart';
 import 'recherche_entreprises_service.dart';
 
-/// Geocoder hybride utilisant les deux APIs officielles francaises :
+/// Geocoder hybride a 3 sources, optimise pour la livraison en France :
 ///
 /// 1. **BAN** (api-adresse.data.gouv.fr) — adresses postales,
-///    couverture quasi exhaustive France.
-/// 2. **Recherche d'Entreprises** (recherche-entreprises.api.gouv.fr) —
-///    base SIRENE/INSEE, toute entreprise francaise declaree.
+///    couverture quasi exhaustive France grace au cadastre DGFiP.
+/// 2. **Recherche d'Entreprises** (recherche-entreprises.api.gouv.fr)
+///    — base SIRENE/INSEE, toute entreprise francaise declaree
+///    legalement (par leur **nom legal**, ex: "SAS GARAGE DUPONT").
+/// 3. **Photon (OSM)** — pour les **enseignes / marques** que SIRENE
+///    ne connait pas (ex: "Citroen", "Carrefour", "McDonald's") parce
+///    que OSM les indexe via les tags `brand=...` / `name=...`.
 ///
-/// Strategie : on detecte si la requete ressemble a une adresse
-/// (commence par un chiffre, ex "14 rue de Charonne") ou a un nom
-/// d'entreprise ("Carrosserie Coculo"). On interroge le bon en
-/// premier, et on fallback sur l'autre si rien ou peu de resultats.
+/// Strategie intelligente :
+/// - Requete commence par un chiffre (adresse) -> ordre BAN, Photon,
+///   Recherche-Entreprises.
+/// - Sinon (nom d'entreprise / enseigne) -> ordre Recherche-Entreprises,
+///   Photon, BAN. SIRENE en 1er pour les vraies entreprises (siege,
+///   etablissements), Photon en 2eme pour rattraper les enseignes.
+/// - On s'arrete des qu'une source retourne au moins un resultat
+///   precis (numero de rue OU POI nomme).
 class FranceGeocodingService implements GeocodingService {
   FranceGeocodingService({
     required this.ban,
     required this.entreprises,
+    required this.photon,
   });
 
   final BanGeocodingService ban;
   final RechercheEntreprisesService entreprises;
+  final PhotonService photon;
 
   @override
   String get providerKey => 'france';
@@ -34,40 +45,38 @@ class FranceGeocodingService implements GeocodingService {
   }) async {
     final looksLikeAddress = _looksLikeAddress(query);
 
-    final primary = looksLikeAddress ? ban : entreprises;
-    final secondary = looksLikeAddress ? entreprises : ban;
+    final order = looksLikeAddress
+        ? <GeocodingService>[ban, photon, entreprises]
+        : <GeocodingService>[entreprises, photon, ban];
 
     final accumulated = <AddressSuggestion>[];
 
-    try {
-      final primaryResults = await primary.search(query, limit: limit);
-      accumulated.addAll(primaryResults);
-      // Si le primaire trouve un resultat precis (numero de rue OU
-      // POI nomme), on s'arrete : pas besoin d'une 2eme requete.
-      if (primaryResults.any((s) => _isPrecise(s))) {
-        return _dedupe(accumulated);
+    for (var i = 0; i < order.length; i++) {
+      final source = order[i];
+      try {
+        final results = await source.search(query, limit: limit);
+        accumulated.addAll(results);
+
+        // Arret precoce : si la source courante a deja trouve du precis,
+        // pas besoin d'interroger les suivantes.
+        if (results.any(_isPrecise)) {
+          return _dedupe(accumulated);
+        }
+      } catch (_) {
+        // Erreur reseau ou parsing : on tente la suivante en silencieux.
       }
-    } catch (_) {
-      // Erreur reseau ou parsing : on tente le secondaire en silencieux.
     }
 
-    try {
-      final secondaryResults = await secondary.search(query, limit: limit);
-      accumulated.addAll(secondaryResults);
-    } catch (_) {
-      if (accumulated.isEmpty) rethrow;
+    if (accumulated.isEmpty) {
+      return const [];
     }
-
     return _dedupe(accumulated);
   }
 
-  /// La requete commence par un chiffre (avec eventuellement bis/ter)
-  /// -> tres probablement une adresse.
   bool _looksLikeAddress(String query) {
     return RegExp(r'^\s*\d', caseSensitive: false).hasMatch(query);
   }
 
-  /// "Precis" = a un numero de rue OU est un POI.
   bool _isPrecise(AddressSuggestion s) {
     if (s.isPoi) return true;
     final n = s.houseNumber;
@@ -88,5 +97,6 @@ class FranceGeocodingService implements GeocodingService {
   void close() {
     ban.close();
     entreprises.close();
+    photon.close();
   }
 }
