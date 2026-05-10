@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../data/parametres_repository.dart';
 import '../data/sheets_repository.dart';
 import '../data/stops_repository.dart';
 import '../data/tournees_repository.dart';
@@ -21,6 +22,15 @@ final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
   return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
+  return ParametresRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Stream de la cle API TomTom (null si non configuree).
+final tomtomApiKeyProvider = StreamProvider<String?>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchTomTomApiKey();
 });
 
 /// Stream des arrets pour une tournee donnee.
