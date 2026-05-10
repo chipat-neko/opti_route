@@ -81,6 +81,32 @@ class BanGeocodingService implements GeocodingService {
     return results;
   }
 
+  /// Reverse geocoding : a partir d'un point GPS, retourne l'adresse
+  /// la plus proche selon BAN. Utilise par le mode "tap sur la carte"
+  /// qui permet a Noah de pointer un emplacement quand l'autocomplete
+  /// n'a rien trouve. Retourne null si aucune adresse trouvee.
+  Future<AddressSuggestion?> reverseGeocode({
+    required double lat,
+    required double lng,
+  }) async {
+    final uri = Uri.https('api-adresse.data.gouv.fr', '/reverse/', {
+      'lon': lng.toString(),
+      'lat': lat.toString(),
+      'limit': '1',
+    });
+    final response =
+        await _client.get(uri, headers: {'User-Agent': _userAgent});
+    if (response.statusCode != 200) {
+      throw GeocodingException('Reponse BAN reverse ${response.statusCode}');
+    }
+    final raw = jsonDecode(response.body);
+    if (raw is! Map<String, dynamic>) return null;
+    final features = raw['features'];
+    if (features is! List || features.isEmpty) return null;
+    final first = features.first as Map<String, dynamic>;
+    return _toSuggestion(first);
+  }
+
   AddressSuggestion? _toSuggestion(Map<String, dynamic> feature) {
     final geometry = feature['geometry'];
     if (geometry is! Map) return null;

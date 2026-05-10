@@ -12,6 +12,15 @@ final geocodeCacheRepositoryProvider = Provider<GeocodeCacheRepository>((ref) {
   return GeocodeCacheRepository(ref.watch(appDatabaseProvider));
 });
 
+/// Provider direct pour BAN, expose pour les usages qui ne passent pas
+/// par la cascade (ex: reverse geocoding depuis un point GPS).
+final banGeocodingServiceProvider = Provider<BanGeocodingService>((ref) {
+  final cache = ref.watch(geocodeCacheRepositoryProvider);
+  final svc = BanGeocodingService(cache: cache);
+  ref.onDispose(svc.close);
+  return svc;
+});
+
 /// Geocodage hybride 3 sources optimise livraison France :
 /// - BAN (cadastre officiel) : adresses postales, tous les numeros.
 /// - Recherche-Entreprises (SIRENE) : nom legal des entreprises FR.

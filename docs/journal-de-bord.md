@@ -114,6 +114,19 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 21. Géocodage manuel par tap sur la carte (#59)
+
+Quand l'autocomplete d'adresse n'a rien trouvé (lieu sans adresse postale précise, hangar industriel, contremarque mal indexée), un bouton **Pointer sur la carte** apparaît sous le champ adresse. Tap → écran carte interactive (flutter_map + tuiles OSM) où Noah peut taper n'importe où pour poser un pin. Reverse geocoding via BAN (`/reverse/?lon=X&lat=Y`) pour récupérer l'adresse postale la plus proche, puis confirmation.
+
+Si BAN ne retrouve rien à l'inverse (zone industrielle, route blanche), on garde quand même les coords avec un libellé `Position {lat}, {lng}` que l'utilisateur peut renommer en passant par "Nom du client".
+
+Centrage initial intelligent : si une suggestion locale existait déjà (carnet ou recherche précédente), la carte s'ouvre sur ce point ; sinon centre sur la France métropolitaine.
+
+Implémentation :
+- Nouvelle méthode `BanGeocodingService.reverseGeocode(lat, lng)`.
+- Nouveau provider `banGeocodingServiceProvider` (BAN exposé directement, pas via la cascade).
+- Nouvel écran `PointerCarteScreen` avec un MapTap → reverse geocode → bottom card "Utiliser cette position".
+
 ## 20. Backup du carnet d'adresses en CSV (#58)
 
 Bouton **Exporter** (icône partage) dans l'AppBar du carnet d'adresses. Génère un CSV avec toutes les entrées (id, nom client, adresse, rue/CP/ville, lat/lng, useCount, dates) et le partage via le sélecteur natif Android (`share_plus`) — Drive, Mail, copie sur PC, etc.
