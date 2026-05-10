@@ -894,6 +894,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     requiredDuringInsert: false,
     defaultValue: const Constant('a_livrer'),
   );
+  static const VerificationMeta _raisonEchecMeta = const VerificationMeta(
+    'raisonEchec',
+  );
+  @override
+  late final GeneratedColumn<String> raisonEchec = GeneratedColumn<String>(
+    'raison_echec',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _ordreOptimiseMeta = const VerificationMeta(
     'ordreOptimise',
   );
@@ -942,6 +953,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     notes,
     nomClient,
     statutLivraison,
+    raisonEchec,
     ordreOptimise,
     ordrePriorite,
     creeLe,
@@ -1058,6 +1070,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('raison_echec')) {
+      context.handle(
+        _raisonEchecMeta,
+        raisonEchec.isAcceptableOrUnknown(
+          data['raison_echec']!,
+          _raisonEchecMeta,
+        ),
+      );
+    }
     if (data.containsKey('ordre_optimise')) {
       context.handle(
         _ordreOptimiseMeta,
@@ -1147,6 +1168,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}statut_livraison'],
       )!,
+      raisonEchec: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raison_echec'],
+      ),
       ordreOptimise: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}ordre_optimise'],
@@ -1183,6 +1208,10 @@ class Stop extends DataClass implements Insertable<Stop> {
   final String? notes;
   final String? nomClient;
   final String statutLivraison;
+
+  /// Raison de l'echec quand `statutLivraison == 'echec'` :
+  /// 'absent' / 'refuse' / 'adresse_fausse' / 'autre'. Null sinon.
+  final String? raisonEchec;
   final int? ordreOptimise;
 
   /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
@@ -1206,6 +1235,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.notes,
     this.nomClient,
     required this.statutLivraison,
+    this.raisonEchec,
     this.ordreOptimise,
     this.ordrePriorite,
     required this.creeLe,
@@ -1241,6 +1271,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       map['nom_client'] = Variable<String>(nomClient);
     }
     map['statut_livraison'] = Variable<String>(statutLivraison);
+    if (!nullToAbsent || raisonEchec != null) {
+      map['raison_echec'] = Variable<String>(raisonEchec);
+    }
     if (!nullToAbsent || ordreOptimise != null) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise);
     }
@@ -1277,6 +1310,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ? const Value.absent()
           : Value(nomClient),
       statutLivraison: Value(statutLivraison),
+      raisonEchec: raisonEchec == null && nullToAbsent
+          ? const Value.absent()
+          : Value(raisonEchec),
       ordreOptimise: ordreOptimise == null && nullToAbsent
           ? const Value.absent()
           : Value(ordreOptimise),
@@ -1309,6 +1345,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       notes: serializer.fromJson<String?>(json['notes']),
       nomClient: serializer.fromJson<String?>(json['nomClient']),
       statutLivraison: serializer.fromJson<String>(json['statutLivraison']),
+      raisonEchec: serializer.fromJson<String?>(json['raisonEchec']),
       ordreOptimise: serializer.fromJson<int?>(json['ordreOptimise']),
       ordrePriorite: serializer.fromJson<int?>(json['ordrePriorite']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
@@ -1332,6 +1369,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'notes': serializer.toJson<String?>(notes),
       'nomClient': serializer.toJson<String?>(nomClient),
       'statutLivraison': serializer.toJson<String>(statutLivraison),
+      'raisonEchec': serializer.toJson<String?>(raisonEchec),
       'ordreOptimise': serializer.toJson<int?>(ordreOptimise),
       'ordrePriorite': serializer.toJson<int?>(ordrePriorite),
       'creeLe': serializer.toJson<DateTime>(creeLe),
@@ -1353,6 +1391,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<String?> notes = const Value.absent(),
     Value<String?> nomClient = const Value.absent(),
     String? statutLivraison,
+    Value<String?> raisonEchec = const Value.absent(),
     Value<int?> ordreOptimise = const Value.absent(),
     Value<int?> ordrePriorite = const Value.absent(),
     DateTime? creeLe,
@@ -1373,6 +1412,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     notes: notes.present ? notes.value : this.notes,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
     statutLivraison: statutLivraison ?? this.statutLivraison,
+    raisonEchec: raisonEchec.present ? raisonEchec.value : this.raisonEchec,
     ordreOptimise: ordreOptimise.present
         ? ordreOptimise.value
         : this.ordreOptimise,
@@ -1409,6 +1449,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       statutLivraison: data.statutLivraison.present
           ? data.statutLivraison.value
           : this.statutLivraison,
+      raisonEchec: data.raisonEchec.present
+          ? data.raisonEchec.value
+          : this.raisonEchec,
       ordreOptimise: data.ordreOptimise.present
           ? data.ordreOptimise.value
           : this.ordreOptimise,
@@ -1436,6 +1479,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('notes: $notes, ')
           ..write('nomClient: $nomClient, ')
           ..write('statutLivraison: $statutLivraison, ')
+          ..write('raisonEchec: $raisonEchec, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('creeLe: $creeLe')
@@ -1459,6 +1503,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     notes,
     nomClient,
     statutLivraison,
+    raisonEchec,
     ordreOptimise,
     ordrePriorite,
     creeLe,
@@ -1481,6 +1526,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.notes == this.notes &&
           other.nomClient == this.nomClient &&
           other.statutLivraison == this.statutLivraison &&
+          other.raisonEchec == this.raisonEchec &&
           other.ordreOptimise == this.ordreOptimise &&
           other.ordrePriorite == this.ordrePriorite &&
           other.creeLe == this.creeLe);
@@ -1501,6 +1547,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<String?> notes;
   final Value<String?> nomClient;
   final Value<String> statutLivraison;
+  final Value<String?> raisonEchec;
   final Value<int?> ordreOptimise;
   final Value<int?> ordrePriorite;
   final Value<DateTime> creeLe;
@@ -1519,6 +1566,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.notes = const Value.absent(),
     this.nomClient = const Value.absent(),
     this.statutLivraison = const Value.absent(),
+    this.raisonEchec = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.creeLe = const Value.absent(),
@@ -1538,6 +1586,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.notes = const Value.absent(),
     this.nomClient = const Value.absent(),
     this.statutLivraison = const Value.absent(),
+    this.raisonEchec = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.creeLe = const Value.absent(),
@@ -1558,6 +1607,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<String>? notes,
     Expression<String>? nomClient,
     Expression<String>? statutLivraison,
+    Expression<String>? raisonEchec,
     Expression<int>? ordreOptimise,
     Expression<int>? ordrePriorite,
     Expression<DateTime>? creeLe,
@@ -1577,6 +1627,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (notes != null) 'notes': notes,
       if (nomClient != null) 'nom_client': nomClient,
       if (statutLivraison != null) 'statut_livraison': statutLivraison,
+      if (raisonEchec != null) 'raison_echec': raisonEchec,
       if (ordreOptimise != null) 'ordre_optimise': ordreOptimise,
       if (ordrePriorite != null) 'ordre_priorite': ordrePriorite,
       if (creeLe != null) 'cree_le': creeLe,
@@ -1598,6 +1649,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<String?>? notes,
     Value<String?>? nomClient,
     Value<String>? statutLivraison,
+    Value<String?>? raisonEchec,
     Value<int?>? ordreOptimise,
     Value<int?>? ordrePriorite,
     Value<DateTime>? creeLe,
@@ -1617,6 +1669,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       notes: notes ?? this.notes,
       nomClient: nomClient ?? this.nomClient,
       statutLivraison: statutLivraison ?? this.statutLivraison,
+      raisonEchec: raisonEchec ?? this.raisonEchec,
       ordreOptimise: ordreOptimise ?? this.ordreOptimise,
       ordrePriorite: ordrePriorite ?? this.ordrePriorite,
       creeLe: creeLe ?? this.creeLe,
@@ -1668,6 +1721,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (statutLivraison.present) {
       map['statut_livraison'] = Variable<String>(statutLivraison.value);
     }
+    if (raisonEchec.present) {
+      map['raison_echec'] = Variable<String>(raisonEchec.value);
+    }
     if (ordreOptimise.present) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise.value);
     }
@@ -1697,6 +1753,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('notes: $notes, ')
           ..write('nomClient: $nomClient, ')
           ..write('statutLivraison: $statutLivraison, ')
+          ..write('raisonEchec: $raisonEchec, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('creeLe: $creeLe')
@@ -3988,6 +4045,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<String?> notes,
       Value<String?> nomClient,
       Value<String> statutLivraison,
+      Value<String?> raisonEchec,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
       Value<DateTime> creeLe,
@@ -4008,6 +4066,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<String?> nomClient,
       Value<String> statutLivraison,
+      Value<String?> raisonEchec,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
       Value<DateTime> creeLe,
@@ -4124,6 +4183,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get statutLivraison => $composableBuilder(
     column: $table.statutLivraison,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get raisonEchec => $composableBuilder(
+    column: $table.raisonEchec,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4265,6 +4329,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get raisonEchec => $composableBuilder(
+    column: $table.raisonEchec,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get ordreOptimise => $composableBuilder(
     column: $table.ordreOptimise,
     builder: (column) => ColumnOrderings(column),
@@ -4361,6 +4430,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<String> get statutLivraison => $composableBuilder(
     column: $table.statutLivraison,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get raisonEchec => $composableBuilder(
+    column: $table.raisonEchec,
     builder: (column) => column,
   );
 
@@ -4468,6 +4542,7 @@ class $$StopsTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<String?> nomClient = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
+                Value<String?> raisonEchec = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
@@ -4486,6 +4561,7 @@ class $$StopsTableTableManager
                 notes: notes,
                 nomClient: nomClient,
                 statutLivraison: statutLivraison,
+                raisonEchec: raisonEchec,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
                 creeLe: creeLe,
@@ -4506,6 +4582,7 @@ class $$StopsTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<String?> nomClient = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
+                Value<String?> raisonEchec = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
@@ -4524,6 +4601,7 @@ class $$StopsTableTableManager
                 notes: notes,
                 nomClient: nomClient,
                 statutLivraison: statutLivraison,
+                raisonEchec: raisonEchec,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
                 creeLe: creeLe,

@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/ordre_priorite_dialog.dart';
+import '../widgets/stop_action_sheet.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
 import 'parametres_screen.dart';
@@ -685,7 +686,7 @@ class _StopsList extends ConsumerWidget {
   }
 }
 
-class _StopRow extends StatelessWidget {
+class _StopRow extends ConsumerWidget {
   const _StopRow({
     required this.stop,
     required this.index,
@@ -697,8 +698,10 @@ class _StopRow extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tags = _buildTags(stop);
+    final isLivre = stop.statutLivraison == 'livre';
+    final isEchec = stop.statutLivraison == 'echec';
     return Dismissible(
       key: ValueKey('stop-${stop.id}'),
       direction: DismissDirection.endToStart,
@@ -713,14 +716,7 @@ class _StopRow extends StatelessWidget {
         return false;
       },
       child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => AjoutArretScreen(
-              tourneeId: stop.tourneeId,
-              initial: stop,
-            ),
-          ),
-        ),
+        onTap: () => _onTap(context, ref),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.x14,
@@ -729,7 +725,11 @@ class _StopRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _IndexChip(index: index, priorite: stop.priorite),
+              _IndexChip(
+                index: index,
+                priorite: stop.priorite,
+                statut: stop.statutLivraison,
+              ),
               const SizedBox(width: AppSpacing.x12),
               Expanded(
                 child: Column(
@@ -737,10 +737,13 @@ class _StopRow extends StatelessWidget {
                   children: [
                     Text(
                       _primaryLine(stop),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
+                        color: isLivre ? AppColors.textMute : AppColors.ink,
+                        decoration:
+                            isLivre ? TextDecoration.lineThrough : null,
+                        decorationColor: AppColors.textMute,
                         height: 1.3,
                       ),
                       maxLines: 2,
@@ -756,6 +759,17 @@ class _StopRow extends StatelessWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (isEchec) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Echec : ${_humanRaison(stop.raisonEchec)}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.red,
+                        ),
                       ),
                     ],
                     if (tags.isNotEmpty) ...[
@@ -774,6 +788,57 @@ class _StopRow extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _onTap(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = ref.read(stopsRepositoryProvider);
+
+    final action = await StopActionSheet.show(context, stop);
+    if (action == null) return;
+    switch (action) {
+      case MarkLivreAction():
+        await repo.markLivre(stop.id);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('${_primaryLine(stop)} marque livre'),
+            backgroundColor: AppColors.emerald,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      case MarkEchecAction(raison: final r):
+        await repo.markEchec(stop.id, r);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+                '${_primaryLine(stop)} en echec : ${_humanRaison(r)}'),
+            backgroundColor: AppColors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      case MarkAaLivrerAction():
+        await repo.markAaLivrer(stop.id);
+      case OpenDetailsAction():
+        await navigator.push<void>(
+          MaterialPageRoute(
+            builder: (_) => AjoutArretScreen(
+              tourneeId: stop.tourneeId,
+              initial: stop,
+            ),
+          ),
+        );
+    }
+  }
+
+  static String _humanRaison(String? r) {
+    return switch (r) {
+      'absent' => 'absent',
+      'refuse' => 'refuse',
+      'adresse_fausse' => 'adresse fausse',
+      'autre' => 'autre',
+      _ => 'sans raison',
+    };
   }
 
   String _primaryLine(Stop s) {
@@ -838,13 +903,42 @@ class _StopRow extends StatelessWidget {
 }
 
 class _IndexChip extends StatelessWidget {
-  const _IndexChip({required this.index, required this.priorite});
+  const _IndexChip({
+    required this.index,
+    required this.priorite,
+    this.statut = 'a_livrer',
+  });
 
   final int index;
   final String priorite;
+  final String statut;
 
   @override
   Widget build(BuildContext context) {
+    if (statut == 'livre') {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          color: AppColors.emerald,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.check, color: AppColors.paper, size: 20),
+      );
+    }
+    if (statut == 'echec') {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          color: AppColors.red,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.close, color: AppColors.paper, size: 20),
+      );
+    }
     final isActive =
         priorite == 'obligatoire_premier' || priorite == 'obligatoire_dernier';
     return Container(
