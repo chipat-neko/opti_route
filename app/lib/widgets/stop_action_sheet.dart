@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/navigation_service.dart';
+import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 
 /// Action choisie par le livreur dans la bottom sheet de validation
@@ -31,7 +33,7 @@ class OpenDetailsAction extends StopAction {
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
-class StopActionSheet extends StatefulWidget {
+class StopActionSheet extends ConsumerStatefulWidget {
   const StopActionSheet({super.key, required this.stop});
 
   final Stop stop;
@@ -51,12 +53,26 @@ class StopActionSheet extends StatefulWidget {
   }
 
   @override
-  State<StopActionSheet> createState() => _StopActionSheetState();
+  ConsumerState<StopActionSheet> createState() => _StopActionSheetState();
 }
 
-class _StopActionSheetState extends State<StopActionSheet> {
+class _StopActionSheetState extends ConsumerState<StopActionSheet> {
   /// Quand non null, on affiche l'etape "raison d'echec".
   bool _pickingRaison = false;
+  String? _navAppDefault;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNavDefault();
+  }
+
+  Future<void> _loadNavDefault() async {
+    final v =
+        await ref.read(parametresRepositoryProvider).getNavAppDefault();
+    if (!mounted) return;
+    setState(() => _navAppDefault = v);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,34 +137,26 @@ class _StopActionSheetState extends State<StopActionSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.ink,
-                        minimumSize: const Size(0, 48),
-                      ),
+                    child: _NavButton(
+                      label: 'Maps',
+                      icon: Icons.map_outlined,
+                      preferred: _navAppDefault == 'maps',
                       onPressed: () => NavigationService.launchGoogleMaps(
                         lat: stop.lat!,
                         lng: stop.lng!,
                       ),
-                      icon: const Icon(Icons.map_outlined, size: 18),
-                      label: const Text('Maps',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.x10),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.ink,
-                        minimumSize: const Size(0, 48),
-                      ),
+                    child: _NavButton(
+                      label: 'Waze',
+                      icon: Icons.navigation_outlined,
+                      preferred: _navAppDefault == 'waze',
                       onPressed: () => NavigationService.launchWaze(
                         lat: stop.lat!,
                         lng: stop.lng!,
                       ),
-                      icon: const Icon(Icons.navigation_outlined, size: 18),
-                      label: const Text('Waze',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -283,6 +291,53 @@ class _StatutBanner extends StatelessWidget {
       'autre' => 'autre',
       _ => 'sans raison',
     };
+  }
+}
+
+/// Bouton 'Maps' / 'Waze' dans le bottom sheet. Quand `preferred` est
+/// vrai (= cette app a ete choisie comme defaut dans Parametres), on
+/// l'affiche en plein (FilledButton vert) pour la mettre en avant.
+/// Sinon en outlined neutre.
+class _NavButton extends StatelessWidget {
+  const _NavButton({
+    required this.label,
+    required this.icon,
+    required this.preferred,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool preferred;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (preferred) {
+      return FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.emerald,
+          foregroundColor: AppColors.paper,
+          minimumSize: const Size(0, 48),
+        ),
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      );
+    }
+    return OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.ink,
+        minimumSize: const Size(0, 48),
+      ),
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label,
+          style: const TextStyle(fontWeight: FontWeight.w700)),
+    );
   }
 }
 

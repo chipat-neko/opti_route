@@ -42,7 +42,19 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
         lat: t.pointDepartLat,
         lon: t.pointDepartLng,
       );
+    } else {
+      // Mode creation : preremplir la capacite avec la valeur par
+      // defaut configuree dans Parametres (si elle existe).
+      _loadDefaults();
     }
+  }
+
+  Future<void> _loadDefaults() async {
+    final cap = await ref
+        .read(parametresRepositoryProvider)
+        .getCapaciteDefault();
+    if (!mounted || cap == null) return;
+    setState(() => _capaciteCtrl.text = cap.toString());
   }
 
   @override

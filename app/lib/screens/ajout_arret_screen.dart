@@ -59,6 +59,11 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   void initState() {
     super.initState();
     _initFromInitial();
+    if (widget.initial == null) {
+      // Mode creation : preremplir la duree d'arret avec la valeur
+      // par defaut configuree dans Parametres (si elle existe).
+      _loadDefaults();
+    }
   }
 
   void _initFromInitial() {
@@ -78,6 +83,14 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
         lon: s.lng!,
       );
     }
+  }
+
+  Future<void> _loadDefaults() async {
+    final duree = await ref
+        .read(parametresRepositoryProvider)
+        .getDureeArretDefault();
+    if (!mounted || duree == null) return;
+    setState(() => _dureeArretCtrl.text = duree.toString());
   }
 
   void _resetForm() {
