@@ -114,6 +114,20 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 25. Templates de tournée — duplication d'une tournée passée (#63)
+
+Long press sur une tournée dans l'historique → bottom sheet avec 2 actions :
+- **Modifier la fiche** (l'ancien comportement)
+- **Dupliquer comme template** (nouveau)
+
+La duplication crée une nouvelle tournée datée d'aujourd'hui, avec le même nom (suffixé `(copie)` ou `(copie 2)` si déjà existant), le même point de départ, la même capacité véhicule. Tous les arrêts sont copiés (adresse, lat/lng, nb colis, priorité EN 1ER/EN DERNIER, fenêtre horaire, notes…) mais on **reset** les données d'exécution : statut → `a_livrer`, raison d'échec → null, ordre optimisé → null.
+
+Énorme gain pour les tournées récurrentes (les mêmes 30 clients chaque semaine). 6 tests unitaires sur le suffixe, le reset des métriques, le reset des statuts d'arrêt.
+
+## C1 Mode sombre — reporté
+
+Demande de remplacer tous les `AppColors.*` directs par des références thématiques (`Theme.of(context).colorScheme.*`), gros refactor risqué qui toucherait la moitié du codebase. Reporté tant que ce n'est pas un blocage terrain — le thème cream/ink reste lisible jour ET nuit (contraste préservé).
+
 ## 24. Onboarding premier lancement (#62)
 
 Walkthrough en 3 pages affiché au premier lancement (ou si le flag `onboarding_done` est manuellement réinitialisé) :
