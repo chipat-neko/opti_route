@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -238,6 +239,8 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                     onTap: () => _toggleLine(i),
                   ),
                 ),
+              const SizedBox(height: AppSpacing.x18),
+              _DebugRawTextSection(lines: lines),
             ],
           ),
         ),
@@ -517,6 +520,115 @@ class _ExtractedRow extends StatelessWidget {
                     ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Section repliable affichant tout le texte OCR ligne par ligne avec
+/// numero, et un bouton pour copier dans le presse-papiers. Utile
+/// pour debugger le parser quand l'extraction auto se trompe — Noah
+/// peut copier le texte et me l'envoyer pour que j'ajuste les
+/// heuristiques aux vraies donnees ML Kit.
+class _DebugRawTextSection extends StatefulWidget {
+  const _DebugRawTextSection({required this.lines});
+  final List<String> lines;
+
+  @override
+  State<_DebugRawTextSection> createState() => _DebugRawTextSectionState();
+}
+
+class _DebugRawTextSectionState extends State<_DebugRawTextSection> {
+  bool _expanded = false;
+
+  String get _numbered =>
+      widget.lines.asMap().entries.map((e) => '${e.key.toString().padLeft(2, "0")}: ${e.value}').join('\n');
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.creamSoft,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x14),
+              child: Row(
+                children: [
+                  const Icon(Icons.bug_report_outlined, size: 18, color: AppColors.ink),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: Text(
+                      _expanded ? 'Texte brut OCR' : 'Voir le texte brut OCR',
+                      style: appMonoStyle(
+                        fontSize: 11,
+                        color: AppColors.ink,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: AppColors.ink,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded) ...[
+            const Divider(height: 1, color: AppColors.inkLine),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.x14,
+                AppSpacing.x10,
+                AppSpacing.x14,
+                AppSpacing.x10,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 320),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        _numbered,
+                        style: appMonoStyle(
+                          fontSize: 11,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.x10),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: _numbered));
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Texte OCR copie dans le presse-papiers',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.content_copy, size: 16),
+                    label: const Text('Copier le texte brut'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
