@@ -18,14 +18,18 @@ import '../widgets/address_autocomplete_field.dart';
 ///   - duree estimee de l'arret
 ///   - nom du client + notes (optionnel)
 ///
-/// Deux boutons d'enregistrement :
-///   - "Enregistrer" : sauvegarde et revient a la home.
-///   - "+ Ajouter un autre" : sauvegarde et reset le formulaire pour
-///     enchainer plusieurs adresses sans naviguer.
+/// Mode creation : deux boutons : "Enregistrer" (retour home) et
+/// "+ Ajouter un autre" (sauve, reset, reste sur la page).
+/// Mode edition (passe `initial`) : un seul bouton "Enregistrer".
 class AjoutArretScreen extends ConsumerStatefulWidget {
-  const AjoutArretScreen({super.key, required this.tourneeId});
+  const AjoutArretScreen({
+    super.key,
+    required this.tourneeId,
+    this.initial,
+  });
 
   final int tourneeId;
+  final Stop? initial;
 
   @override
   ConsumerState<AjoutArretScreen> createState() => _AjoutArretScreenState();
@@ -33,7 +37,6 @@ class AjoutArretScreen extends ConsumerStatefulWidget {
 
 class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _addressFieldKey = GlobalKey();
   late TextEditingController _nbColisCtrl;
   late TextEditingController _dureeArretCtrl;
   late TextEditingController _nomClientCtrl;
@@ -45,17 +48,31 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   TimeOfDay? _fenetreFin;
   bool _saving = false;
 
+  bool get _isEdit => widget.initial != null;
+
   @override
   void initState() {
     super.initState();
-    _initControllers();
+    _initFromInitial();
   }
 
-  void _initControllers() {
-    _nbColisCtrl = TextEditingController(text: '1');
-    _dureeArretCtrl = TextEditingController(text: '3');
-    _nomClientCtrl = TextEditingController();
-    _notesCtrl = TextEditingController();
+  void _initFromInitial() {
+    final s = widget.initial;
+    _nbColisCtrl = TextEditingController(text: (s?.nbColis ?? 1).toString());
+    _dureeArretCtrl =
+        TextEditingController(text: (s?.dureeArretMin ?? 3).toString());
+    _nomClientCtrl = TextEditingController(text: s?.nomClient ?? '');
+    _notesCtrl = TextEditingController(text: s?.notes ?? '');
+    _priorite = s?.priorite ?? 'flexible';
+    _fenetreDebut = _parseTime(s?.fenetreDebut);
+    _fenetreFin = _parseTime(s?.fenetreFin);
+    if (s != null && s.lat != null && s.lng != null) {
+      _address = AddressSuggestion(
+        displayName: s.adresseNormalisee ?? s.adresseBrute,
+        lat: s.lat!,
+        lon: s.lng!,
+      );
+    }
   }
 
   void _resetForm() {
@@ -64,7 +81,10 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     _nomClientCtrl.dispose();
     _notesCtrl.dispose();
     setState(() {
-      _initControllers();
+      _nbColisCtrl = TextEditingController(text: '1');
+      _dureeArretCtrl = TextEditingController(text: '3');
+      _nomClientCtrl = TextEditingController();
+      _notesCtrl = TextEditingController();
       _address = null;
       _priorite = 'flexible';
       _fenetreDebut = null;
@@ -86,7 +106,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ajouter un arret'),
+        title: Text(_isEdit ? 'Modifier l\'arret' : 'Ajouter un arret'),
       ),
       body: Form(
         key: _formKey,
@@ -94,7 +114,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           padding: const EdgeInsets.all(AppSpacing.x18),
           children: [
             AddressAutocompleteField(
-              key: _addressFieldKey,
+              key: ValueKey('address-${widget.initial?.id ?? "new"}'),
               labelText: 'Adresse',
               hintText: 'Tape la rue, la ville...',
               initialSuggestion: _address,
@@ -102,14 +122,14 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               onSuggestionSelected: (s) => setState(() => _address = s),
             ),
             const SizedBox(height: AppSpacing.x22),
-            _SectionTitle('Priorite'),
+            const _SectionTitle('Priorite'),
             const SizedBox(height: AppSpacing.x10),
             _PriorityChips(
               value: _priorite,
               onChanged: (v) => setState(() => _priorite = v),
             ),
             const SizedBox(height: AppSpacing.x22),
-            _SectionTitle('Colis'),
+            const _SectionTitle('Colis'),
             const SizedBox(height: AppSpacing.x10),
             Row(
               children: [
@@ -138,7 +158,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.x22),
-            _SectionTitle('Fenetre horaire (optionnel)'),
+            const _SectionTitle('Fenetre horaire (optionnel)'),
             const SizedBox(height: AppSpacing.x10),
             Row(
               children: [
@@ -160,7 +180,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.x22),
-            _SectionTitle('Client (optionnel)'),
+            const _SectionTitle('Client (optionnel)'),
             const SizedBox(height: AppSpacing.x10),
             TextFormField(
               controller: _nomClientCtrl,
@@ -182,8 +202,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
             ),
             const SizedBox(height: AppSpacing.x28),
             FilledButton.icon(
-              onPressed:
-                  _saving ? null : () => _save(addAnother: false),
+              onPressed: _saving ? null : () => _save(addAnother: false),
               icon: _saving
                   ? const SizedBox(
                       height: 16,
@@ -196,13 +215,14 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                   : const Icon(Icons.check),
               label: const Text('Enregistrer'),
             ),
-            const SizedBox(height: AppSpacing.x10),
-            OutlinedButton.icon(
-              onPressed:
-                  _saving ? null : () => _save(addAnother: true),
-              icon: const Icon(Icons.add),
-              label: const Text('+ Ajouter un autre'),
-            ),
+            if (!_isEdit) ...[
+              const SizedBox(height: AppSpacing.x10),
+              OutlinedButton.icon(
+                onPressed: _saving ? null : () => _save(addAnother: true),
+                icon: const Icon(Icons.add),
+                label: const Text('+ Ajouter un autre'),
+              ),
+            ],
           ],
         ),
       ),
@@ -228,23 +248,41 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
 
     setState(() => _saving = true);
 
-    final companion = StopsCompanion.insert(
-      tourneeId: widget.tourneeId,
-      adresseBrute: _address!.displayName,
-      adresseNormalisee: Value(_address!.displayName),
-      lat: Value(_address!.lat),
-      lng: Value(_address!.lon),
-      nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
-      priorite: Value(_priorite),
-      fenetreDebut: Value(_formatTime(_fenetreDebut)),
-      fenetreFin: Value(_formatTime(_fenetreFin)),
-      dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
-      notes: Value(_orNull(_notesCtrl.text)),
-      nomClient: Value(_orNull(_nomClientCtrl.text)),
-    );
+    final repo = ref.read(stopsRepositoryProvider);
 
     try {
-      await ref.read(stopsRepositoryProvider).create(companion);
+      if (_isEdit) {
+        final companion = StopsCompanion(
+          adresseBrute: Value(_address!.displayName),
+          adresseNormalisee: Value(_address!.displayName),
+          lat: Value(_address!.lat),
+          lng: Value(_address!.lon),
+          nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
+          priorite: Value(_priorite),
+          fenetreDebut: Value(_formatTime(_fenetreDebut)),
+          fenetreFin: Value(_formatTime(_fenetreFin)),
+          dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
+          notes: Value(_orNull(_notesCtrl.text)),
+          nomClient: Value(_orNull(_nomClientCtrl.text)),
+        );
+        await repo.update(widget.initial!.id, companion);
+      } else {
+        final companion = StopsCompanion.insert(
+          tourneeId: widget.tourneeId,
+          adresseBrute: _address!.displayName,
+          adresseNormalisee: Value(_address!.displayName),
+          lat: Value(_address!.lat),
+          lng: Value(_address!.lon),
+          nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
+          priorite: Value(_priorite),
+          fenetreDebut: Value(_formatTime(_fenetreDebut)),
+          fenetreFin: Value(_formatTime(_fenetreFin)),
+          dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
+          notes: Value(_orNull(_notesCtrl.text)),
+          nomClient: Value(_orNull(_nomClientCtrl.text)),
+        );
+        await repo.create(companion);
+      }
       if (!mounted) return;
       if (addAnother) {
         _resetForm();
@@ -269,6 +307,16 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     final hh = t.hour.toString().padLeft(2, '0');
     final mm = t.minute.toString().padLeft(2, '0');
     return '$hh:$mm';
+  }
+
+  TimeOfDay? _parseTime(String? s) {
+    if (s == null || s.isEmpty) return null;
+    final parts = s.split(':');
+    if (parts.length != 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    return TimeOfDay(hour: h, minute: m);
   }
 
   String? _orNull(String s) => s.trim().isEmpty ? null : s.trim();

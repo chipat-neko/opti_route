@@ -50,6 +50,12 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Géocodage finalisé (jalon 5)
+- **Cache local des géocodages** : nouvelle table `geocode_cache` (PK = requête normalisée, TTL 30 jours par défaut). `NominatimService` interroge le cache avant de taper Nominatim ; les requêtes répétées (même mot-clé) ne consomment plus le rate-limit public. Best-effort à l'écriture (un échec de cache n'invalide pas le résultat).
+- **`schemaVersion` 2 → 3** avec `MigrationStrategy.onUpgrade` qui crée la nouvelle table sur les bases existantes.
+- **`GeocodeCacheRepository`** (`lib/data/geocode_cache_repository.dart`) : `read`, `write` (upsert), `purgeExpired`. Encode/decode JSON.
+- **Édition d'un arrêt existant** : tap sur un arrêt dans la liste → ouvre `AjoutArretScreen` en **mode édition**. Préremplissage de tous les champs (adresse via `AddressSuggestion` reconstruit, priorité, colis, durée, fenêtres horaires parsées HH:mm, client, notes). Le bouton *+ Ajouter un autre* est masqué en édition.
+
 ### Ajout d'arrêts (jalon 4)
 - **Écran `AjoutArretScreen`** : page unique qui combine la saisie d'adresse (autocomplete Nominatim, lat/lng cachés) et tous les **impératifs** demandés par Noah :
   - Priorité (`En 1er` / `Flexible` / `En dernier` / `Éviter`) en `ChoiceChip` colorés.
