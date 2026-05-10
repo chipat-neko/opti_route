@@ -1,0 +1,85 @@
+import 'package:flutter/material.dart';
+
+import '../screens/tournees_list_screen.dart';
+import '../theme/app_tokens.dart';
+
+/// Drawer applicatif commun.
+///
+/// Architecture hybride choisie avec Noah : la home est la **tournee
+/// du jour** ; l'historique reste accessible mais cache derriere le
+/// menu hamburger.
+class AppDrawer extends StatelessWidget {
+  const AppDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: AppColors.cream,
+      surfaceTintColor: Colors.transparent,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.x22,
+                AppSpacing.x28,
+                AppSpacing.x22,
+                AppSpacing.x12,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'opti_route',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.x4),
+                  Text(
+                    'Optimisation de tournees',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMute,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.today_outlined),
+              title: const Text('Tournee du jour'),
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Historique des tournees'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TourneesListScreen(),
+                  ),
+                );
+              },
+            ),
+            const Spacer(),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.tune_outlined),
+              title: const Text('Parametres'),
+              subtitle: const Text('Bientot'),
+              enabled: false,
+              onTap: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

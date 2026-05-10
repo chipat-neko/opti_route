@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/app_drawer.dart';
 import 'tournee_form_screen.dart';
 
 class TourneesListScreen extends ConsumerWidget {
@@ -15,8 +16,9 @@ class TourneesListScreen extends ConsumerWidget {
     final tourneesAsync = ref.watch(tourneesStreamProvider);
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('Mes tournees'),
+        title: const Text('Historique des tournees'),
       ),
       body: tourneesAsync.when(
         data: (tournees) => tournees.isEmpty
