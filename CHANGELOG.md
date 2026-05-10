@@ -22,3 +22,6 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ### Modifié
 - `pubspec.yaml` : ajout de `flutter_riverpod ^3.3.1`, `intl ^0.20.2`, `flutter_localizations` (SDK).
+
+### Documentation
+- Import du handoff Claude Design dans `docs/design/handoff/` : 6 écrans cibles haute fidélité (carte, liste, navigation, ajout, optimisation, détail livraison), tokens (palette cream/ink/lime/emerald, Manrope + JetBrains Mono), modèle de données suggéré (avec concept `Sheet` pour gérer les feuilles d'expéditeurs multiples par arrêt). Référence pour toute la suite des écrans à implémenter.
