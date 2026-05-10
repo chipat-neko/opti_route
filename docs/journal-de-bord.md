@@ -114,6 +114,23 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 22. Statistiques cumulatives (#60)
+
+Nouvel écran "Statistiques" accessible depuis le drawer (icône bar chart). Trois cartes une sous l'autre, une par fenêtre temporelle :
+- **7 derniers jours**
+- **30 derniers jours**
+- **Depuis 1 an**
+
+Chaque carte affiche :
+- Le **nombre de colis livrés** en gros sur fond lime (le chiffre métier qui parle au livreur).
+- Tournées terminées / total · arrêts (livrés · échecs).
+- Distance · durée · taux de réussite.
+
+Implémentation :
+- `StatsService` qui calcule les agrégations en mémoire à partir des tables `tournees` + `stops`.
+- Provider famille `statsProvider(days)` qui se recalcule à chaque modif de tournée (watch sur `tourneesStreamProvider`).
+- 4 tests unitaires : agrégations, exclusion hors fenêtre, taux de réussite à 0 si aucune tentative.
+
 ## 21. Géocodage manuel par tap sur la carte (#59)
 
 Quand l'autocomplete d'adresse n'a rien trouvé (lieu sans adresse postale précise, hangar industriel, contremarque mal indexée), un bouton **Pointer sur la carte** apparaît sous le champ adresse. Tap → écran carte interactive (flutter_map + tuiles OSM) où Noah peut taper n'importe où pour poser un pin. Reverse geocoding via BAN (`/reverse/?lon=X&lat=Y`) pour récupérer l'adresse postale la plus proche, puis confirmation.

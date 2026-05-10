@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
 import '../screens/parametres_screen.dart';
+import '../screens/stats_screen.dart';
 import '../screens/tournees_list_screen.dart';
 import '../theme/app_tokens.dart';
 
@@ -113,6 +114,18 @@ class AppDrawer extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const CarnetAdressesScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bar_chart_outlined),
+              title: const Text('Statistiques'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const StatsScreen(),
                   ),
                 );
               },

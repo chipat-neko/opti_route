@@ -4,6 +4,7 @@ import '../data/database.dart';
 import '../data/parametres_repository.dart';
 import '../data/saved_destinations_repository.dart';
 import '../data/sheets_repository.dart';
+import '../data/stats_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournees_repository.dart';
 
@@ -32,6 +33,22 @@ final savedDestinationsRepositoryProvider =
 
 final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
   return ParametresRepository(ref.watch(appDatabaseProvider));
+});
+
+final statsServiceProvider = Provider<StatsService>((ref) {
+  return StatsService(ref.watch(appDatabaseProvider));
+});
+
+/// Stats cumulatives depuis [days] jours (typiquement 7, 30, 365).
+/// Recalcule a chaque modif d'une tournee ou d'un stop (le stream
+/// `tourneesStreamProvider` pousse, on relance le compute).
+final statsProvider =
+    FutureProvider.family<TourneeStats, int>((ref, days) async {
+  // Sert de trigger : on watch les tournees pour invalider quand elles
+  // changent (ajout, statut modifie, suppression).
+  ref.watch(tourneesStreamProvider);
+  final since = DateTime.now().subtract(Duration(days: days));
+  return ref.read(statsServiceProvider).compute(since: since);
 });
 
 /// Stream des arrets pour une tournee donnee.
