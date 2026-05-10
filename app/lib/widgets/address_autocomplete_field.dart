@@ -1,0 +1,305 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/address_suggestion.dart';
+import '../data/nominatim_service.dart';
+import '../providers/nominatim_provider.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
+
+/// Champ texte d'adresse avec autocomplete Nominatim.
+///
+/// L'utilisateur ne saisit qu'une adresse libre ; les coordonnees GPS
+/// sont calculees automatiquement et exposees via [onSuggestionSelected].
+/// Le formulaire parent ne doit pas valider tant qu'une suggestion n'a
+/// pas ete choisie (la selection invalide a chaque keystroke).
+class AddressAutocompleteField extends ConsumerStatefulWidget {
+  const AddressAutocompleteField({
+    super.key,
+    required this.labelText,
+    required this.onSuggestionSelected,
+    this.hintText,
+    this.initialDisplayText,
+    this.initialSuggestion,
+  });
+
+  final String labelText;
+  final String? hintText;
+
+  /// Texte initial du champ, par exemple en mode edition.
+  /// Si [initialSuggestion] est non null, on l'utilise et on considere
+  /// le champ comme deja valide.
+  final String? initialDisplayText;
+  final AddressSuggestion? initialSuggestion;
+
+  /// Appele a chaque selection (ou null quand l'utilisateur invalide
+  /// en re-editant le texte).
+  final ValueChanged<AddressSuggestion?> onSuggestionSelected;
+
+  @override
+  ConsumerState<AddressAutocompleteField> createState() =>
+      _AddressAutocompleteFieldState();
+}
+
+class _AddressAutocompleteFieldState
+    extends ConsumerState<AddressAutocompleteField> {
+  static const _debounce = Duration(milliseconds: 400);
+
+  late final TextEditingController _controller;
+  Timer? _debounceTimer;
+  List<AddressSuggestion> _suggestions = const [];
+  bool _loading = false;
+  String? _errorMessage;
+  AddressSuggestion? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.initialDisplayText ?? '',
+    );
+    _selected = widget.initialSuggestion;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleChange(String value) {
+    if (_selected != null) {
+      _selected = null;
+      widget.onSuggestionSelected(null);
+    }
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounce, () => _runSearch(value));
+  }
+
+  Future<void> _runSearch(String query) async {
+    if (query.trim().length < 3) {
+      if (!mounted) return;
+      setState(() {
+        _suggestions = const [];
+        _errorMessage = null;
+        _loading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final service = ref.read(nominatimServiceProvider);
+      final results = await service.search(query);
+      if (!mounted) return;
+      setState(() {
+        _suggestions = results;
+        _loading = false;
+        _errorMessage = results.isEmpty ? 'Aucune adresse trouvee' : null;
+      });
+    } on NominatimException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.message;
+        _suggestions = const [];
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Erreur reseau, reessaie';
+        _suggestions = const [];
+        _loading = false;
+      });
+    }
+  }
+
+  void _selectSuggestion(AddressSuggestion suggestion) {
+    setState(() {
+      _selected = suggestion;
+      _controller.text = suggestion.displayName;
+      _suggestions = const [];
+      _errorMessage = null;
+    });
+    widget.onSuggestionSelected(suggestion);
+    FocusScope.of(context).unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isValid = _selected != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextFormField(
+          controller: _controller,
+          decoration: InputDecoration(
+            labelText: widget.labelText,
+            hintText: widget.hintText,
+            prefixIcon: Icon(
+              Icons.place_outlined,
+              color: isValid ? AppColors.emerald : AppColors.ink,
+            ),
+            suffixIcon: _buildSuffix(isValid),
+            errorText: _errorMessage,
+          ),
+          textInputAction: TextInputAction.search,
+          onChanged: _handleChange,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Saisis une adresse';
+            }
+            if (_selected == null) {
+              return 'Choisis une suggestion dans la liste';
+            }
+            return null;
+          },
+        ),
+        if (_suggestions.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(AppRadius.r14),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < _suggestions.length; i++) ...[
+                  _SuggestionTile(
+                    suggestion: _suggestions[i],
+                    onTap: () => _selectSuggestion(_suggestions[i]),
+                  ),
+                  if (i < _suggestions.length - 1)
+                    const Divider(height: 1, indent: AppSpacing.x16),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (isValid) ...[
+          const SizedBox(height: AppSpacing.x6),
+          Row(
+            children: [
+              const Icon(
+                Icons.check_circle_outline,
+                size: 14,
+                color: AppColors.emerald,
+              ),
+              const SizedBox(width: AppSpacing.x6),
+              Expanded(
+                child: Text(
+                  'Adresse validee',
+                  style: appMonoStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.emerald,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget? _buildSuffix(bool isValid) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.all(AppSpacing.x12),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    if (isValid) {
+      return const Icon(Icons.check, color: AppColors.emerald);
+    }
+    return null;
+  }
+}
+
+class _SuggestionTile extends StatelessWidget {
+  const _SuggestionTile({required this.suggestion, required this.onTap});
+
+  final AddressSuggestion suggestion;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.r14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x14,
+          vertical: AppSpacing.x12,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.lime,
+                borderRadius: BorderRadius.circular(AppRadius.r8),
+              ),
+              child: const Icon(
+                Icons.place_outlined,
+                size: 16,
+                color: AppColors.ink,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    suggestion.primaryLabel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: AppColors.ink,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (suggestion.secondaryLabel.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        suggestion.secondaryLabel,
+                        style: appMonoStyle(
+                          fontSize: 11,
+                          color: AppColors.textMute,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.north_west,
+              size: 16,
+              color: AppColors.textFaint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
