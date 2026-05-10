@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/database.dart';
@@ -123,6 +124,101 @@ void main() {
             ..where((row) => row.cle.equals('ors_api_key')))
           .getSingle();
       expect(p.valeur, 'xyz');
+    });
+
+    test('sheets : insert + valeurs par defaut', () async {
+      final tourneeId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime.now(),
+              pointDepartLat: 0,
+              pointDepartLng: 0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      final stopId = await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: '12 rue Foo',
+            ),
+          );
+
+      final sheetId = await db.into(db.sheets).insert(
+            SheetsCompanion.insert(stopId: stopId, expediteur: 'Chronopost'),
+          );
+      final sheet = await (db.select(db.sheets)
+            ..where((s) => s.id.equals(sheetId)))
+          .getSingle();
+
+      expect(sheet.expediteur, 'Chronopost');
+      expect(sheet.nbColis, 1);
+      expect(sheet.statut, 'a_livrer');
+      expect(sheet.refCode, isNull);
+      expect(sheet.poidsKg, isNull);
+    });
+
+    test(
+        'sheets : cascade delete supprime les sheets quand on supprime le stop',
+        () async {
+      final tourneeId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime.now(),
+              pointDepartLat: 0,
+              pointDepartLng: 0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      final stopId = await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: '12 rue Foo',
+            ),
+          );
+      await db.into(db.sheets).insert(
+            SheetsCompanion.insert(stopId: stopId, expediteur: 'Chronopost'),
+          );
+      await db.into(db.sheets).insert(
+            SheetsCompanion.insert(
+              stopId: stopId,
+              expediteur: 'La Poste',
+              nbColis: const Value(2),
+            ),
+          );
+
+      expect(await db.select(db.sheets).get(), hasLength(2));
+
+      await (db.delete(db.stops)..where((s) => s.id.equals(stopId))).go();
+
+      expect(await db.select(db.sheets).get(), isEmpty,
+          reason: 'cascade delete sheet via stop');
+    });
+
+    test('sheets : cascade delete via la tournee parente', () async {
+      final tourneeId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime.now(),
+              pointDepartLat: 0,
+              pointDepartLng: 0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      final stopId = await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: 'x',
+            ),
+          );
+      await db.into(db.sheets).insert(
+            SheetsCompanion.insert(stopId: stopId, expediteur: 'Chronopost'),
+          );
+
+      await (db.delete(db.tournees)..where((t) => t.id.equals(tourneeId)))
+          .go();
+
+      expect(await db.select(db.sheets).get(), isEmpty);
+      expect(await db.select(db.stops).get(), isEmpty);
     });
   });
 }
