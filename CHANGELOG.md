@@ -25,3 +25,6 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ### Documentation
 - Import du handoff Claude Design dans `docs/design/handoff/` : 6 écrans cibles haute fidélité (carte, liste, navigation, ajout, optimisation, détail livraison), tokens (palette cream/ink/lime/emerald, Manrope + JetBrains Mono), modèle de données suggéré (avec concept `Sheet` pour gérer les feuilles d'expéditeurs multiples par arrêt). Référence pour toute la suite des écrans à implémenter.
+
+### Visuel
+- Thème global câblé : `lib/theme/app_tokens.dart` expose les primitives (palette cream/ink/lime/emerald, échelles d'espacement et de radius, shadows) et `lib/theme/app_theme.dart` produit un `ThemeData` Material 3 prêt à l'emploi (Manrope via google_fonts, AppBar/Card/Input/Button/FAB tous configurés selon la spec). Les écrans existants (liste tournées, formulaire) prennent automatiquement le nouveau look ; couleurs hardcodées remplacées par les tokens. Helper `appMonoStyle()` exposé pour JetBrains Mono.
