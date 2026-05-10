@@ -207,11 +207,7 @@ class _TourneeRow extends ConsumerWidget {
                 builder: (_) => TourneeDuJourScreen(tournee: tournee),
               ),
             ),
-            onLongPress: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => TourneeFormScreen(initial: tournee),
-              ),
-            ),
+            onLongPress: () => _showActions(context, ref),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.x14),
               child: Row(
@@ -261,6 +257,129 @@ class _TourneeRow extends ConsumerWidget {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Bottom sheet d'actions sur une tournee (long press) : Editer la
+  /// fiche / Dupliquer en nouveau template / (la suppression reste sur
+  /// le swipe lateral comme avant).
+  Future<void> _showActions(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x18,
+            AppSpacing.x14,
+            AppSpacing.x18,
+            AppSpacing.x18,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x14),
+                  decoration: BoxDecoration(
+                    color: AppColors.inkLine,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                tournee.nom,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: AppSpacing.x14),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.paper,
+                  foregroundColor: AppColors.ink,
+                  minimumSize: const Size(0, 52),
+                  alignment: Alignment.centerLeft,
+                ),
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  navigator.push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          TourneeFormScreen(initial: tournee),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text(
+                  'Modifier la fiche tournee',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.lime,
+                  foregroundColor: AppColors.ink,
+                  minimumSize: const Size(0, 52),
+                  alignment: Alignment.centerLeft,
+                ),
+                onPressed: () async {
+                  Navigator.of(sheetContext).pop();
+                  try {
+                    final newId = await ref
+                        .read(tourneesRepositoryProvider)
+                        .duplicate(tournee.id);
+                    if (!context.mounted) return;
+                    final newTournee = await ref
+                        .read(tourneesRepositoryProvider)
+                        .getById(newId);
+                    if (!context.mounted || newTournee == null) return;
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Duplique en "${newTournee.nom}"',
+                        ),
+                        backgroundColor: AppColors.emerald,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                    navigator.push(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            TourneeDuJourScreen(tournee: newTournee),
+                      ),
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    messenger.showSnackBar(
+                      SnackBar(content: Text('Erreur duplication : $e')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.content_copy_outlined),
+                label: const Text(
+                  'Dupliquer comme template',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
         ),
       ),
