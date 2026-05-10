@@ -1,24 +1,36 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
 import '../providers/database_providers.dart';
+import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
+import 'parametres_screen.dart';
 import 'tournee_form_screen.dart';
 
-class TourneeDuJourScreen extends ConsumerWidget {
+class TourneeDuJourScreen extends ConsumerStatefulWidget {
   const TourneeDuJourScreen({super.key, required this.tournee});
 
   final Tournee tournee;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stopsAsync = ref.watch(stopsByTourneeProvider(tournee.id));
+  ConsumerState<TourneeDuJourScreen> createState() =>
+      _TourneeDuJourScreenState();
+}
+
+class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
+  bool _optimizing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final stopsAsync = ref.watch(stopsByTourneeProvider(widget.tournee.id));
+    final optimizer = ref.watch(optimizationServiceProvider);
 
     return Scaffold(
       drawer: const AppDrawer(),
@@ -26,11 +38,24 @@ class TourneeDuJourScreen extends ConsumerWidget {
         title: const Text('Tournee du jour'),
         actions: [
           IconButton(
+            icon: _optimizing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.bolt_outlined),
+            tooltip: optimizer == null
+                ? 'Configure ta cle ORS dans les Parametres'
+                : 'Optimiser la tournee',
+            onPressed: _optimizing ? null : _onOptimizePressed,
+          ),
+          IconButton(
             icon: const Icon(Icons.map_outlined),
             tooltip: 'Voir sur la carte',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => CarteScreen(tournee: tournee),
+                builder: (_) => CarteScreen(tournee: widget.tournee),
               ),
             ),
           ),
@@ -39,21 +64,21 @@ class TourneeDuJourScreen extends ConsumerWidget {
             tooltip: 'Modifier la tournee',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => TourneeFormScreen(initial: tournee),
+                builder: (_) => TourneeFormScreen(initial: widget.tournee),
               ),
             ),
           ),
         ],
       ),
       body: stopsAsync.when(
-        data: (stops) => _Body(tournee: tournee, stops: stops),
+        data: (stops) => _Body(tournee: widget.tournee, stops: stops),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => AjoutArretScreen(tourneeId: tournee.id),
+            builder: (_) => AjoutArretScreen(tourneeId: widget.tournee.id),
           ),
         ),
         icon: const Icon(Icons.add),
@@ -61,6 +86,87 @@ class TourneeDuJourScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _onOptimizePressed() async {
+    final optimizer = ref.read(optimizationServiceProvider);
+    if (optimizer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Cle OpenRouteService manquante. Configure-la dans les Parametres.',
+          ),
+          action: SnackBarAction(
+            label: 'Ouvrir',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ParametresScreen(),
+              ),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final stops =
+        await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
+    final geocoded =
+        stops.where((s) => s.lat != null && s.lng != null).toList();
+    if (geocoded.length < 2) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Au moins 2 arrets avec coordonnees sont necessaires.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _optimizing = true);
+    try {
+      final result =
+          await optimizer.optimize(tournee: widget.tournee, stops: geocoded);
+
+      await ref
+          .read(stopsRepositoryProvider)
+          .applyOptimizedOrder(result.orderedStopIds);
+
+      await ref.read(tourneesRepositoryProvider).update(
+            widget.tournee.id,
+            TourneesCompanion(
+              statut: const Value('optimisee'),
+              distanceTotaleM: Value(result.totalDistanceMeters),
+              dureeTotaleS: Value(result.totalDurationSeconds),
+              optimiseeLe: Value(DateTime.now()),
+            ),
+          );
+
+      if (!mounted) return;
+      final km = (result.totalDistanceMeters / 1000).toStringAsFixed(1);
+      final dur = _formatDuration(result.totalDurationSeconds);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tournee optimisee : $km km · $dur'),
+          backgroundColor: AppColors.emerald,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur d\'optimisation : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _optimizing = false);
+    }
+  }
+}
+
+String _formatDuration(int totalSeconds) {
+  final h = totalSeconds ~/ 3600;
+  final m = (totalSeconds % 3600) ~/ 60;
+  if (h == 0) return '${m}min';
+  return '${h}h${m.toString().padLeft(2, '0')}';
 }
 
 class _Body extends StatelessWidget {
@@ -81,7 +187,15 @@ class _Body extends StatelessWidget {
       children: [
         _Header(tournee: tournee),
         const SizedBox(height: AppSpacing.x16),
-        _StatRow(arretsCount: stops.length),
+        _StatRow(
+          arretsCount: stops.length,
+          distanceMeters: tournee.distanceTotaleM,
+          durationSeconds: tournee.dureeTotaleS,
+        ),
+        if (tournee.statut == 'optimisee') ...[
+          const SizedBox(height: AppSpacing.x12),
+          _OptimisedBanner(tournee: tournee),
+        ],
         const SizedBox(height: AppSpacing.x18),
         if (stops.isEmpty)
           const _StopsPlaceholder()
@@ -142,12 +256,21 @@ class _Header extends StatelessWidget {
 }
 
 class _StatRow extends StatelessWidget {
-  const _StatRow({required this.arretsCount});
+  const _StatRow({
+    required this.arretsCount,
+    this.distanceMeters,
+    this.durationSeconds,
+  });
 
   final int arretsCount;
+  final int? distanceMeters;
+  final int? durationSeconds;
 
   @override
   Widget build(BuildContext context) {
+    final hasDistance = distanceMeters != null && distanceMeters! > 0;
+    final hasDuration = durationSeconds != null && durationSeconds! > 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x16,
@@ -161,9 +284,18 @@ class _StatRow extends StatelessWidget {
         children: [
           _StatTile(label: 'Arrets', value: '$arretsCount'),
           const _StatDivider(),
-          const _StatTile(label: 'Distance', value: '0.0', unit: 'km'),
+          _StatTile(
+            label: 'Distance',
+            value: hasDistance
+                ? (distanceMeters! / 1000).toStringAsFixed(1)
+                : '—',
+            unit: hasDistance ? 'km' : null,
+          ),
           const _StatDivider(),
-          const _StatTile(label: 'Restant', value: '—'),
+          _StatTile(
+            label: 'Duree',
+            value: hasDuration ? _formatDuration(durationSeconds!) : '—',
+          ),
         ],
       ),
     );
@@ -227,6 +359,85 @@ class _StatTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _OptimisedBanner extends StatelessWidget {
+  const _OptimisedBanner({required this.tournee});
+
+  final Tournee tournee;
+
+  @override
+  Widget build(BuildContext context) {
+    final timeLabel = tournee.optimiseeLe == null
+        ? null
+        : DateFormat('HH:mm', 'fr').format(tournee.optimiseeLe!);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(AppRadius.r14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.lime,
+              borderRadius: BorderRadius.circular(AppRadius.r10),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.bolt, color: AppColors.ink, size: 18),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Itineraire optimise',
+                  style: TextStyle(
+                    color: AppColors.paper,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                if (timeLabel != null)
+                  Text(
+                    'Calcule a $timeLabel',
+                    style: TextStyle(
+                      color: AppColors.paper.withValues(alpha: 0.65),
+                      fontSize: 11.5,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x8,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.lime.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppRadius.r6),
+              border: Border.all(
+                color: AppColors.lime.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Text(
+              'OK',
+              style: appMonoStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.lime,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -370,7 +581,7 @@ class _StopRow extends StatelessWidget {
       ),
       confirmDismiss: (_) async {
         onDelete();
-        return false; // on gere via le dialog, pas de dismiss instant
+        return false;
       },
       child: InkWell(
         onTap: () => Navigator.of(context).push(
@@ -445,7 +656,6 @@ class _StopRow extends StatelessWidget {
 
   String? _secondaryLine(Stop s) {
     if (s.nomClient != null && s.nomClient!.isNotEmpty) {
-      // Si on a un client en primary, mettre l'adresse abregee en sub.
       return s.adresseBrute.split(',').take(2).join(',').trim();
     }
     if (s.notes != null && s.notes!.isNotEmpty) return s.notes;

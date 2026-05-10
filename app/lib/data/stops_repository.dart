@@ -51,4 +51,17 @@ class StopsRepository {
     final result = await getByTournee(tourneeId);
     return result.length;
   }
+
+  /// Applique l'ordre optimise calcule par le solveur : pour chaque
+  /// stop, on ecrit `ordre_optimise = position dans la liste` (1-based).
+  /// Tout est fait dans une transaction pour eviter un etat partiel.
+  Future<void> applyOptimizedOrder(List<int> orderedStopIds) async {
+    await _db.transaction(() async {
+      for (var i = 0; i < orderedStopIds.length; i++) {
+        await (_db.update(_db.stops)
+              ..where((s) => s.id.equals(orderedStopIds[i])))
+            .write(StopsCompanion(ordreOptimise: Value(i + 1)));
+      }
+    });
+  }
 }

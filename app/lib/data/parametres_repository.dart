@@ -11,25 +11,32 @@ class ParametresRepository {
 
   // ─── Cles connues (constantes) ───────────────────────────────────
   static const _kTomTomApiKey = 'tomtom_api_key';
+  static const _kOrsApiKey = 'ors_api_key';
 
   /// Cle API TomTom (peut etre null = non configure).
-  Future<String?> getTomTomApiKey() async {
-    final v = await _readRaw(_kTomTomApiKey);
+  Future<String?> getTomTomApiKey() => _readKey(_kTomTomApiKey);
+  Stream<String?> watchTomTomApiKey() => _watchKey(_kTomTomApiKey);
+  Future<void> setTomTomApiKey(String value) =>
+      _write(_kTomTomApiKey, value.trim());
+  Future<void> clearTomTomApiKey() => _delete(_kTomTomApiKey);
+
+  /// Cle API OpenRouteService (optimisation de tournees).
+  Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
+  Stream<String?> watchOrsApiKey() => _watchKey(_kOrsApiKey);
+  Future<void> setOrsApiKey(String value) =>
+      _write(_kOrsApiKey, value.trim());
+  Future<void> clearOrsApiKey() => _delete(_kOrsApiKey);
+
+  Future<String?> _readKey(String cle) async {
+    final v = await _readRaw(cle);
     final trimmed = v?.trim();
     return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
   }
 
-  /// Stream reactif sur la cle TomTom : utile pour que le provider
-  /// Riverpod du geocoder se reinstancie quand la cle change.
-  Stream<String?> watchTomTomApiKey() => _watchRaw(_kTomTomApiKey).map((v) {
+  Stream<String?> _watchKey(String cle) => _watchRaw(cle).map((v) {
         final trimmed = v?.trim();
         return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
       });
-
-  Future<void> setTomTomApiKey(String value) =>
-      _write(_kTomTomApiKey, value.trim());
-
-  Future<void> clearTomTomApiKey() => _delete(_kTomTomApiKey);
 
   // ─── Helpers internes ────────────────────────────────────────────
   Future<String?> _readRaw(String cle) async {

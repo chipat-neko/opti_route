@@ -97,6 +97,39 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     requiredDuringInsert: false,
     defaultValue: const Constant('brouillon'),
   );
+  static const VerificationMeta _distanceTotaleMMeta = const VerificationMeta(
+    'distanceTotaleM',
+  );
+  @override
+  late final GeneratedColumn<int> distanceTotaleM = GeneratedColumn<int>(
+    'distance_totale_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dureeTotaleSMeta = const VerificationMeta(
+    'dureeTotaleS',
+  );
+  @override
+  late final GeneratedColumn<int> dureeTotaleS = GeneratedColumn<int>(
+    'duree_totale_s',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _optimiseeLeMeta = const VerificationMeta(
+    'optimiseeLe',
+  );
+  @override
+  late final GeneratedColumn<DateTime> optimiseeLe = GeneratedColumn<DateTime>(
+    'optimisee_le',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -117,6 +150,9 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     pointDepartLabel,
     vehiculeCapaciteColis,
     statut,
+    distanceTotaleM,
+    dureeTotaleS,
+    optimiseeLe,
     creeLe,
   ];
   @override
@@ -198,6 +234,33 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
       );
     }
+    if (data.containsKey('distance_totale_m')) {
+      context.handle(
+        _distanceTotaleMMeta,
+        distanceTotaleM.isAcceptableOrUnknown(
+          data['distance_totale_m']!,
+          _distanceTotaleMMeta,
+        ),
+      );
+    }
+    if (data.containsKey('duree_totale_s')) {
+      context.handle(
+        _dureeTotaleSMeta,
+        dureeTotaleS.isAcceptableOrUnknown(
+          data['duree_totale_s']!,
+          _dureeTotaleSMeta,
+        ),
+      );
+    }
+    if (data.containsKey('optimisee_le')) {
+      context.handle(
+        _optimiseeLeMeta,
+        optimiseeLe.isAcceptableOrUnknown(
+          data['optimisee_le']!,
+          _optimiseeLeMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -245,6 +308,18 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.string,
         data['${effectivePrefix}statut'],
       )!,
+      distanceTotaleM: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}distance_totale_m'],
+      ),
+      dureeTotaleS: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duree_totale_s'],
+      ),
+      optimiseeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}optimisee_le'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -267,6 +342,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   final String pointDepartLabel;
   final int vehiculeCapaciteColis;
   final String statut;
+  final int? distanceTotaleM;
+  final int? dureeTotaleS;
+  final DateTime? optimiseeLe;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -277,6 +355,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     required this.pointDepartLabel,
     required this.vehiculeCapaciteColis,
     required this.statut,
+    this.distanceTotaleM,
+    this.dureeTotaleS,
+    this.optimiseeLe,
     required this.creeLe,
   });
   @override
@@ -290,6 +371,15 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     map['point_depart_label'] = Variable<String>(pointDepartLabel);
     map['vehicule_capacite_colis'] = Variable<int>(vehiculeCapaciteColis);
     map['statut'] = Variable<String>(statut);
+    if (!nullToAbsent || distanceTotaleM != null) {
+      map['distance_totale_m'] = Variable<int>(distanceTotaleM);
+    }
+    if (!nullToAbsent || dureeTotaleS != null) {
+      map['duree_totale_s'] = Variable<int>(dureeTotaleS);
+    }
+    if (!nullToAbsent || optimiseeLe != null) {
+      map['optimisee_le'] = Variable<DateTime>(optimiseeLe);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -304,6 +394,15 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       pointDepartLabel: Value(pointDepartLabel),
       vehiculeCapaciteColis: Value(vehiculeCapaciteColis),
       statut: Value(statut),
+      distanceTotaleM: distanceTotaleM == null && nullToAbsent
+          ? const Value.absent()
+          : Value(distanceTotaleM),
+      dureeTotaleS: dureeTotaleS == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dureeTotaleS),
+      optimiseeLe: optimiseeLe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(optimiseeLe),
       creeLe: Value(creeLe),
     );
   }
@@ -324,6 +423,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
         json['vehiculeCapaciteColis'],
       ),
       statut: serializer.fromJson<String>(json['statut']),
+      distanceTotaleM: serializer.fromJson<int?>(json['distanceTotaleM']),
+      dureeTotaleS: serializer.fromJson<int?>(json['dureeTotaleS']),
+      optimiseeLe: serializer.fromJson<DateTime?>(json['optimiseeLe']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -339,6 +441,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'pointDepartLabel': serializer.toJson<String>(pointDepartLabel),
       'vehiculeCapaciteColis': serializer.toJson<int>(vehiculeCapaciteColis),
       'statut': serializer.toJson<String>(statut),
+      'distanceTotaleM': serializer.toJson<int?>(distanceTotaleM),
+      'dureeTotaleS': serializer.toJson<int?>(dureeTotaleS),
+      'optimiseeLe': serializer.toJson<DateTime?>(optimiseeLe),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -352,6 +457,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     String? pointDepartLabel,
     int? vehiculeCapaciteColis,
     String? statut,
+    Value<int?> distanceTotaleM = const Value.absent(),
+    Value<int?> dureeTotaleS = const Value.absent(),
+    Value<DateTime?> optimiseeLe = const Value.absent(),
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -362,6 +470,11 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     pointDepartLabel: pointDepartLabel ?? this.pointDepartLabel,
     vehiculeCapaciteColis: vehiculeCapaciteColis ?? this.vehiculeCapaciteColis,
     statut: statut ?? this.statut,
+    distanceTotaleM: distanceTotaleM.present
+        ? distanceTotaleM.value
+        : this.distanceTotaleM,
+    dureeTotaleS: dureeTotaleS.present ? dureeTotaleS.value : this.dureeTotaleS,
+    optimiseeLe: optimiseeLe.present ? optimiseeLe.value : this.optimiseeLe,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -382,6 +495,15 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ? data.vehiculeCapaciteColis.value
           : this.vehiculeCapaciteColis,
       statut: data.statut.present ? data.statut.value : this.statut,
+      distanceTotaleM: data.distanceTotaleM.present
+          ? data.distanceTotaleM.value
+          : this.distanceTotaleM,
+      dureeTotaleS: data.dureeTotaleS.present
+          ? data.dureeTotaleS.value
+          : this.dureeTotaleS,
+      optimiseeLe: data.optimiseeLe.present
+          ? data.optimiseeLe.value
+          : this.optimiseeLe,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -397,6 +519,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('pointDepartLabel: $pointDepartLabel, ')
           ..write('vehiculeCapaciteColis: $vehiculeCapaciteColis, ')
           ..write('statut: $statut, ')
+          ..write('distanceTotaleM: $distanceTotaleM, ')
+          ..write('dureeTotaleS: $dureeTotaleS, ')
+          ..write('optimiseeLe: $optimiseeLe, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -412,6 +537,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     pointDepartLabel,
     vehiculeCapaciteColis,
     statut,
+    distanceTotaleM,
+    dureeTotaleS,
+    optimiseeLe,
     creeLe,
   );
   @override
@@ -426,6 +554,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.pointDepartLabel == this.pointDepartLabel &&
           other.vehiculeCapaciteColis == this.vehiculeCapaciteColis &&
           other.statut == this.statut &&
+          other.distanceTotaleM == this.distanceTotaleM &&
+          other.dureeTotaleS == this.dureeTotaleS &&
+          other.optimiseeLe == this.optimiseeLe &&
           other.creeLe == this.creeLe);
 }
 
@@ -438,6 +569,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<String> pointDepartLabel;
   final Value<int> vehiculeCapaciteColis;
   final Value<String> statut;
+  final Value<int?> distanceTotaleM;
+  final Value<int?> dureeTotaleS;
+  final Value<DateTime?> optimiseeLe;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -448,6 +582,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.pointDepartLabel = const Value.absent(),
     this.vehiculeCapaciteColis = const Value.absent(),
     this.statut = const Value.absent(),
+    this.distanceTotaleM = const Value.absent(),
+    this.dureeTotaleS = const Value.absent(),
+    this.optimiseeLe = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -459,6 +596,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     required String pointDepartLabel,
     this.vehiculeCapaciteColis = const Value.absent(),
     this.statut = const Value.absent(),
+    this.distanceTotaleM = const Value.absent(),
+    this.dureeTotaleS = const Value.absent(),
+    this.optimiseeLe = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -474,6 +614,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<String>? pointDepartLabel,
     Expression<int>? vehiculeCapaciteColis,
     Expression<String>? statut,
+    Expression<int>? distanceTotaleM,
+    Expression<int>? dureeTotaleS,
+    Expression<DateTime>? optimiseeLe,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -486,6 +629,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (vehiculeCapaciteColis != null)
         'vehicule_capacite_colis': vehiculeCapaciteColis,
       if (statut != null) 'statut': statut,
+      if (distanceTotaleM != null) 'distance_totale_m': distanceTotaleM,
+      if (dureeTotaleS != null) 'duree_totale_s': dureeTotaleS,
+      if (optimiseeLe != null) 'optimisee_le': optimiseeLe,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -499,6 +645,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<String>? pointDepartLabel,
     Value<int>? vehiculeCapaciteColis,
     Value<String>? statut,
+    Value<int?>? distanceTotaleM,
+    Value<int?>? dureeTotaleS,
+    Value<DateTime?>? optimiseeLe,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -511,6 +660,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       vehiculeCapaciteColis:
           vehiculeCapaciteColis ?? this.vehiculeCapaciteColis,
       statut: statut ?? this.statut,
+      distanceTotaleM: distanceTotaleM ?? this.distanceTotaleM,
+      dureeTotaleS: dureeTotaleS ?? this.dureeTotaleS,
+      optimiseeLe: optimiseeLe ?? this.optimiseeLe,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -544,6 +696,15 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (statut.present) {
       map['statut'] = Variable<String>(statut.value);
     }
+    if (distanceTotaleM.present) {
+      map['distance_totale_m'] = Variable<int>(distanceTotaleM.value);
+    }
+    if (dureeTotaleS.present) {
+      map['duree_totale_s'] = Variable<int>(dureeTotaleS.value);
+    }
+    if (optimiseeLe.present) {
+      map['optimisee_le'] = Variable<DateTime>(optimiseeLe.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -561,6 +722,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('pointDepartLabel: $pointDepartLabel, ')
           ..write('vehiculeCapaciteColis: $vehiculeCapaciteColis, ')
           ..write('statut: $statut, ')
+          ..write('distanceTotaleM: $distanceTotaleM, ')
+          ..write('dureeTotaleS: $dureeTotaleS, ')
+          ..write('optimiseeLe: $optimiseeLe, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -2668,6 +2832,9 @@ typedef $$TourneesTableCreateCompanionBuilder =
       required String pointDepartLabel,
       Value<int> vehiculeCapaciteColis,
       Value<String> statut,
+      Value<int?> distanceTotaleM,
+      Value<int?> dureeTotaleS,
+      Value<DateTime?> optimiseeLe,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -2680,6 +2847,9 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<String> pointDepartLabel,
       Value<int> vehiculeCapaciteColis,
       Value<String> statut,
+      Value<int?> distanceTotaleM,
+      Value<int?> dureeTotaleS,
+      Value<DateTime?> optimiseeLe,
       Value<DateTime> creeLe,
     });
 
@@ -2753,6 +2923,21 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<String> get statut => $composableBuilder(
     column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get distanceTotaleM => $composableBuilder(
+    column: $table.distanceTotaleM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dureeTotaleS => $composableBuilder(
+    column: $table.dureeTotaleS,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get optimiseeLe => $composableBuilder(
+    column: $table.optimiseeLe,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2836,6 +3021,21 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get distanceTotaleM => $composableBuilder(
+    column: $table.distanceTotaleM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dureeTotaleS => $composableBuilder(
+    column: $table.dureeTotaleS,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get optimiseeLe => $composableBuilder(
+    column: $table.optimiseeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -2882,6 +3082,21 @@ class $$TourneesTableAnnotationComposer
 
   GeneratedColumn<String> get statut =>
       $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<int> get distanceTotaleM => $composableBuilder(
+    column: $table.distanceTotaleM,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dureeTotaleS => $composableBuilder(
+    column: $table.dureeTotaleS,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get optimiseeLe => $composableBuilder(
+    column: $table.optimiseeLe,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
@@ -2948,6 +3163,9 @@ class $$TourneesTableTableManager
                 Value<String> pointDepartLabel = const Value.absent(),
                 Value<int> vehiculeCapaciteColis = const Value.absent(),
                 Value<String> statut = const Value.absent(),
+                Value<int?> distanceTotaleM = const Value.absent(),
+                Value<int?> dureeTotaleS = const Value.absent(),
+                Value<DateTime?> optimiseeLe = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -2958,6 +3176,9 @@ class $$TourneesTableTableManager
                 pointDepartLabel: pointDepartLabel,
                 vehiculeCapaciteColis: vehiculeCapaciteColis,
                 statut: statut,
+                distanceTotaleM: distanceTotaleM,
+                dureeTotaleS: dureeTotaleS,
+                optimiseeLe: optimiseeLe,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -2970,6 +3191,9 @@ class $$TourneesTableTableManager
                 required String pointDepartLabel,
                 Value<int> vehiculeCapaciteColis = const Value.absent(),
                 Value<String> statut = const Value.absent(),
+                Value<int?> distanceTotaleM = const Value.absent(),
+                Value<int?> dureeTotaleS = const Value.absent(),
+                Value<DateTime?> optimiseeLe = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -2980,6 +3204,9 @@ class $$TourneesTableTableManager
                 pointDepartLabel: pointDepartLabel,
                 vehiculeCapaciteColis: vehiculeCapaciteColis,
                 statut: statut,
+                distanceTotaleM: distanceTotaleM,
+                dureeTotaleS: dureeTotaleS,
+                optimiseeLe: optimiseeLe,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0
