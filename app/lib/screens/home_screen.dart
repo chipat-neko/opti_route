@@ -5,18 +5,29 @@ import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/drawer_badge_icon.dart';
+import 'onboarding_screen.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
 
-/// Routeur principal qui choisit entre l'ecran "tournee du jour" si
-/// une tournee active existe, sinon un empty state qui invite a en
-/// creer une.
+/// Routeur principal qui choisit entre :
+/// - l'OnboardingScreen si l'utilisateur n'a pas encore fini le
+///   walkthrough du premier lancement,
+/// - l'ecran "tournee du jour" si une tournee active existe,
+/// - sinon un empty state qui invite a en creer une.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final onboardingDone = ref.watch(onboardingDoneStreamProvider);
     final current = ref.watch(currentTourneeProvider);
+
+    // Tant qu'on n'a pas charge l'etat de l'onboarding, on patiente.
+    if (onboardingDone.isLoading) return const _LoadingScaffold();
+    // Si le flag n'est pas pose -> walkthrough.
+    if (onboardingDone.value != true) {
+      return const OnboardingScreen();
+    }
 
     return current.when(
       data: (tournee) =>
