@@ -905,6 +905,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _ordrePrioriteMeta = const VerificationMeta(
+    'ordrePriorite',
+  );
+  @override
+  late final GeneratedColumn<int> ordrePriorite = GeneratedColumn<int>(
+    'ordre_priorite',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -932,6 +943,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     nomClient,
     statutLivraison,
     ordreOptimise,
+    ordrePriorite,
     creeLe,
   ];
   @override
@@ -1055,6 +1067,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('ordre_priorite')) {
+      context.handle(
+        _ordrePrioriteMeta,
+        ordrePriorite.isAcceptableOrUnknown(
+          data['ordre_priorite']!,
+          _ordrePrioriteMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -1130,6 +1151,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.int,
         data['${effectivePrefix}ordre_optimise'],
       ),
+      ordrePriorite: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordre_priorite'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -1159,6 +1184,12 @@ class Stop extends DataClass implements Insertable<Stop> {
   final String? nomClient;
   final String statutLivraison;
   final int? ordreOptimise;
+
+  /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
+  /// priorite egale (obligatoire_premier ou obligatoire_dernier).
+  /// 1 = livre en premier de son groupe, 2 = en deuxieme, etc.
+  /// Null = pas applicable (priorite flexible / eviter).
+  final int? ordrePriorite;
   final DateTime creeLe;
   const Stop({
     required this.id,
@@ -1176,6 +1207,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.nomClient,
     required this.statutLivraison,
     this.ordreOptimise,
+    this.ordrePriorite,
     required this.creeLe,
   });
   @override
@@ -1212,6 +1244,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || ordreOptimise != null) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise);
     }
+    if (!nullToAbsent || ordrePriorite != null) {
+      map['ordre_priorite'] = Variable<int>(ordrePriorite);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -1245,6 +1280,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordreOptimise: ordreOptimise == null && nullToAbsent
           ? const Value.absent()
           : Value(ordreOptimise),
+      ordrePriorite: ordrePriorite == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ordrePriorite),
       creeLe: Value(creeLe),
     );
   }
@@ -1272,6 +1310,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       nomClient: serializer.fromJson<String?>(json['nomClient']),
       statutLivraison: serializer.fromJson<String>(json['statutLivraison']),
       ordreOptimise: serializer.fromJson<int?>(json['ordreOptimise']),
+      ordrePriorite: serializer.fromJson<int?>(json['ordrePriorite']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -1294,6 +1333,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'nomClient': serializer.toJson<String?>(nomClient),
       'statutLivraison': serializer.toJson<String>(statutLivraison),
       'ordreOptimise': serializer.toJson<int?>(ordreOptimise),
+      'ordrePriorite': serializer.toJson<int?>(ordrePriorite),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -1314,6 +1354,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<String?> nomClient = const Value.absent(),
     String? statutLivraison,
     Value<int?> ordreOptimise = const Value.absent(),
+    Value<int?> ordrePriorite = const Value.absent(),
     DateTime? creeLe,
   }) => Stop(
     id: id ?? this.id,
@@ -1335,6 +1376,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     ordreOptimise: ordreOptimise.present
         ? ordreOptimise.value
         : this.ordreOptimise,
+    ordrePriorite: ordrePriorite.present
+        ? ordrePriorite.value
+        : this.ordrePriorite,
     creeLe: creeLe ?? this.creeLe,
   );
   Stop copyWithCompanion(StopsCompanion data) {
@@ -1368,6 +1412,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordreOptimise: data.ordreOptimise.present
           ? data.ordreOptimise.value
           : this.ordreOptimise,
+      ordrePriorite: data.ordrePriorite.present
+          ? data.ordrePriorite.value
+          : this.ordrePriorite,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -1390,6 +1437,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('nomClient: $nomClient, ')
           ..write('statutLivraison: $statutLivraison, ')
           ..write('ordreOptimise: $ordreOptimise, ')
+          ..write('ordrePriorite: $ordrePriorite, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -1412,6 +1460,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     nomClient,
     statutLivraison,
     ordreOptimise,
+    ordrePriorite,
     creeLe,
   );
   @override
@@ -1433,6 +1482,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.nomClient == this.nomClient &&
           other.statutLivraison == this.statutLivraison &&
           other.ordreOptimise == this.ordreOptimise &&
+          other.ordrePriorite == this.ordrePriorite &&
           other.creeLe == this.creeLe);
 }
 
@@ -1452,6 +1502,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<String?> nomClient;
   final Value<String> statutLivraison;
   final Value<int?> ordreOptimise;
+  final Value<int?> ordrePriorite;
   final Value<DateTime> creeLe;
   const StopsCompanion({
     this.id = const Value.absent(),
@@ -1469,6 +1520,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.nomClient = const Value.absent(),
     this.statutLivraison = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
+    this.ordrePriorite = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   StopsCompanion.insert({
@@ -1487,6 +1539,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.nomClient = const Value.absent(),
     this.statutLivraison = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
+    this.ordrePriorite = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
@@ -1506,6 +1559,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<String>? nomClient,
     Expression<String>? statutLivraison,
     Expression<int>? ordreOptimise,
+    Expression<int>? ordrePriorite,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -1524,6 +1578,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (nomClient != null) 'nom_client': nomClient,
       if (statutLivraison != null) 'statut_livraison': statutLivraison,
       if (ordreOptimise != null) 'ordre_optimise': ordreOptimise,
+      if (ordrePriorite != null) 'ordre_priorite': ordrePriorite,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -1544,6 +1599,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<String?>? nomClient,
     Value<String>? statutLivraison,
     Value<int?>? ordreOptimise,
+    Value<int?>? ordrePriorite,
     Value<DateTime>? creeLe,
   }) {
     return StopsCompanion(
@@ -1562,6 +1618,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       nomClient: nomClient ?? this.nomClient,
       statutLivraison: statutLivraison ?? this.statutLivraison,
       ordreOptimise: ordreOptimise ?? this.ordreOptimise,
+      ordrePriorite: ordrePriorite ?? this.ordrePriorite,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -1614,6 +1671,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (ordreOptimise.present) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise.value);
     }
+    if (ordrePriorite.present) {
+      map['ordre_priorite'] = Variable<int>(ordrePriorite.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -1638,6 +1698,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('nomClient: $nomClient, ')
           ..write('statutLivraison: $statutLivraison, ')
           ..write('ordreOptimise: $ordreOptimise, ')
+          ..write('ordrePriorite: $ordrePriorite, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -3928,6 +3989,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<String?> nomClient,
       Value<String> statutLivraison,
       Value<int?> ordreOptimise,
+      Value<int?> ordrePriorite,
       Value<DateTime> creeLe,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
@@ -3947,6 +4009,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<String?> nomClient,
       Value<String> statutLivraison,
       Value<int?> ordreOptimise,
+      Value<int?> ordrePriorite,
       Value<DateTime> creeLe,
     });
 
@@ -4066,6 +4129,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<int> get ordreOptimise => $composableBuilder(
     column: $table.ordreOptimise,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordrePriorite => $composableBuilder(
+    column: $table.ordrePriorite,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4202,6 +4270,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get ordrePriorite => $composableBuilder(
+    column: $table.ordrePriorite,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -4293,6 +4366,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<int> get ordreOptimise => $composableBuilder(
     column: $table.ordreOptimise,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ordrePriorite => $composableBuilder(
+    column: $table.ordrePriorite,
     builder: (column) => column,
   );
 
@@ -4391,6 +4469,7 @@ class $$StopsTableTableManager
                 Value<String?> nomClient = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
+                Value<int?> ordrePriorite = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
@@ -4408,6 +4487,7 @@ class $$StopsTableTableManager
                 nomClient: nomClient,
                 statutLivraison: statutLivraison,
                 ordreOptimise: ordreOptimise,
+                ordrePriorite: ordrePriorite,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -4427,6 +4507,7 @@ class $$StopsTableTableManager
                 Value<String?> nomClient = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
+                Value<int?> ordrePriorite = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
@@ -4444,6 +4525,7 @@ class $$StopsTableTableManager
                 nomClient: nomClient,
                 statutLivraison: statutLivraison,
                 ordreOptimise: ordreOptimise,
+                ordrePriorite: ordrePriorite,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0

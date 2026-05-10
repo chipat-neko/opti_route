@@ -9,6 +9,7 @@ import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/ordre_priorite_dialog.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
 import 'parametres_screen.dart';
@@ -164,8 +165,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       return;
     }
 
-    final stops =
-        await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
+    final stopsRepo = ref.read(stopsRepositoryProvider);
+    final stops = await stopsRepo.getByTournee(widget.tournee.id);
     final geocoded =
         stops.where((s) => s.lat != null && s.lng != null).toList();
     if (geocoded.length < 2) {
@@ -179,10 +180,56 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       return;
     }
 
+    // 1. Si plusieurs arrets EN 1ER : demander a Noah l'ordre voulu
+    //    entre eux. Idem pour EN DERNIER. VROOM ne sait pas le faire :
+    //    son champ priority est un score, pas un ordre absolu.
+    final firsts = geocoded
+        .where((s) => s.priorite == 'obligatoire_premier')
+        .toList()
+      ..sort(_existingOrdrePrio);
+    final lasts = geocoded
+        .where((s) => s.priorite == 'obligatoire_dernier')
+        .toList()
+      ..sort(_existingOrdrePrio);
+
+    if (!mounted) return;
+    final firstsOrdered = await OrdrePrioriteDialog.showIfNeeded(
+      context,
+      titre: 'Ordre des arrets EN 1ER',
+      sousTitre: 'Tu as ${firsts.length} arrets a livrer en premier. '
+          'Glisse-les dans l\'ordre voulu : 1, 2, 3...',
+      stops: firsts,
+    );
+    if (firstsOrdered == null) return; // annule
+    if (!mounted) return;
+    final lastsOrdered = await OrdrePrioriteDialog.showIfNeeded(
+      context,
+      titre: 'Ordre des arrets EN DERNIER',
+      sousTitre: 'Tu as ${lasts.length} arrets a livrer en fin de tournee. '
+          'Glisse-les dans l\'ordre voulu.',
+      stops: lasts,
+    );
+    if (lastsOrdered == null) return;
+
+    // 2. Persister `ordrePriorite` pour que le solveur (et la prochaine
+    //    optimisation) le retrouvent.
+    await _persistOrdrePriorite(firstsOrdered);
+    await _persistOrdrePriorite(lastsOrdered);
+
+    // Recharger les stops pour avoir les ordrePriorite a jour avant
+    // d'appeler le solveur.
+    final stopsRefreshed = await stopsRepo.getByTournee(widget.tournee.id);
+    final geocodedRefreshed = stopsRefreshed
+        .where((s) => s.lat != null && s.lng != null)
+        .toList(growable: false);
+
+    if (!mounted) return;
     setState(() => _optimizing = true);
     try {
-      final result =
-          await optimizer.optimize(tournee: widget.tournee, stops: geocoded);
+      final result = await optimizer.optimize(
+        tournee: widget.tournee,
+        stops: geocodedRefreshed,
+      );
 
       await ref
           .read(stopsRepositoryProvider)
@@ -214,6 +261,32 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       );
     } finally {
       if (mounted) setState(() => _optimizing = false);
+    }
+  }
+
+  /// Tri stable d'arrets par `ordrePriorite` (croissant). Null tombe a
+  /// la fin -- les arrets non encore ordonnes apparaissent en queue,
+  /// l'utilisateur les classera dans le dialog.
+  static int _existingOrdrePrio(Stop a, Stop b) {
+    final ao = a.ordrePriorite;
+    final bo = b.ordrePriorite;
+    if (ao == null && bo == null) return a.id.compareTo(b.id);
+    if (ao == null) return 1;
+    if (bo == null) return -1;
+    return ao.compareTo(bo);
+  }
+
+  /// Ecrit `ordrePriorite = position dans la liste` (1-based) pour
+  /// chaque stop. Permet aux prochaines optimisations de reprendre
+  /// l'ordre choisi sans redemander.
+  Future<void> _persistOrdrePriorite(List<int> orderedIds) async {
+    if (orderedIds.isEmpty) return;
+    final repo = ref.read(stopsRepositoryProvider);
+    for (var i = 0; i < orderedIds.length; i++) {
+      await repo.update(
+        orderedIds[i],
+        StopsCompanion(ordrePriorite: Value(i + 1)),
+      );
     }
   }
 }
