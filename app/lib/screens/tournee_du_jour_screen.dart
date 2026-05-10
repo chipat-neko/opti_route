@@ -16,6 +16,7 @@ import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/drawer_badge_icon.dart';
 import '../widgets/ordre_priorite_dialog.dart';
 import '../widgets/stop_action_sheet.dart';
 import 'ajout_arret_screen.dart';
@@ -50,6 +51,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
+        leading: const DrawerBadgeIcon(),
         title: const Text('Tournee du jour'),
         actions: [
           IconButton(

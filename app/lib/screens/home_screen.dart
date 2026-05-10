@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/drawer_badge_icon.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
 
@@ -63,7 +64,10 @@ class _NoTourTodayScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const AppDrawer(),
-      appBar: AppBar(title: const Text('Aujourd\'hui')),
+      appBar: AppBar(
+        leading: const DrawerBadgeIcon(),
+        title: const Text('Aujourd\'hui'),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x28),

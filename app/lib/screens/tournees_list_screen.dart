@@ -7,6 +7,7 @@ import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/drawer_badge_icon.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
 
@@ -20,6 +21,7 @@ class TourneesListScreen extends ConsumerWidget {
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
+        leading: const DrawerBadgeIcon(),
         title: const Text('Historique des tournees'),
       ),
       body: tourneesAsync.when(

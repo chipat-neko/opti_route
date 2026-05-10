@@ -44,6 +44,15 @@ final tourneesStreamProvider = StreamProvider<List<Tournee>>((ref) {
   return ref.watch(tourneesRepositoryProvider).watchAll();
 });
 
+/// Vrai s'il existe au moins une tournee `statut == 'en_cours'` dans
+/// la base, peu importe sa date. Sert a afficher un badge "tournee
+/// active" sur l'icone drawer pour eviter d'oublier qu'on est en
+/// mode actif quand on navigue dans d'autres ecrans.
+final hasTourneeEnCoursProvider = Provider<bool>((ref) {
+  final list = ref.watch(tourneesStreamProvider).asData?.value ?? const [];
+  return list.any((t) => t.statut == 'en_cours');
+});
+
 /// Tournee active du jour, ou null si rien aujourd'hui.
 ///
 /// Regles de selection :
