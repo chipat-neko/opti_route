@@ -6,6 +6,7 @@ import '../providers/geocoding_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import 'mentions_legales_screen.dart';
 
 class ParametresScreen extends ConsumerStatefulWidget {
   const ParametresScreen({super.key});
@@ -264,6 +265,25 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               fontSize: 12,
               color: AppColors.textMute,
               height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('A propos'),
+          const SizedBox(height: AppSpacing.x10),
+          ListTile(
+            leading: const Icon(Icons.policy_outlined),
+            title: const Text('Mentions legales'),
+            subtitle: const Text(
+              'Confidentialite + conditions d\'utilisation',
+              style: TextStyle(fontSize: 12),
+            ),
+            contentPadding: EdgeInsets.zero,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const MentionsLegalesScreen(),
+              ),
             ),
           ),
         ],

@@ -114,6 +114,15 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 28. Privacy policy + CGU + écran Mentions légales (#66)
+
+Pré-requis Play Store + transparence utilisateur :
+- `docs/legal/privacy-policy.md` : politique de confidentialité (tout reste local, pas de tracking, services tiers utilisés et données échangées).
+- `docs/legal/cgu.md` : conditions d'utilisation (usage, limitations, quotas APIs, responsabilité).
+- Nouvel écran `MentionsLegalesScreen` accessible depuis **Paramètres → À propos → Mentions légales**. 2 onglets (Confidentialité / CGU), textes embarqués en dur dans l'app (fonctionne hors-ligne, pas d'hébergement requis).
+
+Rendu markdown simplifié maison (titres, listes, paragraphes) pour éviter d'ajouter un package markdown rien que pour ça.
+
 ## 27. CI GitHub Actions (#65)
 
 Workflow `.github/workflows/ci.yml` qui s'exécute sur chaque `pull_request` vers `main` + sur chaque `push` sur `main` :
