@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../data/stops_repository.dart';
+import '../data/tournees_repository.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
@@ -326,6 +328,14 @@ class _Body extends StatelessWidget {
           const SizedBox(height: AppSpacing.x12),
           _OptimisedBanner(tournee: tournee),
         ],
+        if (stops.any((s) =>
+            s.statutLivraison == 'livre' || s.statutLivraison == 'echec')) ...[
+          const SizedBox(height: AppSpacing.x12),
+          _ProgressBanner(
+            stops: stops,
+            tourneeTerminee: tournee.statut == 'terminee',
+          ),
+        ],
         const SizedBox(height: AppSpacing.x18),
         if (stops.isEmpty)
           const _StopsPlaceholder()
@@ -573,6 +583,168 @@ class _OptimisedBanner extends StatelessWidget {
   }
 }
 
+/// Bandeau de progression / bilan qui s'affiche des qu'au moins un
+/// arret a un statut definitif. Quand toute la tournee est terminee,
+/// passe en mode "Tournee terminee" avec un fond vert.
+class _ProgressBanner extends StatelessWidget {
+  const _ProgressBanner({
+    required this.stops,
+    required this.tourneeTerminee,
+  });
+
+  final List<Stop> stops;
+  final bool tourneeTerminee;
+
+  @override
+  Widget build(BuildContext context) {
+    final livres =
+        stops.where((s) => s.statutLivraison == 'livre').length;
+    final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
+    final total = stops.length;
+    final restants = total - livres - echecs;
+
+    final bg = tourneeTerminee ? AppColors.emerald : AppColors.paper;
+    final fg = tourneeTerminee ? AppColors.paper : AppColors.ink;
+    final mute = tourneeTerminee
+        ? AppColors.paper.withValues(alpha: 0.75)
+        : AppColors.textMute;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r14),
+        border: tourneeTerminee
+            ? null
+            : Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                tourneeTerminee
+                    ? Icons.flag
+                    : Icons.local_shipping_outlined,
+                color: fg,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Text(
+                tourneeTerminee
+                    ? 'Tournee terminee'
+                    : 'Avancement : $livres / $total',
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          // Barre de progression simple : 3 segments empiles.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 6,
+              child: Row(
+                children: [
+                  if (livres > 0)
+                    Expanded(
+                      flex: livres,
+                      child: Container(
+                        color: tourneeTerminee
+                            ? AppColors.lime
+                            : AppColors.emerald,
+                      ),
+                    ),
+                  if (echecs > 0)
+                    Expanded(flex: echecs, child: Container(color: AppColors.red)),
+                  if (restants > 0)
+                    Expanded(
+                      flex: restants,
+                      child: Container(
+                        color: tourneeTerminee
+                            ? AppColors.paper.withValues(alpha: 0.2)
+                            : AppColors.creamSoft,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Wrap(
+            spacing: AppSpacing.x14,
+            runSpacing: AppSpacing.x4,
+            children: [
+              _ProgressStat(
+                icon: Icons.check_circle,
+                color: tourneeTerminee ? AppColors.lime : AppColors.emerald,
+                label: '$livres livres',
+                fg: fg,
+                mute: mute,
+              ),
+              _ProgressStat(
+                icon: Icons.cancel,
+                color: AppColors.red,
+                label: '$echecs echecs',
+                fg: fg,
+                mute: mute,
+              ),
+              if (!tourneeTerminee)
+                _ProgressStat(
+                  icon: Icons.schedule,
+                  color: AppColors.amber,
+                  label: '$restants a livrer',
+                  fg: fg,
+                  mute: mute,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressStat extends StatelessWidget {
+  const _ProgressStat({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.fg,
+    required this.mute,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final Color fg;
+  final Color mute;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: fg,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StopsPlaceholder extends StatelessWidget {
   const _StopsPlaceholder();
 
@@ -794,12 +966,15 @@ class _StopRow extends ConsumerWidget {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final repo = ref.read(stopsRepositoryProvider);
+    final tourneesRepo = ref.read(tourneesRepositoryProvider);
 
     final action = await StopActionSheet.show(context, stop);
     if (action == null) return;
+    var statutChange = false;
     switch (action) {
       case MarkLivreAction():
         await repo.markLivre(stop.id);
+        statutChange = true;
         messenger.showSnackBar(
           SnackBar(
             content: Text('${_primaryLine(stop)} marque livre'),
@@ -809,6 +984,7 @@ class _StopRow extends ConsumerWidget {
         );
       case MarkEchecAction(raison: final r):
         await repo.markEchec(stop.id, r);
+        statutChange = true;
         messenger.showSnackBar(
           SnackBar(
             content: Text(
@@ -819,6 +995,7 @@ class _StopRow extends ConsumerWidget {
         );
       case MarkAaLivrerAction():
         await repo.markAaLivrer(stop.id);
+        statutChange = true;
       case OpenDetailsAction():
         await navigator.push<void>(
           MaterialPageRoute(
@@ -828,6 +1005,41 @@ class _StopRow extends ConsumerWidget {
             ),
           ),
         );
+    }
+
+    if (statutChange) {
+      await _maybeFinishTournee(repo, tourneesRepo, stop.tourneeId);
+    }
+  }
+
+  /// Verifie si tous les arrets ont un statut definitif (livre / echec)
+  /// et bascule la tournee en 'terminee' le cas echeant. Si on annule
+  /// un statut, on revient a 'optimisee' / 'en_cours'.
+  Future<void> _maybeFinishTournee(
+    StopsRepository stopsRepo,
+    TourneesRepository tourneesRepo,
+    int tourneeId,
+  ) async {
+    final stops = await stopsRepo.getByTournee(tourneeId);
+    if (stops.isEmpty) return;
+    final tournee = await tourneesRepo.getById(tourneeId);
+    if (tournee == null) return;
+    final tousValides = stops.every(
+      (s) => s.statutLivraison == 'livre' || s.statutLivraison == 'echec',
+    );
+    final wasTerminee = tournee.statut == 'terminee';
+    if (tousValides && !wasTerminee) {
+      await tourneesRepo.update(
+        tourneeId,
+        const TourneesCompanion(statut: Value('terminee')),
+      );
+    } else if (!tousValides && wasTerminee) {
+      // L'utilisateur a annule un statut deja pose. On retire la
+      // marque "terminee" pour qu'il finisse la tournee.
+      await tourneesRepo.update(
+        tourneeId,
+        const TourneesCompanion(statut: Value('optimisee')),
+      );
     }
   }
 
