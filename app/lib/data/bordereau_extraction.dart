@@ -10,7 +10,15 @@ class BordereauExtraction {
     this.ville,
     this.telephone,
     this.nbColis,
+    this.confidence = ExtractionConfidence.high,
   });
+
+  /// Niveau de confiance dans le parsing.
+  /// - high : tous les marqueurs trouves, donnees cross-verifiees.
+  /// - low : on a trouve quelque chose mais c'est ambigu, l'utilisateur
+  ///   doit verifier (UI affichera une carte orange).
+  /// - none : on n'a rien de fiable a proposer (UI cachera la carte).
+  final ExtractionConfidence confidence;
 
   /// Nom de l'entreprise / personne destinataire.
   final String? nomDestinataire;
@@ -55,3 +63,5 @@ class BordereauExtraction {
     return nomDestinataire;
   }
 }
+
+enum ExtractionConfidence { high, low, none }
