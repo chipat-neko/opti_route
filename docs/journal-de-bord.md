@@ -114,6 +114,18 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 26. Export PDF récap d'une tournée (#64)
+
+Nouvelle entrée **Exporter en PDF** dans le menu popup (`⋮`) de l'écran tournée du jour. Génère un PDF récap A4 contenant :
+- Header : nom de la tournée, date, point de départ.
+- Tableau de stats : arrêts, colis (livrés / total), distance, durée, livrés / échecs / à livrer.
+- Liste numérotée de tous les arrêts avec nom client, adresse, nb colis, statut (avec raison d'échec si applicable).
+- Pied de page : « Généré par opti_route le DD/MM/YYYY à HH:mm ».
+
+Le PDF est sauvegardé dans le répertoire temporaire puis partagé via le sélecteur natif Android (`share_plus`) — Drive, Mail, impression, etc. Tout est généré localement, aucune API externe.
+
+Nouvelle dep : `pdf: ^3.11.4`.
+
 ## 25. Templates de tournée — duplication d'une tournée passée (#63)
 
 Long press sur une tournée dans l'historique → bottom sheet avec 2 actions :
