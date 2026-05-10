@@ -411,8 +411,8 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     try {
       if (_isEdit) {
         final companion = StopsCompanion(
-          adresseBrute: Value(_address!.displayName),
-          adresseNormalisee: Value(_address!.displayName),
+          adresseBrute: Value(_address!.adressePostale),
+          adresseNormalisee: Value(_address!.adressePostale),
           lat: Value(_address!.lat),
           lng: Value(_address!.lon),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
@@ -427,8 +427,8 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       } else {
         final companion = StopsCompanion.insert(
           tourneeId: widget.tourneeId,
-          adresseBrute: _address!.displayName,
-          adresseNormalisee: Value(_address!.displayName),
+          adresseBrute: _address!.adressePostale,
+          adresseNormalisee: Value(_address!.adressePostale),
           lat: Value(_address!.lat),
           lng: Value(_address!.lon),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
@@ -447,7 +447,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       try {
         await carnet.upsertFromValidatedStop(
           nomClient: _orNull(_nomClientCtrl.text),
-          adresseDisplay: _address!.displayName,
+          adresseDisplay: _address!.adressePostale,
           lat: _address!.lat,
           lng: _address!.lon,
           rue: _address!.road == null

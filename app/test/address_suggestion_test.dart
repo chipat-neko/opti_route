@@ -1,0 +1,61 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:opti_route/data/address_suggestion.dart';
+
+void main() {
+  group('AddressSuggestion.adressePostale', () {
+    test('POI SIRENE : retire le nom de l\'entreprise du displayName', () {
+      // Cas reel : SIRENE renvoie un displayName "BCI CHARTRES (BCI),
+      // LE BOIS DE PARIS IMPASSE, 28000 CHARTRES". Le nom est ensuite
+      // affiche en titre via `nomClient` -- on ne veut pas le voir
+      // une 2e fois en sous-titre.
+      const s = AddressSuggestion(
+        displayName: 'BCI CHARTRES (BCI), LE BOIS DE PARIS IMPASSE, 28000 CHARTRES',
+        lat: 48.4307,
+        lon: 1.4892,
+        road: 'IMPASSE LE BOIS DE PARIS',
+        postcode: '28000',
+        city: 'CHARTRES',
+        poiName: 'BCI CHARTRES (BCI)',
+      );
+      // L'adresse postale ne doit plus contenir le nom de l'entreprise.
+      expect(s.adressePostale.toUpperCase(),
+          isNot(contains('BCI CHARTRES')));
+      expect(s.adressePostale, contains('IMPASSE LE BOIS DE PARIS'));
+      expect(s.adressePostale, contains('28000 CHARTRES'));
+    });
+
+    test('adresse classique avec numero : "{n} {rue}, {cp} {ville}"', () {
+      const s = AddressSuggestion(
+        displayName: '14, Rue du Faubourg Saint-Antoine, 75011 Paris',
+        lat: 48.85,
+        lon: 2.37,
+        road: 'Rue du Faubourg Saint-Antoine',
+        houseNumber: '14',
+        postcode: '75011',
+        city: 'Paris',
+      );
+      expect(s.adressePostale, '14 Rue du Faubourg Saint-Antoine, 75011 Paris');
+    });
+
+    test('adresse sans numero : juste la rue + ville', () {
+      const s = AddressSuggestion(
+        displayName: 'Rue de la Mouchetiere, 45140 Ingre',
+        lat: 47.9,
+        lon: 1.85,
+        road: 'Rue de la Mouchetiere',
+        postcode: '45140',
+        city: 'Ingre',
+      );
+      expect(s.adressePostale, 'Rue de la Mouchetiere, 45140 Ingre');
+    });
+
+    test('aucune composante : fallback sur displayName', () {
+      const s = AddressSuggestion(
+        displayName: 'Quelque part en France',
+        lat: 47,
+        lon: 2,
+      );
+      expect(s.adressePostale, 'Quelque part en France');
+    });
+  });
+}
