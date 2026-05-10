@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/database.dart';
+import '../data/navigation_service.dart';
 import '../theme/app_tokens.dart';
 
 /// Action choisie par le livreur dans la bottom sheet de validation
@@ -115,6 +116,45 @@ class _StopActionSheetState extends State<StopActionSheet> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.x18),
+
+            if (!_pickingRaison && stop.lat != null && stop.lng != null) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.ink,
+                        minimumSize: const Size(0, 48),
+                      ),
+                      onPressed: () => NavigationService.launchGoogleMaps(
+                        lat: stop.lat!,
+                        lng: stop.lng!,
+                      ),
+                      icon: const Icon(Icons.map_outlined, size: 18),
+                      label: const Text('Maps',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.ink,
+                        minimumSize: const Size(0, 48),
+                      ),
+                      onPressed: () => NavigationService.launchWaze(
+                        lat: stop.lat!,
+                        lng: stop.lng!,
+                      ),
+                      icon: const Icon(Icons.navigation_outlined, size: 18),
+                      label: const Text('Waze',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x14),
+            ],
 
             if (_pickingRaison)
               _RaisonEchecPicker(
