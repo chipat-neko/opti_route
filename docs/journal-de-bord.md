@@ -114,6 +114,16 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 20. Backup du carnet d'adresses en CSV (#58)
+
+Bouton **Exporter** (icône partage) dans l'AppBar du carnet d'adresses. Génère un CSV avec toutes les entrées (id, nom client, adresse, rue/CP/ville, lat/lng, useCount, dates) et le partage via le sélecteur natif Android (`share_plus`) — Drive, Mail, copie sur PC, etc.
+
+Format conforme RFC 4180 : guillemets autour des champs contenant virgule/guillemet/retour ligne, guillemets internes doublés. Tests unitaires sur l'échappement.
+
+Filet de sécurité : Noah peut désormais sauvegarder son carnet avant de changer de téléphone. L'import sera ajouté plus tard (file_picker requis).
+
+Nouvelles deps : `share_plus: ^11.1.0`, `path_provider: ^2.1.5`.
+
 ## 19. Multi-tournées par jour — bandeau de switch (#57)
 
 Quand le livreur a plusieurs tournées datées d'aujourd'hui (matin/aprem ou plusieurs secteurs), un bandeau cliquable apparaît sous le header de la tournée courante : `1 autre tournée aujourd'hui` (ou `N autres`). Tap → bottom sheet listant les autres tournées du jour avec leur statut (en cours / optimisée / terminée), tap sur une → switch.
