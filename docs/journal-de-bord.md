@@ -114,6 +114,18 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 27. CI GitHub Actions (#65)
+
+Workflow `.github/workflows/ci.yml` qui s'exécute sur chaque `pull_request` vers `main` + sur chaque `push` sur `main` :
+1. Checkout du code
+2. Setup Flutter stable (avec cache)
+3. `flutter pub get`
+4. `dart run build_runner build --delete-conflicting-outputs` (régénération des fichiers Drift)
+5. `flutter analyze`
+6. `flutter test --reporter expanded`
+
+Filet de sécurité : à chaque PR future, GitHub vérifie automatiquement que tout passe. Runners Ubuntu free (illimités sur repo public).
+
 ## 26. Export PDF récap d'une tournée (#64)
 
 Nouvelle entrée **Exporter en PDF** dans le menu popup (`⋮`) de l'écran tournée du jour. Génère un PDF récap A4 contenant :

@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  flutter:
+    name: flutter analyze + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Aligne sur l'environnement de Noah (Flutter local en
+          # C:\src\flutter, channel stable). On pinne une version mineure
+          # pour eviter qu'un changement upstream casse la build.
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      # On regenere les fichiers Drift au cas où ils auraient drifte
+      # par rapport au schema check-in. Si build_runner echoue, on veut
+      # le savoir avant le analyze.
+      - name: dart run build_runner build
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: flutter analyze
+        run: flutter analyze
+
+      - name: flutter test
+        run: flutter test --reporter expanded
