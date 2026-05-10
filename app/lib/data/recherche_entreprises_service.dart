@@ -97,32 +97,58 @@ class RechercheEntreprisesService implements GeocodingService {
   }
 
   AddressSuggestion? _toSuggestion(Map<String, dynamic> result) {
-    final siege = (result['siege'] as Map?)?.cast<String, dynamic>();
-    if (siege == null) return null;
+    // Filtre 1 : entreprise cessee (`etat_administratif: "C"`) -> on
+    // ignore. Sinon on enverrait le livreur a une ancienne adresse
+    // d'une entreprise qui n'existe plus (cas reel : SAS Alain Javault,
+    // siege ferme depuis 2006 -- l'entreprise a en fait demenage et
+    // existe encore physiquement, mais SIRENE ne l'a pas suivie).
+    if (result['etat_administratif'] == 'C') return null;
+
+    // On preferait l'etablissement le plus pertinent : si le siege est
+    // ferme mais qu'un etablissement est encore actif, utilise
+    // l'etablissement actif. Sinon on prend le siege (s'il est actif).
+    Map<String, dynamic>? etab = (result['siege'] as Map?)
+        ?.cast<String, dynamic>();
+    final siegeFerme = etab?['etat_administratif'] == 'F';
+    if (etab == null || siegeFerme) {
+      final matching = result['matching_etablissements'];
+      if (matching is List) {
+        for (final m in matching) {
+          if (m is Map && m['etat_administratif'] == 'A') {
+            etab = m.cast<String, dynamic>();
+            break;
+          }
+        }
+      }
+      // Toujours rien d'actif -> on skip ce resultat. La cascade
+      // (FranceGeocodingService) passera a Photon (OSM), qui a souvent
+      // les adresses physiques actuelles meme si SIRENE ne les a pas.
+      if (etab == null || etab['etat_administratif'] == 'F') return null;
+    }
 
     // L'API renvoie latitude/longitude comme **string** ("48.4220...").
     // Cast direct en `num` retourne null. On parse explicitement.
-    final lat = _parseDouble(siege['latitude']);
-    final lon = _parseDouble(siege['longitude']);
+    final lat = _parseDouble(etab['latitude']);
+    final lon = _parseDouble(etab['longitude']);
     if (lat == null || lon == null) return null;
 
     final nomComplet = result['nom_complet'] as String? ??
         result['nom_raison_sociale'] as String?;
 
-    final houseNumber = siege['numero_voie'] as String?;
-    final libelleVoie = siege['libelle_voie'] as String?;
-    final typeVoie = siege['type_voie'] as String?;
+    final houseNumber = etab['numero_voie'] as String?;
+    final libelleVoie = etab['libelle_voie'] as String?;
+    final typeVoie = etab['type_voie'] as String?;
     final road = libelleVoie != null && typeVoie != null
         ? '$typeVoie $libelleVoie'.trim()
-        : libelleVoie ?? siege['adresse'] as String?;
-    final postcode = siege['code_postal'] as String?;
+        : libelleVoie ?? etab['adresse'] as String?;
+    final postcode = etab['code_postal'] as String?;
 
     // ATTENTION : `commune` contient le **code INSEE** ("28158"), pas
     // le nom. Le nom est dans `libelle_commune`.
-    final city = siege['libelle_commune'] as String?;
-    final country = siege['pays'] as String? ?? 'France';
+    final city = etab['libelle_commune'] as String?;
+    final country = etab['pays'] as String? ?? 'France';
 
-    final addressLine = siege['adresse'] as String? ?? '';
+    final addressLine = etab['adresse'] as String? ?? '';
     final localityLine = [
       if (postcode != null && postcode.isNotEmpty) postcode,
       if (city != null && city.isNotEmpty) city,
