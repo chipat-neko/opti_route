@@ -39,9 +39,52 @@ class OpenRouteOptimizationService implements OptimizationService {
       );
     }
 
+    // 1. Separer en 3 groupes selon la priorite. Les firsts et lasts
+    //    sont tries selon `ordrePriorite` (choisi par l'utilisateur via
+    //    le dialog OrdrePrioriteDialog). VROOM ne sait pas faire ce
+    //    tri lui-meme : son champ `priority` est un score de selection,
+    //    pas un ordre absolu dans la route.
+    final firsts = geocoded
+        .where((s) => s.priorite == 'obligatoire_premier')
+        .toList()
+      ..sort(_byOrdrePriorite);
+    final lasts = geocoded
+        .where((s) => s.priorite == 'obligatoire_dernier')
+        .toList()
+      ..sort(_byOrdrePriorite);
+    final flexibles = geocoded
+        .where((s) =>
+            s.priorite != 'obligatoire_premier' &&
+            s.priorite != 'obligatoire_dernier')
+        .toList(growable: false);
+
+    // 2. Cas degeneres : pas besoin d'appeler VROOM si tous les arrets
+    //    sont en ordre fixe (firsts + lasts uniquement).
+    if (flexibles.isEmpty) {
+      return OptimizationResult(
+        orderedStopIds: [
+          for (final s in firsts) s.id,
+          for (final s in lasts) s.id,
+        ],
+        // Pas d'API call -> pas de distance/duree calculees ici. Le
+        // caller verra 0 et affichera "—" comme avant.
+        totalDistanceMeters: 0,
+        totalDurationSeconds: 0,
+      );
+    }
+
+    // 3. Point de depart de la portion VROOM = position du dernier
+    //    "first" si on en a, sinon depot. Idem pour le point de fin.
+    final vroomStart = firsts.isNotEmpty
+        ? [firsts.last.lng!, firsts.last.lat!]
+        : [tournee.pointDepartLng, tournee.pointDepartLat];
+    final vroomEnd = lasts.isNotEmpty
+        ? [lasts.first.lng!, lasts.first.lat!]
+        : [tournee.pointDepartLng, tournee.pointDepartLat];
+
     final payload = {
       'jobs': [
-        for (final s in geocoded)
+        for (final s in flexibles)
           {
             'id': s.id,
             'service': s.dureeArretMin * 60,
@@ -55,8 +98,8 @@ class OpenRouteOptimizationService implements OptimizationService {
         {
           'id': 1,
           'profile': 'driving-car',
-          'start': [tournee.pointDepartLng, tournee.pointDepartLat],
-          'end': [tournee.pointDepartLng, tournee.pointDepartLat],
+          'start': vroomStart,
+          'end': vroomEnd,
         }
       ],
     };
@@ -101,20 +144,29 @@ class OpenRouteOptimizationService implements OptimizationService {
     final route = routes.first as Map<String, dynamic>;
 
     final steps = (route['steps'] as List?) ?? const [];
-    final orderedIds = <int>[];
+    final flexiblesOrdered = <int>[];
     for (final step in steps) {
       if (step is Map && step['type'] == 'job') {
         final jobId = step['job'];
-        if (jobId is int) orderedIds.add(jobId);
+        if (jobId is int) flexiblesOrdered.add(jobId);
       }
     }
 
-    if (orderedIds.length != geocoded.length) {
+    if (flexiblesOrdered.length != flexibles.length) {
       throw OptimizationException(
-        'Solveur n\'a pu placer que ${orderedIds.length}/${geocoded.length} arrets. '
+        'Solveur n\'a pu placer que ${flexiblesOrdered.length}/'
+        '${flexibles.length} arrets flexibles. '
         'Verifie les fenetres horaires ou les priorites.',
       );
     }
+
+    // 4. Concatenation finale : firsts (ordre Noah) + flexibles (ordre
+    //    VROOM) + lasts (ordre Noah).
+    final orderedIds = <int>[
+      for (final s in firsts) s.id,
+      ...flexiblesOrdered,
+      for (final s in lasts) s.id,
+    ];
 
     final summary = (raw['summary'] as Map?)?.cast<String, dynamic>();
     final duration = (route['duration'] as num?)?.toInt() ??
@@ -124,6 +176,10 @@ class OpenRouteOptimizationService implements OptimizationService {
         (summary?['distance'] as num?)?.toInt() ??
         0;
 
+    // Note : la distance/duree retournees ici concernent uniquement le
+    // segment VROOM (entre vroomStart et vroomEnd). Les segments
+    // firsts/lasts ne sont pas factures dans le total. C'est une
+    // approximation volontaire pour eviter un 2e appel ORS.
     return OptimizationResult(
       orderedStopIds: orderedIds,
       totalDistanceMeters: distance,
@@ -131,12 +187,26 @@ class OpenRouteOptimizationService implements OptimizationService {
     );
   }
 
+  /// Tri par `ordrePriorite` croissant. Null tombe a la fin (cas
+  /// migration : un arret deja marque "EN 1ER" avant la v6 n'a pas
+  /// d'ordrePriorite -> on le met en queue de groupe).
+  static int _byOrdrePriorite(Stop a, Stop b) {
+    final ao = a.ordrePriorite;
+    final bo = b.ordrePriorite;
+    if (ao == null && bo == null) return a.id.compareTo(b.id);
+    if (ao == null) return 1;
+    if (bo == null) return -1;
+    return ao.compareTo(bo);
+  }
+
   int _mapPriority(String priorite) {
     return switch (priorite) {
-      'obligatoire_premier' => 100,
-      'obligatoire_dernier' => 0,
+      // Note : ce score n'influence PLUS l'ordre dans la route (les
+      // firsts/lasts sont gerees hors VROOM). Il sert uniquement a ce
+      // que VROOM, en cas d'overflow horaire, abandonne en priorite
+      // les `eviter_si_possible` plutot que les flexibles standards.
       'eviter_si_possible' => 10,
-      _ => 50, // flexible
+      _ => 50,
     };
   }
 

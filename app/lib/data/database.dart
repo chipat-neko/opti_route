@@ -37,6 +37,11 @@ class Stops extends Table {
   TextColumn get statutLivraison =>
       text().withDefault(const Constant('a_livrer'))();
   IntColumn get ordreOptimise => integer().nullable()();
+  /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
+  /// priorite egale (obligatoire_premier ou obligatoire_dernier).
+  /// 1 = livre en premier de son groupe, 2 = en deuxieme, etc.
+  /// Null = pas applicable (priorite flexible / eviter).
+  IntColumn get ordrePriorite => integer().nullable()();
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -124,7 +129,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -145,6 +150,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.createTable(savedDestinations);
+          }
+          if (from < 6) {
+            await m.addColumn(stops, stops.ordrePriorite);
           }
         },
         beforeOpen: (details) async {
