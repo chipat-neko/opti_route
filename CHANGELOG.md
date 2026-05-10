@@ -28,3 +28,10 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ### Visuel
 - Thème global câblé : `lib/theme/app_tokens.dart` expose les primitives (palette cream/ink/lime/emerald, échelles d'espacement et de radius, shadows) et `lib/theme/app_theme.dart` produit un `ThemeData` Material 3 prêt à l'emploi (Manrope via google_fonts, AppBar/Card/Input/Button/FAB tous configurés selon la spec). Les écrans existants (liste tournées, formulaire) prennent automatiquement le nouveau look ; couleurs hardcodées remplacées par les tokens. Helper `appMonoStyle()` exposé pour JetBrains Mono.
+
+### Géocodage
+- **Champ adresse intelligent** : la saisie de tournée a un seul champ « Adresse de départ » avec autocomplete via Nominatim (OpenStreetMap), debounce 400 ms, suggestions ≥ 3 caractères. La sélection valide le champ et stocke `lat` / `lon` en base sans jamais les exposer.
+- `lib/data/address_suggestion.dart` : modèle des résultats Nominatim (display_name, lat, lon, road, city, postcode...).
+- `lib/data/nominatim_service.dart` : client HTTP avec User-Agent identifiable (requis par la policy publique de Nominatim).
+- `lib/widgets/address_autocomplete_field.dart` : widget réutilisable (sera réutilisé pour la saisie d'arrêts au jalon suivant).
+- Permission `INTERNET` ajoutée au `AndroidManifest.xml` principal (était seulement dans debug/profile).

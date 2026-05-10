@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Requise pour le geocodage Nominatim, l'optimisation de tournee
+         et toutes les API HTTP utilisees par l'app. Deja presente dans
+         debug/profile/AndroidManifest.xml mais necessaire ici pour les
+         builds release. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="opti_route"
         android:name="${applicationName}"
