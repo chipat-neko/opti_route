@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import 'address_suggestion.dart';
 import 'geocode_cache_repository.dart';
+import 'geocoding_service.dart';
 
 /// Client minimal pour l'API publique de Nominatim (OpenStreetMap).
 ///
@@ -23,7 +24,7 @@ import 'geocode_cache_repository.dart';
 /// on lance en parallele une recherche free et une recherche
 /// `structured` (street/city), on merge, on dedupe, et on rerangee
 /// pour mettre les adresses avec house_number en tete.
-class NominatimService {
+class NominatimService implements GeocodingService {
   NominatimService({http.Client? client, GeocodeCacheRepository? cache})
       : _client = client ?? http.Client(),
         _cache = cache;
@@ -35,6 +36,10 @@ class NominatimService {
   final http.Client _client;
   final GeocodeCacheRepository? _cache;
 
+  @override
+  String get providerKey => 'nominatim';
+
+  @override
   Future<List<AddressSuggestion>> search(
     String query, {
     int limit = 8,
@@ -44,7 +49,7 @@ class NominatimService {
     if (q.length < 3) return const [];
 
     if (_cache != null) {
-      final cached = await _cache.read(q);
+      final cached = await _cache.read('$providerKey:$q');
       if (cached != null) return cached;
     }
 
@@ -66,7 +71,7 @@ class NominatimService {
 
     if (_cache != null) {
       try {
-        await _cache.write(q, ranked);
+        await _cache.write('$providerKey:$q', ranked);
       } catch (_) {
         // best-effort
       }
@@ -112,11 +117,11 @@ class NominatimService {
       headers: {'User-Agent': _userAgent},
     );
     if (response.statusCode != 200) {
-      throw NominatimException('Reponse Nominatim ${response.statusCode}');
+      throw GeocodingException('Reponse Nominatim ${response.statusCode}');
     }
     final raw = jsonDecode(response.body);
     if (raw is! List) {
-      throw const NominatimException('Reponse JSON inattendue');
+      throw const GeocodingException('Reponse JSON inattendue (Nominatim)');
     }
     return raw
         .whereType<Map<String, dynamic>>()
@@ -182,6 +187,7 @@ class NominatimService {
     );
   }
 
+  @override
   void close() => _client.close();
 }
 
@@ -195,12 +201,4 @@ class _ParsedAddress {
   final String? houseNumber;
   final String street;
   final String? city;
-}
-
-class NominatimException implements Exception {
-  const NominatimException(this.message);
-  final String message;
-
-  @override
-  String toString() => 'NominatimException: $message';
 }

@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/address_suggestion.dart';
-import '../data/nominatim_service.dart';
-import '../providers/nominatim_provider.dart';
+import '../data/geocoding_service.dart';
+import '../providers/geocoding_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -96,7 +96,7 @@ class _AddressAutocompleteFieldState
     });
 
     try {
-      final service = ref.read(nominatimServiceProvider);
+      final service = ref.read(geocodingServiceProvider);
       final results = await service.search(query);
       if (!mounted) return;
       setState(() {
@@ -104,7 +104,7 @@ class _AddressAutocompleteFieldState
         _loading = false;
         _errorMessage = results.isEmpty ? 'Aucune adresse trouvee' : null;
       });
-    } on NominatimException catch (e) {
+    } on GeocodingException catch (e) {
       if (!mounted) return;
       setState(() {
         _errorMessage = e.message;

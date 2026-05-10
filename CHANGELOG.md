@@ -50,6 +50,12 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Géocodage : bascule sur Photon (Komoot)
+- **Nouveau fournisseur par défaut** : Photon (`https://photon.komoot.io/api/`) à la place de Nominatim direct. Toujours basé sur OpenStreetMap, mais avec un index dédié et un meilleur ranker — beaucoup d'adresses qui ratent avec Nominatim ressortent correctement (notamment hors grandes villes). Aucune clé API, aucun compte requis.
+- **Interface `GeocodingService`** abstraite (`lib/data/geocoding_service.dart`) : permet de basculer entre fournisseurs (Photon / Nominatim / TomTom / etc.) sans toucher au widget. `NominatimService` implémente toujours l'interface — garde une bascule possible sans recoder.
+- **Cache local** : la clé est désormais préfixée par `providerKey` (`photon:...` vs `nominatim:...`) pour ne pas mélanger les réponses entre fournisseurs. L'ancien cache Nominatim expirera naturellement (TTL 30 jours) sans interférer.
+- Renommage : `lib/providers/nominatim_provider.dart` → `geocoding_providers.dart` (cohérence).
+
 ### Géocodage plus précis
 - **Détection du numéro de rue** dans la requête (regex tolérante : `14`, `14 bis`, `12 ter`, etc.) → si présent, double appel Nominatim **en parallèle** : recherche libre (`?q=...`) + recherche structurée (`?street=...&city=...`). Les résultats sont mergés et dédupliqués par lat/lng.
 - **Re-ranking** des suggestions : numéro exact en tête, puis suggestions avec n'importe quel `house_number`, puis le reste. Empêche Nominatim de privilégier la rue entière quand l'adresse précise existe.
