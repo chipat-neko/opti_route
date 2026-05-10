@@ -79,4 +79,11 @@ class GeocodeCacheRepository {
           ..where((c) => c.expireLe.isSmallerThanValue(DateTime.now())))
         .go();
   }
+
+  /// Vide TOUT le cache, expirees ou non. Utile quand on change de
+  /// fournisseur ou apres un fix de parser pour relancer toutes les
+  /// recherches.
+  Future<int> purgeAll() {
+    return _db.delete(_db.geocodeCache).go();
+  }
 }

@@ -70,7 +70,7 @@ class BanGeocodingService implements GeocodingService {
         .whereType<AddressSuggestion>()
         .toList(growable: false);
 
-    if (_cache != null) {
+    if (_cache != null && results.isNotEmpty) {
       try {
         await _cache.write('$providerKey:$q', results);
       } catch (_) {
