@@ -13,7 +13,6 @@ import 'bordereau_extraction.dart';
 /// 5. Fallbacks : si un marqueur est absent, on tente avec regex
 ///    (CP francais `\b\d{5}\b`, etc.).
 class BordereauParser {
-  static const _markersDestinataire = ['destinataire'];
   static const _markersLieuLivraison = [
     'lieu de livraison',
     'lieu livraison',
@@ -47,7 +46,7 @@ class BordereauParser {
         .where((l) => l.isNotEmpty)
         .toList(growable: false);
 
-    final destIdx = _findIndex(lines, _markersDestinataire);
+    final destIdx = _findDestinataireIndex(lines);
     final lieuIdx = _findIndex(lines, _markersLieuLivraison);
     final colisIdx = _findIndex(lines, _markersTotalColis);
     final contactIdx = _findIndex(lines, _markersContact);
@@ -66,18 +65,25 @@ class BordereauParser {
       }
     }
 
-    // Bloc Lieu de livraison : on prend les 1-2 lignes suivantes.
+    // Bloc Lieu de livraison : on regarde les 3 lignes suivantes,
+    // **une par une** (concatener les lignes ferait deborder la regex
+    // ville sur "Nature de la marchandise GALET" par ex).
     String? cp;
     String? ville;
     if (lieuIdx >= 0) {
-      final candidates = lines.skip(lieuIdx + 1).take(3).join(' ');
-      final m = _cpVilleRegex.firstMatch(candidates);
-      if (m != null) {
-        cp = m.group(1);
-        ville = _cleanVille(m.group(2));
-      } else {
-        final cpOnly = _cpRegex.firstMatch(candidates);
-        cp = cpOnly?.group(1);
+      for (var i = lieuIdx + 1; i < lines.length && i < lieuIdx + 4; i++) {
+        final line = lines[i];
+        final m = _cpVilleRegex.firstMatch(line);
+        if (m != null) {
+          cp = m.group(1);
+          ville = _cleanVille(m.group(2));
+          break;
+        }
+        final cpOnly = _cpRegex.firstMatch(line);
+        if (cpOnly != null && cp == null) {
+          cp = cpOnly.group(1);
+          // La ville sera peut-etre sur la ligne suivante.
+        }
       }
     }
 
@@ -141,6 +147,19 @@ class BordereauParser {
       for (final m in markers) {
         if (lower.contains(m)) return i;
       }
+    }
+    return -1;
+  }
+
+  /// "Destinataire" tout seul, en excluant "Contact destinataire" qui
+  /// est un autre marqueur dans le format MESEXP.
+  static int _findDestinataireIndex(List<String> lines) {
+    for (var i = 0; i < lines.length; i++) {
+      final lower = lines[i].toLowerCase().trim();
+      if (!lower.contains('destinataire')) continue;
+      if (lower.contains('contact')) continue;
+      if (lower.contains('ref')) continue; // "Ref. dest."
+      return i;
     }
     return -1;
   }
