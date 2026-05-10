@@ -122,6 +122,32 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               onSuggestionSelected: (s) => setState(() => _address = s),
             ),
             const SizedBox(height: AppSpacing.x22),
+            const _SectionTitle('Client / Enseigne (optionnel)'),
+            const SizedBox(height: AppSpacing.x10),
+            TextFormField(
+              controller: _nomClientCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nom du client ou de l\'enseigne',
+                hintText: 'Mme Aubry · Unikalo · Carrefour · Pharmacie...',
+                helperText:
+                    'Astuce : si le commerce n\'apparait pas dans l\'autocomplete '
+                    'd\'adresse, mets son nom ici et tape l\'adresse postale du '
+                    'colis dans le champ Adresse au-dessus.',
+                helperMaxLines: 3,
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            TextFormField(
+              controller: _notesCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                hintText: 'Code 1234B · porte garage · 3e etage',
+              ),
+              maxLines: 3,
+              textInputAction: TextInputAction.newline,
+            ),
+            const SizedBox(height: AppSpacing.x22),
             const _SectionTitle('Priorite'),
             const SizedBox(height: AppSpacing.x10),
             _PriorityChips(
@@ -178,27 +204,6 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Client (optionnel)'),
-            const SizedBox(height: AppSpacing.x10),
-            TextFormField(
-              controller: _nomClientCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nom du client',
-                hintText: 'Mme Aubry, Pharmacie, ...',
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            TextFormField(
-              controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                hintText: 'Code 1234B · porte garage · 3e etage',
-              ),
-              maxLines: 3,
-              textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: AppSpacing.x28),
             FilledButton.icon(
