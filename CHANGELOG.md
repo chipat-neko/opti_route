@@ -50,6 +50,17 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Géocodage : ajout TomTom (qualité maximale, gratuit avec inscription)
+- **`TomTomService`** (`lib/data/tomtom_service.dart`) — nouveau fournisseur, qualité référence pour la livraison/logistique. Connaît les numéros précis, les commerces, tolère les fautes. Plan free TomTom : 2 500 requêtes/jour, sans carte de crédit. Filtrage par pays (France) et langue (`fr-FR`) par défaut.
+- **`ParametresRepository`** (`lib/data/parametres_repository.dart`) — wrapper type-safe sur la table `parametres`. Expose `getTomTomApiKey`, `setTomTomApiKey`, `clearTomTomApiKey`, et un stream `watchTomTomApiKey`.
+- **Sélection automatique du fournisseur** dans `geocodingServiceProvider` : si une clé TomTom est configurée → `TomTomService` ; sinon fallback `PhotonService`. Riverpod re-instancie le service automatiquement quand la clé change.
+- **`ParametresScreen`** (`lib/screens/parametres_screen.dart`) — nouvel écran accessible depuis le drawer (item « Paramètres » désormais actif) :
+  - Indique le fournisseur actif (TomTom en lime, Photon en cream-soft).
+  - Champ clé API TomTom (masqué par défaut, toggle visibilité).
+  - Boutons « Enregistrer » et « Effacer la clé » (revient à Photon).
+  - Bouton « Vider le cache de géocodage » (purge les entrées expirées).
+- **Sécurité** : la clé est saisie via l'UI et stockée dans la DB SQLite locale, **jamais en dur dans le code source ni commitée**.
+
 ### Géocodage : bascule sur Photon (Komoot)
 - **Nouveau fournisseur par défaut** : Photon (`https://photon.komoot.io/api/`) à la place de Nominatim direct. Toujours basé sur OpenStreetMap, mais avec un index dédié et un meilleur ranker — beaucoup d'adresses qui ratent avec Nominatim ressortent correctement (notamment hors grandes villes). Aucune clé API, aucun compte requis.
 - **Interface `GeocodingService`** abstraite (`lib/data/geocoding_service.dart`) : permet de basculer entre fournisseurs (Photon / Nominatim / TomTom / etc.) sans toucher au widget. `NominatimService` implémente toujours l'interface — garde une bascule possible sans recoder.

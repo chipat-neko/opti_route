@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/parametres_screen.dart';
 import '../screens/tournees_list_screen.dart';
 import '../theme/app_tokens.dart';
 
@@ -73,9 +74,14 @@ class AppDrawer extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.tune_outlined),
               title: const Text('Parametres'),
-              subtitle: const Text('Bientot'),
-              enabled: false,
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ParametresScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),
