@@ -66,13 +66,29 @@ class TomTomService implements GeocodingService {
 
     final response = await _client.get(uri);
 
+    if (response.statusCode == 401) {
+      throw const GeocodingException(
+        'Cle TomTom non autorisee pour Search API. '
+        'Va sur developer.tomtom.com/user/me/apps, ouvre ton app, '
+        'et verifie que le produit "Search" est bien dans la liste.',
+      );
+    }
     if (response.statusCode == 403) {
       throw const GeocodingException(
-        'Cle API TomTom invalide ou quota atteint',
+        'Cle TomTom valide mais quota du jour atteint (2500 requetes). '
+        'Reessaie demain ou bascule sur Photon dans les Parametres.',
+      );
+    }
+    if (response.statusCode == 429) {
+      throw const GeocodingException(
+        'Trop de requetes TomTom en peu de temps. Patiente quelques '
+        'secondes avant de retaper.',
       );
     }
     if (response.statusCode != 200) {
-      throw GeocodingException('Reponse TomTom ${response.statusCode}');
+      throw GeocodingException(
+        'Reponse TomTom ${response.statusCode} (cf developer.tomtom.com).',
+      );
     }
 
     final raw = jsonDecode(response.body);
