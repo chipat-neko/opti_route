@@ -62,6 +62,42 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.33.0
   build_runner: ^2.15.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
+
+# App icon : pin lime + trace de route sur fond ink, designee via
+# Claude Design. Sources d'origine versionnees dans
+# `assets/branding/source/` (SVG + PNG aux differentes tailles).
+# `icon_source.png` et `icon_foreground.png` = copie du PNG 1024 ;
+# le double-mask Android adaptive est OK car les coins arrondis du
+# design tombent dans la zone safe.
+# Ne cible que Android pour l'instant -- iOS sera ajoute le jour ou
+# on publiera sur l'App Store.
+# Regenerer apres modification : `flutter pub run flutter_launcher_icons`.
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  image_path: "assets/branding/icon_source.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#0E1410"
+  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
+
+# Splash screen : icone Claude Design (carte ink avec pin + route lime)
+# centree sur fond cream. Le rendu Android < 12 utilise `image`
+# directement, Android 12+ utilise la section `android_12` (icone plus
+# petite imposee par l'API native).
+# Regenerer apres modification : `flutter pub run flutter_native_splash:create`.
+flutter_native_splash:
+  color: "#F5F3EE"
+  image: assets/branding/splash_logo.png
+  android_12:
+    color: "#F5F3EE"
+    image: assets/branding/splash_logo.png
+    icon_background_color: "#F5F3EE"
+  fullscreen: false
+  android: true
+  ios: false
+  web: false
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
