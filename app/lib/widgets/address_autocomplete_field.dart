@@ -102,7 +102,11 @@ class _AddressAutocompleteFieldState
       setState(() {
         _suggestions = results;
         _loading = false;
-        _errorMessage = results.isEmpty ? 'Aucune adresse trouvee' : null;
+        _errorMessage = results.isEmpty
+            ? 'Pas trouve. Si c\'est un commerce inconnu de nos sources, '
+                'tape l\'adresse postale du colis ici et mets le nom dans '
+                '"Client / Enseigne".'
+            : null;
       });
     } on GeocodingException catch (e) {
       if (!mounted) return;
