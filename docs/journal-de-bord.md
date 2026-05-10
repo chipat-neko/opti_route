@@ -114,6 +114,10 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 23. Édition rapide du nb de colis depuis la bottom sheet (#61)
+
+Stepper - / + au-dessus des boutons Maps/Waze dans la bottom sheet d'arrêt. Permet d'ajuster le nb de colis à la livraison (quand on découvre 1 colis en plus / moins que prévu) sans avoir à ouvrir l'écran d'édition complet. Mise à jour immédiate (pas de bouton Enregistrer), persistée via `StopsRepository.update`. Min 1, max 999.
+
 ## 22. Statistiques cumulatives (#60)
 
 Nouvel écran "Statistiques" accessible depuis le drawer (icône bar chart). Trois cartes une sous l'autre, une par fenêtre temporelle :

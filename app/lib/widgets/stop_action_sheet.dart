@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,10 +62,26 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
   bool _pickingRaison = false;
   String? _navAppDefault;
 
+  /// Etat local du nb de colis (le widget est ferme/reouvert, on a
+  /// une copie locale pour repondre instantanement aux taps - / +
+  /// avant que le stream Drift ne rafraichisse).
+  late int _nbColis;
+
   @override
   void initState() {
     super.initState();
+    _nbColis = widget.stop.nbColis;
     _loadNavDefault();
+  }
+
+  Future<void> _adjustNbColis(int delta) async {
+    final next = (_nbColis + delta).clamp(1, 999);
+    if (next == _nbColis) return;
+    setState(() => _nbColis = next);
+    await ref.read(stopsRepositoryProvider).update(
+          widget.stop.id,
+          StopsCompanion(nbColis: Value(next)),
+        );
   }
 
   Future<void> _loadNavDefault() async {
@@ -131,7 +148,62 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: AppSpacing.x18),
+            const SizedBox(height: AppSpacing.x14),
+
+            // Edition rapide du nb de colis (+/-) : utile a la livraison
+            // quand on decouvre 1 colis en plus/moins que prevu sans
+            // avoir a ouvrir l'ecran d'edition complet.
+            if (!_pickingRaison)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x12,
+                  vertical: AppSpacing.x8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.creamSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.r10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.inventory_2_outlined,
+                        size: 18, color: AppColors.ink),
+                    const SizedBox(width: AppSpacing.x8),
+                    const Text(
+                      'Colis',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const Spacer(),
+                    _StepperButton(
+                      icon: Icons.remove,
+                      onPressed: _nbColis > 1
+                          ? () => _adjustNbColis(-1)
+                          : null,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.x14,
+                      ),
+                      child: Text(
+                        '$_nbColis',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                    _StepperButton(
+                      icon: Icons.add,
+                      onPressed: () => _adjustNbColis(1),
+                    ),
+                  ],
+                ),
+              ),
+            if (!_pickingRaison) const SizedBox(height: AppSpacing.x14),
 
             if (!_pickingRaison && stop.lat != null && stop.lng != null) ...[
               Row(
@@ -291,6 +363,38 @@ class _StatutBanner extends StatelessWidget {
       'autre' => 'autre',
       _ => 'sans raison',
     };
+  }
+}
+
+/// Bouton circulaire - / + pour le compteur de colis. Disabled si
+/// `onPressed == null` (typiquement quand on est a 1 et qu'on veut
+/// pas descendre en dessous).
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onPressed == null;
+    return Material(
+      color: disabled ? AppColors.inkLine : AppColors.paper,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(
+            icon,
+            size: 18,
+            color: disabled ? AppColors.textFaint : AppColors.ink,
+          ),
+        ),
+      ),
+    );
   }
 }
 
