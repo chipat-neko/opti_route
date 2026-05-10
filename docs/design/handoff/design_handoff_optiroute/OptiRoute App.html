@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OptiRoute — App livreur (Android)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: 'Manrope', system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <rect width="200" height="200" fill="#0E1410"/>
+    <path d="M 50 150 Q 80 110 100 90 T 150 60" stroke="#B8F24A" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <circle cx="50" cy="150" r="8" fill="#B8F24A" stroke="#0E1410" stroke-width="2"/>
+    <circle cx="100" cy="90" r="8" fill="#B8F24A" stroke="#0E1410" stroke-width="2"/>
+    <circle cx="150" cy="60" r="8" fill="#B8F24A" stroke="#0E1410" stroke-width="2"/>
+    <text x="100" y="180" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16" fill="#F5F3EE">OptiRoute</text>
+  </svg>
+</template>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="map.jsx"></script>
+<script type="text/babel" src="screen-map.jsx"></script>
+<script type="text/babel" src="screen-list.jsx"></script>
+<script type="text/babel" src="screen-add.jsx"></script>
+<script type="text/babel" src="screen-optimize.jsx"></script>
+<script type="text/babel" src="screen-navigation.jsx"></script>
+<script type="text/babel" src="screen-delivery.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#B8F24A",
+  "showLabels": true
+}/*EDITMODE-END*/;
+
+function Frame({ children, dark = false }) {
+  return (
+    <window.AndroidDevice width={412} height={892} dark={dark}>
+      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+        {children}
+      </div>
+    </window.AndroidDevice>
+  );
+}
+
+function App() {
+  const t = window.useTweaks(TWEAK_DEFAULTS);
+  const accent = t.accent;
+
+  return (
+    <>
+      <window.DesignCanvas
+        title="OptiRoute"
+        subtitle="App livreur · 6 écrans · Android · v0.1"
+      >
+        <window.DCSection id="core" title="Cœur de la tournée" subtitle="De la liste d'arrêts à la navigation guidée">
+          <window.DCArtboard id="map" label="01 · Carte en cours" width={412} height={892}>
+            <Frame><window.Screen_Map accent={accent}/></Frame>
+          </window.DCArtboard>
+          <window.DCArtboard id="list" label="02 · Liste de la tournée" width={412} height={892}>
+            <Frame><window.Screen_List accent={accent}/></Frame>
+          </window.DCArtboard>
+          <window.DCArtboard id="nav" label="03 · Navigation guidée" width={412} height={892}>
+            <Frame dark><window.Screen_Navigation accent={accent}/></Frame>
+          </window.DCArtboard>
+        </window.DCSection>
+
+        <window.DCSection id="ops" title="Construire & livrer" subtitle="Saisie en lot, optimisation et preuve de livraison">
+          <window.DCArtboard id="add" label="04 · Ajouter des arrêts" width={412} height={892}>
+            <Frame><window.Screen_Add accent={accent}/></Frame>
+          </window.DCArtboard>
+          <window.DCArtboard id="optim" label="05 · Optimiser l'itinéraire" width={412} height={892}>
+            <Frame><window.Screen_Optimize accent={accent}/></Frame>
+          </window.DCArtboard>
+          <window.DCArtboard id="deliv" label="06 · Détail livraison" width={412} height={892}>
+            <Frame><window.Screen_Delivery accent={accent}/></Frame>
+          </window.DCArtboard>
+        </window.DCSection>
+      </window.DesignCanvas>
+
+      <window.TweaksPanel title="Tweaks">
+        <window.TweakSection title="Couleur d'accent" subtitle="La couleur de la route active et des CTA">
+          <window.TweakColor
+            label="Accent"
+            value={t.accent}
+            onChange={v => t.setTweak('accent', v)}
+            options={['#B8F24A', '#F2A341', '#7BD3F7', '#FF7A59', '#C9A6FF']}
+          />
+        </window.TweakSection>
+      </window.TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
