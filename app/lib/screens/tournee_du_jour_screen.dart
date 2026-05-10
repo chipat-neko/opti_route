@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../data/location_service.dart';
+import '../data/navigation_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournees_repository.dart';
 import '../providers/database_providers.dart';
+import '../providers/location_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -97,14 +100,15 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
+      floatingActionButton: _Fabs(
+        tournee: widget.tournee,
+        onAjouter: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => AjoutArretScreen(tourneeId: widget.tournee.id),
           ),
         ),
-        icon: const Icon(Icons.add),
-        label: const Text('Ajouter un arret'),
+        onDemarrer: _onDemarrerPressed,
+        onArreter: _onArreterPressed,
       ),
     );
   }
@@ -147,6 +151,66 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         SnackBar(content: Text('Erreur lors de la suppression : $e')),
       );
     }
+  }
+
+  Future<void> _onDemarrerPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    // Demande la permission GPS avant de basculer en mode en_cours
+    // pour eviter d'afficher la card "prochain arret" sans donnees.
+    try {
+      final ok = await LocationService.ensurePermission();
+      if (!ok) return;
+    } on LocationPermissionDenied catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    await ref.read(tourneesRepositoryProvider).update(
+          widget.tournee.id,
+          const TourneesCompanion(statut: Value('en_cours')),
+        );
+    if (!mounted) return;
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Tournee demarree. Bonne route !'),
+        backgroundColor: AppColors.emerald,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _onArreterPressed() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Mettre la tournee en pause ?'),
+        content: const Text(
+          'La tournee repasse en mode "optimisee". Tu pourras la '
+          'relancer plus tard.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Mettre en pause'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await ref.read(tourneesRepositoryProvider).update(
+          widget.tournee.id,
+          const TourneesCompanion(statut: Value('optimisee')),
+        );
   }
 
   Future<void> _onOptimizePressed() async {
@@ -343,6 +407,10 @@ class _Body extends StatelessWidget {
             stops: stops,
             tourneeTerminee: tournee.statut == 'terminee',
           ),
+        ],
+        if (tournee.statut == 'en_cours') ...[
+          const SizedBox(height: AppSpacing.x12),
+          _ProchainArretCard(stops: stops),
         ],
         const SizedBox(height: AppSpacing.x18),
         if (stops.isEmpty)
@@ -587,6 +655,249 @@ class _OptimisedBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Card "Prochain arret" affichee en haut de l'ecran pendant que la
+/// tournee est en cours. Met en avant le 1er arret encore "a livrer"
+/// dans l'ordre optimise, avec :
+/// - Distance vol d'oiseau live depuis la position GPS du chauffeur.
+/// - Boutons rapides Maps / Waze.
+/// - Tap sur la card -> bottom sheet d'action (livre / echec / details).
+class _ProchainArretCard extends ConsumerWidget {
+  const _ProchainArretCard({required this.stops});
+
+  final List<Stop> stops;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Stop? candidat;
+    for (final s in stops) {
+      if (s.statutLivraison == 'a_livrer' &&
+          s.lat != null &&
+          s.lng != null) {
+        candidat = s;
+        break;
+      }
+    }
+    if (candidat == null) {
+      // Tous valides ou pas de coords : on n'affiche rien (le
+      // _ProgressBanner / la liste suffisent).
+      return const SizedBox.shrink();
+    }
+    // Promotion non-null : variable `final` apres l'early return.
+    final prochain = candidat;
+    final lat = prochain.lat!;
+    final lng = prochain.lng!;
+
+    final positionAsync = ref.watch(currentPositionProvider);
+    final distanceLabel = positionAsync.maybeWhen(
+      data: (pos) {
+        if (pos == null) return null;
+        final m = LocationService.distanceMeters(
+          fromLat: pos.latitude,
+          fromLng: pos.longitude,
+          toLat: lat,
+          toLng: lng,
+        );
+        return _formatDistanceMeters(m);
+      },
+      orElse: () => null,
+    );
+
+    final nom = (prochain.nomClient ?? '').trim();
+    final hasNom = nom.isNotEmpty;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.lime,
+                  borderRadius: BorderRadius.circular(AppRadius.r6),
+                ),
+                child: Text(
+                  'PROCHAIN',
+                  style: appMonoStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (distanceLabel != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.near_me_outlined,
+                      color: AppColors.lime,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      distanceLabel,
+                      style: appMonoStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.lime,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          if (hasNom)
+            Text(
+              nom,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.paper,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          if (hasNom) const SizedBox(height: 2),
+          Text(
+            prochain.adresseNormalisee ?? prochain.adresseBrute,
+            style: TextStyle(
+              fontSize: hasNom ? 13 : 16,
+              color: AppColors.paper.withValues(alpha: hasNom ? 0.7 : 1),
+              fontWeight: hasNom ? FontWeight.w500 : FontWeight.w700,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.paper,
+                    foregroundColor: AppColors.ink,
+                    minimumSize: const Size(0, 44),
+                  ),
+                  onPressed: () => NavigationService.launchGoogleMaps(
+                    lat: lat,
+                    lng: lng,
+                  ),
+                  icon: const Icon(Icons.map_outlined, size: 16),
+                  label: const Text(
+                    'Maps',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.paper,
+                    foregroundColor: AppColors.ink,
+                    minimumSize: const Size(0, 44),
+                  ),
+                  onPressed: () => NavigationService.launchWaze(
+                    lat: lat,
+                    lng: lng,
+                  ),
+                  icon: const Icon(Icons.navigation_outlined, size: 16),
+                  label: const Text(
+                    'Waze',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatDistanceMeters(double m) {
+    if (m < 1000) return '${m.round()} m';
+    return '${(m / 1000).toStringAsFixed(1)} km';
+  }
+}
+
+/// Pile de FloatingActionButtons en bas a droite. Le bouton du bas est
+/// 'Ajouter un arret' (toujours present). Au-dessus, selon le statut
+/// de la tournee :
+/// - 'optimisee' : 'Demarrer' (vert lime).
+/// - 'en_cours'  : 'Pause' (amber).
+/// - autres : aucun bouton supplementaire.
+class _Fabs extends StatelessWidget {
+  const _Fabs({
+    required this.tournee,
+    required this.onAjouter,
+    required this.onDemarrer,
+    required this.onArreter,
+  });
+
+  final Tournee tournee;
+  final VoidCallback onAjouter;
+  final VoidCallback onDemarrer;
+  final VoidCallback onArreter;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOptimisee = tournee.statut == 'optimisee';
+    final isEnCours = tournee.statut == 'en_cours';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (isOptimisee)
+          FloatingActionButton.extended(
+            heroTag: 'fab-demarrer',
+            backgroundColor: AppColors.lime,
+            foregroundColor: AppColors.ink,
+            onPressed: onDemarrer,
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: const Text(
+              'Demarrer',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        if (isEnCours)
+          FloatingActionButton.extended(
+            heroTag: 'fab-arreter',
+            backgroundColor: AppColors.amber,
+            foregroundColor: AppColors.ink,
+            onPressed: onArreter,
+            icon: const Icon(Icons.pause_rounded),
+            label: const Text(
+              'Pause',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        if (isOptimisee || isEnCours) const SizedBox(height: AppSpacing.x10),
+        FloatingActionButton.extended(
+          heroTag: 'fab-ajouter',
+          onPressed: onAjouter,
+          icon: const Icon(Icons.add),
+          label: const Text('Ajouter un arret'),
+        ),
+      ],
     );
   }
 }
