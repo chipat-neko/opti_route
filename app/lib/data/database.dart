@@ -45,16 +45,46 @@ class Parametres extends Table {
   Set<Column> get primaryKey => {cle};
 }
 
-@DriftDatabase(tables: [Tournees, Stops, Parametres])
+/// Une feuille d'expediteur attachee a un arret.
+///
+/// Cas reel : un livreur peut deposer au meme point des colis venant
+/// d'expediteurs differents (Chronopost + La Poste + Colissimo). Chaque
+/// expediteur a sa propre ref, son nb de colis, son poids, son contact.
+/// Le design `screen-delivery.jsx` montre N feuilles empilees sous une
+/// meme adresse client.
+class Sheets extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get stopId =>
+      integer().references(Stops, #id, onDelete: KeyAction.cascade)();
+  TextColumn get expediteur => text().withLength(min: 1, max: 100)();
+  TextColumn get refCode => text().nullable()();
+  TextColumn get nomDestinataire => text().nullable()();
+  TextColumn get telephone => text().nullable()();
+  IntColumn get nbColis => integer().withDefault(const Constant(1))();
+  RealColumn get poidsKg => real().nullable()();
+  TextColumn get statut => text().withDefault(const Constant('a_livrer'))();
+  TextColumn get raisonEchec => text().nullable()();
+  DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DriftDatabase(tables: [Tournees, Stops, Parametres, Sheets])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(sheets);
+          }
+        },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },

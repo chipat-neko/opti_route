@@ -43,3 +43,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `currentTourneeProvider` (Riverpod) : sélectionne automatiquement la tournée active selon les règles `en_cours > optimisée > brouillon`, datée d'aujourd'hui.
 - `lib/widgets/app_drawer.dart` : drawer commun avec entrées « Tournée du jour » et « Historique des tournées » — l'historique reste accessible mais ne pollue plus l'accueil.
 - `TourneesListScreen` repositionné comme **écran d'historique** (titre AppBar « Historique des tournées », accessible via le drawer).
+
+### Base de données
+- **Nouvelle table `sheets`** : feuilles d'expéditeurs attachées à un arrêt. Cas réel : un livreur peut déposer au même point des colis venant d'expéditeurs distincts (Chronopost, La Poste, Colissimo) — chacun a sa propre référence, son nb de colis, son poids, son contact. La table porte FK `stop_id` avec cascade delete (transitif : supprimer une tournée supprime ses stops, qui suppriment leurs sheets).
+- **`schemaVersion` 1 → 2** avec `MigrationStrategy.onUpgrade` qui crée la nouvelle table sur les bases existantes. Validé sur appareil réel avec une base v1 préexistante.
+- `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
+- Provider `sheetsRepositoryProvider` ajouté.

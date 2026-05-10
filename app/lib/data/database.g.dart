@@ -1688,12 +1688,672 @@ class ParametresCompanion extends UpdateCompanion<Parametre> {
   }
 }
 
+class $SheetsTable extends Sheets with TableInfo<$SheetsTable, Sheet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SheetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _stopIdMeta = const VerificationMeta('stopId');
+  @override
+  late final GeneratedColumn<int> stopId = GeneratedColumn<int>(
+    'stop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stops (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _expediteurMeta = const VerificationMeta(
+    'expediteur',
+  );
+  @override
+  late final GeneratedColumn<String> expediteur = GeneratedColumn<String>(
+    'expediteur',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _refCodeMeta = const VerificationMeta(
+    'refCode',
+  );
+  @override
+  late final GeneratedColumn<String> refCode = GeneratedColumn<String>(
+    'ref_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nomDestinataireMeta = const VerificationMeta(
+    'nomDestinataire',
+  );
+  @override
+  late final GeneratedColumn<String> nomDestinataire = GeneratedColumn<String>(
+    'nom_destinataire',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _telephoneMeta = const VerificationMeta(
+    'telephone',
+  );
+  @override
+  late final GeneratedColumn<String> telephone = GeneratedColumn<String>(
+    'telephone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nbColisMeta = const VerificationMeta(
+    'nbColis',
+  );
+  @override
+  late final GeneratedColumn<int> nbColis = GeneratedColumn<int>(
+    'nb_colis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _poidsKgMeta = const VerificationMeta(
+    'poidsKg',
+  );
+  @override
+  late final GeneratedColumn<double> poidsKg = GeneratedColumn<double>(
+    'poids_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<String> statut = GeneratedColumn<String>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('a_livrer'),
+  );
+  static const VerificationMeta _raisonEchecMeta = const VerificationMeta(
+    'raisonEchec',
+  );
+  @override
+  late final GeneratedColumn<String> raisonEchec = GeneratedColumn<String>(
+    'raison_echec',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    stopId,
+    expediteur,
+    refCode,
+    nomDestinataire,
+    telephone,
+    nbColis,
+    poidsKg,
+    statut,
+    raisonEchec,
+    creeLe,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sheets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Sheet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('stop_id')) {
+      context.handle(
+        _stopIdMeta,
+        stopId.isAcceptableOrUnknown(data['stop_id']!, _stopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stopIdMeta);
+    }
+    if (data.containsKey('expediteur')) {
+      context.handle(
+        _expediteurMeta,
+        expediteur.isAcceptableOrUnknown(data['expediteur']!, _expediteurMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_expediteurMeta);
+    }
+    if (data.containsKey('ref_code')) {
+      context.handle(
+        _refCodeMeta,
+        refCode.isAcceptableOrUnknown(data['ref_code']!, _refCodeMeta),
+      );
+    }
+    if (data.containsKey('nom_destinataire')) {
+      context.handle(
+        _nomDestinataireMeta,
+        nomDestinataire.isAcceptableOrUnknown(
+          data['nom_destinataire']!,
+          _nomDestinataireMeta,
+        ),
+      );
+    }
+    if (data.containsKey('telephone')) {
+      context.handle(
+        _telephoneMeta,
+        telephone.isAcceptableOrUnknown(data['telephone']!, _telephoneMeta),
+      );
+    }
+    if (data.containsKey('nb_colis')) {
+      context.handle(
+        _nbColisMeta,
+        nbColis.isAcceptableOrUnknown(data['nb_colis']!, _nbColisMeta),
+      );
+    }
+    if (data.containsKey('poids_kg')) {
+      context.handle(
+        _poidsKgMeta,
+        poidsKg.isAcceptableOrUnknown(data['poids_kg']!, _poidsKgMeta),
+      );
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    }
+    if (data.containsKey('raison_echec')) {
+      context.handle(
+        _raisonEchecMeta,
+        raisonEchec.isAcceptableOrUnknown(
+          data['raison_echec']!,
+          _raisonEchecMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Sheet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Sheet(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      stopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stop_id'],
+      )!,
+      expediteur: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}expediteur'],
+      )!,
+      refCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ref_code'],
+      ),
+      nomDestinataire: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nom_destinataire'],
+      ),
+      telephone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}telephone'],
+      ),
+      nbColis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}nb_colis'],
+      )!,
+      poidsKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}poids_kg'],
+      ),
+      statut: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}statut'],
+      )!,
+      raisonEchec: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raison_echec'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+    );
+  }
+
+  @override
+  $SheetsTable createAlias(String alias) {
+    return $SheetsTable(attachedDatabase, alias);
+  }
+}
+
+class Sheet extends DataClass implements Insertable<Sheet> {
+  final int id;
+  final int stopId;
+  final String expediteur;
+  final String? refCode;
+  final String? nomDestinataire;
+  final String? telephone;
+  final int nbColis;
+  final double? poidsKg;
+  final String statut;
+  final String? raisonEchec;
+  final DateTime creeLe;
+  const Sheet({
+    required this.id,
+    required this.stopId,
+    required this.expediteur,
+    this.refCode,
+    this.nomDestinataire,
+    this.telephone,
+    required this.nbColis,
+    this.poidsKg,
+    required this.statut,
+    this.raisonEchec,
+    required this.creeLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['stop_id'] = Variable<int>(stopId);
+    map['expediteur'] = Variable<String>(expediteur);
+    if (!nullToAbsent || refCode != null) {
+      map['ref_code'] = Variable<String>(refCode);
+    }
+    if (!nullToAbsent || nomDestinataire != null) {
+      map['nom_destinataire'] = Variable<String>(nomDestinataire);
+    }
+    if (!nullToAbsent || telephone != null) {
+      map['telephone'] = Variable<String>(telephone);
+    }
+    map['nb_colis'] = Variable<int>(nbColis);
+    if (!nullToAbsent || poidsKg != null) {
+      map['poids_kg'] = Variable<double>(poidsKg);
+    }
+    map['statut'] = Variable<String>(statut);
+    if (!nullToAbsent || raisonEchec != null) {
+      map['raison_echec'] = Variable<String>(raisonEchec);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    return map;
+  }
+
+  SheetsCompanion toCompanion(bool nullToAbsent) {
+    return SheetsCompanion(
+      id: Value(id),
+      stopId: Value(stopId),
+      expediteur: Value(expediteur),
+      refCode: refCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refCode),
+      nomDestinataire: nomDestinataire == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nomDestinataire),
+      telephone: telephone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(telephone),
+      nbColis: Value(nbColis),
+      poidsKg: poidsKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poidsKg),
+      statut: Value(statut),
+      raisonEchec: raisonEchec == null && nullToAbsent
+          ? const Value.absent()
+          : Value(raisonEchec),
+      creeLe: Value(creeLe),
+    );
+  }
+
+  factory Sheet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Sheet(
+      id: serializer.fromJson<int>(json['id']),
+      stopId: serializer.fromJson<int>(json['stopId']),
+      expediteur: serializer.fromJson<String>(json['expediteur']),
+      refCode: serializer.fromJson<String?>(json['refCode']),
+      nomDestinataire: serializer.fromJson<String?>(json['nomDestinataire']),
+      telephone: serializer.fromJson<String?>(json['telephone']),
+      nbColis: serializer.fromJson<int>(json['nbColis']),
+      poidsKg: serializer.fromJson<double?>(json['poidsKg']),
+      statut: serializer.fromJson<String>(json['statut']),
+      raisonEchec: serializer.fromJson<String?>(json['raisonEchec']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'stopId': serializer.toJson<int>(stopId),
+      'expediteur': serializer.toJson<String>(expediteur),
+      'refCode': serializer.toJson<String?>(refCode),
+      'nomDestinataire': serializer.toJson<String?>(nomDestinataire),
+      'telephone': serializer.toJson<String?>(telephone),
+      'nbColis': serializer.toJson<int>(nbColis),
+      'poidsKg': serializer.toJson<double?>(poidsKg),
+      'statut': serializer.toJson<String>(statut),
+      'raisonEchec': serializer.toJson<String?>(raisonEchec),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+    };
+  }
+
+  Sheet copyWith({
+    int? id,
+    int? stopId,
+    String? expediteur,
+    Value<String?> refCode = const Value.absent(),
+    Value<String?> nomDestinataire = const Value.absent(),
+    Value<String?> telephone = const Value.absent(),
+    int? nbColis,
+    Value<double?> poidsKg = const Value.absent(),
+    String? statut,
+    Value<String?> raisonEchec = const Value.absent(),
+    DateTime? creeLe,
+  }) => Sheet(
+    id: id ?? this.id,
+    stopId: stopId ?? this.stopId,
+    expediteur: expediteur ?? this.expediteur,
+    refCode: refCode.present ? refCode.value : this.refCode,
+    nomDestinataire: nomDestinataire.present
+        ? nomDestinataire.value
+        : this.nomDestinataire,
+    telephone: telephone.present ? telephone.value : this.telephone,
+    nbColis: nbColis ?? this.nbColis,
+    poidsKg: poidsKg.present ? poidsKg.value : this.poidsKg,
+    statut: statut ?? this.statut,
+    raisonEchec: raisonEchec.present ? raisonEchec.value : this.raisonEchec,
+    creeLe: creeLe ?? this.creeLe,
+  );
+  Sheet copyWithCompanion(SheetsCompanion data) {
+    return Sheet(
+      id: data.id.present ? data.id.value : this.id,
+      stopId: data.stopId.present ? data.stopId.value : this.stopId,
+      expediteur: data.expediteur.present
+          ? data.expediteur.value
+          : this.expediteur,
+      refCode: data.refCode.present ? data.refCode.value : this.refCode,
+      nomDestinataire: data.nomDestinataire.present
+          ? data.nomDestinataire.value
+          : this.nomDestinataire,
+      telephone: data.telephone.present ? data.telephone.value : this.telephone,
+      nbColis: data.nbColis.present ? data.nbColis.value : this.nbColis,
+      poidsKg: data.poidsKg.present ? data.poidsKg.value : this.poidsKg,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      raisonEchec: data.raisonEchec.present
+          ? data.raisonEchec.value
+          : this.raisonEchec,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Sheet(')
+          ..write('id: $id, ')
+          ..write('stopId: $stopId, ')
+          ..write('expediteur: $expediteur, ')
+          ..write('refCode: $refCode, ')
+          ..write('nomDestinataire: $nomDestinataire, ')
+          ..write('telephone: $telephone, ')
+          ..write('nbColis: $nbColis, ')
+          ..write('poidsKg: $poidsKg, ')
+          ..write('statut: $statut, ')
+          ..write('raisonEchec: $raisonEchec, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    stopId,
+    expediteur,
+    refCode,
+    nomDestinataire,
+    telephone,
+    nbColis,
+    poidsKg,
+    statut,
+    raisonEchec,
+    creeLe,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Sheet &&
+          other.id == this.id &&
+          other.stopId == this.stopId &&
+          other.expediteur == this.expediteur &&
+          other.refCode == this.refCode &&
+          other.nomDestinataire == this.nomDestinataire &&
+          other.telephone == this.telephone &&
+          other.nbColis == this.nbColis &&
+          other.poidsKg == this.poidsKg &&
+          other.statut == this.statut &&
+          other.raisonEchec == this.raisonEchec &&
+          other.creeLe == this.creeLe);
+}
+
+class SheetsCompanion extends UpdateCompanion<Sheet> {
+  final Value<int> id;
+  final Value<int> stopId;
+  final Value<String> expediteur;
+  final Value<String?> refCode;
+  final Value<String?> nomDestinataire;
+  final Value<String?> telephone;
+  final Value<int> nbColis;
+  final Value<double?> poidsKg;
+  final Value<String> statut;
+  final Value<String?> raisonEchec;
+  final Value<DateTime> creeLe;
+  const SheetsCompanion({
+    this.id = const Value.absent(),
+    this.stopId = const Value.absent(),
+    this.expediteur = const Value.absent(),
+    this.refCode = const Value.absent(),
+    this.nomDestinataire = const Value.absent(),
+    this.telephone = const Value.absent(),
+    this.nbColis = const Value.absent(),
+    this.poidsKg = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.raisonEchec = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  });
+  SheetsCompanion.insert({
+    this.id = const Value.absent(),
+    required int stopId,
+    required String expediteur,
+    this.refCode = const Value.absent(),
+    this.nomDestinataire = const Value.absent(),
+    this.telephone = const Value.absent(),
+    this.nbColis = const Value.absent(),
+    this.poidsKg = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.raisonEchec = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  }) : stopId = Value(stopId),
+       expediteur = Value(expediteur);
+  static Insertable<Sheet> custom({
+    Expression<int>? id,
+    Expression<int>? stopId,
+    Expression<String>? expediteur,
+    Expression<String>? refCode,
+    Expression<String>? nomDestinataire,
+    Expression<String>? telephone,
+    Expression<int>? nbColis,
+    Expression<double>? poidsKg,
+    Expression<String>? statut,
+    Expression<String>? raisonEchec,
+    Expression<DateTime>? creeLe,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (stopId != null) 'stop_id': stopId,
+      if (expediteur != null) 'expediteur': expediteur,
+      if (refCode != null) 'ref_code': refCode,
+      if (nomDestinataire != null) 'nom_destinataire': nomDestinataire,
+      if (telephone != null) 'telephone': telephone,
+      if (nbColis != null) 'nb_colis': nbColis,
+      if (poidsKg != null) 'poids_kg': poidsKg,
+      if (statut != null) 'statut': statut,
+      if (raisonEchec != null) 'raison_echec': raisonEchec,
+      if (creeLe != null) 'cree_le': creeLe,
+    });
+  }
+
+  SheetsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? stopId,
+    Value<String>? expediteur,
+    Value<String?>? refCode,
+    Value<String?>? nomDestinataire,
+    Value<String?>? telephone,
+    Value<int>? nbColis,
+    Value<double?>? poidsKg,
+    Value<String>? statut,
+    Value<String?>? raisonEchec,
+    Value<DateTime>? creeLe,
+  }) {
+    return SheetsCompanion(
+      id: id ?? this.id,
+      stopId: stopId ?? this.stopId,
+      expediteur: expediteur ?? this.expediteur,
+      refCode: refCode ?? this.refCode,
+      nomDestinataire: nomDestinataire ?? this.nomDestinataire,
+      telephone: telephone ?? this.telephone,
+      nbColis: nbColis ?? this.nbColis,
+      poidsKg: poidsKg ?? this.poidsKg,
+      statut: statut ?? this.statut,
+      raisonEchec: raisonEchec ?? this.raisonEchec,
+      creeLe: creeLe ?? this.creeLe,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (stopId.present) {
+      map['stop_id'] = Variable<int>(stopId.value);
+    }
+    if (expediteur.present) {
+      map['expediteur'] = Variable<String>(expediteur.value);
+    }
+    if (refCode.present) {
+      map['ref_code'] = Variable<String>(refCode.value);
+    }
+    if (nomDestinataire.present) {
+      map['nom_destinataire'] = Variable<String>(nomDestinataire.value);
+    }
+    if (telephone.present) {
+      map['telephone'] = Variable<String>(telephone.value);
+    }
+    if (nbColis.present) {
+      map['nb_colis'] = Variable<int>(nbColis.value);
+    }
+    if (poidsKg.present) {
+      map['poids_kg'] = Variable<double>(poidsKg.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<String>(statut.value);
+    }
+    if (raisonEchec.present) {
+      map['raison_echec'] = Variable<String>(raisonEchec.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SheetsCompanion(')
+          ..write('id: $id, ')
+          ..write('stopId: $stopId, ')
+          ..write('expediteur: $expediteur, ')
+          ..write('refCode: $refCode, ')
+          ..write('nomDestinataire: $nomDestinataire, ')
+          ..write('telephone: $telephone, ')
+          ..write('nbColis: $nbColis, ')
+          ..write('poidsKg: $poidsKg, ')
+          ..write('statut: $statut, ')
+          ..write('raisonEchec: $raisonEchec, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TourneesTable tournees = $TourneesTable(this);
   late final $StopsTable stops = $StopsTable(this);
   late final $ParametresTable parametres = $ParametresTable(this);
+  late final $SheetsTable sheets = $SheetsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1702,6 +2362,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tournees,
     stops,
     parametres,
+    sheets,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -1711,6 +2372,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('stops', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'stops',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('sheets', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -2146,6 +2814,25 @@ final class $$StopsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$SheetsTable, List<Sheet>> _sheetsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.sheets,
+    aliasName: $_aliasNameGenerator(db.stops.id, db.sheets.stopId),
+  );
+
+  $$SheetsTableProcessedTableManager get sheetsRefs {
+    final manager = $$SheetsTableTableManager(
+      $_db,
+      $_db.sheets,
+    ).filter((f) => f.stopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_sheetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
@@ -2252,6 +2939,31 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
           ),
     );
     return composer;
+  }
+
+  Expression<bool> sheetsRefs(
+    Expression<bool> Function($$SheetsTableFilterComposer f) f,
+  ) {
+    final $$SheetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.sheets,
+      getReferencedColumn: (t) => t.stopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SheetsTableFilterComposer(
+            $db: $db,
+            $table: $db.sheets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -2453,6 +3165,31 @@ class $$StopsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> sheetsRefs<T extends Object>(
+    Expression<T> Function($$SheetsTableAnnotationComposer a) f,
+  ) {
+    final $$SheetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.sheets,
+      getReferencedColumn: (t) => t.stopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SheetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sheets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$StopsTableTableManager
@@ -2468,7 +3205,7 @@ class $$StopsTableTableManager
           $$StopsTableUpdateCompanionBuilder,
           (Stop, $$StopsTableReferences),
           Stop,
-          PrefetchHooks Function({bool tourneeId})
+          PrefetchHooks Function({bool tourneeId, bool sheetsRefs})
         > {
   $$StopsTableTableManager(_$AppDatabase db, $StopsTable table)
     : super(
@@ -2559,10 +3296,10 @@ class $$StopsTableTableManager
                     (e.readTable(table), $$StopsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({tourneeId = false}) {
+          prefetchHooksCallback: ({tourneeId = false, sheetsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [],
+              explicitlyWatchedTables: [if (sheetsRefs) db.sheets],
               addJoins:
                   <
                     T extends TableManagerState<
@@ -2596,7 +3333,20 @@ class $$StopsTableTableManager
                     return state;
                   },
               getPrefetchedDataCallback: (items) async {
-                return [];
+                return [
+                  if (sheetsRefs)
+                    await $_getPrefetchedData<Stop, $StopsTable, Sheet>(
+                      currentTable: table,
+                      referencedTable: $$StopsTableReferences._sheetsRefsTable(
+                        db,
+                      ),
+                      managerFromTypedResult: (p0) =>
+                          $$StopsTableReferences(db, table, p0).sheetsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.stopId == item.id),
+                      typedResults: items,
+                    ),
+                ];
               },
             );
           },
@@ -2616,7 +3366,7 @@ typedef $$StopsTableProcessedTableManager =
       $$StopsTableUpdateCompanionBuilder,
       (Stop, $$StopsTableReferences),
       Stop,
-      PrefetchHooks Function({bool tourneeId})
+      PrefetchHooks Function({bool tourneeId, bool sheetsRefs})
     >;
 typedef $$ParametresTableCreateCompanionBuilder =
     ParametresCompanion Function({
@@ -2754,6 +3504,435 @@ typedef $$ParametresTableProcessedTableManager =
       Parametre,
       PrefetchHooks Function()
     >;
+typedef $$SheetsTableCreateCompanionBuilder =
+    SheetsCompanion Function({
+      Value<int> id,
+      required int stopId,
+      required String expediteur,
+      Value<String?> refCode,
+      Value<String?> nomDestinataire,
+      Value<String?> telephone,
+      Value<int> nbColis,
+      Value<double?> poidsKg,
+      Value<String> statut,
+      Value<String?> raisonEchec,
+      Value<DateTime> creeLe,
+    });
+typedef $$SheetsTableUpdateCompanionBuilder =
+    SheetsCompanion Function({
+      Value<int> id,
+      Value<int> stopId,
+      Value<String> expediteur,
+      Value<String?> refCode,
+      Value<String?> nomDestinataire,
+      Value<String?> telephone,
+      Value<int> nbColis,
+      Value<double?> poidsKg,
+      Value<String> statut,
+      Value<String?> raisonEchec,
+      Value<DateTime> creeLe,
+    });
+
+final class $$SheetsTableReferences
+    extends BaseReferences<_$AppDatabase, $SheetsTable, Sheet> {
+  $$SheetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $StopsTable _stopIdTable(_$AppDatabase db) =>
+      db.stops.createAlias($_aliasNameGenerator(db.sheets.stopId, db.stops.id));
+
+  $$StopsTableProcessedTableManager get stopId {
+    final $_column = $_itemColumn<int>('stop_id')!;
+
+    final manager = $$StopsTableTableManager(
+      $_db,
+      $_db.stops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_stopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SheetsTableFilterComposer
+    extends Composer<_$AppDatabase, $SheetsTable> {
+  $$SheetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get expediteur => $composableBuilder(
+    column: $table.expediteur,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refCode => $composableBuilder(
+    column: $table.refCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nomDestinataire => $composableBuilder(
+    column: $table.nomDestinataire,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nbColis => $composableBuilder(
+    column: $table.nbColis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get poidsKg => $composableBuilder(
+    column: $table.poidsKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get raisonEchec => $composableBuilder(
+    column: $table.raisonEchec,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StopsTableFilterComposer get stopId {
+    final $$StopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableFilterComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SheetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SheetsTable> {
+  $$SheetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get expediteur => $composableBuilder(
+    column: $table.expediteur,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refCode => $composableBuilder(
+    column: $table.refCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nomDestinataire => $composableBuilder(
+    column: $table.nomDestinataire,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nbColis => $composableBuilder(
+    column: $table.nbColis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get poidsKg => $composableBuilder(
+    column: $table.poidsKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get raisonEchec => $composableBuilder(
+    column: $table.raisonEchec,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StopsTableOrderingComposer get stopId {
+    final $$StopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SheetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SheetsTable> {
+  $$SheetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get expediteur => $composableBuilder(
+    column: $table.expediteur,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get refCode =>
+      $composableBuilder(column: $table.refCode, builder: (column) => column);
+
+  GeneratedColumn<String> get nomDestinataire => $composableBuilder(
+    column: $table.nomDestinataire,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get telephone =>
+      $composableBuilder(column: $table.telephone, builder: (column) => column);
+
+  GeneratedColumn<int> get nbColis =>
+      $composableBuilder(column: $table.nbColis, builder: (column) => column);
+
+  GeneratedColumn<double> get poidsKg =>
+      $composableBuilder(column: $table.poidsKg, builder: (column) => column);
+
+  GeneratedColumn<String> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<String> get raisonEchec => $composableBuilder(
+    column: $table.raisonEchec,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  $$StopsTableAnnotationComposer get stopId {
+    final $$StopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SheetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SheetsTable,
+          Sheet,
+          $$SheetsTableFilterComposer,
+          $$SheetsTableOrderingComposer,
+          $$SheetsTableAnnotationComposer,
+          $$SheetsTableCreateCompanionBuilder,
+          $$SheetsTableUpdateCompanionBuilder,
+          (Sheet, $$SheetsTableReferences),
+          Sheet,
+          PrefetchHooks Function({bool stopId})
+        > {
+  $$SheetsTableTableManager(_$AppDatabase db, $SheetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SheetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SheetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SheetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> stopId = const Value.absent(),
+                Value<String> expediteur = const Value.absent(),
+                Value<String?> refCode = const Value.absent(),
+                Value<String?> nomDestinataire = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
+                Value<int> nbColis = const Value.absent(),
+                Value<double?> poidsKg = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<String?> raisonEchec = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => SheetsCompanion(
+                id: id,
+                stopId: stopId,
+                expediteur: expediteur,
+                refCode: refCode,
+                nomDestinataire: nomDestinataire,
+                telephone: telephone,
+                nbColis: nbColis,
+                poidsKg: poidsKg,
+                statut: statut,
+                raisonEchec: raisonEchec,
+                creeLe: creeLe,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int stopId,
+                required String expediteur,
+                Value<String?> refCode = const Value.absent(),
+                Value<String?> nomDestinataire = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
+                Value<int> nbColis = const Value.absent(),
+                Value<double?> poidsKg = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<String?> raisonEchec = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => SheetsCompanion.insert(
+                id: id,
+                stopId: stopId,
+                expediteur: expediteur,
+                refCode: refCode,
+                nomDestinataire: nomDestinataire,
+                telephone: telephone,
+                nbColis: nbColis,
+                poidsKg: poidsKg,
+                statut: statut,
+                raisonEchec: raisonEchec,
+                creeLe: creeLe,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$SheetsTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({stopId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (stopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.stopId,
+                                referencedTable: $$SheetsTableReferences
+                                    ._stopIdTable(db),
+                                referencedColumn: $$SheetsTableReferences
+                                    ._stopIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SheetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SheetsTable,
+      Sheet,
+      $$SheetsTableFilterComposer,
+      $$SheetsTableOrderingComposer,
+      $$SheetsTableAnnotationComposer,
+      $$SheetsTableCreateCompanionBuilder,
+      $$SheetsTableUpdateCompanionBuilder,
+      (Sheet, $$SheetsTableReferences),
+      Sheet,
+      PrefetchHooks Function({bool stopId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2764,4 +3943,6 @@ class $AppDatabaseManager {
       $$StopsTableTableManager(_db, _db.stops);
   $$ParametresTableTableManager get parametres =>
       $$ParametresTableTableManager(_db, _db.parametres);
+  $$SheetsTableTableManager get sheets =>
+      $$SheetsTableTableManager(_db, _db.sheets);
 }

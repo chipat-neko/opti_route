@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../data/sheets_repository.dart';
 import '../data/tournees_repository.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -11,6 +12,10 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 final tourneesRepositoryProvider = Provider<TourneesRepository>((ref) {
   return TourneesRepository(ref.watch(appDatabaseProvider));
+});
+
+final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
+  return SheetsRepository(ref.watch(appDatabaseProvider));
 });
 
 final tourneesStreamProvider = StreamProvider<List<Tournee>>((ref) {
