@@ -1136,33 +1136,77 @@ class _StopsPlaceholder extends StatelessWidget {
   }
 }
 
-class _StopsList extends ConsumerWidget {
+class _StopsList extends ConsumerStatefulWidget {
   const _StopsList({required this.stops});
 
   final List<Stop> stops;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StopsList> createState() => _StopsListState();
+}
+
+class _StopsListState extends ConsumerState<_StopsList> {
+  /// Copie locale des stops, manipulee pendant le drag-and-drop. Quand
+  /// le stream Drift emet une nouvelle liste, on resync (sauf si on est
+  /// en plein milieu d'un drag, auquel cas on attend la fin).
+  late List<Stop> _local;
+  bool _dragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _local = List.of(widget.stops);
+  }
+
+  @override
+  void didUpdateWidget(_StopsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_dragging) {
+      _local = List.of(widget.stops);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.paper,
         borderRadius: BorderRadius.circular(AppRadius.r18),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var i = 0; i < stops.length; i++) ...[
-            _StopRow(
-              stop: stops[i],
-              index: i + 1,
-              onDelete: () => _confirmDelete(context, ref, stops[i]),
-            ),
-            if (i < stops.length - 1)
-              const Divider(height: 1, indent: AppSpacing.x16),
-          ],
-        ],
+      child: ReorderableListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: false,
+        itemCount: _local.length,
+        onReorderStart: (_) => _dragging = true,
+        onReorder: _onReorder,
+        itemBuilder: (context, i) {
+          final stop = _local[i];
+          return _StopRow(
+            key: ValueKey('stop-${stop.id}'),
+            stop: stop,
+            index: i + 1,
+            dragIndex: i,
+            onDelete: () => _confirmDelete(context, ref, stop),
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _onReorder(int oldIndex, int newIndex) async {
+    final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
+    setState(() {
+      final item = _local.removeAt(oldIndex);
+      _local.insert(adjusted, item);
+    });
+    // Persister le nouvel ordre. La liste des stops du stream va etre
+    // rafraichie automatiquement avec ces nouveaux ordreOptimise.
+    await ref
+        .read(stopsRepositoryProvider)
+        .applyOptimizedOrder(_local.map((s) => s.id).toList());
+    _dragging = false;
   }
 
   Future<void> _confirmDelete(
@@ -1199,13 +1243,21 @@ class _StopsList extends ConsumerWidget {
 
 class _StopRow extends ConsumerWidget {
   const _StopRow({
+    super.key,
     required this.stop,
     required this.index,
+    required this.dragIndex,
     required this.onDelete,
   });
 
   final Stop stop;
   final int index;
+  /// Index dans la `ReorderableListView` parent. Utilise pour wrapper
+  /// la poignee de drag (icone `drag_handle`) dans un
+  /// `ReorderableDragStartListener` qui demarre le drag uniquement
+  /// quand on tape sur cette poignee (et pas sur le reste de la card,
+  /// qui ouvre la bottom sheet).
+  final int dragIndex;
   final VoidCallback onDelete;
 
   @override
@@ -1292,6 +1344,20 @@ class _StopRow extends ConsumerWidget {
                       ),
                     ],
                   ],
+                ),
+              ),
+              ReorderableDragStartListener(
+                index: dragIndex,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x6,
+                    vertical: AppSpacing.x10,
+                  ),
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: AppColors.textFaint,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
