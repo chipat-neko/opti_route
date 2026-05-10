@@ -114,6 +114,10 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 18. Recherche dans la liste des arrêts (#56)
+
+Champ de recherche au-dessus de la liste, visible uniquement à partir de 5 arrêts. Filtre par nom client + adresse + adresse normalisée + notes, avec normalisation des accents (Lucé == luce). Compteur `X / Y arrêts` quand on filtre. Pendant la recherche, le drag-and-drop est désactivé (l'ordre n'a pas de sens sur une liste partielle) et la poignée de drag est masquée.
+
 ## 17. Badge "tournée en cours" globale (#55)
 
 Pour ne plus oublier qu'une tournée est active quand on navigue dans d'autres écrans : un point lime apparaît sur l'icône hamburger de l'AppBar **et** sur l'item "Tournée du jour" dans le drawer (avec sous-titre `En cours` en vert) dès qu'au moins une tournée a `statut='en_cours'`.

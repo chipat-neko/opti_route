@@ -429,9 +429,125 @@ class _Body extends StatelessWidget {
         if (stops.isEmpty)
           const _StopsPlaceholder()
         else
-          _StopsList(stops: stops),
+          _StopsSection(stops: stops),
       ],
     );
+  }
+}
+
+/// Section "Liste des arrets" avec un champ de recherche au-dessus
+/// (utile pour les grosses tournees, 15+ arrets). Quand la query est
+/// vide : liste complete + drag-and-drop actif. Quand on cherche : on
+/// affiche uniquement les arrets qui matchent (par nom client / adresse
+/// / notes, normalisation des accents) et le drag est desactive
+/// puisque l'ordre n'a pas de sens sur un sous-ensemble.
+class _StopsSection extends StatefulWidget {
+  const _StopsSection({required this.stops});
+
+  final List<Stop> stops;
+
+  @override
+  State<_StopsSection> createState() => _StopsSectionState();
+}
+
+class _StopsSectionState extends State<_StopsSection> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final hasQuery = _query.trim().isNotEmpty;
+    final filtered = hasQuery ? _filter(widget.stops, _query) : widget.stops;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // N'afficher le champ de recherche que si la liste est assez
+        // longue pour en valoir la peine.
+        if (widget.stops.length >= 5) ...[
+          TextField(
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search, size: 20),
+              hintText: 'Filtrer par nom, rue, notes...',
+              isDense: true,
+              suffixIcon: hasQuery
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () => setState(() => _query = ''),
+                    )
+                  : null,
+            ),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+          if (hasQuery) ...[
+            const SizedBox(height: AppSpacing.x6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x6),
+              child: Text(
+                filtered.isEmpty
+                    ? 'Aucun arret ne correspond'
+                    : '${filtered.length} / ${widget.stops.length} arret(s)',
+                style: appMonoStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMute,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.x10),
+        ],
+        if (filtered.isEmpty && hasQuery)
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x22),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(AppRadius.r18),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: const Text(
+              'Aucun arret ne correspond a ta recherche.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textMute),
+            ),
+          )
+        else
+          _StopsList(stops: filtered, reorderable: !hasQuery),
+      ],
+    );
+  }
+
+  static List<Stop> _filter(List<Stop> stops, String query) {
+    final norm = _normalize(query.trim());
+    if (norm.isEmpty) return stops;
+    return stops.where((s) {
+      final hay = _normalize([
+        s.nomClient ?? '',
+        s.adresseBrute,
+        s.adresseNormalisee ?? '',
+        s.notes ?? '',
+      ].join(' '));
+      return hay.contains(norm);
+    }).toList();
+  }
+
+  static String _normalize(String s) {
+    final lower = s.toLowerCase();
+    const map = {
+      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
+      'ç': 'c',
+      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
+      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
+      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+      'ÿ': 'y', 'ý': 'y',
+      'ñ': 'n',
+      'œ': 'oe', 'æ': 'ae',
+    };
+    final buf = StringBuffer();
+    for (final ch in lower.split('')) {
+      buf.write(map[ch] ?? ch);
+    }
+    return buf.toString();
   }
 }
 
@@ -1149,9 +1265,15 @@ class _StopsPlaceholder extends StatelessWidget {
 }
 
 class _StopsList extends ConsumerStatefulWidget {
-  const _StopsList({required this.stops});
+  const _StopsList({required this.stops, this.reorderable = true});
 
   final List<Stop> stops;
+
+  /// Quand `false` (typiquement pendant une recherche), le drag-and-drop
+  /// est desactive : la poignee `drag_handle` est masquee et la liste
+  /// utilise un simple `ListView` au lieu de `ReorderableListView`.
+  /// L'ordre n'a pas de sens sur une liste filtree.
+  final bool reorderable;
 
   @override
   ConsumerState<_StopsList> createState() => _StopsListState();
@@ -1180,6 +1302,31 @@ class _StopsListState extends ConsumerState<_StopsList> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.reorderable) {
+      // Mode lecture seule (typiquement pendant une recherche). La liste
+      // est un simple ListView ; chaque _StopRow recoit `showDragHandle:
+      // false` pour cacher la poignee qui n'a pas de sens ici.
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(AppRadius.r18),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var i = 0; i < widget.stops.length; i++)
+              _StopRow(
+                key: ValueKey('stop-${widget.stops[i].id}'),
+                stop: widget.stops[i],
+                index: i + 1,
+                dragIndex: i,
+                showDragHandle: false,
+                onDelete: () => _confirmDelete(context, ref, widget.stops[i]),
+              ),
+          ],
+        ),
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         color: AppColors.paper,
@@ -1263,6 +1410,7 @@ class _StopRow extends ConsumerWidget {
     required this.index,
     required this.dragIndex,
     required this.onDelete,
+    this.showDragHandle = true,
   });
 
   final Stop stop;
@@ -1274,6 +1422,10 @@ class _StopRow extends ConsumerWidget {
   /// qui ouvre la bottom sheet).
   final int dragIndex;
   final VoidCallback onDelete;
+
+  /// Mis a false pendant une recherche (la liste est filtree, l'ordre
+  /// n'a pas de sens) : on cache la poignee de drag.
+  final bool showDragHandle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1361,20 +1513,21 @@ class _StopRow extends ConsumerWidget {
                   ],
                 ),
               ),
-              ReorderableDragStartListener(
-                index: dragIndex,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.x6,
-                    vertical: AppSpacing.x10,
-                  ),
-                  child: Icon(
-                    Icons.drag_handle,
-                    color: AppColors.textFaint,
-                    size: 20,
+              if (showDragHandle)
+                ReorderableDragStartListener(
+                  index: dragIndex,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.x6,
+                      vertical: AppSpacing.x10,
+                    ),
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: AppColors.textFaint,
+                      size: 20,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
