@@ -51,10 +51,11 @@ class TomTomService implements GeocodingService {
       if (cached != null) return cached;
     }
 
-    // Uri.https encode correctement le path et la query string.
-    // unencodedPath : Dart fait l'encoding par segment (gere les espaces,
-    // accents, etc. sans double-encoding).
-    final uri = Uri.https('api.tomtom.com', '/search/2/geocode/$q.json', {
+    // Endpoint /search/2/search/{q}.json (Fuzzy Search) : retourne
+    // adresses ET POIs (commerces, entreprises, sites). Plus large que
+    // /search/2/geocode qui ne fait que des adresses.
+    // Uri.https encode chaque segment proprement.
+    final uri = Uri.https('api.tomtom.com', '/search/2/search/$q.json', {
       'key': apiKey,
       'limit': '$limit',
       'countrySet': countrySet,
@@ -130,6 +131,15 @@ class TomTomService implements GeocodingService {
     final city = address['municipality'] as String?;
     final country = address['country'] as String?;
 
+    // POI : si le resultat est de type "POI", on extrait le nom de
+    // l'entreprise / commerce.
+    String? poiName;
+    final type = result['type'] as String?;
+    if (type == 'POI') {
+      final poi = (result['poi'] as Map?)?.cast<String, dynamic>();
+      poiName = poi?['name'] as String?;
+    }
+
     final displayName = freeform ??
         _build(
           houseNumber: houseNumber,
@@ -138,7 +148,7 @@ class TomTomService implements GeocodingService {
           city: city,
           country: country,
         );
-    if (displayName.isEmpty) return null;
+    if (displayName.isEmpty && poiName == null) return null;
 
     return AddressSuggestion(
       displayName: displayName,
@@ -149,6 +159,7 @@ class TomTomService implements GeocodingService {
       postcode: postcode,
       city: city,
       country: country,
+      poiName: poiName,
     );
   }
 

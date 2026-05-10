@@ -84,6 +84,21 @@ class PhotonService implements GeocodingService {
     return ranked;
   }
 
+  /// Categories OSM qui correspondent a des POIs (commerces,
+  /// entreprises, services). Quand `osm_key` tombe la-dedans, on
+  /// considere `name` comme le nom du POI.
+  static const _poiOsmKeys = {
+    'amenity',
+    'shop',
+    'office',
+    'tourism',
+    'leisure',
+    'craft',
+    'healthcare',
+    'building',
+    'industrial',
+  };
+
   AddressSuggestion? _toSuggestion(Map<String, dynamic> feature) {
     final geometry = feature['geometry'];
     if (geometry is! Map) return null;
@@ -96,7 +111,7 @@ class PhotonService implements GeocodingService {
     final props = (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
 
     final houseNumber = props['housenumber'] as String?;
-    final street = (props['street'] as String?) ?? (props['name'] as String?);
+    final street = props['street'] as String?;
     final postcode = props['postcode'] as String?;
     final city = props['city'] as String? ??
         props['town'] as String? ??
@@ -104,15 +119,20 @@ class PhotonService implements GeocodingService {
         props['locality'] as String?;
     final country = props['country'] as String?;
 
+    final osmKey = props['osm_key'] as String?;
+    final name = props['name'] as String?;
+    final isPoi =
+        osmKey != null && _poiOsmKeys.contains(osmKey) && name != null;
+
     final displayName = _buildDisplayName(
       houseNumber: houseNumber,
-      street: street,
+      street: street ?? (isPoi ? null : name),
       postcode: postcode,
       city: city,
       country: country,
-      fallbackName: props['name'] as String?,
+      fallbackName: name,
     );
-    if (displayName.isEmpty) return null;
+    if (displayName.isEmpty && !isPoi) return null;
 
     return AddressSuggestion(
       displayName: displayName,
@@ -123,6 +143,7 @@ class PhotonService implements GeocodingService {
       postcode: postcode,
       city: city,
       country: country,
+      poiName: isPoi ? name : null,
     );
   }
 

@@ -238,8 +238,19 @@ class _SuggestionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPoi = suggestion.isPoi;
     final hasNumber = suggestion.houseNumber != null &&
         suggestion.houseNumber!.isNotEmpty;
+
+    final iconBg =
+        isPoi ? AppColors.emeraldSoft : (hasNumber ? AppColors.lime : AppColors.creamSoft);
+    final iconColor = isPoi
+        ? AppColors.emerald
+        : (hasNumber ? AppColors.ink : AppColors.textMute);
+    final iconData = isPoi ? Icons.storefront_outlined : Icons.place_outlined;
+
+    final secondary = isPoi ? _poiAddressLine(suggestion) : suggestion.secondaryLabel;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.r14),
@@ -254,14 +265,10 @@ class _SuggestionTile extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: hasNumber ? AppColors.lime : AppColors.creamSoft,
+                color: iconBg,
                 borderRadius: BorderRadius.circular(AppRadius.r8),
               ),
-              child: Icon(
-                Icons.place_outlined,
-                size: 16,
-                color: hasNumber ? AppColors.ink : AppColors.textMute,
-              ),
+              child: Icon(iconData, size: 16, color: iconColor),
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
@@ -278,11 +285,11 @@ class _SuggestionTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (suggestion.secondaryLabel.isNotEmpty)
+                  if (secondary.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
-                        suggestion.secondaryLabel,
+                        secondary,
                         style: appMonoStyle(
                           fontSize: 11,
                           color: AppColors.textMute,
@@ -291,27 +298,22 @@ class _SuggestionTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  if (!hasNumber)
+                  if (isPoi)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.amber.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(AppRadius.r6),
-                        ),
-                        child: Text(
-                          'SANS NUMERO',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.4,
-                            color: AppColors.amber.withValues(alpha: 0.95),
-                          ),
-                        ),
+                      child: _Badge(
+                        label: 'COMMERCE',
+                        bg: AppColors.emeraldSoft,
+                        fg: AppColors.emerald,
+                      ),
+                    )
+                  else if (!hasNumber)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: _Badge(
+                        label: 'SANS NUMERO',
+                        bg: AppColors.amber.withValues(alpha: 0.2),
+                        fg: AppColors.amber.withValues(alpha: 0.95),
                       ),
                     ),
                 ],
@@ -323,6 +325,52 @@ class _SuggestionTile extends StatelessWidget {
               color: AppColors.textFaint,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Pour un POI, on construit une sub-line lisible : numero + rue +
+  /// postcode + ville. Plus riche que le secondaryLabel par defaut.
+  String _poiAddressLine(AddressSuggestion s) {
+    final parts = <String>[];
+    if (s.road != null && s.road!.isNotEmpty) {
+      parts.add(s.houseNumber != null && s.houseNumber!.isNotEmpty
+          ? '${s.houseNumber} ${s.road}'
+          : s.road!);
+    }
+    final localityBits = <String>[
+      if (s.postcode != null && s.postcode!.isNotEmpty) s.postcode!,
+      if (s.city != null && s.city!.isNotEmpty) s.city!,
+    ];
+    if (localityBits.isNotEmpty) parts.add(localityBits.join(' '));
+    if (parts.isEmpty) return s.displayName;
+    return parts.join(' · ');
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.label, required this.bg, required this.fg});
+
+  final String label;
+  final Color bg;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          color: fg,
         ),
       ),
     );

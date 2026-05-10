@@ -50,6 +50,15 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
 
+### Recherche par nom d'entreprise / commerce (POI)
+- **Bascule de l'endpoint TomTom** de `/search/2/geocode/` vers `/search/2/search/` (Fuzzy Search) : retourne maintenant aussi les POIs (commerces, entreprises, sites). Tu peux taper *« Carrosserie Coculo Fontenay sur Eure »* et obtenir l'adresse exacte de l'entreprise.
+- **`AddressSuggestion.poiName`** ajouté : nom du POI quand le résultat est une entreprise/commerce. `primaryLabel` retourne le nom du POI à la place de l'adresse quand présent.
+- **`PhotonService`** : reconnaît les POIs OpenStreetMap (osm_key dans `amenity`/`shop`/`office`/`tourism`/`leisure`/`craft`/`healthcare`/`building`/`industrial`) et extrait le `name` comme nom d'entreprise.
+- **`_SuggestionTile`** mis à jour visuellement :
+  - **POI** : icône `storefront_outlined` sur fond `emeraldSoft`, badge **« COMMERCE »** en `emerald`, sub-line riche avec adresse complète (numéro · rue · CP ville).
+  - **Adresse précise** : icône `place_outlined` lime (inchangé).
+  - **Adresse imprécise** : icône grisée + badge **« SANS NUMERO »** ambre (inchangé).
+
 ### Suppression depuis les écrans
 - **Menu overflow** (3 points) dans l'AppBar de `TourneeDuJourScreen` avec une action *Supprimer la tournée* (confirmation modale avant suppression). Après confirmation, le `HomeScreen` détecte automatiquement qu'il n'y a plus de tournée du jour et bascule sur l'empty state.
 - **Bouton danger rouge** dans `TourneeFormScreen` (mode édition seulement) : *Supprimer cette tournée* en bas du formulaire, séparé par un divider, avec sous-texte explicatif (« tous les arrêts seront supprimés »).

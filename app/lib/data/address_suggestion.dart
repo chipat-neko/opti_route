@@ -13,6 +13,7 @@ class AddressSuggestion {
     this.postcode,
     this.city,
     this.country,
+    this.poiName,
   });
 
   /// Reponse complete de Nominatim (`display_name`).
@@ -30,9 +31,19 @@ class AddressSuggestion {
   final String? city;
   final String? country;
 
-  /// Premiere ligne pour l'UI : "14 Rue du Faubourg Saint-Antoine".
-  /// Fallback sur le premier segment de `displayName`.
+  /// Nom d'un POI (Point Of Interest) : commerce, entreprise, site
+  /// notable. Quand present, on l'affiche en titre dans l'UI a la place
+  /// de l'adresse. Ex : "Carrosserie Coculo".
+  final String? poiName;
+
+  /// Vrai si la suggestion est un POI (entreprise / commerce / site).
+  bool get isPoi => poiName != null && poiName!.isNotEmpty;
+
+  /// Premiere ligne pour l'UI :
+  /// - POI : nom du POI ("Carrosserie Coculo").
+  /// - Adresse : "14 Rue du Faubourg Saint-Antoine".
   String get primaryLabel {
+    if (isPoi) return poiName!;
     if (road != null && road!.isNotEmpty) {
       return houseNumber != null && houseNumber!.isNotEmpty
           ? '$houseNumber $road'
@@ -66,6 +77,7 @@ class AddressSuggestion {
           address?['village'] as String? ??
           address?['municipality'] as String?,
       country: address?['country'] as String?,
+      poiName: json['name'] as String?,
     );
   }
 
