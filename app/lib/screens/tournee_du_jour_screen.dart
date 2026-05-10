@@ -40,6 +40,12 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   Widget build(BuildContext context) {
     final stopsAsync = ref.watch(stopsByTourneeProvider(widget.tournee.id));
     final optimizer = ref.watch(optimizationServiceProvider);
+    // Bouton grisé tant que `optimiseeLe != null` : la tournée est déjà
+    // optimisée et rien n'a changé depuis. Toute modif structurelle
+    // (add/edit/delete arret, point de depart change) appelle
+    // `invalidateOptimization` qui remet `optimiseeLe = null` et
+    // ré-active le bouton.
+    final dejaOptimisee = widget.tournee.optimiseeLe != null;
 
     return Scaffold(
       drawer: const AppDrawer(),
@@ -56,8 +62,12 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                 : const Icon(Icons.bolt_outlined),
             tooltip: optimizer == null
                 ? 'Configure ta cle ORS dans les Parametres'
-                : 'Optimiser la tournee',
-            onPressed: _optimizing ? null : _onOptimizePressed,
+                : dejaOptimisee
+                    ? 'Tournee deja optimisee — modifie un arret pour relancer'
+                    : 'Optimiser la tournee',
+            onPressed: (_optimizing || dejaOptimisee)
+                ? null
+                : _onOptimizePressed,
           ),
           IconButton(
             icon: const Icon(Icons.map_outlined),
@@ -1237,6 +1247,9 @@ class _StopsListState extends ConsumerState<_StopsList> {
     );
     if (confirmed == true && context.mounted) {
       await ref.read(stopsRepositoryProvider).delete(stop.id);
+      await ref
+          .read(tourneesRepositoryProvider)
+          .invalidateOptimization(stop.tourneeId);
     }
   }
 }
