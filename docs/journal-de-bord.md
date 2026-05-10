@@ -114,6 +114,12 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 17. Badge "tournée en cours" globale (#55)
+
+Pour ne plus oublier qu'une tournée est active quand on navigue dans d'autres écrans : un point lime apparaît sur l'icône hamburger de l'AppBar **et** sur l'item "Tournée du jour" dans le drawer (avec sous-titre `En cours` en vert) dès qu'au moins une tournée a `statut='en_cours'`.
+
+Implémentation : nouveau provider `hasTourneeEnCoursProvider` (boolean) + widget réutilisable `DrawerBadgeIcon` utilisé dans les AppBars de `home_screen.dart`, `tournee_du_jour_screen.dart`, `tournees_list_screen.dart`.
+
 ## 16. App icon + splash screen (#53)
 
 Identité visuelle finalisée :

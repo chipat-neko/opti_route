@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/tournees_list_screen.dart';
@@ -10,11 +12,12 @@ import '../theme/app_tokens.dart';
 /// Architecture hybride choisie avec Noah : la home est la **tournee
 /// du jour** ; l'historique reste accessible mais cache derriere le
 /// menu hamburger.
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasEnCours = ref.watch(hasTourneeEnCoursProvider);
     return Drawer(
       backgroundColor: AppColors.cream,
       surfaceTintColor: Colors.transparent,
@@ -54,8 +57,40 @@ class AppDrawer extends StatelessWidget {
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.today_outlined),
+              leading: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.today_outlined),
+                  if (hasEnCours)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.lime,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.cream,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               title: const Text('Tournee du jour'),
+              subtitle: hasEnCours
+                  ? Text(
+                      'En cours',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.emerald,
+                      ),
+                    )
+                  : null,
               onTap: () => Navigator.of(context).pop(),
             ),
             ListTile(
