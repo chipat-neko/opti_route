@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../data/database.dart';
 import '../providers/database_providers.dart';
+import '../theme/app_tokens.dart';
 import 'tournee_form_screen.dart';
 
 class TourneesListScreen extends ConsumerWidget {
@@ -48,25 +49,35 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.x28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.local_shipping_outlined,
-              size: 80,
-              color: Theme.of(context).colorScheme.outline,
+            Container(
+              width: 96,
+              height: 96,
+              decoration: const BoxDecoration(
+                color: AppColors.creamSoft,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.local_shipping_outlined,
+                size: 44,
+                color: AppColors.ink,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.x18),
             Text(
               'Aucune tournee',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.x8),
             Text(
               'Tape sur "+" en bas pour creer ta premiere tournee.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMute,
+                  ),
             ),
           ],
         ),
@@ -156,18 +167,34 @@ class _StatutBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (statut) {
-      'optimisee' => ('Optimisee', Colors.blue),
-      'en_cours' => ('En cours', Colors.orange),
-      'terminee' => ('Terminee', Colors.green),
-      _ => ('Brouillon', Colors.grey),
+    // Couleurs alignees sur les tokens du handoff :
+    // - active : ink + halo lime
+    // - terminee : emerald
+    // - optimisee : creamSoft + ink
+    // - brouillon (default) : paper + outline ink
+    final (letter, bg, fg, border) = switch (statut) {
+      'optimisee' =>
+        ('O', AppColors.creamSoft, AppColors.ink, AppColors.inkLine),
+      'en_cours' => ('E', AppColors.ink, AppColors.lime, null),
+      'terminee' => ('T', AppColors.emerald, AppColors.paper, null),
+      _ => ('B', AppColors.paper, AppColors.ink, AppColors.inkLine),
     };
-    return CircleAvatar(
-      backgroundColor: color.withValues(alpha: 0.15),
-      foregroundColor: color.shade700,
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+        border: border != null ? Border.all(color: border, width: 1.5) : null,
+      ),
+      alignment: Alignment.center,
       child: Text(
-        label[0],
-        style: const TextStyle(fontWeight: FontWeight.bold),
+        letter,
+        style: TextStyle(
+          color: fg,
+          fontWeight: FontWeight.w800,
+          fontSize: 14,
+        ),
       ),
     );
   }
