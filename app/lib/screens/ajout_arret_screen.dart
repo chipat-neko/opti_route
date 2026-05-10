@@ -1,0 +1,403 @@
+import 'package:drift/drift.dart' show Value;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/address_suggestion.dart';
+import '../data/database.dart';
+import '../providers/database_providers.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
+import '../widgets/address_autocomplete_field.dart';
+
+/// Ajout (potentiellement multiple) d'arrets a une tournee, avec
+/// imperatifs sur la meme page :
+///   - adresse (autocomplete Nominatim, lat/lng caches en backend)
+///   - priorite (premier / flexible / dernier / eviter)
+///   - nb de colis
+///   - fenetre horaire debut/fin (optionnel)
+///   - duree estimee de l'arret
+///   - nom du client + notes (optionnel)
+///
+/// Deux boutons d'enregistrement :
+///   - "Enregistrer" : sauvegarde et revient a la home.
+///   - "+ Ajouter un autre" : sauvegarde et reset le formulaire pour
+///     enchainer plusieurs adresses sans naviguer.
+class AjoutArretScreen extends ConsumerStatefulWidget {
+  const AjoutArretScreen({super.key, required this.tourneeId});
+
+  final int tourneeId;
+
+  @override
+  ConsumerState<AjoutArretScreen> createState() => _AjoutArretScreenState();
+}
+
+class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _addressFieldKey = GlobalKey();
+  late TextEditingController _nbColisCtrl;
+  late TextEditingController _dureeArretCtrl;
+  late TextEditingController _nomClientCtrl;
+  late TextEditingController _notesCtrl;
+
+  AddressSuggestion? _address;
+  String _priorite = 'flexible';
+  TimeOfDay? _fenetreDebut;
+  TimeOfDay? _fenetreFin;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initControllers();
+  }
+
+  void _initControllers() {
+    _nbColisCtrl = TextEditingController(text: '1');
+    _dureeArretCtrl = TextEditingController(text: '3');
+    _nomClientCtrl = TextEditingController();
+    _notesCtrl = TextEditingController();
+  }
+
+  void _resetForm() {
+    _nbColisCtrl.dispose();
+    _dureeArretCtrl.dispose();
+    _nomClientCtrl.dispose();
+    _notesCtrl.dispose();
+    setState(() {
+      _initControllers();
+      _address = null;
+      _priorite = 'flexible';
+      _fenetreDebut = null;
+      _fenetreFin = null;
+    });
+    _formKey.currentState?.reset();
+  }
+
+  @override
+  void dispose() {
+    _nbColisCtrl.dispose();
+    _dureeArretCtrl.dispose();
+    _nomClientCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Ajouter un arret'),
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.x18),
+          children: [
+            AddressAutocompleteField(
+              key: _addressFieldKey,
+              labelText: 'Adresse',
+              hintText: 'Tape la rue, la ville...',
+              initialSuggestion: _address,
+              initialDisplayText: _address?.displayName,
+              onSuggestionSelected: (s) => setState(() => _address = s),
+            ),
+            const SizedBox(height: AppSpacing.x22),
+            _SectionTitle('Priorite'),
+            const SizedBox(height: AppSpacing.x10),
+            _PriorityChips(
+              value: _priorite,
+              onChanged: (v) => setState(() => _priorite = v),
+            ),
+            const SizedBox(height: AppSpacing.x22),
+            _SectionTitle('Colis'),
+            const SizedBox(height: AppSpacing.x10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _nbColisCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de colis',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: _validatePositiveInt,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _dureeArretCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Duree (min)',
+                      helperText: 'Temps estime sur place',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: _validatePositiveInt,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x22),
+            _SectionTitle('Fenetre horaire (optionnel)'),
+            const SizedBox(height: AppSpacing.x10),
+            Row(
+              children: [
+                Expanded(
+                  child: _TimePickerField(
+                    label: 'Pas avant',
+                    value: _fenetreDebut,
+                    onChanged: (t) => setState(() => _fenetreDebut = t),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: _TimePickerField(
+                    label: 'Avant',
+                    value: _fenetreFin,
+                    onChanged: (t) => setState(() => _fenetreFin = t),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x22),
+            _SectionTitle('Client (optionnel)'),
+            const SizedBox(height: AppSpacing.x10),
+            TextFormField(
+              controller: _nomClientCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nom du client',
+                hintText: 'Mme Aubry, Pharmacie, ...',
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            TextFormField(
+              controller: _notesCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                hintText: 'Code 1234B · porte garage · 3e etage',
+              ),
+              maxLines: 3,
+              textInputAction: TextInputAction.newline,
+            ),
+            const SizedBox(height: AppSpacing.x28),
+            FilledButton.icon(
+              onPressed:
+                  _saving ? null : () => _save(addAnother: false),
+              icon: _saving
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.lime,
+                      ),
+                    )
+                  : const Icon(Icons.check),
+              label: const Text('Enregistrer'),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            OutlinedButton.icon(
+              onPressed:
+                  _saving ? null : () => _save(addAnother: true),
+              icon: const Icon(Icons.add),
+              label: const Text('+ Ajouter un autre'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _validatePositiveInt(String? v) {
+    final s = v?.trim() ?? '';
+    if (s.isEmpty) return 'Requis';
+    final n = int.tryParse(s);
+    if (n == null || n < 0) return 'Entier positif';
+    return null;
+  }
+
+  Future<void> _save({required bool addAnother}) async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_address == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choisis une adresse')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    final companion = StopsCompanion.insert(
+      tourneeId: widget.tourneeId,
+      adresseBrute: _address!.displayName,
+      adresseNormalisee: Value(_address!.displayName),
+      lat: Value(_address!.lat),
+      lng: Value(_address!.lon),
+      nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
+      priorite: Value(_priorite),
+      fenetreDebut: Value(_formatTime(_fenetreDebut)),
+      fenetreFin: Value(_formatTime(_fenetreFin)),
+      dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
+      notes: Value(_orNull(_notesCtrl.text)),
+      nomClient: Value(_orNull(_nomClientCtrl.text)),
+    );
+
+    try {
+      await ref.read(stopsRepositoryProvider).create(companion);
+      if (!mounted) return;
+      if (addAnother) {
+        _resetForm();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Arret ajoute, saisis le suivant')),
+        );
+        setState(() => _saving = false);
+      } else {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de l\'enregistrement : $e')),
+      );
+    }
+  }
+
+  String? _formatTime(TimeOfDay? t) {
+    if (t == null) return null;
+    final hh = t.hour.toString().padLeft(2, '0');
+    final mm = t.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
+  }
+
+  String? _orNull(String s) => s.trim().isEmpty ? null : s.trim();
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.6,
+        color: AppColors.textMute,
+      ),
+    );
+  }
+}
+
+class _PriorityChips extends StatelessWidget {
+  const _PriorityChips({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  static const _options = [
+    ('obligatoire_premier', 'En premier', AppColors.lime),
+    ('flexible', 'Flexible', AppColors.creamSoft),
+    ('obligatoire_dernier', 'En dernier', AppColors.lime),
+    ('eviter_si_possible', 'Eviter', AppColors.amber),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.x8,
+      runSpacing: AppSpacing.x8,
+      children: [
+        for (final (id, label, accent) in _options)
+          ChoiceChip(
+            label: Text(label),
+            selected: value == id,
+            onSelected: (sel) {
+              if (sel) onChanged(id);
+            },
+            selectedColor: accent,
+            backgroundColor: AppColors.paper,
+            side: BorderSide(
+              color: value == id ? accent : AppColors.inkLine,
+            ),
+            labelStyle: TextStyle(
+              color: AppColors.ink,
+              fontWeight: value == id ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _TimePickerField extends StatelessWidget {
+  const _TimePickerField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final TimeOfDay? value;
+  final ValueChanged<TimeOfDay?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = value == null
+        ? '—'
+        : '${value!.hour.toString().padLeft(2, '0')}:${value!.minute.toString().padLeft(2, '0')}';
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r14),
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: value ?? const TimeOfDay(hour: 9, minute: 0),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      onLongPress: value == null ? null : () => onChanged(null),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x14,
+          vertical: AppSpacing.x12,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(AppRadius.r14),
+          border: Border.all(color: AppColors.inkLine),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.access_time, size: 18, color: AppColors.ink),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMute,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    display,
+                    style: appMonoStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

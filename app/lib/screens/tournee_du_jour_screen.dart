@@ -3,16 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import 'ajout_arret_screen.dart';
 import 'tournee_form_screen.dart';
 
-/// Vue principale lorsque l'utilisateur a une tournee active aujourd'hui.
-///
-/// Inspire de `screen-list.jsx` du handoff (header + stats + body),
-/// mais sans la liste des arrets pour l'instant : ils arrivent au jalon
-/// suivant. La structure est posee pour pouvoir les brancher tel quel.
 class TourneeDuJourScreen extends ConsumerWidget {
   const TourneeDuJourScreen({super.key, required this.tournee});
 
@@ -20,6 +17,8 @@ class TourneeDuJourScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final stopsAsync = ref.watch(stopsByTourneeProvider(tournee.id));
+
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
@@ -36,38 +35,49 @@ class TourneeDuJourScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.x18,
-          AppSpacing.x8,
-          AppSpacing.x18,
-          AppSpacing.x18,
-        ),
-        children: [
-          _Header(tournee: tournee),
-          const SizedBox(height: AppSpacing.x16),
-          const _StatRow(
-            arretsCount: 0,
-            distanceKm: 0,
-            restantLabel: '—',
-          ),
-          const SizedBox(height: AppSpacing.x18),
-          const _StopsPlaceholder(),
-        ],
+      body: stopsAsync.when(
+        data: (stops) => _Body(tournee: tournee, stops: stops),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Ecran d\'ajout d\'arrets : prochain jalon (4)',
-              ),
-            ),
-          );
-        },
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AjoutArretScreen(tourneeId: tournee.id),
+          ),
+        ),
         icon: const Icon(Icons.add),
         label: const Text('Ajouter un arret'),
       ),
+    );
+  }
+}
+
+class _Body extends StatelessWidget {
+  const _Body({required this.tournee, required this.stops});
+
+  final Tournee tournee;
+  final List<Stop> stops;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x18,
+        AppSpacing.x8,
+        AppSpacing.x18,
+        AppSpacing.x18,
+      ),
+      children: [
+        _Header(tournee: tournee),
+        const SizedBox(height: AppSpacing.x16),
+        _StatRow(arretsCount: stops.length),
+        const SizedBox(height: AppSpacing.x18),
+        if (stops.isEmpty)
+          const _StopsPlaceholder()
+        else
+          _StopsList(stops: stops),
+      ],
     );
   }
 }
@@ -122,15 +132,9 @@ class _Header extends StatelessWidget {
 }
 
 class _StatRow extends StatelessWidget {
-  const _StatRow({
-    required this.arretsCount,
-    required this.distanceKm,
-    required this.restantLabel,
-  });
+  const _StatRow({required this.arretsCount});
 
   final int arretsCount;
-  final double distanceKm;
-  final String restantLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -147,13 +151,9 @@ class _StatRow extends StatelessWidget {
         children: [
           _StatTile(label: 'Arrets', value: '$arretsCount'),
           const _StatDivider(),
-          _StatTile(
-            label: 'Distance',
-            value: distanceKm.toStringAsFixed(1),
-            unit: 'km',
-          ),
+          const _StatTile(label: 'Distance', value: '0.0', unit: 'km'),
           const _StatDivider(),
-          _StatTile(label: 'Restant', value: restantLabel),
+          const _StatTile(label: 'Restant', value: '—'),
         ],
       ),
     );
@@ -269,6 +269,281 @@ class _StopsPlaceholder extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StopsList extends ConsumerWidget {
+  const _StopsList({required this.stops});
+
+  final List<Stop> stops;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < stops.length; i++) ...[
+            _StopRow(
+              stop: stops[i],
+              index: i + 1,
+              onDelete: () => _confirmDelete(context, ref, stops[i]),
+            ),
+            if (i < stops.length - 1)
+              const Divider(height: 1, indent: AppSpacing.x16),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Stop stop,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Supprimer cet arret ?'),
+        content: Text(
+          stop.nomClient != null && stop.nomClient!.isNotEmpty
+              ? '${stop.nomClient} - ${stop.adresseBrute}'
+              : stop.adresseBrute,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(stopsRepositoryProvider).delete(stop.id);
+    }
+  }
+}
+
+class _StopRow extends StatelessWidget {
+  const _StopRow({
+    required this.stop,
+    required this.index,
+    required this.onDelete,
+  });
+
+  final Stop stop;
+  final int index;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final tags = _buildTags(stop);
+    return Dismissible(
+      key: ValueKey('stop-${stop.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: AppColors.red.withValues(alpha: 0.12),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x22),
+        child: const Icon(Icons.delete_outline, color: AppColors.red),
+      ),
+      confirmDismiss: (_) async {
+        onDelete();
+        return false; // on gere via le dialog, pas de dismiss instant
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x14,
+          vertical: AppSpacing.x14,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _IndexChip(index: index, priorite: stop.priorite),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _primaryLine(stop),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (_secondaryLine(stop) != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      _secondaryLine(stop)!,
+                      style: appMonoStyle(
+                        fontSize: 11,
+                        color: AppColors.textMute,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (tags.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.x8),
+                    Wrap(
+                      spacing: AppSpacing.x6,
+                      runSpacing: AppSpacing.x4,
+                      children: tags,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _primaryLine(Stop s) {
+    if (s.nomClient != null && s.nomClient!.isNotEmpty) {
+      return s.nomClient!;
+    }
+    return s.adresseBrute.split(',').first.trim();
+  }
+
+  String? _secondaryLine(Stop s) {
+    if (s.nomClient != null && s.nomClient!.isNotEmpty) {
+      // Si on a un client en primary, mettre l'adresse abregee en sub.
+      return s.adresseBrute.split(',').take(2).join(',').trim();
+    }
+    if (s.notes != null && s.notes!.isNotEmpty) return s.notes;
+    return null;
+  }
+
+  List<Widget> _buildTags(Stop s) {
+    final out = <Widget>[];
+    final priority = _priorityTag(s.priorite);
+    if (priority != null) out.add(priority);
+    if (s.nbColis > 1) {
+      out.add(_Tag(
+        label: '${s.nbColis} colis',
+        bg: AppColors.creamSoft,
+        fg: AppColors.ink,
+      ));
+    }
+    if (s.fenetreDebut != null || s.fenetreFin != null) {
+      final start = s.fenetreDebut ?? '--:--';
+      final end = s.fenetreFin ?? '--:--';
+      out.add(_Tag(
+        label: '$start → $end',
+        bg: const Color(0x33F2A341),
+        fg: const Color(0xFF7A4F0E),
+        mono: true,
+      ));
+    }
+    return out;
+  }
+
+  Widget? _priorityTag(String priorite) {
+    return switch (priorite) {
+      'obligatoire_premier' => const _Tag(
+          label: 'En 1er',
+          bg: AppColors.lime,
+          fg: AppColors.ink,
+        ),
+      'obligatoire_dernier' => const _Tag(
+          label: 'En dernier',
+          bg: AppColors.lime,
+          fg: AppColors.ink,
+        ),
+      'eviter_si_possible' => _Tag(
+          label: 'Eviter',
+          bg: AppColors.amber.withValues(alpha: 0.25),
+          fg: const Color(0xFF7A4F0E),
+        ),
+      _ => null,
+    };
+  }
+}
+
+class _IndexChip extends StatelessWidget {
+  const _IndexChip({required this.index, required this.priorite});
+
+  final int index;
+  final String priorite;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive =
+        priorite == 'obligatoire_premier' || priorite == 'obligatoire_dernier';
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: isActive ? AppColors.ink : AppColors.paper,
+        border: Border.all(color: AppColors.ink, width: 1.5),
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '$index',
+        style: appMonoStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: isActive ? AppColors.lime : AppColors.ink,
+        ),
+      ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({
+    required this.label,
+    required this.bg,
+    required this.fg,
+    this.mono = false,
+  });
+
+  final String label;
+  final Color bg;
+  final Color fg;
+  final bool mono;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = mono
+        ? appMonoStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: fg)
+        : TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: fg,
+            letterSpacing: 0.4,
+          );
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x8,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r6),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: style,
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/sheets_repository.dart';
+import '../data/stops_repository.dart';
 import '../data/tournees_repository.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -16,6 +17,16 @@ final tourneesRepositoryProvider = Provider<TourneesRepository>((ref) {
 
 final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
   return SheetsRepository(ref.watch(appDatabaseProvider));
+});
+
+final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
+  return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Stream des arrets pour une tournee donnee.
+final stopsByTourneeProvider =
+    StreamProvider.family<List<Stop>, int>((ref, tourneeId) {
+  return ref.watch(stopsRepositoryProvider).watchByTournee(tourneeId);
 });
 
 final tourneesStreamProvider = StreamProvider<List<Tournee>>((ref) {

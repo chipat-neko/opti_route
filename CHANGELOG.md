@@ -49,3 +49,14 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - **`schemaVersion` 1 → 2** avec `MigrationStrategy.onUpgrade` qui crée la nouvelle table sur les bases existantes. Validé sur appareil réel avec une base v1 préexistante.
 - `lib/data/sheets_repository.dart` : `SheetsRepository` (CRUD + `watchByStop` + `totalColisForStop`).
 - Provider `sheetsRepositoryProvider` ajouté.
+
+### Ajout d'arrêts (jalon 4)
+- **Écran `AjoutArretScreen`** : page unique qui combine la saisie d'adresse (autocomplete Nominatim, lat/lng cachés) et tous les **impératifs** demandés par Noah :
+  - Priorité (`En 1er` / `Flexible` / `En dernier` / `Éviter`) en `ChoiceChip` colorés.
+  - Nombre de colis et durée d'arrêt (en minutes).
+  - Fenêtre horaire optionnelle (`Pas avant` / `Avant`) via `showTimePicker`. Long-press sur le champ pour effacer.
+  - Nom du client et notes libres (code accès, étage, etc.).
+  - Deux boutons : `Enregistrer` (revient à la home) et `+ Ajouter un autre` (sauvegarde et reset le formulaire pour enchaîner sans naviguer).
+- **`StopsRepository`** + provider famille `stopsByTourneeProvider` : la liste des arrêts est réactive automatiquement via le stream drift.
+- **Liste des arrêts dans `TourneeDuJourScreen`** : remplace le placeholder. Chaque ligne montre un index numéroté (mono, ink+lime quand priorité forte), le client ou l'adresse, une sub-info, et des **tags** alignés sur le design (`En 1er`, `2 colis`, `09:00 → 11:00` en mono, `Éviter` ambre). Swipe gauche → confirmation → suppression (cascade sheets via DB).
+- Le compteur d'arrêts dans la stat row est désormais réel.
