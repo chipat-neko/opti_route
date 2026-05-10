@@ -223,10 +223,76 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                 label: const Text('+ Ajouter un autre'),
               ),
             ],
+            if (_isEdit) ...[
+              const SizedBox(height: AppSpacing.x18),
+              const Divider(),
+              const SizedBox(height: AppSpacing.x18),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _saving ? null : _confirmDelete,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.red,
+                    side: const BorderSide(color: AppColors.red, width: 1.5),
+                    minimumSize: const Size(0, 52),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.all(Radius.circular(AppRadius.r14)),
+                    ),
+                  ),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Supprimer cet arret'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete() async {
+    if (widget.initial == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Supprimer cet arret ?'),
+        content: Text(
+          widget.initial!.nomClient != null &&
+                  widget.initial!.nomClient!.isNotEmpty
+              ? '${widget.initial!.nomClient} - ${widget.initial!.adresseBrute}'
+              : widget.initial!.adresseBrute,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red.withValues(alpha: 0.15),
+              foregroundColor: AppColors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(stopsRepositoryProvider).delete(widget.initial!.id);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+      );
+    }
   }
 
   String? _validatePositiveInt(String? v) {
