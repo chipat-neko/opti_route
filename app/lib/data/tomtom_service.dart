@@ -27,8 +27,6 @@ class TomTomService implements GeocodingService {
   })  : _client = client ?? http.Client(),
         _cache = cache;
 
-  static const _base = 'https://api.tomtom.com';
-
   final String apiKey;
   final String countrySet;
   final String language;
@@ -53,10 +51,10 @@ class TomTomService implements GeocodingService {
       if (cached != null) return cached;
     }
 
-    // Le path utilise la query encodee. On laisse Dart faire l'encoding via Uri().
-    final uri = Uri.parse(
-      '$_base/search/2/geocode/${Uri.encodeComponent(q)}.json',
-    ).replace(queryParameters: {
+    // Uri.https encode correctement le path et la query string.
+    // unencodedPath : Dart fait l'encoding par segment (gere les espaces,
+    // accents, etc. sans double-encoding).
+    final uri = Uri.https('api.tomtom.com', '/search/2/geocode/$q.json', {
       'key': apiKey,
       'limit': '$limit',
       'countrySet': countrySet,
@@ -67,10 +65,11 @@ class TomTomService implements GeocodingService {
     final response = await _client.get(uri);
 
     if (response.statusCode == 401) {
-      throw const GeocodingException(
-        'Cle TomTom non autorisee pour Search API. '
+      throw GeocodingException(
+        'Cle TomTom non autorisee pour Search API (401). '
         'Va sur developer.tomtom.com/user/me/apps, ouvre ton app, '
-        'et verifie que le produit "Search" est bien dans la liste.',
+        'et verifie que le produit "Search" est bien dans la liste. '
+        'URL essayee : ${_safeUrl(uri)}',
       );
     }
     if (response.statusCode == 403) {
@@ -87,7 +86,7 @@ class TomTomService implements GeocodingService {
     }
     if (response.statusCode != 200) {
       throw GeocodingException(
-        'Reponse TomTom ${response.statusCode} (cf developer.tomtom.com).',
+        'Reponse TomTom ${response.statusCode}. URL : ${_safeUrl(uri)}',
       );
     }
 
@@ -173,6 +172,16 @@ class TomTomService implements GeocodingService {
     if (localityBits.isNotEmpty) parts.add(localityBits.join(' '));
     if (country != null && country.isNotEmpty) parts.add(country);
     return parts.join(', ');
+  }
+
+  /// Retourne l'URL avec la cle masquee, sans risque d'apparaitre
+  /// telle quelle dans un message d'erreur visible a l'utilisateur.
+  String _safeUrl(Uri uri) {
+    final params = Map<String, String>.from(uri.queryParameters);
+    if (params.containsKey('key')) {
+      params['key'] = '***';
+    }
+    return uri.replace(queryParameters: params).toString();
   }
 
   @override
