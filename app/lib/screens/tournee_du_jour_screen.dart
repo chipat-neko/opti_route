@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import 'ajout_arret_screen.dart';
+import 'carte_screen.dart';
 import 'tournee_form_screen.dart';
 
 class TourneeDuJourScreen extends ConsumerWidget {
@@ -24,6 +25,15 @@ class TourneeDuJourScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Tournee du jour'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.map_outlined),
+            tooltip: 'Voir sur la carte',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CarteScreen(tournee: tournee),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Modifier la tournee',
