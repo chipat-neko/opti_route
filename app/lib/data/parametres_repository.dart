@@ -14,6 +14,7 @@ class ParametresRepository {
   static const _kCapaciteDefault = 'vehicule_capacite_default';
   static const _kDureeArretDefault = 'duree_arret_default_min';
   static const _kNavAppDefault = 'nav_app_default';
+  static const _kOnboardingDone = 'onboarding_done';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -52,6 +53,19 @@ class ParametresRepository {
   Future<void> setNavAppDefault(String value) =>
       _write(_kNavAppDefault, value);
   Future<void> clearNavAppDefault() => _delete(_kNavAppDefault);
+
+  /// Onboarding du premier lancement : vrai si l'utilisateur a deja
+  /// passe le walkthrough (cle ORS + tutoriel mini).
+  Future<bool> isOnboardingDone() async {
+    final v = await _readKey(_kOnboardingDone);
+    return v == '1';
+  }
+
+  Stream<bool> watchOnboardingDone() =>
+      _watchKey(_kOnboardingDone).map((v) => v == '1');
+
+  Future<void> setOnboardingDone() => _write(_kOnboardingDone, '1');
+  Future<void> resetOnboarding() => _delete(_kOnboardingDone);
 
   Future<String?> _readKey(String cle) async {
     final v = await _readRaw(cle);

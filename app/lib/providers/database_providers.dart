@@ -39,6 +39,12 @@ final statsServiceProvider = Provider<StatsService>((ref) {
   return StatsService(ref.watch(appDatabaseProvider));
 });
 
+/// Stream du flag "onboarding deja fait". Sert au routeur d'app a
+/// decider d'afficher le walkthrough ou le contenu normal.
+final onboardingDoneStreamProvider = StreamProvider<bool>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchOnboardingDone();
+});
+
 /// Stats cumulatives depuis [days] jours (typiquement 7, 30, 365).
 /// Recalcule a chaque modif d'une tournee ou d'un stop (le stream
 /// `tourneesStreamProvider` pousse, on relance le compute).

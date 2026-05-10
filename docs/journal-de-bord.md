@@ -114,6 +114,19 @@ Réordonner les arrêts à la main après l'optim, pour gérer les contraintes t
 
 Bouton **Optimiser** désactivé tant que `optimiseeLe != null` (rien n'a changé depuis la dernière optimisation). Toute modification d'arrêt (add / edit / delete / changement du point de départ) appelle `invalidateOptimization` qui remet le marqueur à null et réactive le bouton. Économise des appels ORS inutiles.
 
+## 24. Onboarding premier lancement (#62)
+
+Walkthrough en 3 pages affiché au premier lancement (ou si le flag `onboarding_done` est manuellement réinitialisé) :
+1. **Bienvenue** : présentation de l'app + 4 features clés (optimisation, GPS, carnet, 100% local).
+2. **Comment ça marche** : 4 étapes (créer une tournée → ajouter des arrêts → optimiser → démarrer).
+3. **Clé OpenRouteService** : bouton externe pour créer un compte gratuit + champ pour coller la clé.
+
+Indicateurs de page (pills). Boutons `Précédent` / `Suivant` / `Commencer`. `Passer` sur la 1ère page si Noah veut juste fermer.
+
+Implémentation :
+- Nouvelle clé `onboarding_done` dans `Parametres` (helpers `isOnboardingDone`, `watchOnboardingDone`, `setOnboardingDone`, `resetOnboarding`).
+- Provider `onboardingDoneStreamProvider` watché par `HomeScreen` : si flag absent → affiche `OnboardingScreen` à la place du contenu normal. Quand l'utilisateur valide, le stream re-émet et le rebuild bascule.
+
 ## 23. Édition rapide du nb de colis depuis la bottom sheet (#61)
 
 Stepper - / + au-dessus des boutons Maps/Waze dans la bottom sheet d'arrêt. Permet d'ajuster le nb de colis à la livraison (quand on découvre 1 colis en plus / moins que prévu) sans avoir à ouvrir l'écran d'édition complet. Mise à jour immédiate (pas de bouton Enregistrer), persistée via `StopsRepository.update`. Min 1, max 999.
