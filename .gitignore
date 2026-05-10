@@ -5,6 +5,9 @@
 *.swp
 *~
 
+# Claude Code (settings personnels avec chemins absolus de la machine)
+.claude/
+
 # Système
 .DS_Store
 Thumbs.db
