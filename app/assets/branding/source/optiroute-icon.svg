@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="g" cx="62%" cy="38%" r="60%">
+      <stop offset="0" stop-color="#1F2A24"></stop>
+      <stop offset="1" stop-color="#0E1410"></stop>
+    </radialGradient>
+    <clipPath id="r"><rect width="1024" height="1024" rx="235" ry="235"></rect></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="1024" height="1024" fill="#0E1410"></rect>
+    <rect width="1024" height="1024" fill="url(#g)"></rect>
+    <g stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2">
+      <line x1="0" y1="256" x2="1024" y2="256"></line>
+      <line x1="0" y1="512" x2="1024" y2="512"></line>
+      <line x1="0" y1="768" x2="1024" y2="768"></line>
+      <line x1="256" y1="0" x2="256" y2="1024"></line>
+      <line x1="512" y1="0" x2="512" y2="1024"></line>
+      <line x1="768" y1="0" x2="768" y2="1024"></line>
+    </g>
+    <path d="M 232 800 C 360 720, 360 600, 480 560 S 700 520, 720 392 S 600 232, 792 232" stroke="#B8F24A" stroke-opacity="0.18" stroke-width="120" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M 232 800 C 360 720, 360 600, 480 560 S 700 520, 720 392 S 600 232, 792 232" stroke="#0E1410" stroke-width="80" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M 232 800 C 360 720, 360 600, 480 560 S 700 520, 720 392 S 600 232, 792 232" stroke="#B8F24A" stroke-width="46" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M 232 800 C 360 720, 360 600, 480 560 S 700 520, 720 392 S 600 232, 792 232" stroke="#0E1410" stroke-opacity="0.55" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14 22"></path>
+    <g transform="translate(232 800)">
+      <circle r="56" fill="#0E7C5A"></circle>
+      <circle r="56" fill="none" stroke="#0E1410" stroke-width="14"></circle>
+      <circle r="20" fill="#F5F3EE"></circle>
+    </g>
+    <g transform="translate(792 232)">
+      <circle r="120" fill="#B8F24A" opacity="0.15"></circle>
+      <path d="M 0 -150 C -72 -150, -118 -94, -118 -36 C -118 36, -54 96, 0 168 C 54 96, 118 36, 118 -36 C 118 -94, 72 -150, 0 -150 Z" fill="#B8F24A" stroke="#0E1410" stroke-width="14" stroke-linejoin="round"></path>
+      <circle r="42" fill="#0E1410"></circle>
+      <circle r="18" fill="#B8F24A"></circle>
+    </g>
+  </g>
+</svg>
