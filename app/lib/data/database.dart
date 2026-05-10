@@ -83,13 +83,48 @@ class GeocodeCache extends Table {
   Set<Column> get primaryKey => {query};
 }
 
-@DriftDatabase(tables: [Tournees, Stops, Parametres, Sheets, GeocodeCache])
+/// Carnet d'adresses local : chaque arret valide ajoute (ou rafraichit)
+/// une entree ici. Sert a pre-suggerer les adresses connues quand le
+/// livreur retape le nom d'un client deja livre.
+///
+/// 100 % local au telephone (dans la meme base SQLite que le reste).
+/// Cle d'unicite logique : `nomClient` + lat/lng arrondis (pour
+/// mutualiser les variantes orthographiques de l'adresse postale).
+class SavedDestinations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Nom du client / enseigne (ex: "Garage Aguilar"). Optionnel : on
+  /// accepte aussi une entree adresse seule.
+  TextColumn get nomClient => text().nullable()();
+
+  /// Libelle d'adresse complet pour affichage (ex: "51 Avenue
+  /// d'Orleans, 28000 Chartres").
+  TextColumn get adresseDisplay => text()();
+
+  RealColumn get lat => real()();
+  RealColumn get lng => real()();
+
+  // Composantes optionnelles (pour matcher l'autocomplete sur la rue
+  // ou la ville isolement).
+  TextColumn get rue => text().nullable()();
+  TextColumn get codePostal => text().nullable()();
+  TextColumn get ville => text().nullable()();
+
+  IntColumn get useCount => integer().withDefault(const Constant(1))();
+  DateTimeColumn get lastUsedAt =>
+      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DriftDatabase(
+  tables: [Tournees, Stops, Parametres, Sheets, GeocodeCache, SavedDestinations],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -107,6 +142,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(tournees, tournees.distanceTotaleM);
             await m.addColumn(tournees, tournees.dureeTotaleS);
             await m.addColumn(tournees, tournees.optimiseeLe);
+          }
+          if (from < 5) {
+            await m.createTable(savedDestinations);
           }
         },
         beforeOpen: (details) async {

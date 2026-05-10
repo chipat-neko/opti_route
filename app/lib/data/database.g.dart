@@ -2784,6 +2784,657 @@ class GeocodeCacheCompanion extends UpdateCompanion<GeocodeCacheData> {
   }
 }
 
+class $SavedDestinationsTable extends SavedDestinations
+    with TableInfo<$SavedDestinationsTable, SavedDestination> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SavedDestinationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nomClientMeta = const VerificationMeta(
+    'nomClient',
+  );
+  @override
+  late final GeneratedColumn<String> nomClient = GeneratedColumn<String>(
+    'nom_client',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _adresseDisplayMeta = const VerificationMeta(
+    'adresseDisplay',
+  );
+  @override
+  late final GeneratedColumn<String> adresseDisplay = GeneratedColumn<String>(
+    'adresse_display',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _latMeta = const VerificationMeta('lat');
+  @override
+  late final GeneratedColumn<double> lat = GeneratedColumn<double>(
+    'lat',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lngMeta = const VerificationMeta('lng');
+  @override
+  late final GeneratedColumn<double> lng = GeneratedColumn<double>(
+    'lng',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rueMeta = const VerificationMeta('rue');
+  @override
+  late final GeneratedColumn<String> rue = GeneratedColumn<String>(
+    'rue',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _codePostalMeta = const VerificationMeta(
+    'codePostal',
+  );
+  @override
+  late final GeneratedColumn<String> codePostal = GeneratedColumn<String>(
+    'code_postal',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _villeMeta = const VerificationMeta('ville');
+  @override
+  late final GeneratedColumn<String> ville = GeneratedColumn<String>(
+    'ville',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _useCountMeta = const VerificationMeta(
+    'useCount',
+  );
+  @override
+  late final GeneratedColumn<int> useCount = GeneratedColumn<int>(
+    'use_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _lastUsedAtMeta = const VerificationMeta(
+    'lastUsedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastUsedAt = GeneratedColumn<DateTime>(
+    'last_used_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nomClient,
+    adresseDisplay,
+    lat,
+    lng,
+    rue,
+    codePostal,
+    ville,
+    useCount,
+    lastUsedAt,
+    creeLe,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'saved_destinations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavedDestination> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('nom_client')) {
+      context.handle(
+        _nomClientMeta,
+        nomClient.isAcceptableOrUnknown(data['nom_client']!, _nomClientMeta),
+      );
+    }
+    if (data.containsKey('adresse_display')) {
+      context.handle(
+        _adresseDisplayMeta,
+        adresseDisplay.isAcceptableOrUnknown(
+          data['adresse_display']!,
+          _adresseDisplayMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_adresseDisplayMeta);
+    }
+    if (data.containsKey('lat')) {
+      context.handle(
+        _latMeta,
+        lat.isAcceptableOrUnknown(data['lat']!, _latMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_latMeta);
+    }
+    if (data.containsKey('lng')) {
+      context.handle(
+        _lngMeta,
+        lng.isAcceptableOrUnknown(data['lng']!, _lngMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lngMeta);
+    }
+    if (data.containsKey('rue')) {
+      context.handle(
+        _rueMeta,
+        rue.isAcceptableOrUnknown(data['rue']!, _rueMeta),
+      );
+    }
+    if (data.containsKey('code_postal')) {
+      context.handle(
+        _codePostalMeta,
+        codePostal.isAcceptableOrUnknown(data['code_postal']!, _codePostalMeta),
+      );
+    }
+    if (data.containsKey('ville')) {
+      context.handle(
+        _villeMeta,
+        ville.isAcceptableOrUnknown(data['ville']!, _villeMeta),
+      );
+    }
+    if (data.containsKey('use_count')) {
+      context.handle(
+        _useCountMeta,
+        useCount.isAcceptableOrUnknown(data['use_count']!, _useCountMeta),
+      );
+    }
+    if (data.containsKey('last_used_at')) {
+      context.handle(
+        _lastUsedAtMeta,
+        lastUsedAt.isAcceptableOrUnknown(
+          data['last_used_at']!,
+          _lastUsedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SavedDestination map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavedDestination(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      nomClient: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nom_client'],
+      ),
+      adresseDisplay: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}adresse_display'],
+      )!,
+      lat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lat'],
+      )!,
+      lng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lng'],
+      )!,
+      rue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rue'],
+      ),
+      codePostal: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code_postal'],
+      ),
+      ville: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ville'],
+      ),
+      useCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}use_count'],
+      )!,
+      lastUsedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_used_at'],
+      )!,
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+    );
+  }
+
+  @override
+  $SavedDestinationsTable createAlias(String alias) {
+    return $SavedDestinationsTable(attachedDatabase, alias);
+  }
+}
+
+class SavedDestination extends DataClass
+    implements Insertable<SavedDestination> {
+  final int id;
+
+  /// Nom du client / enseigne (ex: "Garage Aguilar"). Optionnel : on
+  /// accepte aussi une entree adresse seule.
+  final String? nomClient;
+
+  /// Libelle d'adresse complet pour affichage (ex: "51 Avenue
+  /// d'Orleans, 28000 Chartres").
+  final String adresseDisplay;
+  final double lat;
+  final double lng;
+  final String? rue;
+  final String? codePostal;
+  final String? ville;
+  final int useCount;
+  final DateTime lastUsedAt;
+  final DateTime creeLe;
+  const SavedDestination({
+    required this.id,
+    this.nomClient,
+    required this.adresseDisplay,
+    required this.lat,
+    required this.lng,
+    this.rue,
+    this.codePostal,
+    this.ville,
+    required this.useCount,
+    required this.lastUsedAt,
+    required this.creeLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || nomClient != null) {
+      map['nom_client'] = Variable<String>(nomClient);
+    }
+    map['adresse_display'] = Variable<String>(adresseDisplay);
+    map['lat'] = Variable<double>(lat);
+    map['lng'] = Variable<double>(lng);
+    if (!nullToAbsent || rue != null) {
+      map['rue'] = Variable<String>(rue);
+    }
+    if (!nullToAbsent || codePostal != null) {
+      map['code_postal'] = Variable<String>(codePostal);
+    }
+    if (!nullToAbsent || ville != null) {
+      map['ville'] = Variable<String>(ville);
+    }
+    map['use_count'] = Variable<int>(useCount);
+    map['last_used_at'] = Variable<DateTime>(lastUsedAt);
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    return map;
+  }
+
+  SavedDestinationsCompanion toCompanion(bool nullToAbsent) {
+    return SavedDestinationsCompanion(
+      id: Value(id),
+      nomClient: nomClient == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nomClient),
+      adresseDisplay: Value(adresseDisplay),
+      lat: Value(lat),
+      lng: Value(lng),
+      rue: rue == null && nullToAbsent ? const Value.absent() : Value(rue),
+      codePostal: codePostal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(codePostal),
+      ville: ville == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ville),
+      useCount: Value(useCount),
+      lastUsedAt: Value(lastUsedAt),
+      creeLe: Value(creeLe),
+    );
+  }
+
+  factory SavedDestination.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavedDestination(
+      id: serializer.fromJson<int>(json['id']),
+      nomClient: serializer.fromJson<String?>(json['nomClient']),
+      adresseDisplay: serializer.fromJson<String>(json['adresseDisplay']),
+      lat: serializer.fromJson<double>(json['lat']),
+      lng: serializer.fromJson<double>(json['lng']),
+      rue: serializer.fromJson<String?>(json['rue']),
+      codePostal: serializer.fromJson<String?>(json['codePostal']),
+      ville: serializer.fromJson<String?>(json['ville']),
+      useCount: serializer.fromJson<int>(json['useCount']),
+      lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'nomClient': serializer.toJson<String?>(nomClient),
+      'adresseDisplay': serializer.toJson<String>(adresseDisplay),
+      'lat': serializer.toJson<double>(lat),
+      'lng': serializer.toJson<double>(lng),
+      'rue': serializer.toJson<String?>(rue),
+      'codePostal': serializer.toJson<String?>(codePostal),
+      'ville': serializer.toJson<String?>(ville),
+      'useCount': serializer.toJson<int>(useCount),
+      'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+    };
+  }
+
+  SavedDestination copyWith({
+    int? id,
+    Value<String?> nomClient = const Value.absent(),
+    String? adresseDisplay,
+    double? lat,
+    double? lng,
+    Value<String?> rue = const Value.absent(),
+    Value<String?> codePostal = const Value.absent(),
+    Value<String?> ville = const Value.absent(),
+    int? useCount,
+    DateTime? lastUsedAt,
+    DateTime? creeLe,
+  }) => SavedDestination(
+    id: id ?? this.id,
+    nomClient: nomClient.present ? nomClient.value : this.nomClient,
+    adresseDisplay: adresseDisplay ?? this.adresseDisplay,
+    lat: lat ?? this.lat,
+    lng: lng ?? this.lng,
+    rue: rue.present ? rue.value : this.rue,
+    codePostal: codePostal.present ? codePostal.value : this.codePostal,
+    ville: ville.present ? ville.value : this.ville,
+    useCount: useCount ?? this.useCount,
+    lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+    creeLe: creeLe ?? this.creeLe,
+  );
+  SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
+    return SavedDestination(
+      id: data.id.present ? data.id.value : this.id,
+      nomClient: data.nomClient.present ? data.nomClient.value : this.nomClient,
+      adresseDisplay: data.adresseDisplay.present
+          ? data.adresseDisplay.value
+          : this.adresseDisplay,
+      lat: data.lat.present ? data.lat.value : this.lat,
+      lng: data.lng.present ? data.lng.value : this.lng,
+      rue: data.rue.present ? data.rue.value : this.rue,
+      codePostal: data.codePostal.present
+          ? data.codePostal.value
+          : this.codePostal,
+      ville: data.ville.present ? data.ville.value : this.ville,
+      useCount: data.useCount.present ? data.useCount.value : this.useCount,
+      lastUsedAt: data.lastUsedAt.present
+          ? data.lastUsedAt.value
+          : this.lastUsedAt,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedDestination(')
+          ..write('id: $id, ')
+          ..write('nomClient: $nomClient, ')
+          ..write('adresseDisplay: $adresseDisplay, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('rue: $rue, ')
+          ..write('codePostal: $codePostal, ')
+          ..write('ville: $ville, ')
+          ..write('useCount: $useCount, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    nomClient,
+    adresseDisplay,
+    lat,
+    lng,
+    rue,
+    codePostal,
+    ville,
+    useCount,
+    lastUsedAt,
+    creeLe,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavedDestination &&
+          other.id == this.id &&
+          other.nomClient == this.nomClient &&
+          other.adresseDisplay == this.adresseDisplay &&
+          other.lat == this.lat &&
+          other.lng == this.lng &&
+          other.rue == this.rue &&
+          other.codePostal == this.codePostal &&
+          other.ville == this.ville &&
+          other.useCount == this.useCount &&
+          other.lastUsedAt == this.lastUsedAt &&
+          other.creeLe == this.creeLe);
+}
+
+class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
+  final Value<int> id;
+  final Value<String?> nomClient;
+  final Value<String> adresseDisplay;
+  final Value<double> lat;
+  final Value<double> lng;
+  final Value<String?> rue;
+  final Value<String?> codePostal;
+  final Value<String?> ville;
+  final Value<int> useCount;
+  final Value<DateTime> lastUsedAt;
+  final Value<DateTime> creeLe;
+  const SavedDestinationsCompanion({
+    this.id = const Value.absent(),
+    this.nomClient = const Value.absent(),
+    this.adresseDisplay = const Value.absent(),
+    this.lat = const Value.absent(),
+    this.lng = const Value.absent(),
+    this.rue = const Value.absent(),
+    this.codePostal = const Value.absent(),
+    this.ville = const Value.absent(),
+    this.useCount = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  });
+  SavedDestinationsCompanion.insert({
+    this.id = const Value.absent(),
+    this.nomClient = const Value.absent(),
+    required String adresseDisplay,
+    required double lat,
+    required double lng,
+    this.rue = const Value.absent(),
+    this.codePostal = const Value.absent(),
+    this.ville = const Value.absent(),
+    this.useCount = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  }) : adresseDisplay = Value(adresseDisplay),
+       lat = Value(lat),
+       lng = Value(lng);
+  static Insertable<SavedDestination> custom({
+    Expression<int>? id,
+    Expression<String>? nomClient,
+    Expression<String>? adresseDisplay,
+    Expression<double>? lat,
+    Expression<double>? lng,
+    Expression<String>? rue,
+    Expression<String>? codePostal,
+    Expression<String>? ville,
+    Expression<int>? useCount,
+    Expression<DateTime>? lastUsedAt,
+    Expression<DateTime>? creeLe,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nomClient != null) 'nom_client': nomClient,
+      if (adresseDisplay != null) 'adresse_display': adresseDisplay,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+      if (rue != null) 'rue': rue,
+      if (codePostal != null) 'code_postal': codePostal,
+      if (ville != null) 'ville': ville,
+      if (useCount != null) 'use_count': useCount,
+      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (creeLe != null) 'cree_le': creeLe,
+    });
+  }
+
+  SavedDestinationsCompanion copyWith({
+    Value<int>? id,
+    Value<String?>? nomClient,
+    Value<String>? adresseDisplay,
+    Value<double>? lat,
+    Value<double>? lng,
+    Value<String?>? rue,
+    Value<String?>? codePostal,
+    Value<String?>? ville,
+    Value<int>? useCount,
+    Value<DateTime>? lastUsedAt,
+    Value<DateTime>? creeLe,
+  }) {
+    return SavedDestinationsCompanion(
+      id: id ?? this.id,
+      nomClient: nomClient ?? this.nomClient,
+      adresseDisplay: adresseDisplay ?? this.adresseDisplay,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      rue: rue ?? this.rue,
+      codePostal: codePostal ?? this.codePostal,
+      ville: ville ?? this.ville,
+      useCount: useCount ?? this.useCount,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      creeLe: creeLe ?? this.creeLe,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (nomClient.present) {
+      map['nom_client'] = Variable<String>(nomClient.value);
+    }
+    if (adresseDisplay.present) {
+      map['adresse_display'] = Variable<String>(adresseDisplay.value);
+    }
+    if (lat.present) {
+      map['lat'] = Variable<double>(lat.value);
+    }
+    if (lng.present) {
+      map['lng'] = Variable<double>(lng.value);
+    }
+    if (rue.present) {
+      map['rue'] = Variable<String>(rue.value);
+    }
+    if (codePostal.present) {
+      map['code_postal'] = Variable<String>(codePostal.value);
+    }
+    if (ville.present) {
+      map['ville'] = Variable<String>(ville.value);
+    }
+    if (useCount.present) {
+      map['use_count'] = Variable<int>(useCount.value);
+    }
+    if (lastUsedAt.present) {
+      map['last_used_at'] = Variable<DateTime>(lastUsedAt.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedDestinationsCompanion(')
+          ..write('id: $id, ')
+          ..write('nomClient: $nomClient, ')
+          ..write('adresseDisplay: $adresseDisplay, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('rue: $rue, ')
+          ..write('codePostal: $codePostal, ')
+          ..write('ville: $ville, ')
+          ..write('useCount: $useCount, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2792,6 +3443,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ParametresTable parametres = $ParametresTable(this);
   late final $SheetsTable sheets = $SheetsTable(this);
   late final $GeocodeCacheTable geocodeCache = $GeocodeCacheTable(this);
+  late final $SavedDestinationsTable savedDestinations =
+      $SavedDestinationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2802,6 +3455,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     parametres,
     sheets,
     geocodeCache,
+    savedDestinations,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4599,6 +5253,333 @@ typedef $$GeocodeCacheTableProcessedTableManager =
       GeocodeCacheData,
       PrefetchHooks Function()
     >;
+typedef $$SavedDestinationsTableCreateCompanionBuilder =
+    SavedDestinationsCompanion Function({
+      Value<int> id,
+      Value<String?> nomClient,
+      required String adresseDisplay,
+      required double lat,
+      required double lng,
+      Value<String?> rue,
+      Value<String?> codePostal,
+      Value<String?> ville,
+      Value<int> useCount,
+      Value<DateTime> lastUsedAt,
+      Value<DateTime> creeLe,
+    });
+typedef $$SavedDestinationsTableUpdateCompanionBuilder =
+    SavedDestinationsCompanion Function({
+      Value<int> id,
+      Value<String?> nomClient,
+      Value<String> adresseDisplay,
+      Value<double> lat,
+      Value<double> lng,
+      Value<String?> rue,
+      Value<String?> codePostal,
+      Value<String?> ville,
+      Value<int> useCount,
+      Value<DateTime> lastUsedAt,
+      Value<DateTime> creeLe,
+    });
+
+class $$SavedDestinationsTableFilterComposer
+    extends Composer<_$AppDatabase, $SavedDestinationsTable> {
+  $$SavedDestinationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nomClient => $composableBuilder(
+    column: $table.nomClient,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get adresseDisplay => $composableBuilder(
+    column: $table.adresseDisplay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rue => $composableBuilder(
+    column: $table.rue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get codePostal => $composableBuilder(
+    column: $table.codePostal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ville => $composableBuilder(
+    column: $table.ville,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get useCount => $composableBuilder(
+    column: $table.useCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SavedDestinationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SavedDestinationsTable> {
+  $$SavedDestinationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nomClient => $composableBuilder(
+    column: $table.nomClient,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get adresseDisplay => $composableBuilder(
+    column: $table.adresseDisplay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rue => $composableBuilder(
+    column: $table.rue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get codePostal => $composableBuilder(
+    column: $table.codePostal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ville => $composableBuilder(
+    column: $table.ville,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get useCount => $composableBuilder(
+    column: $table.useCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SavedDestinationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SavedDestinationsTable> {
+  $$SavedDestinationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nomClient =>
+      $composableBuilder(column: $table.nomClient, builder: (column) => column);
+
+  GeneratedColumn<String> get adresseDisplay => $composableBuilder(
+    column: $table.adresseDisplay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get lat =>
+      $composableBuilder(column: $table.lat, builder: (column) => column);
+
+  GeneratedColumn<double> get lng =>
+      $composableBuilder(column: $table.lng, builder: (column) => column);
+
+  GeneratedColumn<String> get rue =>
+      $composableBuilder(column: $table.rue, builder: (column) => column);
+
+  GeneratedColumn<String> get codePostal => $composableBuilder(
+    column: $table.codePostal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ville =>
+      $composableBuilder(column: $table.ville, builder: (column) => column);
+
+  GeneratedColumn<int> get useCount =>
+      $composableBuilder(column: $table.useCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+}
+
+class $$SavedDestinationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SavedDestinationsTable,
+          SavedDestination,
+          $$SavedDestinationsTableFilterComposer,
+          $$SavedDestinationsTableOrderingComposer,
+          $$SavedDestinationsTableAnnotationComposer,
+          $$SavedDestinationsTableCreateCompanionBuilder,
+          $$SavedDestinationsTableUpdateCompanionBuilder,
+          (
+            SavedDestination,
+            BaseReferences<
+              _$AppDatabase,
+              $SavedDestinationsTable,
+              SavedDestination
+            >,
+          ),
+          SavedDestination,
+          PrefetchHooks Function()
+        > {
+  $$SavedDestinationsTableTableManager(
+    _$AppDatabase db,
+    $SavedDestinationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SavedDestinationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SavedDestinationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SavedDestinationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> nomClient = const Value.absent(),
+                Value<String> adresseDisplay = const Value.absent(),
+                Value<double> lat = const Value.absent(),
+                Value<double> lng = const Value.absent(),
+                Value<String?> rue = const Value.absent(),
+                Value<String?> codePostal = const Value.absent(),
+                Value<String?> ville = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
+                Value<DateTime> lastUsedAt = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => SavedDestinationsCompanion(
+                id: id,
+                nomClient: nomClient,
+                adresseDisplay: adresseDisplay,
+                lat: lat,
+                lng: lng,
+                rue: rue,
+                codePostal: codePostal,
+                ville: ville,
+                useCount: useCount,
+                lastUsedAt: lastUsedAt,
+                creeLe: creeLe,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> nomClient = const Value.absent(),
+                required String adresseDisplay,
+                required double lat,
+                required double lng,
+                Value<String?> rue = const Value.absent(),
+                Value<String?> codePostal = const Value.absent(),
+                Value<String?> ville = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
+                Value<DateTime> lastUsedAt = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => SavedDestinationsCompanion.insert(
+                id: id,
+                nomClient: nomClient,
+                adresseDisplay: adresseDisplay,
+                lat: lat,
+                lng: lng,
+                rue: rue,
+                codePostal: codePostal,
+                ville: ville,
+                useCount: useCount,
+                lastUsedAt: lastUsedAt,
+                creeLe: creeLe,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SavedDestinationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SavedDestinationsTable,
+      SavedDestination,
+      $$SavedDestinationsTableFilterComposer,
+      $$SavedDestinationsTableOrderingComposer,
+      $$SavedDestinationsTableAnnotationComposer,
+      $$SavedDestinationsTableCreateCompanionBuilder,
+      $$SavedDestinationsTableUpdateCompanionBuilder,
+      (
+        SavedDestination,
+        BaseReferences<
+          _$AppDatabase,
+          $SavedDestinationsTable,
+          SavedDestination
+        >,
+      ),
+      SavedDestination,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4613,4 +5594,6 @@ class $AppDatabaseManager {
       $$SheetsTableTableManager(_db, _db.sheets);
   $$GeocodeCacheTableTableManager get geocodeCache =>
       $$GeocodeCacheTableTableManager(_db, _db.geocodeCache);
+  $$SavedDestinationsTableTableManager get savedDestinations =>
+      $$SavedDestinationsTableTableManager(_db, _db.savedDestinations);
 }

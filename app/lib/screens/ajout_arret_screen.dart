@@ -123,10 +123,24 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                 'address-${widget.initial?.id ?? "new"}-$_addressFieldVersion',
               ),
               labelText: 'Adresse',
-              hintText: 'Tape la rue, la ville...',
+              hintText: 'Tape la rue, la ville, ou le nom d\'un client deja livre...',
               initialSuggestion: _address,
               initialDisplayText: _scannedAddress ?? _address?.displayName,
-              onSuggestionSelected: (s) => setState(() => _address = s),
+              onSuggestionSelected: (s) {
+                setState(() {
+                  _address = s;
+                  // Si c'est une selection du carnet local, on pre-remplit
+                  // aussi le champ "Nom du client" (sauf si l'utilisateur
+                  // a deja saisi quelque chose).
+                  if (s != null &&
+                      s.fromCarnet &&
+                      s.poiName != null &&
+                      s.poiName!.isNotEmpty &&
+                      _nomClientCtrl.text.trim().isEmpty) {
+                    _nomClientCtrl.text = s.poiName!;
+                  }
+                });
+              },
             ),
             const SizedBox(height: AppSpacing.x10),
             OutlinedButton.icon(
@@ -392,6 +406,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     setState(() => _saving = true);
 
     final repo = ref.read(stopsRepositoryProvider);
+    final carnet = ref.read(savedDestinationsRepositoryProvider);
 
     try {
       if (_isEdit) {
@@ -426,6 +441,28 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
         );
         await repo.create(companion);
       }
+
+      // Carnet d'adresses : on enregistre (ou rafraichit) silencieusement.
+      // Ne doit jamais bloquer l'enregistrement de l'arret.
+      try {
+        await carnet.upsertFromValidatedStop(
+          nomClient: _orNull(_nomClientCtrl.text),
+          adresseDisplay: _address!.displayName,
+          lat: _address!.lat,
+          lng: _address!.lon,
+          rue: _address!.road == null
+              ? null
+              : (_address!.houseNumber != null &&
+                      _address!.houseNumber!.isNotEmpty
+                  ? '${_address!.houseNumber} ${_address!.road}'
+                  : _address!.road),
+          codePostal: _address!.postcode,
+          ville: _address!.city,
+        );
+      } catch (_) {
+        // Silencieux : le carnet est un bonus, pas un bloquant.
+      }
+
       if (!mounted) return;
       if (addAnother) {
         _resetForm();

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/address_suggestion.dart';
+import '../data/database.dart';
 import '../data/geocoding_service.dart';
+import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -88,7 +90,7 @@ class _AddressAutocompleteFieldState
   }
 
   Future<void> _runSearch(String query) async {
-    if (query.trim().length < 3) {
+    if (query.trim().length < 2) {
       if (!mounted) return;
       setState(() {
         _suggestions = const [];
@@ -98,19 +100,39 @@ class _AddressAutocompleteFieldState
       return;
     }
 
+    // Etape 1 : carnet local (instantane). On l'affiche tout de suite,
+    // l'API distante viendra completer ensuite.
+    final carnetRepo = ref.read(savedDestinationsRepositoryProvider);
+    final localResults = await carnetRepo.search(query, limit: 5);
+    final localSuggestions = localResults.map(_carnetToSuggestion).toList();
+
+    if (!mounted) return;
     setState(() {
-      _loading = true;
+      _suggestions = localSuggestions;
+      _loading = query.trim().length >= 3;
       _errorMessage = null;
     });
 
+    // Etape 2 : recherche distante (BAN/SIRENE/Photon) seulement a
+    // partir de 3 caracteres (l'API limite ses requetes).
+    if (query.trim().length < 3) return;
+
     try {
       final service = ref.read(geocodingServiceProvider);
-      final results = await service.search(query);
+      final remote = await service.search(query);
       if (!mounted) return;
+      // Dedup : on retire les resultats distants dont les coords sont
+      // tres proches (< ~11m) d'une suggestion locale.
+      final dedupedRemote = remote.where((r) {
+        return !localSuggestions.any((l) =>
+            (l.lat - r.lat).abs() < 0.0001 &&
+            (l.lon - r.lon).abs() < 0.0001);
+      }).toList();
+
       setState(() {
-        _suggestions = results;
+        _suggestions = [...localSuggestions, ...dedupedRemote];
         _loading = false;
-        _errorMessage = results.isEmpty
+        _errorMessage = (_suggestions.isEmpty)
             ? 'Pas trouve. Si c\'est un commerce inconnu de nos sources, '
                 'tape l\'adresse postale du colis ici et mets le nom dans '
                 '"Client / Enseigne".'
@@ -119,18 +141,33 @@ class _AddressAutocompleteFieldState
     } on GeocodingException catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.message;
-        _suggestions = const [];
+        // On garde les suggestions locales meme si l'API distante echoue.
+        _errorMessage = localSuggestions.isEmpty ? e.message : null;
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Erreur reseau, reessaie';
-        _suggestions = const [];
+        _errorMessage =
+            localSuggestions.isEmpty ? 'Erreur reseau, reessaie' : null;
         _loading = false;
       });
     }
+  }
+
+  /// Convertit une entree du carnet local en `AddressSuggestion` pour
+  /// pouvoir la traiter de maniere uniforme dans l'UI.
+  AddressSuggestion _carnetToSuggestion(SavedDestination d) {
+    return AddressSuggestion(
+      displayName: d.adresseDisplay,
+      lat: d.lat,
+      lon: d.lng,
+      road: d.rue,
+      postcode: d.codePostal,
+      city: d.ville,
+      poiName: d.nomClient,
+      fromCarnet: true,
+    );
   }
 
   void _selectSuggestion(AddressSuggestion suggestion) {
@@ -254,14 +291,22 @@ class _SuggestionTile extends StatelessWidget {
     final hasNumber = suggestion.houseNumber != null &&
         suggestion.houseNumber!.isNotEmpty;
 
-    final iconBg =
-        isPoi ? AppColors.emeraldSoft : (hasNumber ? AppColors.lime : AppColors.creamSoft);
-    final iconColor = isPoi
-        ? AppColors.emerald
-        : (hasNumber ? AppColors.ink : AppColors.textMute);
-    final iconData = isPoi ? Icons.storefront_outlined : Icons.place_outlined;
+    final fromCarnet = suggestion.fromCarnet;
+    final iconBg = fromCarnet
+        ? AppColors.lime
+        : (isPoi ? AppColors.emeraldSoft : (hasNumber ? AppColors.lime : AppColors.creamSoft));
+    final iconColor = fromCarnet
+        ? AppColors.ink
+        : (isPoi
+            ? AppColors.emerald
+            : (hasNumber ? AppColors.ink : AppColors.textMute));
+    final iconData = fromCarnet
+        ? Icons.bookmark
+        : (isPoi ? Icons.storefront_outlined : Icons.place_outlined);
 
-    final secondary = isPoi ? _poiAddressLine(suggestion) : suggestion.secondaryLabel;
+    final secondary = (fromCarnet || isPoi)
+        ? _poiAddressLine(suggestion)
+        : suggestion.secondaryLabel;
 
     return InkWell(
       onTap: onTap,
@@ -310,7 +355,16 @@ class _SuggestionTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  if (isPoi)
+                  if (fromCarnet)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: _Badge(
+                        label: 'DEJA LIVRE',
+                        bg: AppColors.lime,
+                        fg: AppColors.ink,
+                      ),
+                    )
+                  else if (isPoi)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: _Badge(
