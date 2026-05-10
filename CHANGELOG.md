@@ -15,3 +15,10 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - Hook `pre-push` versionné (`.githooks/pre-push`) qui bloque les push directs vers `main` ; activation via `git config core.hooksPath .githooks` après clone.
 - Schéma de base de données SQLite via `drift` (`app/lib/data/database.dart`) : tables `tournees`, `stops` (avec FK et cascade delete), `parametres` (clé primaire texte). PRAGMA `foreign_keys=ON` activé via la migration strategy. Code drift généré commité dans `database.g.dart`.
 - Suite de tests pour la base (`app/test/database_test.dart`) couvrant insertion + valeurs par défaut, cascade delete, upsert sur paramètres.
+- Première UI métier : `TourneesListScreen` (liste accueil avec empty state, swipe-to-delete et confirmation, FAB *Nouvelle tournée*) et `TourneeFormScreen` (création / édition avec validation des champs et DatePicker localisé `fr_FR`).
+- Couche `TourneesRepository` qui abstrait les opérations CRUD au-dessus de drift et expose un `Stream<List<Tournee>>` pour la réactivité automatique.
+- Providers Riverpod (`appDatabaseProvider`, `tourneesRepositoryProvider`, `tourneesStreamProvider`) et `ProviderScope` à la racine.
+- `main.dart` réécrit : ne montre plus le compteur Flutter mais ouvre directement la liste de tournées. Configuration des locales `fr_FR` (intl + flutter_localizations).
+
+### Modifié
+- `pubspec.yaml` : ajout de `flutter_riverpod ^3.3.1`, `intl ^0.20.2`, `flutter_localizations` (SDK).
