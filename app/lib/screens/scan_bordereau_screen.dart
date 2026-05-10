@@ -320,6 +320,14 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       final result = await ref.read(ocrServiceProvider).extractFromFile(file);
 
       if (!mounted) return;
+      // Dump des lignes OCR dans logcat (filtrable via tag OCRDUMP)
+      // pour debug a distance via `adb logcat -s flutter:V | grep OCRDUMP`.
+      debugPrint('OCRDUMP === START (${result.lines.length} lignes) ===');
+      for (var i = 0; i < result.lines.length; i++) {
+        debugPrint('OCRDUMP ${i.toString().padLeft(2, "0")}: ${result.lines[i]}');
+      }
+      debugPrint('OCRDUMP === END ===');
+
       final extraction = BordereauParser().parse(result.lines);
       setState(() {
         _imageFile = file;
