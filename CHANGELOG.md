@@ -12,3 +12,4 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - Script de génération PDF pour les documents Markdown (`docs/_build_pdf.py`).
 - Squelette du projet Flutter dans `app/` (cible Android, organisation `com.optiroute`).
 - Convention Git du projet (branches, commits, PRs) documentée dans le README.
+- Hook `pre-push` versionné (`.githooks/pre-push`) qui bloque les push directs vers `main` ; activation via `git config core.hooksPath .githooks` après clone.
