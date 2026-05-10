@@ -55,27 +55,43 @@ void main() {
       return (tournee, stops);
     }
 
-    /// Mock HTTP qui renvoie l'ordre des jobs tel quel (VROOM = identite).
-    /// Permet de verifier que le service respecte les firsts/lasts en
-    /// pre/post-traitement, independamment du solveur.
+    /// Mock HTTP : repond aux 2 endpoints ORS.
+    /// - /optimization (VROOM) : renvoie les jobs tels quels (identite).
+    /// - /v2/directions/driving-car : renvoie une distance/duree fixees
+    ///   (1234 m / 60 s) pour valider que le total vient bien de la.
     MockClient mockVroomEcho() {
       return MockClient((req) async {
-        final body = jsonDecode(req.body) as Map<String, dynamic>;
-        final jobs = body['jobs'] as List;
-        final steps = [
-          for (final j in jobs)
-            {'type': 'job', 'job': (j as Map)['id']},
-        ];
-        return http.Response(
-          jsonEncode({
-            'code': 0,
-            'summary': {'duration': 0, 'distance': 0},
-            'routes': [
-              {'duration': 0, 'distance': 0, 'steps': steps},
-            ],
-          }),
-          200,
-        );
+        if (req.url.path.contains('/optimization')) {
+          final body = jsonDecode(req.body) as Map<String, dynamic>;
+          final jobs = body['jobs'] as List;
+          final steps = [
+            for (final j in jobs)
+              {'type': 'job', 'job': (j as Map)['id']},
+          ];
+          return http.Response(
+            jsonEncode({
+              'code': 0,
+              'summary': {'duration': 0, 'distance': 0},
+              'routes': [
+                {'duration': 0, 'distance': 0, 'steps': steps},
+              ],
+            }),
+            200,
+          );
+        }
+        if (req.url.path.contains('/directions')) {
+          return http.Response(
+            jsonEncode({
+              'routes': [
+                {
+                  'summary': {'distance': 1234, 'duration': 60},
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
       });
     }
 
@@ -156,10 +172,24 @@ void main() {
     });
 
     test('100 % firsts + lasts : pas d\'appel VROOM, ordre fixe', () async {
-      var apiCalled = false;
+      var vroomCalled = false;
       final mock = MockClient((req) async {
-        apiCalled = true;
-        return http.Response('{}', 500);
+        if (req.url.path.contains('/optimization')) {
+          vroomCalled = true;
+          return http.Response('{}', 500);
+        }
+        // /directions : on accepte (Directions est appele meme sans VROOM
+        // pour avoir un total realiste).
+        return http.Response(
+          jsonEncode({
+            'routes': [
+              {
+                'summary': {'distance': 999, 'duration': 30},
+              }
+            ],
+          }),
+          200,
+        );
       });
       final (tournee, stops) = await seedTournee([
         (priorite: 'obligatoire_premier', ordre: 1),
@@ -168,8 +198,65 @@ void main() {
       final svc = OpenRouteOptimizationService(apiKey: 'k', client: mock);
       final r = await svc.optimize(tournee: tournee, stops: stops);
       svc.close();
-      expect(apiCalled, isFalse);
+      expect(vroomCalled, isFalse);
       expect(r.orderedStopIds, [stops[0].id, stops[1].id]);
+      expect(r.totalDistanceMeters, 999);
+      expect(r.totalDurationSeconds, 30);
+    });
+
+    test('total distance/duree vient de /directions (pas de VROOM)',
+        () async {
+      final (tournee, stops) = await seedTournee([
+        (priorite: 'flexible', ordre: null),
+        (priorite: 'flexible', ordre: null),
+      ]);
+      final svc = OpenRouteOptimizationService(
+        apiKey: 'k',
+        client: mockVroomEcho(),
+      );
+      final r = await svc.optimize(tournee: tournee, stops: stops);
+      svc.close();
+      // VROOM renvoie 0/0 dans le mock, /directions renvoie 1234/60 :
+      // le total doit venir de /directions.
+      expect(r.totalDistanceMeters, 1234);
+      expect(r.totalDurationSeconds, 60);
+    });
+
+    test('fallback haversine si /directions echoue', () async {
+      final mock = MockClient((req) async {
+        if (req.url.path.contains('/optimization')) {
+          final body = jsonDecode(req.body) as Map<String, dynamic>;
+          final jobs = body['jobs'] as List;
+          return http.Response(
+            jsonEncode({
+              'code': 0,
+              'routes': [
+                {
+                  'duration': 0,
+                  'distance': 0,
+                  'steps': [
+                    for (final j in jobs)
+                      {'type': 'job', 'job': (j as Map)['id']},
+                  ],
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('Service indisponible', 503);
+      });
+      final (tournee, stops) = await seedTournee([
+        (priorite: 'flexible', ordre: null),
+        (priorite: 'flexible', ordre: null),
+      ]);
+      final svc = OpenRouteOptimizationService(apiKey: 'k', client: mock);
+      final r = await svc.optimize(tournee: tournee, stops: stops);
+      svc.close();
+      // Fallback haversine sur 3 segments (depot -> s0 -> s1 -> depot).
+      // Pas zero, pas l'API : on s'attend a quelques metres / secondes.
+      expect(r.totalDistanceMeters, greaterThan(0));
+      expect(r.totalDurationSeconds, greaterThan(0));
     });
   });
 }
