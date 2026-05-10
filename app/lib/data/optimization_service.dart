@@ -6,12 +6,18 @@ class OptimizationResult {
     required this.orderedStopIds,
     required this.totalDistanceMeters,
     required this.totalDurationSeconds,
+    this.routeGeometry,
   });
 
   /// Ids des stops dans l'ordre optimal de visite.
   final List<int> orderedStopIds;
   final int totalDistanceMeters;
   final int totalDurationSeconds;
+
+  /// Trace de l'itineraire (liste de points `[lng, lat]`), si le
+  /// fournisseur en renvoie une. Sert a tracer une polyline sur la
+  /// carte de la tournee.
+  final List<List<double>>? routeGeometry;
 }
 
 /// Interface commune pour les fournisseurs d'optimisation de tournee.

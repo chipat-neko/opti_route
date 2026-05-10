@@ -80,11 +80,22 @@ void main() {
           );
         }
         if (req.url.path.contains('/directions')) {
+          // Endpoint /geojson : structure GeoJSON FeatureCollection.
           return http.Response(
             jsonEncode({
-              'routes': [
+              'features': [
                 {
-                  'summary': {'distance': 1234, 'duration': 60},
+                  'geometry': {
+                    'type': 'LineString',
+                    'coordinates': [
+                      [1.0, 48.0],
+                      [1.5, 48.5],
+                      [2.0, 49.0],
+                    ],
+                  },
+                  'properties': {
+                    'summary': {'distance': 1234, 'duration': 60},
+                  },
                 }
               ],
             }),
@@ -178,13 +189,22 @@ void main() {
           vroomCalled = true;
           return http.Response('{}', 500);
         }
-        // /directions : on accepte (Directions est appele meme sans VROOM
-        // pour avoir un total realiste).
+        // /directions /geojson : on accepte (Directions est appele
+        // meme sans VROOM pour avoir un total realiste).
         return http.Response(
           jsonEncode({
-            'routes': [
+            'features': [
               {
-                'summary': {'distance': 999, 'duration': 30},
+                'geometry': {
+                  'type': 'LineString',
+                  'coordinates': [
+                    [1.0, 48.0],
+                    [2.0, 49.0],
+                  ],
+                },
+                'properties': {
+                  'summary': {'distance': 999, 'duration': 30},
+                },
               }
             ],
           }),
@@ -220,6 +240,24 @@ void main() {
       // le total doit venir de /directions.
       expect(r.totalDistanceMeters, 1234);
       expect(r.totalDurationSeconds, 60);
+    });
+
+    test('routeGeometry extraite depuis le GeoJSON de /directions',
+        () async {
+      final (tournee, stops) = await seedTournee([
+        (priorite: 'flexible', ordre: null),
+        (priorite: 'flexible', ordre: null),
+      ]);
+      final svc = OpenRouteOptimizationService(
+        apiKey: 'k',
+        client: mockVroomEcho(),
+      );
+      final r = await svc.optimize(tournee: tournee, stops: stops);
+      svc.close();
+      expect(r.routeGeometry, isNotNull);
+      expect(r.routeGeometry, hasLength(3));
+      expect(r.routeGeometry!.first, [1.0, 48.0]);
+      expect(r.routeGeometry!.last, [2.0, 49.0]);
     });
 
     test('fallback haversine si /directions echoue', () async {

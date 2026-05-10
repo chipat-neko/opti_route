@@ -16,6 +16,11 @@ class Tournees extends Table {
   IntColumn get distanceTotaleM => integer().nullable()();
   IntColumn get dureeTotaleS => integer().nullable()();
   DateTimeColumn get optimiseeLe => dateTime().nullable()();
+  /// Trace de l'itineraire optimise au format GeoJSON LineString (juste
+  /// la liste des coordonnees [lng, lat] encodee en JSON string), pour
+  /// affichage en polyline sur la carte. Nullable : pas tous les
+  /// fournisseurs d'optimisation renvoient une trace.
+  TextColumn get traceGeojson => text().nullable()();
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -132,7 +137,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -159,6 +164,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 7) {
             await m.addColumn(stops, stops.raisonEchec);
+          }
+          if (from < 8) {
+            await m.addColumn(tournees, tournees.traceGeojson);
           }
         },
         beforeOpen: (details) async {

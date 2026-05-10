@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,6 +56,8 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
       for (final s in stopsGeoreferenced) LatLng(s.lat!, s.lng!),
     ];
 
+    final tracePoints = _decodeTrace(widget.tournee.traceGeojson);
+
     _currentFit = allPoints.length > 1
         ? CameraFit.bounds(
             bounds: LatLngBounds.fromPoints(allPoints),
@@ -79,6 +83,18 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.optiroute.opti_route',
             ),
+            if (tracePoints.length >= 2)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: tracePoints,
+                    strokeWidth: 5,
+                    color: AppColors.emerald,
+                    borderColor: AppColors.paper,
+                    borderStrokeWidth: 1.5,
+                  ),
+                ],
+              ),
             MarkerLayer(
               markers: [
                 _DepotMarker.build(depot, widget.tournee),
@@ -110,6 +126,26 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
         ),
       ],
     );
+  }
+
+  /// Decode la trace stockee dans `Tournee.traceGeojson` (string JSON
+  /// d'une liste de [lng, lat]) en liste de LatLng utilisable par
+  /// `PolylineLayer`. Retourne une liste vide si rien a tracer
+  /// (tournee non encore optimisee, ou le fournisseur n'a pas renvoye
+  /// de geometry).
+  static List<LatLng> _decodeTrace(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return [
+        for (final c in decoded)
+          if (c is List && c.length >= 2)
+            LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()),
+      ];
+    } catch (_) {
+      return const [];
+    }
   }
 
   void _showStopInfo(Stop stop, int index) {

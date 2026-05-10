@@ -23,11 +23,13 @@ class OpenRouteOptimizationService implements OptimizationService {
   static final _endpoint =
       Uri.parse('https://api.openrouteservice.org/optimization');
 
-  /// Endpoint Directions pour calculer la distance/duree exactes d'une
-  /// sequence de waypoints. Utilise apres VROOM pour avoir le total
-  /// reel sur toute la tournee (firsts + flexibles + lasts + retour).
-  static final _directionsEndpoint =
-      Uri.parse('https://api.openrouteservice.org/v2/directions/driving-car');
+  /// Endpoint Directions /geojson : retourne distance + duree exactes
+  /// **et** la geometry sous forme de liste de coords [lng, lat]
+  /// (utilisee comme polyline sur la carte). Plus simple a parser que
+  /// l'endpoint /json qui renvoie une polyline encodee.
+  static final _directionsEndpoint = Uri.parse(
+    'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
+  );
 
   final String apiKey;
   final http.Client _client;
@@ -79,6 +81,7 @@ class OpenRouteOptimizationService implements OptimizationService {
         orderedStopIds: orderedIds,
         totalDistanceMeters: totals.distance,
         totalDurationSeconds: totals.duration,
+        routeGeometry: totals.geometry,
       );
     }
 
@@ -192,21 +195,29 @@ class OpenRouteOptimizationService implements OptimizationService {
       orderedStopIds: orderedIds,
       totalDistanceMeters: totals.distance,
       totalDurationSeconds: totals.duration,
+      routeGeometry: totals.geometry,
     );
   }
 
   /// Calcule la distance et la duree totales (en metres et secondes)
-  /// pour la sequence depot -> stops[0] -> ... -> stops[N-1] -> depot.
-  /// Utilise l'endpoint Directions d'OpenRouteService.
+  /// + la geometry GeoJSON de l'itineraire pour la sequence depot ->
+  /// stops[0] -> ... -> stops[N-1] -> depot.
+  ///
+  /// Utilise l'endpoint /v2/directions/driving-car/geojson qui renvoie
+  /// la geometry directement comme liste de coords (plus simple a
+  /// parser que l'encoded polyline).
   ///
   /// En cas d'echec (reseau, quota, etc.), on tombe sur un fallback
-  /// approximatif a vol d'oiseau pour ne pas casser l'optimisation
-  /// (l'utilisateur verra un total approximatif plutot que rien).
-  Future<({int distance, int duration})> _computeTotals(
+  /// approximatif a vol d'oiseau (sans geometry) pour ne pas casser
+  /// l'optimisation -- l'utilisateur verra un total approximatif et
+  /// la carte n'aura pas de polyline mais l'app reste utilisable.
+  Future<_RouteTotals> _computeTotals(
     Tournee tournee,
     List<Stop> orderedStops,
   ) async {
-    if (orderedStops.isEmpty) return (distance: 0, duration: 0);
+    if (orderedStops.isEmpty) {
+      return const _RouteTotals(distance: 0, duration: 0, geometry: null);
+    }
 
     final coords = <List<double>>[
       [tournee.pointDepartLng, tournee.pointDepartLat],
@@ -229,25 +240,42 @@ class OpenRouteOptimizationService implements OptimizationService {
       }
       final raw = jsonDecode(response.body);
       if (raw is! Map<String, dynamic>) return _haversineFallback(coords);
-      final routes = raw['routes'];
-      if (routes is! List || routes.isEmpty) {
+      final features = raw['features'];
+      if (features is! List || features.isEmpty) {
         return _haversineFallback(coords);
       }
+      final feature = features.first as Map<String, dynamic>;
+      final props =
+          (feature['properties'] as Map?)?.cast<String, dynamic>();
       final summary =
-          ((routes.first as Map)['summary'] as Map?)?.cast<String, dynamic>();
+          (props?['summary'] as Map?)?.cast<String, dynamic>();
       final distance = (summary?['distance'] as num?)?.toInt() ?? 0;
       final duration = (summary?['duration'] as num?)?.toInt() ?? 0;
-      return (distance: distance, duration: duration);
+
+      List<List<double>>? geometry;
+      final geom = (feature['geometry'] as Map?)?.cast<String, dynamic>();
+      final coordsList = geom?['coordinates'];
+      if (coordsList is List) {
+        geometry = [
+          for (final c in coordsList)
+            if (c is List && c.length >= 2)
+              [(c[0] as num).toDouble(), (c[1] as num).toDouble()],
+        ];
+      }
+      return _RouteTotals(
+        distance: distance,
+        duration: duration,
+        geometry: geometry,
+      );
     } catch (_) {
       return _haversineFallback(coords);
     }
   }
 
   /// Fallback : somme des distances haversine (vol d'oiseau) entre
-  /// waypoints, et duree estimee a 50 km/h moyenne (urbain + extra-urbain).
-  ({int distance, int duration}) _haversineFallback(
-    List<List<double>> coords,
-  ) {
+  /// waypoints, duree estimee a 50 km/h moyenne. Pas de geometry --
+  /// on ne peut pas tracer une vraie route sans appel API.
+  _RouteTotals _haversineFallback(List<List<double>> coords) {
     var total = 0.0;
     for (var i = 1; i < coords.length; i++) {
       total += _haversineMeters(
@@ -257,7 +285,7 @@ class OpenRouteOptimizationService implements OptimizationService {
     }
     final dist = total.round();
     final dur = (total / (50000 / 3600)).round();
-    return (distance: dist, duration: dur);
+    return _RouteTotals(distance: dist, duration: dur, geometry: null);
   }
 
   static double _haversineMeters(
@@ -321,4 +349,18 @@ class OpenRouteOptimizationService implements OptimizationService {
 
   @override
   void close() => _client.close();
+}
+
+/// Resultat interne de `_computeTotals` : distance + duree + geometry
+/// optionnelle (liste de coords [lng, lat] de l'itineraire trace).
+class _RouteTotals {
+  const _RouteTotals({
+    required this.distance,
+    required this.duration,
+    required this.geometry,
+  });
+
+  final int distance;
+  final int duration;
+  final List<List<double>>? geometry;
 }

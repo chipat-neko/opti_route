@@ -130,6 +130,17 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _traceGeojsonMeta = const VerificationMeta(
+    'traceGeojson',
+  );
+  @override
+  late final GeneratedColumn<String> traceGeojson = GeneratedColumn<String>(
+    'trace_geojson',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -153,6 +164,7 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     distanceTotaleM,
     dureeTotaleS,
     optimiseeLe,
+    traceGeojson,
     creeLe,
   ];
   @override
@@ -261,6 +273,15 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         ),
       );
     }
+    if (data.containsKey('trace_geojson')) {
+      context.handle(
+        _traceGeojsonMeta,
+        traceGeojson.isAcceptableOrUnknown(
+          data['trace_geojson']!,
+          _traceGeojsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -320,6 +341,10 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}optimisee_le'],
       ),
+      traceGeojson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}trace_geojson'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -345,6 +370,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   final int? distanceTotaleM;
   final int? dureeTotaleS;
   final DateTime? optimiseeLe;
+
+  /// Trace de l'itineraire optimise au format GeoJSON LineString (juste
+  /// la liste des coordonnees [lng, lat] encodee en JSON string), pour
+  /// affichage en polyline sur la carte. Nullable : pas tous les
+  /// fournisseurs d'optimisation renvoient une trace.
+  final String? traceGeojson;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -358,6 +389,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     this.distanceTotaleM,
     this.dureeTotaleS,
     this.optimiseeLe,
+    this.traceGeojson,
     required this.creeLe,
   });
   @override
@@ -379,6 +411,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     }
     if (!nullToAbsent || optimiseeLe != null) {
       map['optimisee_le'] = Variable<DateTime>(optimiseeLe);
+    }
+    if (!nullToAbsent || traceGeojson != null) {
+      map['trace_geojson'] = Variable<String>(traceGeojson);
     }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
@@ -403,6 +438,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       optimiseeLe: optimiseeLe == null && nullToAbsent
           ? const Value.absent()
           : Value(optimiseeLe),
+      traceGeojson: traceGeojson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(traceGeojson),
       creeLe: Value(creeLe),
     );
   }
@@ -426,6 +464,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       distanceTotaleM: serializer.fromJson<int?>(json['distanceTotaleM']),
       dureeTotaleS: serializer.fromJson<int?>(json['dureeTotaleS']),
       optimiseeLe: serializer.fromJson<DateTime?>(json['optimiseeLe']),
+      traceGeojson: serializer.fromJson<String?>(json['traceGeojson']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -444,6 +483,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'distanceTotaleM': serializer.toJson<int?>(distanceTotaleM),
       'dureeTotaleS': serializer.toJson<int?>(dureeTotaleS),
       'optimiseeLe': serializer.toJson<DateTime?>(optimiseeLe),
+      'traceGeojson': serializer.toJson<String?>(traceGeojson),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -460,6 +500,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     Value<int?> distanceTotaleM = const Value.absent(),
     Value<int?> dureeTotaleS = const Value.absent(),
     Value<DateTime?> optimiseeLe = const Value.absent(),
+    Value<String?> traceGeojson = const Value.absent(),
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -475,6 +516,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
         : this.distanceTotaleM,
     dureeTotaleS: dureeTotaleS.present ? dureeTotaleS.value : this.dureeTotaleS,
     optimiseeLe: optimiseeLe.present ? optimiseeLe.value : this.optimiseeLe,
+    traceGeojson: traceGeojson.present ? traceGeojson.value : this.traceGeojson,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -504,6 +546,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       optimiseeLe: data.optimiseeLe.present
           ? data.optimiseeLe.value
           : this.optimiseeLe,
+      traceGeojson: data.traceGeojson.present
+          ? data.traceGeojson.value
+          : this.traceGeojson,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -522,6 +567,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('distanceTotaleM: $distanceTotaleM, ')
           ..write('dureeTotaleS: $dureeTotaleS, ')
           ..write('optimiseeLe: $optimiseeLe, ')
+          ..write('traceGeojson: $traceGeojson, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -540,6 +586,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     distanceTotaleM,
     dureeTotaleS,
     optimiseeLe,
+    traceGeojson,
     creeLe,
   );
   @override
@@ -557,6 +604,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.distanceTotaleM == this.distanceTotaleM &&
           other.dureeTotaleS == this.dureeTotaleS &&
           other.optimiseeLe == this.optimiseeLe &&
+          other.traceGeojson == this.traceGeojson &&
           other.creeLe == this.creeLe);
 }
 
@@ -572,6 +620,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<int?> distanceTotaleM;
   final Value<int?> dureeTotaleS;
   final Value<DateTime?> optimiseeLe;
+  final Value<String?> traceGeojson;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -585,6 +634,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.distanceTotaleM = const Value.absent(),
     this.dureeTotaleS = const Value.absent(),
     this.optimiseeLe = const Value.absent(),
+    this.traceGeojson = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -599,6 +649,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.distanceTotaleM = const Value.absent(),
     this.dureeTotaleS = const Value.absent(),
     this.optimiseeLe = const Value.absent(),
+    this.traceGeojson = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -617,6 +668,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<int>? distanceTotaleM,
     Expression<int>? dureeTotaleS,
     Expression<DateTime>? optimiseeLe,
+    Expression<String>? traceGeojson,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -632,6 +684,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (distanceTotaleM != null) 'distance_totale_m': distanceTotaleM,
       if (dureeTotaleS != null) 'duree_totale_s': dureeTotaleS,
       if (optimiseeLe != null) 'optimisee_le': optimiseeLe,
+      if (traceGeojson != null) 'trace_geojson': traceGeojson,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -648,6 +701,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<int?>? distanceTotaleM,
     Value<int?>? dureeTotaleS,
     Value<DateTime?>? optimiseeLe,
+    Value<String?>? traceGeojson,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -663,6 +717,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       distanceTotaleM: distanceTotaleM ?? this.distanceTotaleM,
       dureeTotaleS: dureeTotaleS ?? this.dureeTotaleS,
       optimiseeLe: optimiseeLe ?? this.optimiseeLe,
+      traceGeojson: traceGeojson ?? this.traceGeojson,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -705,6 +760,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (optimiseeLe.present) {
       map['optimisee_le'] = Variable<DateTime>(optimiseeLe.value);
     }
+    if (traceGeojson.present) {
+      map['trace_geojson'] = Variable<String>(traceGeojson.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -725,6 +783,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('distanceTotaleM: $distanceTotaleM, ')
           ..write('dureeTotaleS: $dureeTotaleS, ')
           ..write('optimiseeLe: $optimiseeLe, ')
+          ..write('traceGeojson: $traceGeojson, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -3607,6 +3666,7 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<int?> distanceTotaleM,
       Value<int?> dureeTotaleS,
       Value<DateTime?> optimiseeLe,
+      Value<String?> traceGeojson,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -3622,6 +3682,7 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<int?> distanceTotaleM,
       Value<int?> dureeTotaleS,
       Value<DateTime?> optimiseeLe,
+      Value<String?> traceGeojson,
       Value<DateTime> creeLe,
     });
 
@@ -3710,6 +3771,11 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<DateTime> get optimiseeLe => $composableBuilder(
     column: $table.optimiseeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get traceGeojson => $composableBuilder(
+    column: $table.traceGeojson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3808,6 +3874,11 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get traceGeojson => $composableBuilder(
+    column: $table.traceGeojson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -3867,6 +3938,11 @@ class $$TourneesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get optimiseeLe => $composableBuilder(
     column: $table.optimiseeLe,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get traceGeojson => $composableBuilder(
+    column: $table.traceGeojson,
     builder: (column) => column,
   );
 
@@ -3938,6 +4014,7 @@ class $$TourneesTableTableManager
                 Value<int?> distanceTotaleM = const Value.absent(),
                 Value<int?> dureeTotaleS = const Value.absent(),
                 Value<DateTime?> optimiseeLe = const Value.absent(),
+                Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -3951,6 +4028,7 @@ class $$TourneesTableTableManager
                 distanceTotaleM: distanceTotaleM,
                 dureeTotaleS: dureeTotaleS,
                 optimiseeLe: optimiseeLe,
+                traceGeojson: traceGeojson,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -3966,6 +4044,7 @@ class $$TourneesTableTableManager
                 Value<int?> distanceTotaleM = const Value.absent(),
                 Value<int?> dureeTotaleS = const Value.absent(),
                 Value<DateTime?> optimiseeLe = const Value.absent(),
+                Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -3979,6 +4058,7 @@ class $$TourneesTableTableManager
                 distanceTotaleM: distanceTotaleM,
                 dureeTotaleS: dureeTotaleS,
                 optimiseeLe: optimiseeLe,
+                traceGeojson: traceGeojson,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0
