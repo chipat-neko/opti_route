@@ -126,18 +126,27 @@ Tests : +4 (aucun candidat / résolution OK / geocoder vide / throw).
 
 | Avant session | Après session |
 |---|---|
-| 85 tests | **134 tests** |
+| 85 tests | **182 tests (+97)** |
 
-+49 tests dans :
+Détail :
 - `openroute_optimization_service_test.dart` : +4 (HGV/péages/cap)
-- `tournee_text_share_service_test.dart` : 4 (nouveau)
+- `tournee_text_share_service_test.dart` : 6 (nouveau, incl. coût EUR)
 - `carnet_vcard_export_service_test.dart` : 7 (nouveau)
 - `stops_geocode_retry_service_test.dart` : 4 (nouveau)
 - `stats_service_test.dart` : +8 (jours semaine + distance totale)
 - `parametres_repository_test.dart` : 5 (nouveau, cout carburant)
 - `stops_repository_test.dart` : +4 (undo dernier statut)
+- `tournees_repository_test.dart` : +4 (duplicate + targetDate)
+- `geo_utils_test.dart` : 6 (nouveau)
+- `geocode_cache_repository_test.dart` : 8 (nouveau)
+- `bordereau_extraction_test.dart` : 13 (nouveau)
+- `ban_geocoding_service_test.dart` : 6 (nouveau)
+- `photon_service_test.dart` : 4 (nouveau)
+- `france_geocoding_service_test.dart` : 5 (nouveau)
+- `widget_smoke_test.dart` : 8 (nouveau)
 
-`flutter analyze` : 0 erreur, 3 infos cosmétiques sur outils dev.
+`flutter analyze` : **0 issue** (après dart fix + nettoyage docstrings
+de `app/tool/strip_const.dart`).
 
 ## État Play Store
 
