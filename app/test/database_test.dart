@@ -194,6 +194,39 @@ void main() {
           reason: 'cascade delete sheet via stop');
     });
 
+    test('tournees v15 + : profilOrs / eviterPeages / rappelLe defauts',
+        () async {
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 11),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+      final t = await (db.select(db.tournees)
+            ..where((row) => row.id.equals(id)))
+          .getSingle();
+      expect(t.profilOrs, 'driving-car');
+      expect(t.eviterPeages, isFalse);
+      expect(t.rappelLe, isNull);
+    });
+
+    test('savedDestinations v17 + : notesCarnet null par defaut', () async {
+      final id = await db.into(db.savedDestinations).insert(
+            SavedDestinationsCompanion.insert(
+              adresseDisplay: 'A',
+              lat: 0,
+              lng: 0,
+            ),
+          );
+      final d = await (db.select(db.savedDestinations)
+            ..where((row) => row.id.equals(id)))
+          .getSingle();
+      expect(d.notesCarnet, isNull);
+    });
+
     test('sheets : cascade delete via la tournee parente', () async {
       final tourneeId = await db.into(db.tournees).insert(
             TourneesCompanion.insert(
