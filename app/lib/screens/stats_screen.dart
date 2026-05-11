@@ -544,7 +544,14 @@ class _TopClientRow extends StatelessWidget {
             height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: rank == 1 ? AppColors.lime : p.creamSoft,
+              // Priorite : couleur custom du carnet > lime pour rang 1 >
+              // creamSoft par defaut. La couleur custom permet a Noah
+              // d'identifier ses clients d'un coup d'oeil ici aussi.
+              color: colorFromTag(
+                client.colorTag,
+                defaultColor:
+                    rank == 1 ? AppColors.lime : p.creamSoft,
+              ),
               shape: BoxShape.circle,
             ),
             child: Text(
