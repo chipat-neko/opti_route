@@ -45,4 +45,11 @@ class SavedDestinations extends Table {
   /// 'red', 'amber', 'cream', 'ink'). Null = couleur par defaut
   /// (lime ou amber selon isFavori).
   TextColumn get colorTag => text().nullable()();
+
+  /// Notes pre-definies par client : code interphone, instructions
+  /// fragiles, heures preferees, etc. Affichees automatiquement comme
+  /// notes du prochain arret cree pour ce client (pre-remplies dans le
+  /// champ Notes de `AjoutArretScreen`). L'utilisateur peut les
+  /// surcharger pour cet arret precis sans modifier le carnet.
+  TextColumn get notesCarnet => text().nullable()();
 }

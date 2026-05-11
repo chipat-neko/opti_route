@@ -163,6 +163,17 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                       _nomClientCtrl.text.trim().isEmpty) {
                     _nomClientCtrl.text = s.poiName!;
                   }
+                  // Idem pour les notes pre-definies du carnet (code
+                  // interphone, instructions). On les pre-remplit
+                  // seulement si Noah n'a pas encore tape ses propres
+                  // notes pour cet arret.
+                  if (s != null &&
+                      s.fromCarnet &&
+                      s.notesCarnet != null &&
+                      s.notesCarnet!.trim().isNotEmpty &&
+                      _notesCtrl.text.trim().isEmpty) {
+                    _notesCtrl.text = s.notesCarnet!;
+                  }
                 });
               },
             ),

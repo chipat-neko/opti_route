@@ -101,6 +101,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               if (value == 'share_text') _onShareTextPressed();
               if (value == 'batch_livre') _onBatchLivrePressed();
               if (value == 'retry_geocode') _onRetryGeocodePressed();
+              if (value == 'undo_last') _onUndoLastStatusPressed();
             },
             itemBuilder: (_) => const [
               PopupMenuItem(
@@ -108,6 +109,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                 child: ListTile(
                   leading: Icon(Icons.done_all, color: AppColors.emerald),
                   title: Text('Tout marquer livre'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'undo_last',
+                child: ListTile(
+                  leading: Icon(Icons.undo, color: AppColors.amber),
+                  title: Text('Annuler dernier statut'),
+                  subtitle: Text(
+                    'Le dernier arret valide/echec',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -307,6 +320,42 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'export PDF : $e')),
+      );
+    }
+  }
+
+  /// Annule le dernier statut (livre ou echec) pose dans cette tournee.
+  /// Retrouve le stop via `getLastTransitionedStop` puis le repasse en
+  /// 'a_livrer'. Snackbar de confirmation avec un bouton de re-annule.
+  Future<void> _onUndoLastStatusPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final repo = ref.read(stopsRepositoryProvider);
+      final last = await repo.getLastTransitionedStop(widget.tournee.id);
+      if (!mounted) return;
+      if (last == null) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Aucun statut a annuler dans cette tournee.'),
+          ),
+        );
+        return;
+      }
+      await repo.revertStatus(last.id);
+      if (!mounted) return;
+      final label = last.nomClient?.trim().isNotEmpty == true
+          ? last.nomClient!.trim()
+          : last.adresseBrute.split(',').first.trim();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('"$label" est repasse en "A livrer"'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
       );
     }
   }

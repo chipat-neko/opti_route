@@ -170,6 +170,7 @@ class _AddressAutocompleteFieldState
       city: d.ville,
       poiName: d.nomClient,
       fromCarnet: true,
+      notesCarnet: d.notesCarnet,
     );
   }
 

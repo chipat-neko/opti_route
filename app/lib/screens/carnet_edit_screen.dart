@@ -22,6 +22,7 @@ class CarnetEditScreen extends ConsumerStatefulWidget {
 
 class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
   late final TextEditingController _nomCtrl;
+  late final TextEditingController _notesCarnetCtrl;
   AddressSuggestion? _address;
   bool _saving = false;
 
@@ -30,6 +31,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
     super.initState();
     final e = widget.entry;
     _nomCtrl = TextEditingController(text: e.nomClient ?? '');
+    _notesCarnetCtrl = TextEditingController(text: e.notesCarnet ?? '');
     _address = AddressSuggestion(
       displayName: e.adresseDisplay,
       lat: e.lat,
@@ -43,6 +45,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
   @override
   void dispose() {
     _nomCtrl.dispose();
+    _notesCarnetCtrl.dispose();
     super.dispose();
   }
 
@@ -73,6 +76,19 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
             initialDisplayText: widget.entry.adresseDisplay,
             initialSuggestion: _address,
             onSuggestionSelected: (s) => setState(() => _address = s),
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          TextField(
+            controller: _notesCarnetCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Notes pre-definies (optionnel)',
+              hintText: 'Code 1234B Â· sonner 2 fois Â· porte garage',
+              helperText:
+                  'Pre-remplies dans le champ Notes a chaque nouvel '
+                  'arret cree pour ce client. Modifiables au cas par cas.',
+              helperMaxLines: 3,
+            ),
+            maxLines: 3,
           ),
           const SizedBox(height: AppSpacing.x18),
           // Picker de couleur pour reperer visuellement le client
@@ -143,6 +159,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
             rue: _address!.road ?? '',
             codePostal: _address!.postcode ?? '',
             ville: _address!.city ?? '',
+            notesCarnet: _notesCarnetCtrl.text.trim(),
           );
       if (!mounted) return;
       Navigator.of(context).pop();

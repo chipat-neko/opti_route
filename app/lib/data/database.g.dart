@@ -3542,6 +3542,17 @@ class $SavedDestinationsTable extends SavedDestinations
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _notesCarnetMeta = const VerificationMeta(
+    'notesCarnet',
+  );
+  @override
+  late final GeneratedColumn<String> notesCarnet = GeneratedColumn<String>(
+    'notes_carnet',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3557,6 +3568,7 @@ class $SavedDestinationsTable extends SavedDestinations
     creeLe,
     isFavori,
     colorTag,
+    notesCarnet,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3657,6 +3669,15 @@ class $SavedDestinationsTable extends SavedDestinations
         colorTag.isAcceptableOrUnknown(data['color_tag']!, _colorTagMeta),
       );
     }
+    if (data.containsKey('notes_carnet')) {
+      context.handle(
+        _notesCarnetMeta,
+        notesCarnet.isAcceptableOrUnknown(
+          data['notes_carnet']!,
+          _notesCarnetMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3718,6 +3739,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.string,
         data['${effectivePrefix}color_tag'],
       ),
+      notesCarnet: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes_carnet'],
+      ),
     );
   }
 
@@ -3759,6 +3784,13 @@ class SavedDestination extends DataClass
   /// 'red', 'amber', 'cream', 'ink'). Null = couleur par defaut
   /// (lime ou amber selon isFavori).
   final String? colorTag;
+
+  /// Notes pre-definies par client : code interphone, instructions
+  /// fragiles, heures preferees, etc. Affichees automatiquement comme
+  /// notes du prochain arret cree pour ce client (pre-remplies dans le
+  /// champ Notes de `AjoutArretScreen`). L'utilisateur peut les
+  /// surcharger pour cet arret precis sans modifier le carnet.
+  final String? notesCarnet;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -3773,6 +3805,7 @@ class SavedDestination extends DataClass
     required this.creeLe,
     required this.isFavori,
     this.colorTag,
+    this.notesCarnet,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3800,6 +3833,9 @@ class SavedDestination extends DataClass
     if (!nullToAbsent || colorTag != null) {
       map['color_tag'] = Variable<String>(colorTag);
     }
+    if (!nullToAbsent || notesCarnet != null) {
+      map['notes_carnet'] = Variable<String>(notesCarnet);
+    }
     return map;
   }
 
@@ -3826,6 +3862,9 @@ class SavedDestination extends DataClass
       colorTag: colorTag == null && nullToAbsent
           ? const Value.absent()
           : Value(colorTag),
+      notesCarnet: notesCarnet == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notesCarnet),
     );
   }
 
@@ -3848,6 +3887,7 @@ class SavedDestination extends DataClass
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       isFavori: serializer.fromJson<bool>(json['isFavori']),
       colorTag: serializer.fromJson<String?>(json['colorTag']),
+      notesCarnet: serializer.fromJson<String?>(json['notesCarnet']),
     );
   }
   @override
@@ -3867,6 +3907,7 @@ class SavedDestination extends DataClass
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'isFavori': serializer.toJson<bool>(isFavori),
       'colorTag': serializer.toJson<String?>(colorTag),
+      'notesCarnet': serializer.toJson<String?>(notesCarnet),
     };
   }
 
@@ -3884,6 +3925,7 @@ class SavedDestination extends DataClass
     DateTime? creeLe,
     bool? isFavori,
     Value<String?> colorTag = const Value.absent(),
+    Value<String?> notesCarnet = const Value.absent(),
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -3898,6 +3940,7 @@ class SavedDestination extends DataClass
     creeLe: creeLe ?? this.creeLe,
     isFavori: isFavori ?? this.isFavori,
     colorTag: colorTag.present ? colorTag.value : this.colorTag,
+    notesCarnet: notesCarnet.present ? notesCarnet.value : this.notesCarnet,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -3920,6 +3963,9 @@ class SavedDestination extends DataClass
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
       isFavori: data.isFavori.present ? data.isFavori.value : this.isFavori,
       colorTag: data.colorTag.present ? data.colorTag.value : this.colorTag,
+      notesCarnet: data.notesCarnet.present
+          ? data.notesCarnet.value
+          : this.notesCarnet,
     );
   }
 
@@ -3938,7 +3984,8 @@ class SavedDestination extends DataClass
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('creeLe: $creeLe, ')
           ..write('isFavori: $isFavori, ')
-          ..write('colorTag: $colorTag')
+          ..write('colorTag: $colorTag, ')
+          ..write('notesCarnet: $notesCarnet')
           ..write(')'))
         .toString();
   }
@@ -3958,6 +4005,7 @@ class SavedDestination extends DataClass
     creeLe,
     isFavori,
     colorTag,
+    notesCarnet,
   );
   @override
   bool operator ==(Object other) =>
@@ -3975,7 +4023,8 @@ class SavedDestination extends DataClass
           other.lastUsedAt == this.lastUsedAt &&
           other.creeLe == this.creeLe &&
           other.isFavori == this.isFavori &&
-          other.colorTag == this.colorTag);
+          other.colorTag == this.colorTag &&
+          other.notesCarnet == this.notesCarnet);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -3992,6 +4041,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<DateTime> creeLe;
   final Value<bool> isFavori;
   final Value<String?> colorTag;
+  final Value<String?> notesCarnet;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -4006,6 +4056,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.creeLe = const Value.absent(),
     this.isFavori = const Value.absent(),
     this.colorTag = const Value.absent(),
+    this.notesCarnet = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -4021,6 +4072,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.creeLe = const Value.absent(),
     this.isFavori = const Value.absent(),
     this.colorTag = const Value.absent(),
+    this.notesCarnet = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -4038,6 +4090,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<DateTime>? creeLe,
     Expression<bool>? isFavori,
     Expression<String>? colorTag,
+    Expression<String>? notesCarnet,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4053,6 +4106,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (creeLe != null) 'cree_le': creeLe,
       if (isFavori != null) 'is_favori': isFavori,
       if (colorTag != null) 'color_tag': colorTag,
+      if (notesCarnet != null) 'notes_carnet': notesCarnet,
     });
   }
 
@@ -4070,6 +4124,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<DateTime>? creeLe,
     Value<bool>? isFavori,
     Value<String?>? colorTag,
+    Value<String?>? notesCarnet,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -4085,6 +4140,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       creeLe: creeLe ?? this.creeLe,
       isFavori: isFavori ?? this.isFavori,
       colorTag: colorTag ?? this.colorTag,
+      notesCarnet: notesCarnet ?? this.notesCarnet,
     );
   }
 
@@ -4130,6 +4186,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (colorTag.present) {
       map['color_tag'] = Variable<String>(colorTag.value);
     }
+    if (notesCarnet.present) {
+      map['notes_carnet'] = Variable<String>(notesCarnet.value);
+    }
     return map;
   }
 
@@ -4148,7 +4207,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('creeLe: $creeLe, ')
           ..write('isFavori: $isFavori, ')
-          ..write('colorTag: $colorTag')
+          ..write('colorTag: $colorTag, ')
+          ..write('notesCarnet: $notesCarnet')
           ..write(')'))
         .toString();
   }
@@ -6775,6 +6835,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<DateTime> creeLe,
       Value<bool> isFavori,
       Value<String?> colorTag,
+      Value<String?> notesCarnet,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -6791,6 +6852,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<DateTime> creeLe,
       Value<bool> isFavori,
       Value<String?> colorTag,
+      Value<String?> notesCarnet,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -6864,6 +6926,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<String> get colorTag => $composableBuilder(
     column: $table.colorTag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notesCarnet => $composableBuilder(
+    column: $table.notesCarnet,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6941,6 +7008,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.colorTag,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get notesCarnet => $composableBuilder(
+    column: $table.notesCarnet,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -6996,6 +7068,11 @@ class $$SavedDestinationsTableAnnotationComposer
 
   GeneratedColumn<String> get colorTag =>
       $composableBuilder(column: $table.colorTag, builder: (column) => column);
+
+  GeneratedColumn<String> get notesCarnet => $composableBuilder(
+    column: $table.notesCarnet,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -7051,6 +7128,7 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<bool> isFavori = const Value.absent(),
                 Value<String?> colorTag = const Value.absent(),
+                Value<String?> notesCarnet = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -7065,6 +7143,7 @@ class $$SavedDestinationsTableTableManager
                 creeLe: creeLe,
                 isFavori: isFavori,
                 colorTag: colorTag,
+                notesCarnet: notesCarnet,
               ),
           createCompanionCallback:
               ({
@@ -7081,6 +7160,7 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<bool> isFavori = const Value.absent(),
                 Value<String?> colorTag = const Value.absent(),
+                Value<String?> notesCarnet = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -7095,6 +7175,7 @@ class $$SavedDestinationsTableTableManager
                 creeLe: creeLe,
                 isFavori: isFavori,
                 colorTag: colorTag,
+                notesCarnet: notesCarnet,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

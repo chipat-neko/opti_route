@@ -185,6 +185,47 @@ class StopsRepository {
     return result.length;
   }
 
+  /// Recupere le **dernier** stop d'une tournee dont le statut a ete
+  /// transitionne (le plus recent dans `stop_history`). Sert au bouton
+  /// "Annuler le dernier statut" : on remet ce stop a `a_livrer`.
+  /// Retourne null si rien a annuler (aucune transition livre/echec).
+  Future<Stop?> getLastTransitionedStop(int tourneeId) async {
+    // On limite au dernier event qui change vers livre/echec.
+    final stops = await getByTournee(tourneeId);
+    if (stops.isEmpty) return null;
+    final stopIds = stops.map((s) => s.id).toList();
+    final hist = await (_db.select(_db.stopHistory)
+          ..where((h) =>
+              h.stopId.isIn(stopIds) &
+              h.toStatus.isIn(['livre', 'echec']))
+          ..orderBy([(h) => OrderingTerm.desc(h.timestamp)])
+          ..limit(1))
+        .getSingleOrNull();
+    if (hist == null) return null;
+    return stops.firstWhere((s) => s.id == hist.stopId);
+  }
+
+  /// Annule le statut d'un stop : le remet a 'a_livrer' + reset
+  /// raisonEchec + log dans l'historique.
+  Future<void> revertStatus(int stopId) async {
+    final stop = await getById(stopId);
+    if (stop == null) return;
+    await (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(
+      statutLivraison: const Value('a_livrer'),
+      raisonEchec: const Value(null),
+      livreLat: const Value(null),
+      livreLng: const Value(null),
+      livreLe: const Value(null),
+    ));
+    await _logHistory(
+      stopId: stopId,
+      action: 'revert',
+      fromStatus: stop.statutLivraison,
+      toStatus: 'a_livrer',
+    );
+  }
+
   /// Applique l'ordre optimise calcule par le solveur : pour chaque
   /// stop, on ecrit `ordre_optimise = position dans la liste` (1-based).
   /// Tout est fait dans une transaction pour eviter un etat partiel.
