@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/address_suggestion.dart';
 import '../data/bordereau_extraction.dart';
 import '../data/database.dart';
+import '../data/geo_utils.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../theme/app_theme.dart';
@@ -614,8 +613,15 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     for (final s in stops) {
       if (s.adresseBrute.toLowerCase().trim() == adresseLower) return s;
       if (s.lat != null && s.lng != null) {
-        final d = _haversineMeters(lat, lng, s.lat!, s.lng!);
-        if (d < 30) return s;
+        if (GeoUtils.areClose(
+          lat1: lat,
+          lon1: lng,
+          lat2: s.lat!,
+          lon2: s.lng!,
+          thresholdMeters: 30,
+        )) {
+          return s;
+        }
       }
     }
     return null;
@@ -680,21 +686,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     return result == true;
   }
 
-  /// Distance haversine en metres entre 2 coords. Approximation rapide
-  /// suffisante pour comparer 2 arrets a courte distance (< 1 km).
-  static double _haversineMeters(
-      double lat1, double lon1, double lat2, double lon2) {
-    const r = 6371000.0;
-    final dLat = (lat2 - lat1) * 3.141592653589793 / 180.0;
-    final dLon = (lon2 - lon1) * 3.141592653589793 / 180.0;
-    final lat1Rad = lat1 * 3.141592653589793 / 180.0;
-    final lat2Rad = lat2 * 3.141592653589793 / 180.0;
-    final a = (math.sin(dLat / 2)) * (math.sin(dLat / 2)) +
-        math.cos(lat1Rad) * math.cos(lat2Rad) *
-            math.sin(dLon / 2) * math.sin(dLon / 2);
-    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    return r * c;
-  }
+  // Note : haversine deplace dans `GeoUtils` (lib/data/geo_utils.dart)
+  // pour pouvoir le tester sans dependance Flutter et l'utiliser depuis
+  // d'autres ecrans.
 
   /// Dialog "Saisie hors-ligne" : un seul champ texte que l'utilisateur
   /// remplit a la main quand l'autocomplete echoue (zone rurale sans
