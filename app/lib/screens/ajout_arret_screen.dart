@@ -7,6 +7,7 @@ import '../data/bordereau_extraction.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
+import '../services/share_intent_handler.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
@@ -63,7 +64,24 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       // Mode creation : preremplir la duree d'arret avec la valeur
       // par defaut configuree dans Parametres (si elle existe).
       _loadDefaults();
+      // Recupere l'adresse partagee via Share Intent (Google Maps ->
+      // Partager -> opti_route). Si dispo, consume_le et l'ecran
+      // demarre avec l'adresse pre-remplie.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _consumeSharedAddress();
+      });
     }
+  }
+
+  void _consumeSharedAddress() {
+    final shared = ShareIntentHandler.instance.pendingAddress.value;
+    if (shared == null || shared.isEmpty) return;
+    ShareIntentHandler.instance.clear();
+    if (!mounted) return;
+    setState(() {
+      _scannedAddress = shared;
+      _addressFieldVersion++;
+    });
   }
 
   void _initFromInitial() {

@@ -50,6 +50,16 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Intent-filter "Share" : permet a l'utilisateur de
+                 partager une adresse depuis Google Maps (bouton
+                 Partager -> opti_route apparait dans la liste). Le
+                 plugin receive_sharing_intent recupere le texte
+                 partage et l'expose a l'app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

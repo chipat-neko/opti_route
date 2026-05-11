@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:latlong2/latlong.dart';
 
 import '../data/address_suggestion.dart';
+import '../data/clipboard_address_helper.dart';
 import '../data/database.dart';
 import '../data/external_search_service.dart';
 import '../data/geocoding_service.dart';
@@ -50,7 +52,8 @@ class AddressAutocompleteField extends ConsumerStatefulWidget {
 }
 
 class _AddressAutocompleteFieldState
-    extends ConsumerState<AddressAutocompleteField> {
+    extends ConsumerState<AddressAutocompleteField>
+    with WidgetsBindingObserver {
   static const _debounce = Duration(milliseconds: 400);
 
   late final TextEditingController _controller;
@@ -60,12 +63,18 @@ class _AddressAutocompleteFieldState
   String? _errorMessage;
   AddressSuggestion? _selected;
 
+  /// Hash du presse-papier deja detecte une fois, pour eviter de
+  /// re-afficher la SnackBar a chaque retour dans l'app pour le meme
+  /// contenu.
+  String? _lastDetectedClipboard;
+
   @override
   void initState() {
     super.initState();
     final initial = widget.initialDisplayText ?? '';
     _controller = TextEditingController(text: initial);
     _selected = widget.initialSuggestion;
+    WidgetsBinding.instance.addObserver(this);
 
     // Si on a un texte initial mais pas de suggestion validee
     // (typiquement : retour d'un scan OCR), on lance automatiquement
@@ -79,9 +88,91 @@ class _AddressAutocompleteFieldState
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  /// Option 2 : detection auto au retour dans l'app.
+  /// Quand on revient de Google Maps (app au premier plan), on regarde
+  /// le presse-papier et on propose de coller s'il contient une adresse.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state != AppLifecycleState.resumed) return;
+    if (_selected != null) return; // adresse deja validee, pas besoin
+    _maybeOfferClipboardPaste();
+  }
+
+  Future<void> _maybeOfferClipboardPaste() async {
+    final data = await Clipboard.getData('text/plain');
+    final text = data?.text;
+    if (text == null || text.trim().isEmpty) return;
+    // Anti-spam : on ne reproprose pas le meme contenu 2 fois.
+    if (text == _lastDetectedClipboard) return;
+    if (!ClipboardAddressHelper.looksLikeAddress(text)) return;
+    final extracted = ClipboardAddressHelper.extractAddress(text);
+    if (extracted == null) return;
+
+    _lastDetectedClipboard = text;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Adresse detectee : ${_truncate(extracted, 40)}'),
+        duration: const Duration(seconds: 6),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'COLLER',
+          textColor: AppColors.lime,
+          onPressed: () => _applyExtractedAddress(extracted),
+        ),
+      ),
+    );
+  }
+
+  static String _truncate(String s, int max) =>
+      s.length <= max ? s : '${s.substring(0, max - 1)}…';
+
+  /// Option 1 : bouton manuel "Coller depuis Google". Lit le
+  /// presse-papier, extrait l'adresse et relance la recherche.
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData('text/plain');
+    final text = data?.text;
+    if (text == null || text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Presse-papier vide. Copie l\'adresse sur Google Maps d\'abord.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    final extracted = ClipboardAddressHelper.extractAddress(text);
+    if (extracted == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pas d\'adresse reconnue dans le presse-papier.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    _applyExtractedAddress(extracted);
+  }
+
+  /// Applique une adresse extraite : met le champ a jour et relance la
+  /// recherche de geocoding pour que BAN/SIRENE/Photon la valident.
+  void _applyExtractedAddress(String address) {
+    setState(() {
+      _controller.text = address;
+      _selected = null;
+      _suggestions = const [];
+      _errorMessage = null;
+    });
+    _handleChange(address);
   }
 
   void _handleChange(String value) {
@@ -293,6 +384,22 @@ class _AddressAutocompleteFieldState
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
+              TextButton.icon(
+                onPressed: _pasteFromClipboard,
+                icon: const Icon(Icons.content_paste_outlined, size: 16),
+                label: const Text(
+                  'Coller adresse',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.ink,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x10,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
               TextButton.icon(
                 onPressed: _openPointerCarte,
                 icon: const Icon(Icons.touch_app_outlined, size: 16),

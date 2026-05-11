@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'data/notifications_service.dart';
 import 'providers/database_providers.dart';
 import 'screens/home_screen.dart';
+import 'services/share_intent_handler.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -16,6 +17,9 @@ Future<void> main() async {
   // Init notifications locales (best-effort, ne pas bloquer le boot
   // si echec).
   unawaited(NotificationsService.instance.init());
+  // Init du handler Share Intent : recupere les adresses partagees
+  // depuis Google Maps (menu "Partager -> opti_route").
+  unawaited(ShareIntentHandler.instance.init());
   runApp(const ProviderScope(child: OptiRouteApp()));
 }
 
