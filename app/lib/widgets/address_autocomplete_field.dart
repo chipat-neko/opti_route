@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
+import '../data/external_search_service.dart';
 import '../data/geocoding_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
@@ -260,33 +261,76 @@ class _AddressAutocompleteFieldState
             ],
           ),
         ] else ...[
-          // Quand pas (encore) de selection : bouton de fallback pour
-          // pointer manuellement sur la carte. Indispensable quand
-          // l'autocomplete n'a rien (lieu sans adresse postale, hangar
-          // industriel, contremarque mal indexee...).
+          // Quand pas (encore) de selection : 2 fallback boutons.
+          //
+          // 1. "Chercher sur Google" : ouvre Google Maps natif (ou
+          //    Chrome) avec la query courante. Aucune API Google n'est
+          //    appelee par l'app -- c'est une URL ouverte cote
+          //    utilisateur. Indispensable quand le client est un
+          //    particulier / TPE non indexee par BAN/SIRENE/Photon.
+          // 2. "Pointer sur la carte" : positionnement manuel sur OSM
+          //    si Noah connait l'emplacement exact.
           const SizedBox(height: AppSpacing.x6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _openPointerCarte,
-              icon: const Icon(Icons.touch_app_outlined, size: 16),
-              label: const Text(
-                'Pointer sur la carte',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.ink,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.x10,
-                  vertical: 4,
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: AppSpacing.x4,
+            children: [
+              if (_controller.text.trim().length >= 3)
+                TextButton.icon(
+                  onPressed: _openGoogleSearch,
+                  icon: const Icon(Icons.travel_explore_outlined, size: 16),
+                  label: const Text(
+                    'Chercher sur Google',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.ink,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.x10,
+                      vertical: 4,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              TextButton.icon(
+                onPressed: _openPointerCarte,
+                icon: const Icon(Icons.touch_app_outlined, size: 16),
+                label: const Text(
+                  'Pointer sur la carte',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.ink,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x10,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ],
     );
+  }
+
+  Future<void> _openGoogleSearch() async {
+    final query = _controller.text.trim();
+    if (query.isEmpty) return;
+    try {
+      await const ExternalSearchService().launchGoogleMaps(query);
+    } catch (_) {
+      // Echec d'ouverture (pas de navigateur installe ?) : on tente
+      // une URL classique Google Search en fallback.
+      try {
+        await const ExternalSearchService().launchGoogleSearch(query);
+      } catch (_) {
+        // Silencieux : on n'a aucun moyen de notifier sans messenger
+        // ici. Le user verra que rien ne s'ouvre.
+      }
+    }
   }
 
   Future<void> _openPointerCarte() async {
