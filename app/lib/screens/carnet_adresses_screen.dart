@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/carnet_export_service.dart';
 import '../data/carnet_import_service.dart';
+import '../data/carnet_pdf_service.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
@@ -43,6 +44,11 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
             icon: const Icon(Icons.ios_share),
             tooltip: 'Exporter en CSV',
             onPressed: _onExportPressed,
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: 'Exporter en PDF',
+            onPressed: _onExportPdfPressed,
           ),
           const TourneeEnCoursPill(),
         ],
@@ -179,6 +185,31 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'export : $e')),
+      );
+    }
+  }
+
+  Future<void> _onExportPdfPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final service = CarnetPdfService(
+        ref.read(savedDestinationsRepositoryProvider),
+      );
+      final count = await service.exportAndShare();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(count > 0
+              ? '$count entree(s) exportee(s) en PDF'
+              : 'Carnet vide, rien a exporter'),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'export PDF : $e')),
       );
     }
   }
