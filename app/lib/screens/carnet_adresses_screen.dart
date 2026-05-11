@@ -1,7 +1,11 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/carnet_export_service.dart';
+import '../data/carnet_import_service.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
@@ -29,6 +33,11 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       appBar: AppBar(
         title: const Text('Carnet d\'adresses'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.file_upload_outlined),
+            tooltip: 'Importer un CSV',
+            onPressed: _onImportPressed,
+          ),
           IconButton(
             icon: const Icon(Icons.ios_share),
             tooltip: 'Exporter en CSV',
@@ -80,6 +89,71 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _onImportPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final path = picked.files.first.path;
+    if (path == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Fichier illisible')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final shouldImport = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Importer ce CSV ?'),
+        content: Text(
+          'Les entrees du fichier vont s\'ajouter a ton carnet existant. '
+          'Les doublons (meme nom client ou meme position GPS) seront '
+          'fusionnes, pas dupliques.\n\n${picked.files.first.name}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Importer'),
+          ),
+        ],
+      ),
+    );
+    if (shouldImport != true || !mounted) return;
+
+    try {
+      final service = CarnetImportService(
+        ref.read(savedDestinationsRepositoryProvider),
+      );
+      final result = await service.importFromFile(File(path));
+      if (!mounted) return;
+      final summary = [
+        if (result.created > 0) '${result.created} ajoutee(s)',
+        if (result.merged > 0) '${result.merged} fusionnee(s)',
+        if (result.rejected > 0) '${result.rejected} rejetee(s)',
+      ].join(' · ');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(summary.isEmpty ? 'Aucune entree' : summary),
+          backgroundColor:
+              result.rejected > 0 ? AppColors.amber : AppColors.emerald,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'import : $e')),
+      );
+    }
   }
 
   Future<void> _onExportPressed() async {
