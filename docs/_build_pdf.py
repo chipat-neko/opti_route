@@ -1,103 +1,345 @@
-"""Convertit chaque .md du dossier en .pdf via markdown -> HTML -> Edge headless.
+"""Convertit chaque .md du dossier en .pdf via fpdf2.
 
 Usage :
   python _build_pdf.py            # convertit tous les .md du dossier
   python _build_pdf.py plan_cb    # convertit uniquement plan_cb.md
+
+Avant : on passait par Edge headless avec --print-to-pdf, mais c'etait
+fragile (tronquage a 1 page selon les versions, faux succes silencieux
+quand subprocess Python). Maintenant on genere directement avec fpdf2
+(pur Python, deterministe, pas de navigateur).
 """
-import subprocess
+import re
 import sys
+import unicodedata
 from pathlib import Path
 
-import markdown
+from fpdf import FPDF
 
 HERE = Path(__file__).parent
 
-CSS = """
-@page { size: A4; margin: 18mm 16mm; }
-body {
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10.5pt;
-    line-height: 1.5;
-    color: #222;
-    max-width: none;
-}
-h1 { font-size: 22pt; border-bottom: 2px solid #2c5282; padding-bottom: 6px; color: #2c5282; }
-h2 { font-size: 15pt; margin-top: 22px; color: #2c5282; border-bottom: 1px solid #cbd5e0; padding-bottom: 3px; }
-h3 { font-size: 12pt; color: #2d3748; }
-code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
-pre { background: #f7fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 9pt; }
-pre code { background: transparent; padding: 0; }
-table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9.5pt; }
-th, td { border: 1px solid #cbd5e0; padding: 6px 8px; text-align: left; vertical-align: top; }
-th { background: #edf2f7; font-weight: 600; }
-hr { border: none; border-top: 1px solid #cbd5e0; margin: 18px 0; }
-blockquote { border-left: 3px solid #2c5282; margin: 10px 0; padding-left: 12px; color: #4a5568; }
-ul, ol { padding-left: 22px; }
-a { color: #2c5282; text-decoration: none; }
-strong { color: #1a202c; }
-"""
 
-EDGE_CANDIDATES = [
-    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-    r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-]
+# ─── Couleurs (depuis l'ancien CSS) ──────────────────────────────────
+COLOR_H1 = (44, 82, 130)        # #2c5282
+COLOR_H2 = (44, 82, 130)
+COLOR_H3 = (45, 55, 72)         # #2d3748
+COLOR_TEXT = (34, 34, 34)
+COLOR_MUTE = (74, 85, 104)      # #4a5568
+COLOR_BORDER = (203, 213, 224)  # #cbd5e0
+COLOR_TABLE_HEAD = (237, 242, 247)  # #edf2f7
+COLOR_CODE_BG = (241, 243, 245)  # #f1f3f5
 
 
-def find_edge() -> str:
-    for path in EDGE_CANDIDATES:
-        if Path(path).exists():
-            return path
-    raise FileNotFoundError("Microsoft Edge non trouve. Installe Edge ou adapte le script.")
+def _strip_accents(s: str) -> str:
+    """fpdf2 avec polices builtin (Helvetica) supporte mal l'UTF-8 hors
+    Latin-1. On normalise les accents et caracteres speciaux courants.
+    """
+    # Remplacement explicite des caracteres qui passent mal en Latin-1.
+    s = s.replace("’", "'")  # ’
+    s = s.replace("‘", "'")
+    s = s.replace("“", '"')
+    s = s.replace("”", '"')
+    s = s.replace("—", "--")  # em dash
+    s = s.replace("–", "-")   # en dash
+    s = s.replace("…", "...")
+    s = s.replace(" ", " ")   # nbsp
+    s = s.replace("→", "->")  # →
+    s = s.replace("←", "<-")
+    s = s.replace("✓", "v")   # ✓
+    s = s.replace("✗", "x")   # ✗
+    s = s.replace("→", "->")
+    s = s.replace("↑", "^")
+    s = s.replace("↓", "v")
+    s = s.replace("•", "*")   # •
+    s = s.replace("·", "*")   # ·
+    s = s.replace("●", "*")
+    # Symboles unicode de couleur (rond plein) -> texte
+    for ch in ("\U0001f7e2", "\U0001f7e1", "\U0001f535", "\U0001f534"):
+        s = s.replace(ch, "*")
+    # Etoiles
+    s = s.replace("★", "*").replace("☆", "*")
+    # Tout ce qui n'est pas Latin-1 -> approximation NFD puis dropping
+    out = []
+    for ch in s:
+        if ord(ch) < 0x100:
+            out.append(ch)
+        else:
+            decomp = unicodedata.normalize("NFKD", ch)
+            ascii_part = "".join(c for c in decomp if ord(c) < 0x80)
+            out.append(ascii_part if ascii_part else "?")
+    return "".join(out)
 
 
-def md_to_html(md_text: str) -> str:
-    body = markdown.markdown(
-        md_text,
-        extensions=["tables", "fenced_code", "toc", "sane_lists"],
-    )
-    return f"""<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<title>Plan opti_route</title>
-<style>{CSS}</style>
-</head>
-<body>
-{body}
-</body>
-</html>
-"""
+class _Renderer(FPDF):
+    def __init__(self):
+        super().__init__(format="A4")
+        self.set_margins(left=16, top=18, right=16)
+        self.set_auto_page_break(auto=True, margin=18)
+
+    # Helpers de format
+    def _font(self, size: float, bold: bool = False, italic: bool = False):
+        style = ""
+        if bold:
+            style += "B"
+        if italic:
+            style += "I"
+        self.set_font("Helvetica", style, size=size)
+
+    def _color(self, rgb):
+        self.set_text_color(*rgb)
+
+    def render_inline(self, text: str, base_size: float = 10.5):
+        """Rendu d'une ligne avec gestion basique de **gras**, *italique*,
+        et `code`. Utilise multi_cell pour le wrapping.
+        """
+        text = _strip_accents(text)
+        # Token simple : on splite sur les marqueurs et on alterne.
+        parts = re.split(r"(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)", text)
+        # Si pas de markup -> direct.
+        if all(not p.startswith(("**", "*", "`")) for p in parts):
+            self._font(base_size)
+            self._color(COLOR_TEXT)
+            self.multi_cell(0, base_size * 0.55, text, new_x="LMARGIN", new_y="NEXT")
+            return
+        # Mixed : on traite token par token.
+        # multi_cell ne supporte pas le mixage easy ; on simule en
+        # decoupant les lignes a la main et en ecrivant token par token.
+        # Approche simplifiee : on perd le wrapping fin, mais pour notre
+        # contenu c'est OK.
+        self._font(base_size)
+        self._color(COLOR_TEXT)
+        line = ""
+        for part in parts:
+            if part.startswith("**") and part.endswith("**"):
+                # Flush ce qu'on a, puis ecrit en gras.
+                if line:
+                    self._font(base_size)
+                    self.write(base_size * 0.55, line)
+                    line = ""
+                self._font(base_size, bold=True)
+                self.write(base_size * 0.55, part[2:-2])
+                self._font(base_size)
+            elif part.startswith("*") and part.endswith("*") and len(part) > 1:
+                if line:
+                    self._font(base_size)
+                    self.write(base_size * 0.55, line)
+                    line = ""
+                self._font(base_size, italic=True)
+                self.write(base_size * 0.55, part[1:-1])
+                self._font(base_size)
+            elif part.startswith("`") and part.endswith("`"):
+                if line:
+                    self._font(base_size)
+                    self.write(base_size * 0.55, line)
+                    line = ""
+                # Code inline : juste en mono-equivalent
+                self.set_font("Courier", "", base_size - 0.5)
+                self.write(base_size * 0.55, part[1:-1])
+                self._font(base_size)
+            else:
+                line += part
+        if line:
+            self._font(base_size)
+            self.write(base_size * 0.55, line)
+        self.ln(base_size * 0.7)
+
+    def render_h1(self, text: str):
+        if self.get_y() > 30:
+            self.ln(4)
+        self._font(20, bold=True)
+        self._color(COLOR_H1)
+        self.multi_cell(0, 10, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        # Trait sous le H1
+        self.set_draw_color(*COLOR_H1)
+        self.set_line_width(0.6)
+        y = self.get_y()
+        self.line(self.l_margin, y, self.w - self.r_margin, y)
+        self.ln(4)
+
+    def render_h2(self, text: str):
+        self.ln(6)
+        self._font(14, bold=True)
+        self._color(COLOR_H2)
+        self.multi_cell(0, 7, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.set_draw_color(*COLOR_BORDER)
+        self.set_line_width(0.3)
+        y = self.get_y() + 0.5
+        self.line(self.l_margin, y, self.w - self.r_margin, y)
+        self.ln(3)
+
+    def render_h3(self, text: str):
+        self.ln(3)
+        self._font(11.5, bold=True)
+        self._color(COLOR_H3)
+        self.multi_cell(0, 6, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.ln(1)
+
+    def render_bullet(self, text: str):
+        self._font(10.5)
+        self._color(COLOR_TEXT)
+        # Indent + marker
+        x_start = self.get_x()
+        self.cell(5, 5, "*", new_x="RIGHT", new_y="TOP")
+        self.set_x(x_start + 5)
+        self.multi_cell(0, 5, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+
+    def render_paragraph(self, text: str):
+        self._font(10.5)
+        self._color(COLOR_TEXT)
+        self.multi_cell(0, 5, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.ln(1.5)
+
+    def render_italic(self, text: str):
+        self._font(9.5, italic=True)
+        self._color(COLOR_MUTE)
+        self.multi_cell(0, 4.5, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.ln(2)
+
+    def render_table(self, rows: list[list[str]]):
+        if not rows:
+            return
+        # Sanitize
+        rows = [[_strip_accents(c) for c in r] for r in rows]
+        ncols = max(len(r) for r in rows)
+        usable_w = self.w - self.l_margin - self.r_margin
+        col_w = usable_w / ncols
+
+        # Header (1ere ligne) puis body, en ignorant la ligne de separators
+        # (`|---|---|`).
+        header = rows[0]
+        body = [r for r in rows[1:] if not all(re.match(r"^-+$", c.strip()) or c.strip().startswith(":-") for c in r)]
+
+        # Calcul de la hauteur de ligne : on prend la max selon le nb de wraps
+        def line_height(row, font_size):
+            self._font(font_size)
+            max_h = 5
+            for cell in row:
+                # Estimation : la fonction `multi_cell` peut wrap. On
+                # compte en mesurant la largeur du texte vs col_w.
+                lines = self.multi_cell(
+                    col_w, 5, cell, new_x="LMARGIN", new_y="NEXT",
+                    dry_run=True, output="LINES",
+                )
+                h = max(1, len(lines)) * 5
+                if h > max_h:
+                    max_h = h
+            return max_h
+
+        # Header
+        h = line_height(header, 9.5)
+        self.set_fill_color(*COLOR_TABLE_HEAD)
+        self.set_draw_color(*COLOR_BORDER)
+        self._font(9.5, bold=True)
+        self._color(COLOR_H3)
+        y_start = self.get_y()
+        x_start = self.l_margin
+        for i, cell in enumerate(header):
+            x = x_start + i * col_w
+            self.set_xy(x, y_start)
+            self.multi_cell(col_w, 5, cell, border=1, fill=True)
+        self.set_xy(x_start, y_start + h)
+
+        # Body
+        self._font(9.5)
+        self._color(COLOR_TEXT)
+        for row in body:
+            # Pad row si moins de cols que header
+            while len(row) < ncols:
+                row.append("")
+            h = line_height(row, 9.5)
+            y_row = self.get_y()
+            if y_row + h > self.h - self.b_margin:
+                self.add_page()
+                y_row = self.get_y()
+            for i, cell in enumerate(row):
+                x = x_start + i * col_w
+                self.set_xy(x, y_row)
+                self.multi_cell(col_w, 5, cell, border=1)
+            self.set_xy(x_start, y_row + h)
+        self.ln(3)
 
 
-def convert_one(md_path: Path, edge: str) -> int:
+def parse_md_to_pdf(md_text: str, pdf_path: Path):
+    pdf = _Renderer()
+    pdf.add_page()
+
+    lines = md_text.split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip()
+
+        if not line.strip():
+            i += 1
+            continue
+
+        # Code fence : on ignore le marker mais on rend le contenu en
+        # monospace en bloc.
+        if line.startswith("```"):
+            block = []
+            i += 1
+            while i < len(lines) and not lines[i].startswith("```"):
+                block.append(lines[i])
+                i += 1
+            i += 1  # skip closing ```
+            pdf.set_font("Courier", "", 8.5)
+            pdf.set_text_color(*COLOR_TEXT)
+            pdf.set_fill_color(*COLOR_CODE_BG)
+            for bl in block:
+                pdf.multi_cell(
+                    0, 4, _strip_accents(bl),
+                    new_x="LMARGIN", new_y="NEXT", fill=True,
+                )
+            pdf.ln(2)
+            continue
+
+        # Tables : detecter `| col | col |` puis les lignes consecutives.
+        if line.startswith("|") and "|" in line[1:]:
+            rows = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+                rows.append(cells)
+                i += 1
+            pdf.render_table(rows)
+            continue
+
+        if line.startswith("# "):
+            pdf.render_h1(line[2:])
+        elif line.startswith("## "):
+            pdf.render_h2(line[3:])
+        elif line.startswith("### "):
+            pdf.render_h3(line[4:])
+        elif line.startswith("- ") or line.startswith("* "):
+            pdf.render_bullet(line[2:])
+        elif line.startswith("---") and len(line.strip("-").strip()) == 0:
+            pdf.ln(2)
+            pdf.set_draw_color(*COLOR_BORDER)
+            pdf.set_line_width(0.3)
+            y = pdf.get_y()
+            pdf.line(pdf.l_margin, y, pdf.w - pdf.r_margin, y)
+            pdf.ln(3)
+        elif line.startswith("*") and line.endswith("*") and line.count("*") == 2:
+            pdf.render_italic(line.strip("*"))
+        elif line.startswith(">"):
+            # Blockquote : juste un paragraphe en italique pour rester
+            # simple.
+            pdf.render_italic(line.lstrip(">").strip())
+        else:
+            pdf.render_paragraph(line)
+
+        i += 1
+
+    pdf.output(str(pdf_path))
+
+
+def convert_one(md_path: Path) -> int:
     pdf_path = md_path.with_suffix(".pdf")
-    html_path = md_path.with_name(f"_{md_path.stem}_temp.html")
-
     md_text = md_path.read_text(encoding="utf-8")
-    html_path.write_text(md_to_html(md_text), encoding="utf-8")
-
-    cmd = [
-        edge,
-        "--headless=new",
-        "--disable-gpu",
-        f"--print-to-pdf={pdf_path}",
-        "--no-pdf-header-footer",
-        html_path.as_uri(),
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    html_path.unlink(missing_ok=True)
-    if proc.returncode != 0:
-        print(f"Echec sur {md_path.name}")
-        print("Edge stdout:", proc.stdout)
-        print("Edge stderr:", proc.stderr)
-        return proc.returncode
-
+    parse_md_to_pdf(md_text, pdf_path)
     print(f"PDF genere : {pdf_path}")
     return 0
 
 
 def main() -> int:
-    edge = find_edge()
     args = sys.argv[1:]
     if args:
         targets = []
@@ -109,12 +351,14 @@ def main() -> int:
             targets.append(p)
     else:
         targets = sorted(HERE.glob("*.md"))
+        # Filtre les .md "internes" qui ne doivent pas etre PDF-ises.
+        targets = [t for t in targets if not t.name.startswith("_")]
         if not targets:
             print("Aucun .md trouve dans le dossier.")
             return 1
 
     for md in targets:
-        rc = convert_one(md, edge)
+        rc = convert_one(md)
         if rc != 0:
             return rc
     return 0
