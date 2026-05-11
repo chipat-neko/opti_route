@@ -286,4 +286,19 @@ void main() {
       expect(d, 5000); // mars exclu
     });
   });
+
+  group('TourneeStats - constante empty', () {
+    test('TourneeStats.empty : tout a zero', () {
+      const s = TourneeStats.empty;
+      expect(s.nbTournees, 0);
+      expect(s.nbTourneesTerminees, 0);
+      expect(s.nbArrets, 0);
+      expect(s.nbColisLivres, 0);
+      expect(s.nbLivres, 0);
+      expect(s.nbEchecs, 0);
+      expect(s.distanceMeters, 0);
+      expect(s.durationSeconds, 0);
+      expect(s.tauxReussite, 0);
+    });
+  });
 }
