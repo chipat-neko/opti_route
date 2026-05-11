@@ -41,6 +41,7 @@ FONT_MONO = "JetBrainsMono" if HAS_CUSTOM_FONTS else "Courier"
 # ─── Couleurs (palette de l'app si custom fonts, sinon ancien CSS) ──
 if HAS_CUSTOM_FONTS:
     # Palette opti_route (cf app/lib/theme/app_tokens.dart).
+    COLOR_BG = (245, 243, 238)      # cream #F5F3EE (background page de garde)
     COLOR_H1 = (14, 124, 90)        # emerald #0E7C5A
     COLOR_H2 = (14, 124, 90)
     COLOR_H3 = (14, 20, 16)         # ink #0E1410
@@ -51,6 +52,7 @@ if HAS_CUSTOM_FONTS:
     COLOR_CODE_BG = (239, 234, 224)  # creamSoft #EFEAE0
     COLOR_ACCENT = (184, 242, 74)   # lime #B8F24A (pour highlights)
 else:
+    COLOR_BG = (255, 255, 255)
     COLOR_H1 = (44, 82, 130)
     COLOR_H2 = (44, 82, 130)
     COLOR_H3 = (45, 55, 72)
@@ -113,10 +115,24 @@ def _strip_accents(s: str) -> str:
 
 
 class _Renderer(FPDF):
-    def __init__(self):
+    """Rendu PDF de base : marges A4 + chargement des fontes custom.
+
+    Les modes "presentation" (page de garde stylee + footer pagine
+    + header de section) sont actives via `--mode=pitch <md>` en ligne
+    de commande, ou en passant `mode='pitch'` au constructeur.
+    """
+
+    def __init__(self, mode: str = "report", title: str | None = None,
+                 subtitle: str | None = None, cover_logo: Path | None = None):
         super().__init__(format="A4")
         self.set_margins(left=16, top=18, right=16)
         self.set_auto_page_break(auto=True, margin=18)
+        self._mode = mode  # 'report' (default) ou 'pitch'
+        self._title = title or ""
+        self._subtitle = subtitle or ""
+        self._cover_logo = cover_logo
+        self._current_section = ""
+        self._cover_done = False
         if HAS_CUSTOM_FONTS:
             # Manrope variable font : fpdf2 charge l'instance default
             # (poids ~400). Le style="B" donnera un synthetic bold (fpdf2
@@ -127,6 +143,98 @@ class _Renderer(FPDF):
             self.add_font("Manrope", "BI", str(MANROPE_PATH))
             self.add_font("JetBrainsMono", "", str(JETBRAINS_REG))
             self.add_font("JetBrainsMono", "B", str(JETBRAINS_BOLD))
+
+    # ─── Hooks fpdf2 (header / footer) ──────────────────────────────
+    def header(self):
+        # Pas de header sur la page de garde du mode pitch.
+        if self._mode != "pitch" or self.page_no() == 1:
+            return
+        self.set_y(8)
+        self._font(8.5)
+        self._color(COLOR_MUTE)
+        self.set_x(self.l_margin)
+        title = self._title or "opti_route"
+        if self._current_section:
+            title = f"{title}  ·  {self._current_section}"
+        self.cell(0, 5, _strip_accents(title), new_x="LMARGIN", new_y="NEXT")
+        # Filet sous le header
+        self.set_draw_color(*COLOR_BORDER)
+        self.set_line_width(0.2)
+        y = 14
+        self.line(self.l_margin, y, self.w - self.r_margin, y)
+
+    def footer(self):
+        if self._mode != "pitch" or self.page_no() == 1:
+            return
+        self.set_y(-12)
+        self._font(8)
+        self._color(COLOR_MUTE)
+        self.cell(0, 5,
+                  _strip_accents(f"opti_route  ·  page {self.page_no()}"),
+                  align="C")
+
+    # ─── Page de garde mode pitch ───────────────────────────────────
+    def render_cover(self):
+        """Page de garde plein cadre, fond cream et titre emerald."""
+        if self._cover_done:
+            return
+        self.add_page()
+        # Fond cream qui couvre toute la page.
+        self.set_fill_color(*COLOR_BG)
+        self.rect(0, 0, self.w, self.h, "F")
+
+        # Bandeau lime en haut a gauche
+        self.set_fill_color(*COLOR_ACCENT)
+        self.rect(0, 0, 48, 6, "F")
+
+        # Logo si dispo
+        if self._cover_logo and self._cover_logo.exists():
+            try:
+                self.image(str(self._cover_logo), x=16, y=24, w=28)
+            except Exception:
+                pass
+
+        # Titre principal
+        self.set_y(60)
+        self.set_x(self.l_margin)
+        self._font(36, bold=True)
+        self._color(COLOR_H1)
+        self.multi_cell(0, 12, _strip_accents(self._title or "opti_route"),
+                        new_x="LMARGIN", new_y="NEXT")
+        self.ln(2)
+
+        # Sous-titre
+        if self._subtitle:
+            self._font(13)
+            self._color(COLOR_TEXT)
+            self.multi_cell(0, 6, _strip_accents(self._subtitle),
+                            new_x="LMARGIN", new_y="NEXT")
+            self.ln(8)
+
+        # Filet decoratif
+        self.set_draw_color(*COLOR_H1)
+        self.set_line_width(0.8)
+        y_line = self.get_y() + 2
+        self.line(self.l_margin, y_line,
+                  self.l_margin + 60, y_line)
+
+        # Footer page de garde : date + auteur
+        from datetime import date
+        self.set_y(self.h - 30)
+        self._font(9)
+        self._color(COLOR_MUTE)
+        self.set_x(self.l_margin)
+        self.cell(0, 5,
+                  _strip_accents(f"Rapport interne · {date.today().isoformat()}"),
+                  new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 5, _strip_accents("Auteur : Noah Trillon (chipat-neko)"),
+                  new_x="LMARGIN", new_y="NEXT")
+
+        self._cover_done = True
+
+    def set_section(self, section: str):
+        """Met a jour le titre de section affiche dans le header."""
+        self._current_section = section
 
     # Helpers de format
     def _font(self, size: float, bold: bool = False, italic: bool = False):
@@ -209,6 +317,11 @@ class _Renderer(FPDF):
         self.ln(4)
 
     def render_h2(self, text: str):
+        # En mode pitch : nouvelle page a chaque H2 majeur pour un
+        # rendu deck-style, et mise a jour du header.
+        if self._mode == "pitch" and self._cover_done:
+            self.add_page()
+            self._current_section = text
         self.ln(6)
         self._font(14, bold=True)
         self._color(COLOR_H2)
@@ -311,14 +424,60 @@ class _Renderer(FPDF):
         self.ln(3)
 
 
-def parse_md_to_pdf(md_text: str, pdf_path: Path):
-    pdf = _Renderer()
-    pdf.add_page()
+def parse_md_to_pdf(md_text: str, pdf_path: Path, mode: str = "report"):
+    """Parse un Markdown et produit un PDF.
+
+    En mode 'pitch', extrait le titre (1er H1) et le sous-titre (1ere
+    ligne italique) pour la page de garde, puis chaque H2 = nouvelle
+    page deck-style avec header.
+    """
+    title = ""
+    subtitle = ""
+    logo = (HERE / "_assets" / "logo-512.png")
+    if not logo.exists():
+        logo = None
 
     lines = md_text.split("\n")
+
+    if mode == "pitch":
+        # Scan rapide : 1er H1 = titre, 1ere ligne italique apres = sous-titre.
+        for ln in lines:
+            s = ln.strip()
+            if not title and s.startswith("# "):
+                title = s[2:].strip()
+            elif title and not subtitle and s.startswith("*") and s.endswith("*") and len(s) >= 3:
+                subtitle = s.strip("*").strip()
+                break
+            elif title and s and not s.startswith("#"):
+                # Si on tombe sur autre chose qu'un italique apres le H1,
+                # on s'arrete : pas de sous-titre.
+                break
+
+    pdf = _Renderer(mode=mode, title=title, subtitle=subtitle, cover_logo=logo)
+    if mode == "pitch":
+        pdf.render_cover()
+        pdf.add_page()
+    else:
+        pdf.add_page()
+
+    # Skip le 1er H1 et 1ere ligne italique (deja consommes en cover) en
+    # mode pitch.
+    consumed_title = False
+    consumed_subtitle = False
     i = 0
     while i < len(lines):
         line = lines[i].rstrip()
+
+        if mode == "pitch" and not consumed_title and line.strip().startswith("# "):
+            consumed_title = True
+            i += 1
+            continue
+        if (mode == "pitch" and consumed_title and not consumed_subtitle
+                and line.strip().startswith("*") and line.strip().endswith("*")
+                and len(line.strip()) >= 3):
+            consumed_subtitle = True
+            i += 1
+            continue
 
         if not line.strip():
             i += 1
@@ -383,16 +542,25 @@ def parse_md_to_pdf(md_text: str, pdf_path: Path):
     pdf.output(str(pdf_path))
 
 
-def convert_one(md_path: Path) -> int:
+def convert_one(md_path: Path, mode: str = "report") -> int:
     pdf_path = md_path.with_suffix(".pdf")
     md_text = md_path.read_text(encoding="utf-8")
-    parse_md_to_pdf(md_text, pdf_path)
-    print(f"PDF genere : {pdf_path}")
+    parse_md_to_pdf(md_text, pdf_path, mode=mode)
+    print(f"PDF genere : {pdf_path}  (mode={mode})")
     return 0
 
 
 def main() -> int:
     args = sys.argv[1:]
+    mode = "report"
+    cleaned = []
+    for a in args:
+        if a == "--pitch":
+            mode = "pitch"
+        else:
+            cleaned.append(a)
+    args = cleaned
+
     if args:
         targets = []
         for arg in args:
@@ -410,7 +578,7 @@ def main() -> int:
             return 1
 
     for md in targets:
-        rc = convert_one(md)
+        rc = convert_one(md, mode=mode)
         if rc != 0:
             return rc
     return 0
