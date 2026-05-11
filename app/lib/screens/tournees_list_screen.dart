@@ -170,19 +170,27 @@ class _TourneesList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Tri en 2 sections : actives en haut (brouillon / optimisee /
-    // en_cours), terminees en bas (statut == 'terminee'). A l'interieur
-    // de chaque section, ordre par date decroissante.
+    // Tri en 3 sections : templates en haut (modeles reutilisables),
+    // actives ensuite (brouillon / optimisee / en_cours), terminees en
+    // bas. A l'interieur de chaque section, ordre par date decroissante.
+    final templates = tournees.where((t) => t.isTemplate).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
     final actives = tournees
-        .where((t) => t.statut != 'terminee')
+        .where((t) => !t.isTemplate && t.statut != 'terminee')
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
     final terminees = tournees
-        .where((t) => t.statut == 'terminee')
+        .where((t) => !t.isTemplate && t.statut == 'terminee')
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
     final items = <Widget>[];
+    if (templates.isNotEmpty) {
+      items.add(const _SectionHeader('Templates recurrents'));
+      for (final t in templates) {
+        items.add(_TourneeRow(tournee: t));
+      }
+    }
     if (actives.isNotEmpty) {
       items.add(const _SectionHeader('En cours / a venir'));
       for (final t in actives) {
@@ -448,6 +456,44 @@ class _TourneeRow extends ConsumerWidget {
                 label: const Text(
                   'Dupliquer comme template',
                   style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.paper,
+                  foregroundColor: AppColors.ink,
+                  minimumSize: const Size(0, 52),
+                  alignment: Alignment.centerLeft,
+                ),
+                onPressed: () async {
+                  Navigator.of(sheetContext).pop();
+                  await ref
+                      .read(tourneesRepositoryProvider)
+                      .toggleTemplate(tournee.id);
+                  if (!context.mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        tournee.isTemplate
+                            ? 'Plus marquee comme template'
+                            : 'Marquee comme template recurrent',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  tournee.isTemplate ? Icons.star : Icons.star_border,
+                  color: tournee.isTemplate
+                      ? AppColors.amber
+                      : AppColors.ink,
+                ),
+                label: Text(
+                  tournee.isTemplate
+                      ? 'Retirer du Templates'
+                      : 'Marquer comme template',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ],
