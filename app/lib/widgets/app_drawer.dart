@@ -19,15 +19,16 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasEnCours = ref.watch(hasTourneeEnCoursProvider);
+    final p = context.palette;
     return Drawer(
-      backgroundColor: AppColors.cream,
+      backgroundColor: p.cream,
       surfaceTintColor: Colors.transparent,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.x22,
                 AppSpacing.x28,
                 AppSpacing.x22,
@@ -41,16 +42,16 @@ class AppDrawer extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
+                      color: p.ink,
                       letterSpacing: -0.4,
                     ),
                   ),
-                  SizedBox(height: AppSpacing.x4),
+                  const SizedBox(height: AppSpacing.x4),
                   Text(
                     'Optimisation de tournees',
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textMute,
+                      color: p.textMute,
                     ),
                   ),
                 ],
@@ -73,7 +74,7 @@ class AppDrawer extends ConsumerWidget {
                           color: AppColors.lime,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.cream,
+                            color: p.cream,
                             width: 1.5,
                           ),
                         ),

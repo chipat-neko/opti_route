@@ -719,6 +719,9 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    // Quand highlight=true, fond lime fixe -> texte ink fixe (signal accent
+    // qui doit rester lisible dans les 2 modes).
+    final fg = highlight ? AppColors.ink : p.ink;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
@@ -728,7 +731,7 @@ class _StatusCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: p.ink),
+          Icon(icon, color: fg),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(
@@ -739,7 +742,7 @@ class _StatusCard extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
-                    color: p.ink,
+                    color: fg,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -747,7 +750,7 @@ class _StatusCard extends StatelessWidget {
                   subtitle,
                   style: appMonoStyle(
                     fontSize: 11,
-                    color: p.ink.withValues(alpha: 0.75),
+                    color: fg.withValues(alpha: 0.75),
                   ),
                 ),
               ],

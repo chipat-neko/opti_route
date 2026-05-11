@@ -500,7 +500,6 @@ class _AutoDetectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
@@ -512,13 +511,13 @@ class _AutoDetectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.auto_awesome, color: p.ink, size: 18),
+              const Icon(Icons.auto_awesome, color: AppColors.ink, size: 18),
               const SizedBox(width: AppSpacing.x8),
               Text(
                 'DETECTION AUTOMATIQUE',
                 style: appMonoStyle(
                   fontSize: 11,
-                  color: p.ink,
+                  color: AppColors.ink,
                   letterSpacing: 0.6,
                   fontWeight: FontWeight.w800,
                 ),
@@ -560,7 +559,7 @@ class _AutoDetectionCard extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onUse,
               style: FilledButton.styleFrom(
-                backgroundColor: p.ink,
+                backgroundColor: AppColors.ink,
                 foregroundColor: AppColors.lime,
                 minimumSize: const Size(0, 48),
               ),
@@ -589,7 +588,8 @@ class _ExtractedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
+    // _ExtractedRow est toujours rendu sur fond accent fixe (lime ou amber)
+    // donc texte ink fixe pour rester lisible dans les 2 modes.
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -601,7 +601,7 @@ class _ExtractedRow extends StatelessWidget {
               label,
               style: appMonoStyle(
                 fontSize: 10,
-                color: p.ink.withValues(alpha: 0.6),
+                color: AppColors.ink.withValues(alpha: 0.6),
                 letterSpacing: 0.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -614,16 +614,18 @@ class _ExtractedRow extends StatelessWidget {
               style: mono
                   ? appMonoStyle(
                       fontSize: 13,
-                      color: p.ink,
+                      color: AppColors.ink,
                       fontWeight:
                           bold ? FontWeight.w800 : FontWeight.w700,
                     )
-                  : TextStyle(
+                  : const TextStyle(
                       fontSize: 13,
-                      color: p.ink,
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    ).copyWith(
                       fontWeight:
                           bold ? FontWeight.w800 : FontWeight.w600,
-                      height: 1.3,
                     ),
             ),
           ),

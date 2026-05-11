@@ -73,6 +73,7 @@ class _NoTourTodayScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
@@ -88,14 +89,14 @@ class _NoTourTodayScreen extends StatelessWidget {
               Container(
                 width: 96,
                 height: 96,
-                decoration: const BoxDecoration(
-                  color: AppColors.creamSoft,
+                decoration: BoxDecoration(
+                  color: p.creamSoft,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.local_shipping_outlined,
                   size: 44,
-                  color: AppColors.ink,
+                  color: p.ink,
                 ),
               ),
               const SizedBox(height: AppSpacing.x18),
@@ -104,12 +105,12 @@ class _NoTourTodayScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: AppSpacing.x8),
-              const Text(
+              Text(
                 'Cree-la maintenant pour commencer a ajouter tes arrets.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textMute,
+                  color: p.textMute,
                   height: 1.4,
                 ),
               ),
