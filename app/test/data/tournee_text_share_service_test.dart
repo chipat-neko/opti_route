@@ -156,6 +156,30 @@ void main() {
       expect(out, isNot(contains('EUR')));
     });
 
+    test('tournee vide (0 arret) : header sans crash, pas de liste',
+        () async {
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T vide',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+      final tournee = await (db.select(db.tournees)
+            ..where((t) => t.id.equals(id)))
+          .getSingle();
+
+      final out =
+          await svc.formatPlainText(tournee: tournee, stops: const []);
+      expect(out, contains('T vide'));
+      expect(out, contains('0 arret')); // singulier
+      expect(out, contains('0 colis'));
+      // Pas de "1." ni "2." dans le texte
+      expect(out, isNot(contains('\n1. ')));
+    });
+
     test('priorites speciales : EN 1ER / EN DERNIER / A EVITER', () async {
       final id = await db.into(db.tournees).insert(
             TourneesCompanion.insert(
