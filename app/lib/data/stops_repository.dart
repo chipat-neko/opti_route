@@ -47,18 +47,16 @@ class StopsRepository {
     return (_db.delete(_db.stops)..where((s) => s.id.equals(id))).go();
   }
 
-  /// Marque un arret comme livre. Reset la raison d'echec si elle
-  /// avait ete remplie precedemment.
-  ///
-  /// Si [position] est fourni (best-effort GPS au moment du tap), on
-  /// l'enregistre comme preuve de passage (utile en cas de litige
-  /// client). Idem pour [livreLe] qui timestamp la validation.
+  /// Marque un arret comme livre + ecrit une ligne dans StopHistory
+  /// pour tracer la transition (en cas de litige client).
   Future<int> markLivre(
     int id, {
     ({double lat, double lng})? position,
     DateTime? livreLe,
-  }) {
-    return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
+  }) async {
+    final previous = await getById(id);
+    final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
+        .write(
       StopsCompanion(
         statutLivraison: const Value('livre'),
         raisonEchec: const Value(null),
@@ -69,18 +67,27 @@ class StopsRepository {
         livreLe: Value(livreLe ?? DateTime.now()),
       ),
     );
+    if (previous != null) {
+      await _logHistory(
+        stopId: id,
+        action: 'mark_livre',
+        fromStatus: previous.statutLivraison,
+        toStatus: 'livre',
+      );
+    }
+    return n;
   }
 
-  /// Marque un arret en echec avec une raison ('absent', 'refuse',
-  /// 'adresse_fausse', 'autre'). Idem [markLivre] pour la position
-  /// GPS optionnelle.
+  /// Marque un arret en echec + log dans StopHistory avec la raison.
   Future<int> markEchec(
     int id,
     String raison, {
     ({double lat, double lng})? position,
     DateTime? livreLe,
-  }) {
-    return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
+  }) async {
+    final previous = await getById(id);
+    final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
+        .write(
       StopsCompanion(
         statutLivraison: const Value('echec'),
         raisonEchec: Value(raison),
@@ -91,12 +98,23 @@ class StopsRepository {
         livreLe: Value(livreLe ?? DateTime.now()),
       ),
     );
+    if (previous != null) {
+      await _logHistory(
+        stopId: id,
+        action: 'mark_echec',
+        fromStatus: previous.statutLivraison,
+        toStatus: 'echec',
+        raison: raison,
+      );
+    }
+    return n;
   }
 
-  /// Annule un statut deja pose : remet en 'a_livrer' et efface la
-  /// position GPS / timestamp de validation.
-  Future<int> markAaLivrer(int id) {
-    return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
+  /// Annule un statut deja pose + log la transition inverse.
+  Future<int> markAaLivrer(int id) async {
+    final previous = await getById(id);
+    final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
+        .write(
       const StopsCompanion(
         statutLivraison: Value('a_livrer'),
         raisonEchec: Value(null),
@@ -105,6 +123,42 @@ class StopsRepository {
         livreLe: Value(null),
       ),
     );
+    if (previous != null) {
+      await _logHistory(
+        stopId: id,
+        action: 'mark_a_livrer',
+        fromStatus: previous.statutLivraison,
+        toStatus: 'a_livrer',
+      );
+    }
+    return n;
+  }
+
+  Future<void> _logHistory({
+    required int stopId,
+    required String action,
+    required String fromStatus,
+    required String toStatus,
+    String? raison,
+  }) async {
+    await _db.into(_db.stopHistory).insert(
+          StopHistoryCompanion.insert(
+            stopId: stopId,
+            action: action,
+            fromStatus: fromStatus,
+            toStatus: toStatus,
+            raison: Value(raison),
+          ),
+        );
+  }
+
+  /// Recupere l'historique des transitions d'un arret, ordre chrono
+  /// du plus recent au plus ancien.
+  Future<List<StopHistoryData>> getHistory(int stopId) {
+    return (_db.select(_db.stopHistory)
+          ..where((h) => h.stopId.equals(stopId))
+          ..orderBy([(h) => OrderingTerm.desc(h.timestamp)]))
+        .get();
   }
 
   Future<int> countByTournee(int tourneeId) async {
