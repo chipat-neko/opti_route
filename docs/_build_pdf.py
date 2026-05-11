@@ -125,8 +125,10 @@ class _Renderer(FPDF):
     def __init__(self, mode: str = "report", title: str | None = None,
                  subtitle: str | None = None, cover_logo: Path | None = None):
         super().__init__(format="A4")
-        self.set_margins(left=16, top=18, right=16)
-        self.set_auto_page_break(auto=True, margin=18)
+        # En mode pitch on laisse plus de top margin pour le header.
+        top = 24 if mode == "pitch" else 18
+        self.set_margins(left=18, top=top, right=18)
+        self.set_auto_page_break(auto=True, margin=22 if mode == "pitch" else 18)
         self._mode = mode  # 'report' (default) ou 'pitch'
         self._title = title or ""
         self._subtitle = subtitle or ""
@@ -227,7 +229,7 @@ class _Renderer(FPDF):
         self.cell(0, 5,
                   _strip_accents(f"Rapport interne · {date.today().isoformat()}"),
                   new_x="LMARGIN", new_y="NEXT")
-        self.cell(0, 5, _strip_accents("Auteur : Noah Trillon (chipat-neko)"),
+        self.cell(0, 5, _strip_accents("Auteur : CALOTE Noah"),
                   new_x="LMARGIN", new_y="NEXT")
 
         self._cover_done = True
@@ -317,20 +319,28 @@ class _Renderer(FPDF):
         self.ln(4)
 
     def render_h2(self, text: str):
-        # En mode pitch : nouvelle page a chaque H2 majeur pour un
-        # rendu deck-style, et mise a jour du header.
+        # En mode pitch : on met a jour le header de section, et on
+        # bascule sur nouvelle page UNIQUEMENT si le reste de la page
+        # courante est trop petit (sinon trous blancs).
         if self._mode == "pitch" and self._cover_done:
-            self.add_page()
             self._current_section = text
-        self.ln(6)
-        self._font(14, bold=True)
+            # Force nouvelle page si on a moins de 60mm restants
+            # (un H2 + au moins quelques lignes ne tiennent pas).
+            remaining = (self.h - self.b_margin) - self.get_y()
+            if remaining < 60:
+                self.add_page()
+            else:
+                self.ln(8)
+        else:
+            self.ln(6)
+        self._font(16, bold=True)
         self._color(COLOR_H2)
-        self.multi_cell(0, 7, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 8, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*COLOR_BORDER)
         self.set_line_width(0.3)
         y = self.get_y() + 0.5
         self.line(self.l_margin, y, self.w - self.r_margin, y)
-        self.ln(3)
+        self.ln(4)
 
     def render_h3(self, text: str):
         self.ln(3)
@@ -340,19 +350,23 @@ class _Renderer(FPDF):
         self.ln(1)
 
     def render_bullet(self, text: str):
-        self._font(10.5)
+        body_size = 11.5 if self._mode == "pitch" else 10.5
+        lh = 6 if self._mode == "pitch" else 5
+        self._font(body_size)
         self._color(COLOR_TEXT)
-        # Indent + marker
         x_start = self.get_x()
-        self.cell(5, 5, "*", new_x="RIGHT", new_y="TOP")
+        self.cell(5, lh, "*", new_x="RIGHT", new_y="TOP")
         self.set_x(x_start + 5)
-        self.multi_cell(0, 5, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, lh, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.ln(0.5)
 
     def render_paragraph(self, text: str):
-        self._font(10.5)
+        body_size = 11.5 if self._mode == "pitch" else 10.5
+        lh = 6 if self._mode == "pitch" else 5
+        self._font(body_size)
         self._color(COLOR_TEXT)
-        self.multi_cell(0, 5, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
-        self.ln(1.5)
+        self.multi_cell(0, lh, _strip_accents(text), new_x="LMARGIN", new_y="NEXT")
+        self.ln(2.5 if self._mode == "pitch" else 1.5)
 
     def render_italic(self, text: str):
         self._font(9.5, italic=True)
