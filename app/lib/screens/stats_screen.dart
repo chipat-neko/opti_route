@@ -5,6 +5,7 @@ import '../data/stats_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/tournee_en_cours_pill.dart';
 
 /// Ecran "Statistiques cumulatives" accessible depuis le drawer.
 /// Affiche 3 fenetres : 7 derniers jours / 30 jours / 365 jours.
@@ -18,6 +19,7 @@ class StatsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Statistiques'),
+        actions: const [TourneeEnCoursPill()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x18),

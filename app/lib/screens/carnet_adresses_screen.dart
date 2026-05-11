@@ -10,6 +10,7 @@ import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/tournee_en_cours_pill.dart';
 import 'carnet_edit_screen.dart';
 
 /// Liste des entrees du carnet d'adresses local. Recherche en haut,
@@ -43,6 +44,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
             tooltip: 'Exporter en CSV',
             onPressed: _onExportPressed,
           ),
+          const TourneeEnCoursPill(),
         ],
       ),
       body: Column(

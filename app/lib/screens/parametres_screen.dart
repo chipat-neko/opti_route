@@ -8,6 +8,7 @@ import '../providers/optimization_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/tournee_en_cours_pill.dart';
 import 'mentions_legales_screen.dart';
 
 class ParametresScreen extends ConsumerStatefulWidget {
@@ -72,6 +73,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Parametres'),
+        actions: const [TourneeEnCoursPill()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x18),
