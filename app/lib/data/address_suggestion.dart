@@ -1,4 +1,32 @@
-/// Une suggestion d'adresse retournee par Nominatim (OpenStreetMap).
+/// Source de donnees qui a produit une suggestion. Sert a afficher
+/// un badge dans l'UI (transparence) et a debugger les choix de
+/// cascade.
+enum AddressSource {
+  /// Carnet d'adresses local (clients deja livres). Toujours en 1er.
+  carnet,
+
+  /// Base Adresse Nationale (api-adresse.data.gouv.fr). Source
+  /// officielle pour les adresses postales francaises.
+  ban,
+
+  /// Annuaire SIRENE / Recherche-Entreprises
+  /// (recherche-entreprises.api.gouv.fr). Source officielle pour les
+  /// entreprises immatriculees en France.
+  sirene,
+
+  /// Photon (OSM/Komoot). Couverture mondiale pour les enseignes,
+  /// monuments, lieux publics.
+  photon,
+
+  /// Nominatim direct (rarement utilise, voir geocoding_service).
+  osm,
+
+  /// Source inconnue / pas precisee (compat back).
+  unknown,
+}
+
+/// Une suggestion d'adresse retournee par la cascade de geocodage
+/// (BAN / SIRENE / Photon) ou par le carnet local.
 ///
 /// `lat` et `lon` ne sont jamais montres a l'utilisateur — ils sont
 /// stockes en base et utilises pour le geocoding inverse, l'optimisation
@@ -15,10 +43,19 @@ class AddressSuggestion {
     this.country,
     this.poiName,
     this.fromCarnet = false,
+    this.source = AddressSource.unknown,
   });
+
+  /// Source qui a produit cette suggestion (BAN, SIRENE, Photon,
+  /// Carnet, OSM). Sert a afficher un badge informatif a l'utilisateur
+  /// et a debugger les choix de cascade.
+  final AddressSource source;
 
   /// Vrai si la suggestion vient du carnet d'adresses local
   /// (un client deja livre). L'UI peut afficher un badge "DEJA LIVRE".
+  ///
+  /// Note : redondant avec `source == AddressSource.carnet` mais
+  /// garde pour compat back avec le code historique.
   final bool fromCarnet;
 
   /// Reponse complete de Nominatim (`display_name`).
@@ -91,7 +128,10 @@ class AddressSuggestion {
     return displayName;
   }
 
-  factory AddressSuggestion.fromJson(Map<String, dynamic> json) {
+  factory AddressSuggestion.fromJson(
+    Map<String, dynamic> json, {
+    AddressSource source = AddressSource.osm,
+  }) {
     final address = (json['address'] as Map?)?.cast<String, dynamic>();
     return AddressSuggestion(
       displayName: json['display_name'] as String? ?? '',
@@ -108,7 +148,26 @@ class AddressSuggestion {
           address?['municipality'] as String?,
       country: address?['country'] as String?,
       poiName: json['name'] as String?,
+      source: source,
     );
+  }
+
+  /// Label court pour le badge UI : `BAN`, `SIRENE`, `OSM`, `Carnet`.
+  String? get sourceBadge {
+    switch (source) {
+      case AddressSource.carnet:
+        return 'Carnet';
+      case AddressSource.ban:
+        return 'BAN';
+      case AddressSource.sirene:
+        return 'SIRENE';
+      case AddressSource.photon:
+        return 'OSM';
+      case AddressSource.osm:
+        return 'OSM';
+      case AddressSource.unknown:
+        return null;
+    }
   }
 
   @override

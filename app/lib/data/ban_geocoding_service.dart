@@ -81,6 +81,41 @@ class BanGeocodingService implements GeocodingService {
     return results;
   }
 
+  /// Recherche de communes uniquement (BAN type=municipality). Sert a
+  /// l'auto-correct quand la cascade standard a rien trouve : BAN fait
+  /// du fuzzy matching sur les noms de communes francaises, ce qui
+  /// rattrape les fautes de frappe ("Charters" -> "Chartres",
+  /// "Marseile" -> "Marseille").
+  ///
+  /// Le score BAN tient compte de l'edit distance, on n'a pas besoin
+  /// de notre propre Levenshtein.
+  Future<List<AddressSuggestion>> searchMunicipalities(
+    String query, {
+    int limit = 3,
+  }) async {
+    final q = query.trim();
+    if (q.length < 3) return const [];
+
+    final uri = Uri.https('api-adresse.data.gouv.fr', '/search/', {
+      'q': q,
+      'limit': '$limit',
+      'type': 'municipality',
+      'autocomplete': '0', // on veut le best-match, pas le prefix
+    });
+    final response =
+        await _client.get(uri, headers: {'User-Agent': _userAgent});
+    if (response.statusCode != 200) return const [];
+    final raw = jsonDecode(response.body);
+    if (raw is! Map<String, dynamic>) return const [];
+    final features = raw['features'];
+    if (features is! List) return const [];
+    return features
+        .whereType<Map<String, dynamic>>()
+        .map(_toSuggestion)
+        .whereType<AddressSuggestion>()
+        .toList(growable: false);
+  }
+
   /// Reverse geocoding : a partir d'un point GPS, retourne l'adresse
   /// la plus proche selon BAN. Utilise par le mode "tap sur la carte"
   /// qui permet a Noah de pointer un emplacement quand l'autocomplete
@@ -138,6 +173,7 @@ class BanGeocodingService implements GeocodingService {
       postcode: postcode,
       city: city,
       country: 'France',
+      source: AddressSource.ban,
     );
   }
 

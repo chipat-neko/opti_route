@@ -144,6 +144,7 @@ class PhotonService implements GeocodingService {
       city: city,
       country: country,
       poiName: isPoi ? name : null,
+      source: AddressSource.photon,
     );
   }
 

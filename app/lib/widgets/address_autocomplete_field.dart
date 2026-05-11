@@ -170,6 +170,7 @@ class _AddressAutocompleteFieldState
       city: d.ville,
       poiName: d.nomClient,
       fromCarnet: true,
+      source: AddressSource.carnet,
     );
   }
 
@@ -402,33 +403,42 @@ class _SuggestionTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  if (fromCarnet)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: _Badge(
-                        label: 'DEJA LIVRE',
-                        bg: AppColors.lime,
-                        fg: AppColors.ink,
-                      ),
-                    )
-                  else if (isPoi)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: _Badge(
-                        label: 'COMMERCE',
-                        bg: AppColors.emeraldSoft,
-                        fg: AppColors.emerald,
-                      ),
-                    )
-                  else if (!hasNumber)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: _Badge(
-                        label: 'SANS NUMERO',
-                        bg: AppColors.amber.withValues(alpha: 0.2),
-                        fg: AppColors.amber.withValues(alpha: 0.95),
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Wrap(
+                      spacing: AppSpacing.x4,
+                      runSpacing: 2,
+                      children: [
+                        if (fromCarnet)
+                          _Badge(
+                            label: 'DEJA LIVRE',
+                            bg: AppColors.lime,
+                            fg: AppColors.ink,
+                          )
+                        else if (isPoi)
+                          _Badge(
+                            label: 'COMMERCE',
+                            bg: AppColors.emeraldSoft,
+                            fg: AppColors.emerald,
+                          )
+                        else if (!hasNumber)
+                          _Badge(
+                            label: 'SANS NUMERO',
+                            bg: AppColors.amber.withValues(alpha: 0.2),
+                            fg: AppColors.amber.withValues(alpha: 0.95),
+                          ),
+                        // Badge source (BAN / SIRENE / OSM / Carnet) :
+                        // permet a l'utilisateur de savoir d'ou vient
+                        // la donnee et aide au debug terrain.
+                        if (suggestion.sourceBadge != null && !fromCarnet)
+                          _Badge(
+                            label: suggestion.sourceBadge!.toUpperCase(),
+                            bg: AppColors.creamSoft,
+                            fg: AppColors.textMute,
+                          ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),

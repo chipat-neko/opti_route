@@ -171,6 +171,7 @@ class RechercheEntreprisesService implements GeocodingService {
       city: city,
       country: country,
       poiName: nomComplet,
+      source: AddressSource.sirene,
     );
   }
 

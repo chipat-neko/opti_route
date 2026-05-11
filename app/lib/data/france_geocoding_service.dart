@@ -43,6 +43,20 @@ class FranceGeocodingService implements GeocodingService {
     int limit = 10,
     String acceptLanguage = 'fr-FR',
   }) async {
+    // V7.2 : detection des formats specifiques (SIRET, SIREN).
+    // Si Noah colle un identifiant officiel depuis un bordereau, on
+    // saute la cascade et on tape directement SIRENE -- resultat
+    // beaucoup plus precis qu'une recherche textuelle.
+    final siret = extractSiret(query);
+    if (siret != null) {
+      try {
+        final results = await entreprises.search(siret, limit: limit);
+        if (results.isNotEmpty) return _dedupe(results);
+      } catch (_) {
+        // Echec : on continue avec la cascade normale en repli.
+      }
+    }
+
     final looksLikeAddress = _looksLikeAddress(query);
 
     final order = looksLikeAddress
@@ -68,6 +82,20 @@ class FranceGeocodingService implements GeocodingService {
     }
 
     if (accumulated.isEmpty) {
+      // V7.3 : auto-correct des communes. Aucune des 3 sources n'a
+      // trouve. Si la query semble contenir un nom de ville (au moins
+      // 4 lettres), on demande a BAN un best-match parmi les
+      // communes francaises (type=municipality). Ca rattrape les
+      // fautes de frappe : "Charters" -> "Chartres", "Marseile" ->
+      // "Marseille".
+      if (query.trim().length >= 4) {
+        try {
+          final corrections = await ban.searchMunicipalities(query);
+          if (corrections.isNotEmpty) return _dedupe(corrections);
+        } catch (_) {
+          // Echec silencieux.
+        }
+      }
       return const [];
     }
     return _dedupe(accumulated);
@@ -75,6 +103,24 @@ class FranceGeocodingService implements GeocodingService {
 
   bool _looksLikeAddress(String query) {
     return RegExp(r'^\s*\d', caseSensitive: false).hasMatch(query);
+  }
+
+  /// Detecte si la query contient un SIRET (14 chiffres consecutifs)
+  /// ou SIREN (9 chiffres consecutifs). Tolere espaces et tirets pour
+  /// que Noah puisse coller depuis un bordereau au format "832 023 558
+  /// 00018".
+  ///
+  /// Retourne le SIRET nettoye (14 chiffres) ou SIREN (9 chiffres), ou
+  /// null si la query ne contient pas ce format.
+  ///
+  /// Public visible pour les tests, mais ne pas appeler depuis l'UI :
+  /// la cascade `search()` l'utilise deja en interne pour court-
+  /// circuiter et taper directement SIRENE.
+  static String? extractSiret(String query) {
+    final digitsOnly = query.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length == 14) return digitsOnly;
+    if (digitsOnly.length == 9) return digitsOnly;
+    return null;
   }
 
   bool _isPrecise(AddressSuggestion s) {
