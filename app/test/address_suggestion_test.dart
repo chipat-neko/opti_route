@@ -77,4 +77,51 @@ void main() {
       expect(s.fromCarnet, isTrue);
     });
   });
+
+  group('AddressSuggestion - isPoi', () {
+    test('poiName null : isPoi = false', () {
+      const s = AddressSuggestion(displayName: 'A', lat: 48, lon: 1);
+      expect(s.isPoi, isFalse);
+    });
+
+    test('poiName vide : isPoi = false', () {
+      const s = AddressSuggestion(
+        displayName: 'A',
+        lat: 48,
+        lon: 1,
+        poiName: '',
+      );
+      expect(s.isPoi, isFalse);
+    });
+
+    test('poiName renseigne : isPoi = true', () {
+      const s = AddressSuggestion(
+        displayName: 'A',
+        lat: 48,
+        lon: 1,
+        poiName: 'Carrefour Dreux',
+      );
+      expect(s.isPoi, isTrue);
+    });
+
+    test('primaryLabel : retourne poiName si POI, sinon rue', () {
+      const poi = AddressSuggestion(
+        displayName: 'BCI CHARTRES, IMPASSE X, 28000',
+        lat: 48,
+        lon: 1,
+        poiName: 'BCI CHARTRES',
+        road: 'IMPASSE X',
+      );
+      expect(poi.primaryLabel, 'BCI CHARTRES');
+
+      const addr = AddressSuggestion(
+        displayName: '14 rue X',
+        lat: 48,
+        lon: 1,
+        road: 'rue X',
+        houseNumber: '14',
+      );
+      expect(addr.primaryLabel, '14 rue X');
+    });
+  });
 }
