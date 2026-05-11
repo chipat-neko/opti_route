@@ -71,6 +71,9 @@ nettoyées).
 **Nettoyage** : suppression de `nominatim_service.dart` (~204 lignes
 de code mort) — remplacé par FranceGeocodingService depuis longtemps.
 
+**Bilan session** : 39+ commits, 0 issue `flutter analyze`, APK
+release **v1.1.0+2** (~96 MB) prêt à `app/build/app/outputs/flutter-apk/app-release.apk`.
+
 **Documentation** :
 - `docs/user-guide.md` : guide utilisateur exhaustif
 - `docs/play_store/listing.md` : fiche Play Store enrichie
