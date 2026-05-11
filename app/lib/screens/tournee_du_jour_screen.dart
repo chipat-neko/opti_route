@@ -96,8 +96,17 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             onSelected: (value) {
               if (value == 'delete') _confirmDeleteTournee();
               if (value == 'export_pdf') _onExportPdfPressed();
+              if (value == 'batch_livre') _onBatchLivrePressed();
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'batch_livre',
+                child: ListTile(
+                  leading: Icon(Icons.done_all, color: AppColors.emerald),
+                  title: Text('Tout marquer livre'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               PopupMenuItem(
                 value: 'export_pdf',
                 child: ListTile(
@@ -174,6 +183,86 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         SnackBar(content: Text('Erreur lors de la suppression : $e')),
       );
     }
+  }
+
+  /// Action "Tout marquer livre" : valide d'un coup tous les arrets
+  /// restants en statut 'a_livrer'. Utile pour les depots d'entreprise
+  /// ou on livre 10 colis en une fois, ou pour cloturer rapidement une
+  /// tournee terminee qu'on a oublie de marquer.
+  Future<void> _onBatchLivrePressed() async {
+    final stopsRepo = ref.read(stopsRepositoryProvider);
+    final tourneesRepo = ref.read(tourneesRepositoryProvider);
+    final all = await stopsRepo.getByTournee(widget.tournee.id);
+    final pending =
+        all.where((s) => s.statutLivraison == 'a_livrer').toList();
+    if (!mounted) return;
+    if (pending.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aucun arret en attente de livraison'),
+        ),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Tout marquer livre ?'),
+        content: Text(
+          '${pending.length} arret(s) en attente vont etre marques comme '
+          'livres. Tu pourras revenir en arriere arret par arret depuis la '
+          'bottom sheet si besoin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.emerald,
+              foregroundColor: AppColors.paper,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Tout livrer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    // Capture GPS une fois pour tout le batch (best-effort).
+    ({double lat, double lng})? pos;
+    try {
+      final ok = await LocationService.ensurePermission();
+      if (ok) {
+        final p = await LocationService.currentPosition()
+            .timeout(const Duration(seconds: 4));
+        pos = (lat: p.latitude, lng: p.longitude);
+      }
+    } catch (_) {}
+
+    for (final s in pending) {
+      await stopsRepo.markLivre(s.id, position: pos);
+    }
+    // Bascule auto en 'terminee' (tous les arrets valides maintenant).
+    final refreshed = await stopsRepo.getByTournee(widget.tournee.id);
+    final tousValides = refreshed.every(
+      (s) => s.statutLivraison == 'livre' || s.statutLivraison == 'echec',
+    );
+    if (tousValides) {
+      await tourneesRepo.update(
+        widget.tournee.id,
+        const TourneesCompanion(statut: Value('terminee')),
+      );
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${pending.length} arret(s) marques livres'),
+        backgroundColor: AppColors.emerald,
+      ),
+    );
   }
 
   Future<void> _onExportPdfPressed() async {
