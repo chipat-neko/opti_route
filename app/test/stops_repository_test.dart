@@ -189,5 +189,45 @@ void main() {
       expect(revert.fromStatus, 'livre');
       expect(revert.toStatus, 'a_livrer');
     });
+
+    test('getHistory : log les 3 transitions livre/echec/revert',
+        () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markLivre(sId);
+      await repo.markEchec(sId, 'absent');
+      await repo.revertStatus(sId);
+      final hist = await repo.getHistory(sId);
+      // 3 evenements logges, ordre exact peut depender de la precision
+      // de stockage Drift sur la milli. On verifie juste la presence.
+      expect(hist, hasLength(3));
+      final actions = hist.map((h) => h.action).toSet();
+      expect(actions, containsAll(['mark_livre', 'mark_echec', 'revert']));
+    });
+
+    test('updateCoords : met a jour lat/lng + adresseNormalisee uniquement',
+        () async {
+      final (_, sId) = await seedTourneeWithStop();
+      // Set des notes + nbColis avant le re-geocodage
+      await repo.update(
+        sId,
+        StopsCompanion(
+          notes: const Value('garde-meuble'),
+          nbColis: const Value(7),
+        ),
+      );
+      await repo.updateCoords(
+        stopId: sId,
+        lat: 48.9999,
+        lng: 1.9999,
+        adresseNormalisee: '14 rue X, 28000 Chartres',
+      );
+      final s = await repo.getById(sId);
+      expect(s!.lat, 48.9999);
+      expect(s.lng, 1.9999);
+      expect(s.adresseNormalisee, '14 rue X, 28000 Chartres');
+      // Les autres champs (notes, nbColis) sont preserves.
+      expect(s.notes, 'garde-meuble');
+      expect(s.nbColis, 7);
+    });
   });
 }
