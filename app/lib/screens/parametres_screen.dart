@@ -418,6 +418,23 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             icon: const Icon(Icons.notifications_active_outlined),
             label: const Text('Test : notif dans 2 min'),
           ),
+          const SizedBox(height: AppSpacing.x10),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _cancelAllNotifications,
+            icon: const Icon(Icons.notifications_off_outlined),
+            label: const Text('Annuler tous les rappels programmes'),
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          Text(
+            'Coupe les rappels de toutes les tournees + la notif de test '
+            'si elle est encore en attente. Pratique en vacances pour pas '
+            'etre reveille par un rappel programme la semaine derniere.',
+            style: TextStyle(
+              fontSize: 12,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
           const SizedBox(height: AppSpacing.x6),
           Text(
             'Programme une notification de test 120 secondes apres le '
@@ -626,6 +643,26 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
         SnackBar(
           content: Text('$deleted tournee(s) supprimee(s)'),
           backgroundColor: AppColors.emerald,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _cancelAllNotifications() async {
+    setState(() => _saving = true);
+    try {
+      await NotificationsService.instance.cancelAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tous les rappels programmes ont ete annules'),
         ),
       );
     } catch (e) {

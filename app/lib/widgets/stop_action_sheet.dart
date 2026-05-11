@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../data/navigation_service.dart';
 import '../providers/database_providers.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
 /// Action choisie par le livreur dans la bottom sheet de validation
@@ -110,6 +111,18 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
           StopsCompanion(notes: Value(v)),
         );
     _initialNotes = value;
+  }
+
+  /// Sauvegarde la fenetre horaire (debut/fin au format "HH:mm",
+  /// null pour effacer). Appele depuis les 2 TimePicker inline.
+  Future<void> _persistFenetre({String? debut, String? fin}) async {
+    await ref.read(stopsRepositoryProvider).update(
+          widget.stop.id,
+          StopsCompanion(
+            fenetreDebut: Value(debut),
+            fenetreFin: Value(fin),
+          ),
+        );
   }
 
   Future<void> _adjustNbColis(int delta) async {
@@ -259,6 +272,33 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   hintText: 'Code Â· porte Â· etage...',
                   isDense: true,
                 ),
+              ),
+            if (!_pickingRaison) const SizedBox(height: AppSpacing.x10),
+
+            // Edition rapide de la fenetre horaire : utile quand un
+            // client appelle pour decaler son creneau. Tap = ouvre un
+            // TimePicker, sauvegarde direct.
+            if (!_pickingRaison)
+              Row(
+                children: [
+                  Expanded(
+                    child: _FenetreInlineField(
+                      label: 'Pas avant',
+                      value: stop.fenetreDebut,
+                      onChanged: (t) =>
+                          _persistFenetre(debut: t, fin: stop.fenetreFin),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x10),
+                  Expanded(
+                    child: _FenetreInlineField(
+                      label: 'Avant',
+                      value: stop.fenetreFin,
+                      onChanged: (t) => _persistFenetre(
+                          debut: stop.fenetreDebut, fin: t),
+                    ),
+                  ),
+                ],
               ),
             if (!_pickingRaison) const SizedBox(height: AppSpacing.x14),
 
@@ -501,6 +541,98 @@ class _NavButton extends StatelessWidget {
       label: Text(label,
           style: const TextStyle(fontWeight: FontWeight.w700)),
     );
+  }
+}
+
+/// Picker compact d'une heure (HH:mm) qui sauvegarde inline. Affiche
+/// "Pas avant 09:30" ou "--:--" si vide, avec un X pour effacer.
+class _FenetreInlineField extends StatelessWidget {
+  const _FenetreInlineField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final filled = value != null && value!.isNotEmpty;
+    return Material(
+      color: p.creamSoft,
+      borderRadius: BorderRadius.circular(AppRadius.r10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+        onTap: () => _pick(context),
+        onLongPress: filled ? () => onChanged(null) : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x10,
+            vertical: AppSpacing.x8,
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.access_time, size: 16, color: p.textMute),
+              const SizedBox(width: AppSpacing.x6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: appMonoStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        color: p.textMute,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      filled ? value! : '--:--',
+                      style: appMonoStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: filled ? p.ink : p.textFaint,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (filled)
+                GestureDetector(
+                  onTap: () => onChanged(null),
+                  child: Icon(Icons.close, size: 16, color: p.textMute),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pick(BuildContext context) async {
+    final init = _parseHHmm(value) ?? const TimeOfDay(hour: 9, minute: 0);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: init,
+    );
+    if (picked == null) return;
+    final hh = picked.hour.toString().padLeft(2, '0');
+    final mm = picked.minute.toString().padLeft(2, '0');
+    onChanged('$hh:$mm');
+  }
+
+  static TimeOfDay? _parseHHmm(String? s) {
+    if (s == null || s.isEmpty) return null;
+    final parts = s.split(':');
+    if (parts.length != 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    return TimeOfDay(hour: h, minute: m);
   }
 }
 

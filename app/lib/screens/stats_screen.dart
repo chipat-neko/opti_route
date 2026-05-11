@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/database.dart';
 import '../data/stats_service.dart';
 import '../providers/database_providers.dart';
+import 'carnet_adresses_screen.dart' show carnetStreamProvider;
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -29,6 +31,8 @@ class StatsScreen extends ConsumerWidget {
           _StatsCard(label: 'DEPUIS 1 AN', days: 365),
           SizedBox(height: AppSpacing.x14),
           _JoursSemaineCard(),
+          SizedBox(height: AppSpacing.x14),
+          _TopClientsCard(),
         ],
       ),
     );
@@ -386,6 +390,137 @@ class _JoursSemaineCard extends ConsumerWidget {
             error: (e, _) => Text(
               'Erreur : $e',
               style: const TextStyle(color: AppColors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Top N des clients les plus livres, lu directement du carnet
+/// d'adresses (`saved_destinations.use_count`). Sert a Noah pour
+/// reconnaitre ses recurrents.
+class _TopClientsCard extends ConsumerWidget {
+  const _TopClientsCard();
+
+  static const _topN = 5;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final stream = ref.watch(carnetStreamProvider);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: p.paper,
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+        border: Border.all(color: p.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TOP $_topN CLIENTS',
+            style: appMonoStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: p.textMute,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          stream.when(
+            data: (all) {
+              if (all.isEmpty) {
+                return Text(
+                  'Aucun client dans le carnet.',
+                  style: TextStyle(color: p.textMute),
+                );
+              }
+              final sorted = [...all]..sort(
+                  (a, b) => b.useCount.compareTo(a.useCount),
+                );
+              final top = sorted.take(_topN).toList();
+              return Column(
+                children: [
+                  for (var i = 0; i < top.length; i++) ...[
+                    _TopClientRow(rank: i + 1, client: top[i]),
+                    if (i < top.length - 1) const Divider(height: 1),
+                  ],
+                ],
+              );
+            },
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.x18),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (e, _) => Text(
+              'Erreur : $e',
+              style: const TextStyle(color: AppColors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopClientRow extends StatelessWidget {
+  const _TopClientRow({required this.rank, required this.client});
+
+  final int rank;
+  final SavedDestination client;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final nom = (client.nomClient?.trim().isNotEmpty ?? false)
+        ? client.nomClient!.trim()
+        : client.adresseDisplay;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x6),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: rank == 1 ? AppColors.lime : p.creamSoft,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$rank',
+              style: appMonoStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: p.ink,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x10),
+          Expanded(
+            child: Text(
+              nom,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: p.ink,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          Text(
+            '${client.useCount}x',
+            style: appMonoStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.emerald,
             ),
           ),
         ],
