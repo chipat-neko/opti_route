@@ -49,4 +49,22 @@ void main() {
       expect(AppShadows.sheet, isNotEmpty);
     });
   });
+
+  group('AppSpacing / AppRadius constants', () {
+    test('AppSpacing : valeurs croissantes', () {
+      expect(AppSpacing.x4, 4.0);
+      expect(AppSpacing.x6, 6.0);
+      expect(AppSpacing.x8, 8.0);
+      expect(AppSpacing.x10, 10.0);
+      expect(AppSpacing.x28, 28.0);
+      // L'echelle est croissante
+      expect(AppSpacing.x4 < AppSpacing.x28, isTrue);
+    });
+
+    test('AppRadius : valeurs croissantes', () {
+      expect(AppRadius.r6, 6.0);
+      expect(AppRadius.r28, 28.0);
+      expect(AppRadius.r6 < AppRadius.r28, isTrue);
+    });
+  });
 }
