@@ -26,5 +26,13 @@ class Tournees extends Table {
   /// meme apres Pause / Terminee (utile pour l'historique).
   DateTimeColumn get demareeLe => dateTime().nullable()();
 
+  /// Marqueur "tournee modele" : si vrai, la tournee apparait dans la
+  /// section "Templates" de l'historique avec un bouton "Creer une
+  /// nouvelle tournee depuis ce template" qui appelle duplicate().
+  /// Sert pour les tournees recurrentes (memes 30 clients chaque
+  /// semaine).
+  BoolColumn get isTemplate =>
+      boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

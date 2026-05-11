@@ -152,6 +152,21 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isTemplateMeta = const VerificationMeta(
+    'isTemplate',
+  );
+  @override
+  late final GeneratedColumn<bool> isTemplate = GeneratedColumn<bool>(
+    'is_template',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_template" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -177,6 +192,7 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     optimiseeLe,
     traceGeojson,
     demareeLe,
+    isTemplate,
     creeLe,
   ];
   @override
@@ -300,6 +316,12 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         demareeLe.isAcceptableOrUnknown(data['demaree_le']!, _demareeLeMeta),
       );
     }
+    if (data.containsKey('is_template')) {
+      context.handle(
+        _isTemplateMeta,
+        isTemplate.isAcceptableOrUnknown(data['is_template']!, _isTemplateMeta),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -367,6 +389,10 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}demaree_le'],
       ),
+      isTemplate: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_template'],
+      )!,
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -404,6 +430,13 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// arret" / les stats post-tournee. Null si jamais demarre, conserve
   /// meme apres Pause / Terminee (utile pour l'historique).
   final DateTime? demareeLe;
+
+  /// Marqueur "tournee modele" : si vrai, la tournee apparait dans la
+  /// section "Templates" de l'historique avec un bouton "Creer une
+  /// nouvelle tournee depuis ce template" qui appelle duplicate().
+  /// Sert pour les tournees recurrentes (memes 30 clients chaque
+  /// semaine).
+  final bool isTemplate;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -419,6 +452,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     this.optimiseeLe,
     this.traceGeojson,
     this.demareeLe,
+    required this.isTemplate,
     required this.creeLe,
   });
   @override
@@ -447,6 +481,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     if (!nullToAbsent || demareeLe != null) {
       map['demaree_le'] = Variable<DateTime>(demareeLe);
     }
+    map['is_template'] = Variable<bool>(isTemplate);
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -476,6 +511,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       demareeLe: demareeLe == null && nullToAbsent
           ? const Value.absent()
           : Value(demareeLe),
+      isTemplate: Value(isTemplate),
       creeLe: Value(creeLe),
     );
   }
@@ -501,6 +537,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       optimiseeLe: serializer.fromJson<DateTime?>(json['optimiseeLe']),
       traceGeojson: serializer.fromJson<String?>(json['traceGeojson']),
       demareeLe: serializer.fromJson<DateTime?>(json['demareeLe']),
+      isTemplate: serializer.fromJson<bool>(json['isTemplate']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -521,6 +558,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'optimiseeLe': serializer.toJson<DateTime?>(optimiseeLe),
       'traceGeojson': serializer.toJson<String?>(traceGeojson),
       'demareeLe': serializer.toJson<DateTime?>(demareeLe),
+      'isTemplate': serializer.toJson<bool>(isTemplate),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -539,6 +577,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     Value<DateTime?> optimiseeLe = const Value.absent(),
     Value<String?> traceGeojson = const Value.absent(),
     Value<DateTime?> demareeLe = const Value.absent(),
+    bool? isTemplate,
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -556,6 +595,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     optimiseeLe: optimiseeLe.present ? optimiseeLe.value : this.optimiseeLe,
     traceGeojson: traceGeojson.present ? traceGeojson.value : this.traceGeojson,
     demareeLe: demareeLe.present ? demareeLe.value : this.demareeLe,
+    isTemplate: isTemplate ?? this.isTemplate,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -589,6 +629,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ? data.traceGeojson.value
           : this.traceGeojson,
       demareeLe: data.demareeLe.present ? data.demareeLe.value : this.demareeLe,
+      isTemplate: data.isTemplate.present
+          ? data.isTemplate.value
+          : this.isTemplate,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -609,6 +652,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('optimiseeLe: $optimiseeLe, ')
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
+          ..write('isTemplate: $isTemplate, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -629,6 +673,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     optimiseeLe,
     traceGeojson,
     demareeLe,
+    isTemplate,
     creeLe,
   );
   @override
@@ -648,6 +693,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.optimiseeLe == this.optimiseeLe &&
           other.traceGeojson == this.traceGeojson &&
           other.demareeLe == this.demareeLe &&
+          other.isTemplate == this.isTemplate &&
           other.creeLe == this.creeLe);
 }
 
@@ -665,6 +711,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<DateTime?> optimiseeLe;
   final Value<String?> traceGeojson;
   final Value<DateTime?> demareeLe;
+  final Value<bool> isTemplate;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -680,6 +727,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.optimiseeLe = const Value.absent(),
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
+    this.isTemplate = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -696,6 +744,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.optimiseeLe = const Value.absent(),
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
+    this.isTemplate = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -716,6 +765,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<DateTime>? optimiseeLe,
     Expression<String>? traceGeojson,
     Expression<DateTime>? demareeLe,
+    Expression<bool>? isTemplate,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -733,6 +783,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (optimiseeLe != null) 'optimisee_le': optimiseeLe,
       if (traceGeojson != null) 'trace_geojson': traceGeojson,
       if (demareeLe != null) 'demaree_le': demareeLe,
+      if (isTemplate != null) 'is_template': isTemplate,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -751,6 +802,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<DateTime?>? optimiseeLe,
     Value<String?>? traceGeojson,
     Value<DateTime?>? demareeLe,
+    Value<bool>? isTemplate,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -768,6 +820,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       optimiseeLe: optimiseeLe ?? this.optimiseeLe,
       traceGeojson: traceGeojson ?? this.traceGeojson,
       demareeLe: demareeLe ?? this.demareeLe,
+      isTemplate: isTemplate ?? this.isTemplate,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -816,6 +869,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (demareeLe.present) {
       map['demaree_le'] = Variable<DateTime>(demareeLe.value);
     }
+    if (isTemplate.present) {
+      map['is_template'] = Variable<bool>(isTemplate.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -838,6 +894,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('optimiseeLe: $optimiseeLe, ')
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
+          ..write('isTemplate: $isTemplate, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -3930,6 +3987,7 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<DateTime?> optimiseeLe,
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
+      Value<bool> isTemplate,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -3947,6 +4005,7 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<DateTime?> optimiseeLe,
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
+      Value<bool> isTemplate,
       Value<DateTime> creeLe,
     });
 
@@ -4045,6 +4104,11 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<DateTime> get demareeLe => $composableBuilder(
     column: $table.demareeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isTemplate => $composableBuilder(
+    column: $table.isTemplate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4153,6 +4217,11 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isTemplate => $composableBuilder(
+    column: $table.isTemplate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -4222,6 +4291,11 @@ class $$TourneesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get demareeLe =>
       $composableBuilder(column: $table.demareeLe, builder: (column) => column);
+
+  GeneratedColumn<bool> get isTemplate => $composableBuilder(
+    column: $table.isTemplate,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
@@ -4293,6 +4367,7 @@ class $$TourneesTableTableManager
                 Value<DateTime?> optimiseeLe = const Value.absent(),
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
+                Value<bool> isTemplate = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -4308,6 +4383,7 @@ class $$TourneesTableTableManager
                 optimiseeLe: optimiseeLe,
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
+                isTemplate: isTemplate,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -4325,6 +4401,7 @@ class $$TourneesTableTableManager
                 Value<DateTime?> optimiseeLe = const Value.absent(),
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
+                Value<bool> isTemplate = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -4340,6 +4417,7 @@ class $$TourneesTableTableManager
                 optimiseeLe: optimiseeLe,
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
+                isTemplate: isTemplate,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0

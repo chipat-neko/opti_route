@@ -34,6 +34,17 @@ class TourneesRepository {
     return (_db.delete(_db.tournees)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Toggle le marqueur "isTemplate" : transforme une tournee passee
+  /// en modele reutilisable, qui apparait dans la section "Templates"
+  /// de l'historique avec un bouton "Creer une tournee depuis ce
+  /// template" (appelle `duplicate`).
+  Future<int> toggleTemplate(int id) async {
+    final t = await getById(id);
+    if (t == null) return 0;
+    return (_db.update(_db.tournees)..where((row) => row.id.equals(id)))
+        .write(TourneesCompanion(isTemplate: Value(!t.isTemplate)));
+  }
+
   /// Compte les tournees plus anciennes que [olderThan]. Sert au
   /// bouton "Nettoyer les vieilles tournees" dans Parametres : on
   /// previent l'utilisateur du nombre avant d'effacer.
