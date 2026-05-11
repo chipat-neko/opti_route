@@ -77,16 +77,19 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
                 if (filtered.isEmpty) {
                   return _EmptyState(hasQuery: _query.isNotEmpty);
                 }
-                return ListView.builder(
+                return ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.x14,
                     AppSpacing.x4,
                     AppSpacing.x14,
                     AppSpacing.x18,
                   ),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, i) =>
-                      _CarnetTile(entry: filtered[i]),
+                  children: [
+                    if (all.isNotEmpty)
+                      _BackupBanner(onExport: _onExportPressed),
+                    for (final entry in filtered)
+                      _CarnetTile(entry: entry),
+                  ],
                 );
               },
               loading: () =>
@@ -171,6 +174,9 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         ref.read(savedDestinationsRepositoryProvider),
       );
       final count = await service.exportAndShare();
+      if (count > 0) {
+        await ref.read(parametresRepositoryProvider).markCarnetExported();
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
@@ -196,6 +202,9 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         ref.read(savedDestinationsRepositoryProvider),
       );
       final count = await service.exportAndShare();
+      if (count > 0) {
+        await ref.read(parametresRepositoryProvider).markCarnetExported();
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
@@ -402,6 +411,76 @@ class _CarnetTile extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Banner discrete en tete de liste : invite a sauvegarder le carnet
+/// si plus de 14 jours se sont ecoules depuis le dernier export (CSV
+/// ou PDF), ou si aucun export n'a jamais ete fait.
+class _BackupBanner extends ConsumerWidget {
+  const _BackupBanner({required this.onExport});
+
+  final VoidCallback onExport;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final last = ref.watch(lastCarnetExportProvider).asData?.value;
+    final now = DateTime.now();
+    final neverExported = last == null;
+    final daysSince = last == null ? null : now.difference(last).inDays;
+    final showBanner = neverExported || (daysSince ?? 0) >= 14;
+    if (!showBanner) return const SizedBox.shrink();
+
+    final message = neverExported
+        ? 'Pense a sauvegarder ton carnet (jamais exporte).'
+        : 'Derniere sauvegarde il y a $daysSince jours.';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.x10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x12,
+        vertical: AppSpacing.x10,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        border: Border.all(
+          color: AppColors.amber.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_upload_outlined,
+              color: AppColors.amber, size: 18),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onExport,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.ink,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              minimumSize: const Size(0, 32),
+            ),
+            child: const Text(
+              'Sauvegarder',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

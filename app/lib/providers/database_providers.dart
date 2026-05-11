@@ -105,6 +105,12 @@ final dailyStatsProvider =
   return ref.read(statsServiceProvider).computeDaily(days: days);
 });
 
+/// Timestamp du dernier export reussi du carnet (CSV ou PDF). Sert a
+/// afficher la banner "pense a sauvegarder" sur l'ecran Carnet.
+final lastCarnetExportProvider = StreamProvider<DateTime?>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchLastCarnetExport();
+});
+
 /// Stream des arrets pour une tournee donnee.
 final stopsByTourneeProvider =
     StreamProvider.family<List<Stop>, int>((ref, tourneeId) {

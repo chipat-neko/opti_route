@@ -18,6 +18,7 @@ class ParametresRepository {
   static const _kOrsUsedCount = 'ors_used_count';
   static const _kOrsUsedDate = 'ors_used_date';
   static const _kThemeMode = 'theme_mode';
+  static const _kLastCarnetExport = 'last_carnet_export_at';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -134,6 +135,23 @@ class ParametresRepository {
     assert(mode == 'system' || mode == 'light' || mode == 'dark');
     return _write(_kThemeMode, mode);
   }
+
+  /// Timestamp ISO du dernier export du carnet (CSV ou PDF). Sert a
+  /// afficher une banner "pense a sauvegarder" dans le carnet quand
+  /// trop de temps s'est ecoule.
+  Future<DateTime?> getLastCarnetExport() async {
+    final v = await _readKey(_kLastCarnetExport);
+    if (v == null) return null;
+    return DateTime.tryParse(v);
+  }
+
+  Stream<DateTime?> watchLastCarnetExport() =>
+      _watchKey(_kLastCarnetExport).map(
+        (v) => v == null ? null : DateTime.tryParse(v),
+      );
+
+  Future<void> markCarnetExported() =>
+      _write(_kLastCarnetExport, DateTime.now().toIso8601String());
 
   static String _todayIso() {
     final now = DateTime.now();
