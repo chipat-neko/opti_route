@@ -3237,6 +3237,21 @@ class $SavedDestinationsTable extends SavedDestinations
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _isFavoriMeta = const VerificationMeta(
+    'isFavori',
+  );
+  @override
+  late final GeneratedColumn<bool> isFavori = GeneratedColumn<bool>(
+    'is_favori',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_favori" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3250,6 +3265,7 @@ class $SavedDestinationsTable extends SavedDestinations
     useCount,
     lastUsedAt,
     creeLe,
+    isFavori,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3338,6 +3354,12 @@ class $SavedDestinationsTable extends SavedDestinations
         creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
       );
     }
+    if (data.containsKey('is_favori')) {
+      context.handle(
+        _isFavoriMeta,
+        isFavori.isAcceptableOrUnknown(data['is_favori']!, _isFavoriMeta),
+      );
+    }
     return context;
   }
 
@@ -3391,6 +3413,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
       )!,
+      isFavori: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_favori'],
+      )!,
     );
   }
 
@@ -3419,6 +3445,12 @@ class SavedDestination extends DataClass
   final int useCount;
   final DateTime lastUsedAt;
   final DateTime creeLe;
+
+  /// Marqueur "favori" choisi manuellement par l'utilisateur depuis
+  /// l'ecran de detail du carnet. Les favoris remontent en haut de la
+  /// liste, peu importe le useCount ou lastUsedAt. Sert a epingler
+  /// les clients critiques / fragiles / a soigner.
+  final bool isFavori;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -3431,6 +3463,7 @@ class SavedDestination extends DataClass
     required this.useCount,
     required this.lastUsedAt,
     required this.creeLe,
+    required this.isFavori,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3454,6 +3487,7 @@ class SavedDestination extends DataClass
     map['use_count'] = Variable<int>(useCount);
     map['last_used_at'] = Variable<DateTime>(lastUsedAt);
     map['cree_le'] = Variable<DateTime>(creeLe);
+    map['is_favori'] = Variable<bool>(isFavori);
     return map;
   }
 
@@ -3476,6 +3510,7 @@ class SavedDestination extends DataClass
       useCount: Value(useCount),
       lastUsedAt: Value(lastUsedAt),
       creeLe: Value(creeLe),
+      isFavori: Value(isFavori),
     );
   }
 
@@ -3496,6 +3531,7 @@ class SavedDestination extends DataClass
       useCount: serializer.fromJson<int>(json['useCount']),
       lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      isFavori: serializer.fromJson<bool>(json['isFavori']),
     );
   }
   @override
@@ -3513,6 +3549,7 @@ class SavedDestination extends DataClass
       'useCount': serializer.toJson<int>(useCount),
       'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
       'creeLe': serializer.toJson<DateTime>(creeLe),
+      'isFavori': serializer.toJson<bool>(isFavori),
     };
   }
 
@@ -3528,6 +3565,7 @@ class SavedDestination extends DataClass
     int? useCount,
     DateTime? lastUsedAt,
     DateTime? creeLe,
+    bool? isFavori,
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -3540,6 +3578,7 @@ class SavedDestination extends DataClass
     useCount: useCount ?? this.useCount,
     lastUsedAt: lastUsedAt ?? this.lastUsedAt,
     creeLe: creeLe ?? this.creeLe,
+    isFavori: isFavori ?? this.isFavori,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -3560,6 +3599,7 @@ class SavedDestination extends DataClass
           ? data.lastUsedAt.value
           : this.lastUsedAt,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      isFavori: data.isFavori.present ? data.isFavori.value : this.isFavori,
     );
   }
 
@@ -3576,7 +3616,8 @@ class SavedDestination extends DataClass
           ..write('ville: $ville, ')
           ..write('useCount: $useCount, ')
           ..write('lastUsedAt: $lastUsedAt, ')
-          ..write('creeLe: $creeLe')
+          ..write('creeLe: $creeLe, ')
+          ..write('isFavori: $isFavori')
           ..write(')'))
         .toString();
   }
@@ -3594,6 +3635,7 @@ class SavedDestination extends DataClass
     useCount,
     lastUsedAt,
     creeLe,
+    isFavori,
   );
   @override
   bool operator ==(Object other) =>
@@ -3609,7 +3651,8 @@ class SavedDestination extends DataClass
           other.ville == this.ville &&
           other.useCount == this.useCount &&
           other.lastUsedAt == this.lastUsedAt &&
-          other.creeLe == this.creeLe);
+          other.creeLe == this.creeLe &&
+          other.isFavori == this.isFavori);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -3624,6 +3667,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<int> useCount;
   final Value<DateTime> lastUsedAt;
   final Value<DateTime> creeLe;
+  final Value<bool> isFavori;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -3636,6 +3680,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.useCount = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
     this.creeLe = const Value.absent(),
+    this.isFavori = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -3649,6 +3694,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.useCount = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
     this.creeLe = const Value.absent(),
+    this.isFavori = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -3664,6 +3710,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<int>? useCount,
     Expression<DateTime>? lastUsedAt,
     Expression<DateTime>? creeLe,
+    Expression<bool>? isFavori,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3677,6 +3724,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (useCount != null) 'use_count': useCount,
       if (lastUsedAt != null) 'last_used_at': lastUsedAt,
       if (creeLe != null) 'cree_le': creeLe,
+      if (isFavori != null) 'is_favori': isFavori,
     });
   }
 
@@ -3692,6 +3740,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<int>? useCount,
     Value<DateTime>? lastUsedAt,
     Value<DateTime>? creeLe,
+    Value<bool>? isFavori,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -3705,6 +3754,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       useCount: useCount ?? this.useCount,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
       creeLe: creeLe ?? this.creeLe,
+      isFavori: isFavori ?? this.isFavori,
     );
   }
 
@@ -3744,6 +3794,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
+    if (isFavori.present) {
+      map['is_favori'] = Variable<bool>(isFavori.value);
+    }
     return map;
   }
 
@@ -3760,7 +3813,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('ville: $ville, ')
           ..write('useCount: $useCount, ')
           ..write('lastUsedAt: $lastUsedAt, ')
-          ..write('creeLe: $creeLe')
+          ..write('creeLe: $creeLe, ')
+          ..write('isFavori: $isFavori')
           ..write(')'))
         .toString();
   }
@@ -5717,6 +5771,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<int> useCount,
       Value<DateTime> lastUsedAt,
       Value<DateTime> creeLe,
+      Value<bool> isFavori,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -5731,6 +5786,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<int> useCount,
       Value<DateTime> lastUsedAt,
       Value<DateTime> creeLe,
+      Value<bool> isFavori,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -5794,6 +5850,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFavori => $composableBuilder(
+    column: $table.isFavori,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5861,6 +5922,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isFavori => $composableBuilder(
+    column: $table.isFavori,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -5910,6 +5976,9 @@ class $$SavedDestinationsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<bool> get isFavori =>
+      $composableBuilder(column: $table.isFavori, builder: (column) => column);
 }
 
 class $$SavedDestinationsTableTableManager
@@ -5963,6 +6032,7 @@ class $$SavedDestinationsTableTableManager
                 Value<int> useCount = const Value.absent(),
                 Value<DateTime> lastUsedAt = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
+                Value<bool> isFavori = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -5975,6 +6045,7 @@ class $$SavedDestinationsTableTableManager
                 useCount: useCount,
                 lastUsedAt: lastUsedAt,
                 creeLe: creeLe,
+                isFavori: isFavori,
               ),
           createCompanionCallback:
               ({
@@ -5989,6 +6060,7 @@ class $$SavedDestinationsTableTableManager
                 Value<int> useCount = const Value.absent(),
                 Value<DateTime> lastUsedAt = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
+                Value<bool> isFavori = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -6001,6 +6073,7 @@ class $$SavedDestinationsTableTableManager
                 useCount: useCount,
                 lastUsedAt: lastUsedAt,
                 creeLe: creeLe,
+                isFavori: isFavori,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

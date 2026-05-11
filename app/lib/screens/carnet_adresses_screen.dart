@@ -293,16 +293,26 @@ class _CarnetTile extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.x14),
               child: Row(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: AppColors.lime,
-                      shape: BoxShape.circle,
+                  GestureDetector(
+                    onTap: () => ref
+                        .read(savedDestinationsRepositoryProvider)
+                        .toggleFavori(entry.id),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: entry.isFavori
+                            ? AppColors.amber
+                            : AppColors.lime,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        entry.isFavori ? Icons.star : Icons.bookmark,
+                        color: AppColors.ink,
+                        size: 18,
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.bookmark, color: AppColors.ink,
-                        size: 18),
                   ),
                   const SizedBox(width: AppSpacing.x12),
                   Expanded(

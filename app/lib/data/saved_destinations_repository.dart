@@ -140,10 +140,20 @@ class SavedDestinationsRepository {
   Stream<List<SavedDestination>> watchAll() {
     final select = _db.select(_db.savedDestinations)
       ..orderBy([
+        // Favoris en haut, peu importe useCount/lastUsedAt.
+        (d) => OrderingTerm.desc(d.isFavori),
         (d) => OrderingTerm.desc(d.useCount),
         (d) => OrderingTerm.desc(d.lastUsedAt),
       ]);
     return select.watch();
+  }
+
+  /// Toggle l'etoile "favori" sur une entree du carnet.
+  Future<int> toggleFavori(int id) async {
+    final entry = await getById(id);
+    if (entry == null) return 0;
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
+        .write(SavedDestinationsCompanion(isFavori: Value(!entry.isFavori)));
   }
 
   Future<int> delete(int id) {
