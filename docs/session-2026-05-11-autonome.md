@@ -206,12 +206,18 @@ adb install -r app/build/app/outputs/flutter-apk/app-release.apk
 
 ## Bilan en chiffres
 
-- **30+ commits** sur `feat/vague-8-quality`
-- **+97 tests** (85 → 182)
+- **57+ commits** sur `feat/vague-8-quality`
+- **~170 tests** ajoutés (85 → ~255)
 - **3 migrations Drift** (v15 / v16 / v17)
-- **11 nouveaux fichiers de tests**
-- **5 nouveaux services** (`StopsGeocodeRetryService`,
+- **18 nouveaux fichiers de tests** (geo_utils, geocode_cache,
+  bordereau_extraction, parametres, stops_geocode_retry,
+  tournee_text_share, carnet_vcard, ban_geocoding, photon,
+  france_geocoding, ocr_result, optimization_result,
+  geocoding_exception, location_permission_denied, stop_action,
+  app_tokens, app_theme, smoke)
+- **5 nouveaux services / helpers** (`StopsGeocodeRetryService`,
   `TourneeTextShareService`, `CarnetVcardExportService`,
-  `GeoUtils`)
-- **0 issue** `flutter analyze`
+  `GeoUtils`, params carburant dans `ParametresRepository`)
+- **0 issue** `flutter analyze` (après `dart fix --apply`)
 - **204 lignes** de code mort retirées (`NominatimService`)
+- **APK release v1.1.0+2** (~96 MB) prêt à `app/build/app/outputs/flutter-apk/app-release.apk`
