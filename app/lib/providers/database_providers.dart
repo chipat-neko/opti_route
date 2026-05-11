@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
@@ -43,6 +44,20 @@ final statsServiceProvider = Provider<StatsService>((ref) {
 /// decider d'afficher le walkthrough ou le contenu normal.
 final onboardingDoneStreamProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchOnboardingDone();
+});
+
+/// Mode de theme (system / light / dark) choisi dans Parametres.
+/// Watche dans MyApp pour basculer entre `theme` et `darkTheme` du
+/// MaterialApp via `themeMode`.
+final themeModeProvider = StreamProvider<ThemeMode>((ref) {
+  return ref
+      .watch(parametresRepositoryProvider)
+      .watchThemeMode()
+      .map((s) => switch (s) {
+            'light' => ThemeMode.light,
+            'dark' => ThemeMode.dark,
+            _ => ThemeMode.system,
+          });
 });
 
 /// Compteur d'optimisations OpenRouteService consommees aujourd'hui.

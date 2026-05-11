@@ -17,6 +17,7 @@ class ParametresRepository {
   static const _kOnboardingDone = 'onboarding_done';
   static const _kOrsUsedCount = 'ors_used_count';
   static const _kOrsUsedDate = 'ors_used_date';
+  static const _kThemeMode = 'theme_mode';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -115,6 +116,23 @@ class ParametresRepository {
     }
     await _write(_kOrsUsedCount, '$next');
     await _write(_kOrsUsedDate, today);
+  }
+
+  /// Mode de theme choisi par l'utilisateur :
+  /// - `'system'` (default) : suit les reglages Android
+  /// - `'light'` : force le mode clair
+  /// - `'dark'` : force le mode sombre
+  Future<String> getThemeMode() async {
+    final v = await _readKey(_kThemeMode);
+    return v ?? 'system';
+  }
+
+  Stream<String> watchThemeMode() =>
+      _watchKey(_kThemeMode).map((v) => v ?? 'system');
+
+  Future<void> setThemeMode(String mode) {
+    assert(mode == 'system' || mode == 'light' || mode == 'dark');
+    return _write(_kThemeMode, mode);
   }
 
   static String _todayIso() {
