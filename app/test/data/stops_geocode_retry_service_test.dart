@@ -103,6 +103,18 @@ void main() {
       expect(stop.lng, isNull);
     });
 
+    test('BatchGeocodeResult conserve les listes resolved/unresolved',
+        () async {
+      const r = BatchGeocodeResult(
+        totalCandidats: 3,
+        resolved: [],
+        unresolved: [],
+      );
+      expect(r.totalCandidats, 3);
+      expect(r.resolved, isEmpty);
+      expect(r.unresolved, isEmpty);
+    });
+
     test('geocoder throw : unresolved, ne casse pas la boucle', () async {
       final id = await seedTourneeWithStops([
         (adr: 'A offline', hasCoords: false),
