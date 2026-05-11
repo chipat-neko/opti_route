@@ -91,6 +91,8 @@ class TourneesRepository {
               pointDepartLng: source.pointDepartLng,
               pointDepartLabel: source.pointDepartLabel,
               vehiculeCapaciteColis: Value(source.vehiculeCapaciteColis),
+              profilOrs: Value(source.profilOrs),
+              eviterPeages: Value(source.eviterPeages),
               // Pas de statut / metriques / trace : nouvelle tournee
               // -> brouillon, pas encore optimisee.
             ),

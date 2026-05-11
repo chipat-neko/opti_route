@@ -34,5 +34,23 @@ class Tournees extends Table {
   BoolColumn get isTemplate =>
       boolean().withDefault(const Constant(false))();
 
+  /// Profil OpenRouteService utilise pour le calcul d'itineraire :
+  /// - `driving-car` (defaut) : VL classique, prend toutes les routes
+  /// - `driving-hgv` : camion lourd > 3.5t, respecte les restrictions
+  ///   de hauteur, poids, largeur, interdictions camion et evite les
+  ///   centres-ville pietonnises.
+  ///
+  /// Pour Noah en VUL standard (< 3.5t), `driving-car` est correct.
+  /// `driving-hgv` peut etre necessaire pour les transporteurs PL.
+  TextColumn get profilOrs =>
+      text().withDefault(const Constant('driving-car'))();
+
+  /// Eviter les peages quand on calcule l'itineraire. Ajoute
+  /// `options.avoid_features: ['tollways']` aux appels Directions ORS.
+  /// Defaut false : pour un livreur urbain les peages sont rares et
+  /// l'evitement allonge enormement le trajet.
+  BoolColumn get eviterPeages =>
+      boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

@@ -167,6 +167,33 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _profilOrsMeta = const VerificationMeta(
+    'profilOrs',
+  );
+  @override
+  late final GeneratedColumn<String> profilOrs = GeneratedColumn<String>(
+    'profil_ors',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('driving-car'),
+  );
+  static const VerificationMeta _eviterPeagesMeta = const VerificationMeta(
+    'eviterPeages',
+  );
+  @override
+  late final GeneratedColumn<bool> eviterPeages = GeneratedColumn<bool>(
+    'eviter_peages',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("eviter_peages" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -193,6 +220,8 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     traceGeojson,
     demareeLe,
     isTemplate,
+    profilOrs,
+    eviterPeages,
     creeLe,
   ];
   @override
@@ -322,6 +351,21 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         isTemplate.isAcceptableOrUnknown(data['is_template']!, _isTemplateMeta),
       );
     }
+    if (data.containsKey('profil_ors')) {
+      context.handle(
+        _profilOrsMeta,
+        profilOrs.isAcceptableOrUnknown(data['profil_ors']!, _profilOrsMeta),
+      );
+    }
+    if (data.containsKey('eviter_peages')) {
+      context.handle(
+        _eviterPeagesMeta,
+        eviterPeages.isAcceptableOrUnknown(
+          data['eviter_peages']!,
+          _eviterPeagesMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -393,6 +437,14 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_template'],
       )!,
+      profilOrs: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profil_ors'],
+      )!,
+      eviterPeages: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}eviter_peages'],
+      )!,
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -437,6 +489,22 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// Sert pour les tournees recurrentes (memes 30 clients chaque
   /// semaine).
   final bool isTemplate;
+
+  /// Profil OpenRouteService utilise pour le calcul d'itineraire :
+  /// - `driving-car` (defaut) : VL classique, prend toutes les routes
+  /// - `driving-hgv` : camion lourd > 3.5t, respecte les restrictions
+  ///   de hauteur, poids, largeur, interdictions camion et evite les
+  ///   centres-ville pietonnises.
+  ///
+  /// Pour Noah en VUL standard (< 3.5t), `driving-car` est correct.
+  /// `driving-hgv` peut etre necessaire pour les transporteurs PL.
+  final String profilOrs;
+
+  /// Eviter les peages quand on calcule l'itineraire. Ajoute
+  /// `options.avoid_features: ['tollways']` aux appels Directions ORS.
+  /// Defaut false : pour un livreur urbain les peages sont rares et
+  /// l'evitement allonge enormement le trajet.
+  final bool eviterPeages;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -453,6 +521,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     this.traceGeojson,
     this.demareeLe,
     required this.isTemplate,
+    required this.profilOrs,
+    required this.eviterPeages,
     required this.creeLe,
   });
   @override
@@ -482,6 +552,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       map['demaree_le'] = Variable<DateTime>(demareeLe);
     }
     map['is_template'] = Variable<bool>(isTemplate);
+    map['profil_ors'] = Variable<String>(profilOrs);
+    map['eviter_peages'] = Variable<bool>(eviterPeages);
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -512,6 +584,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ? const Value.absent()
           : Value(demareeLe),
       isTemplate: Value(isTemplate),
+      profilOrs: Value(profilOrs),
+      eviterPeages: Value(eviterPeages),
       creeLe: Value(creeLe),
     );
   }
@@ -538,6 +612,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       traceGeojson: serializer.fromJson<String?>(json['traceGeojson']),
       demareeLe: serializer.fromJson<DateTime?>(json['demareeLe']),
       isTemplate: serializer.fromJson<bool>(json['isTemplate']),
+      profilOrs: serializer.fromJson<String>(json['profilOrs']),
+      eviterPeages: serializer.fromJson<bool>(json['eviterPeages']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -559,6 +635,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'traceGeojson': serializer.toJson<String?>(traceGeojson),
       'demareeLe': serializer.toJson<DateTime?>(demareeLe),
       'isTemplate': serializer.toJson<bool>(isTemplate),
+      'profilOrs': serializer.toJson<String>(profilOrs),
+      'eviterPeages': serializer.toJson<bool>(eviterPeages),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -578,6 +656,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     Value<String?> traceGeojson = const Value.absent(),
     Value<DateTime?> demareeLe = const Value.absent(),
     bool? isTemplate,
+    String? profilOrs,
+    bool? eviterPeages,
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -596,6 +676,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     traceGeojson: traceGeojson.present ? traceGeojson.value : this.traceGeojson,
     demareeLe: demareeLe.present ? demareeLe.value : this.demareeLe,
     isTemplate: isTemplate ?? this.isTemplate,
+    profilOrs: profilOrs ?? this.profilOrs,
+    eviterPeages: eviterPeages ?? this.eviterPeages,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -632,6 +714,10 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       isTemplate: data.isTemplate.present
           ? data.isTemplate.value
           : this.isTemplate,
+      profilOrs: data.profilOrs.present ? data.profilOrs.value : this.profilOrs,
+      eviterPeages: data.eviterPeages.present
+          ? data.eviterPeages.value
+          : this.eviterPeages,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -653,6 +739,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
           ..write('isTemplate: $isTemplate, ')
+          ..write('profilOrs: $profilOrs, ')
+          ..write('eviterPeages: $eviterPeages, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -674,6 +762,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     traceGeojson,
     demareeLe,
     isTemplate,
+    profilOrs,
+    eviterPeages,
     creeLe,
   );
   @override
@@ -694,6 +784,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.traceGeojson == this.traceGeojson &&
           other.demareeLe == this.demareeLe &&
           other.isTemplate == this.isTemplate &&
+          other.profilOrs == this.profilOrs &&
+          other.eviterPeages == this.eviterPeages &&
           other.creeLe == this.creeLe);
 }
 
@@ -712,6 +804,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<String?> traceGeojson;
   final Value<DateTime?> demareeLe;
   final Value<bool> isTemplate;
+  final Value<String> profilOrs;
+  final Value<bool> eviterPeages;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -728,6 +822,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
     this.isTemplate = const Value.absent(),
+    this.profilOrs = const Value.absent(),
+    this.eviterPeages = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -745,6 +841,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
     this.isTemplate = const Value.absent(),
+    this.profilOrs = const Value.absent(),
+    this.eviterPeages = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -766,6 +864,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<String>? traceGeojson,
     Expression<DateTime>? demareeLe,
     Expression<bool>? isTemplate,
+    Expression<String>? profilOrs,
+    Expression<bool>? eviterPeages,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -784,6 +884,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (traceGeojson != null) 'trace_geojson': traceGeojson,
       if (demareeLe != null) 'demaree_le': demareeLe,
       if (isTemplate != null) 'is_template': isTemplate,
+      if (profilOrs != null) 'profil_ors': profilOrs,
+      if (eviterPeages != null) 'eviter_peages': eviterPeages,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -803,6 +905,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<String?>? traceGeojson,
     Value<DateTime?>? demareeLe,
     Value<bool>? isTemplate,
+    Value<String>? profilOrs,
+    Value<bool>? eviterPeages,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -821,6 +925,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       traceGeojson: traceGeojson ?? this.traceGeojson,
       demareeLe: demareeLe ?? this.demareeLe,
       isTemplate: isTemplate ?? this.isTemplate,
+      profilOrs: profilOrs ?? this.profilOrs,
+      eviterPeages: eviterPeages ?? this.eviterPeages,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -872,6 +978,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (isTemplate.present) {
       map['is_template'] = Variable<bool>(isTemplate.value);
     }
+    if (profilOrs.present) {
+      map['profil_ors'] = Variable<String>(profilOrs.value);
+    }
+    if (eviterPeages.present) {
+      map['eviter_peages'] = Variable<bool>(eviterPeages.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -895,6 +1007,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
           ..write('isTemplate: $isTemplate, ')
+          ..write('profilOrs: $profilOrs, ')
+          ..write('eviterPeages: $eviterPeages, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -4506,6 +4620,8 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
       Value<bool> isTemplate,
+      Value<String> profilOrs,
+      Value<bool> eviterPeages,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -4524,6 +4640,8 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
       Value<bool> isTemplate,
+      Value<String> profilOrs,
+      Value<bool> eviterPeages,
       Value<DateTime> creeLe,
     });
 
@@ -4627,6 +4745,16 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<bool> get isTemplate => $composableBuilder(
     column: $table.isTemplate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get profilOrs => $composableBuilder(
+    column: $table.profilOrs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get eviterPeages => $composableBuilder(
+    column: $table.eviterPeages,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4740,6 +4868,16 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get profilOrs => $composableBuilder(
+    column: $table.profilOrs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get eviterPeages => $composableBuilder(
+    column: $table.eviterPeages,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -4815,6 +4953,14 @@ class $$TourneesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get profilOrs =>
+      $composableBuilder(column: $table.profilOrs, builder: (column) => column);
+
+  GeneratedColumn<bool> get eviterPeages => $composableBuilder(
+    column: $table.eviterPeages,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
 
@@ -4886,6 +5032,8 @@ class $$TourneesTableTableManager
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
                 Value<bool> isTemplate = const Value.absent(),
+                Value<String> profilOrs = const Value.absent(),
+                Value<bool> eviterPeages = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -4902,6 +5050,8 @@ class $$TourneesTableTableManager
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
                 isTemplate: isTemplate,
+                profilOrs: profilOrs,
+                eviterPeages: eviterPeages,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -4920,6 +5070,8 @@ class $$TourneesTableTableManager
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
                 Value<bool> isTemplate = const Value.absent(),
+                Value<String> profilOrs = const Value.absent(),
+                Value<bool> eviterPeages = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -4936,6 +5088,8 @@ class $$TourneesTableTableManager
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
                 isTemplate: isTemplate,
+                profilOrs: profilOrs,
+                eviterPeages: eviterPeages,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0

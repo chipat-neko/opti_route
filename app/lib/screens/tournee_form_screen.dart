@@ -25,6 +25,8 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
   late DateTime _date;
   AddressSuggestion? _depart;
   bool _saving = false;
+  late String _profilOrs;
+  late bool _eviterPeages;
 
   bool get _isEdit => widget.initial != null;
 
@@ -36,6 +38,8 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
     _capaciteCtrl =
         TextEditingController(text: (t?.vehiculeCapaciteColis ?? 0).toString());
     _date = t?.date ?? DateTime.now();
+    _profilOrs = t?.profilOrs ?? 'driving-car';
+    _eviterPeages = t?.eviterPeages ?? false;
     if (t != null) {
       _depart = AddressSuggestion(
         displayName: t.pointDepartLabel,
@@ -113,6 +117,49 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
               ),
               keyboardType: TextInputType.number,
               validator: _validatePositiveInt,
+            ),
+            const SizedBox(height: AppSpacing.x18),
+            Text(
+              'Profil vehicule',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.x6),
+            Text(
+              'Voiture/VUL pour les livraisons standards. Camion >3.5t '
+              'respecte les restrictions de hauteur/poids et evite les '
+              'centres pietonnises.',
+              style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Wrap(
+              spacing: AppSpacing.x8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Voiture / VUL'),
+                  selected: _profilOrs == 'driving-car',
+                  onSelected: (_) =>
+                      setState(() => _profilOrs = 'driving-car'),
+                ),
+                ChoiceChip(
+                  label: const Text('Camion >3.5t'),
+                  selected: _profilOrs == 'driving-hgv',
+                  onSelected: (_) =>
+                      setState(() => _profilOrs = 'driving-hgv'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x14),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              tileColor: Colors.transparent,
+              title: const Text('Eviter les peages'),
+              subtitle: Text(
+                'Rallonge souvent l\'itineraire ; utile si tu veux pas '
+                'payer de peages sur ton compte perso.',
+                style: TextStyle(fontSize: 12, color: p.textMute),
+              ),
+              value: _eviterPeages,
+              onChanged: (v) => setState(() => _eviterPeages = v),
             ),
             const SizedBox(height: AppSpacing.x28),
             FilledButton.icon(
@@ -235,19 +282,23 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
       pointDepartLabel: Value(_depart!.displayName),
       vehiculeCapaciteColis:
           Value(int.tryParse(_capaciteCtrl.text.trim()) ?? 0),
+      profilOrs: Value(_profilOrs),
+      eviterPeages: Value(_eviterPeages),
     );
 
     try {
       if (_isEdit) {
-        // Le point de depart a-t-il bouge ? Si oui, l'itineraire
-        // optimise n'est plus valide -- on invalide pour reactiver le
-        // bouton "Optimiser". Un simple changement de nom ou de
-        // capacite ne touche pas a la geometrie de la tournee.
+        // Le depart, le profil ou l'evitement de peages ont-ils bouge ?
+        // Tout ca change la geometrie de l'itineraire optimal -> on
+        // invalide pour reactiver le bouton "Optimiser". Un simple
+        // changement de nom / capacite ne touche pas a la geometrie.
         final initial = widget.initial!;
-        final departChanged = initial.pointDepartLat != _depart!.lat ||
-            initial.pointDepartLng != _depart!.lon;
+        final geometryChanged = initial.pointDepartLat != _depart!.lat ||
+            initial.pointDepartLng != _depart!.lon ||
+            initial.profilOrs != _profilOrs ||
+            initial.eviterPeages != _eviterPeages;
         await repo.update(initial.id, companion);
-        if (departChanged) {
+        if (geometryChanged) {
           await repo.invalidateOptimization(initial.id);
         }
       } else {
