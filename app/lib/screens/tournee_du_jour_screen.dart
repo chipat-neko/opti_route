@@ -489,14 +489,79 @@ class _StopsSection extends StatefulWidget {
 class _StopsSectionState extends State<_StopsSection> {
   String _query = '';
 
+  /// Filtre par statut applique en plus de la recherche texte :
+  /// 'tout' / 'a_livrer' / 'livre' / 'echec'.
+  String _statutFilter = 'tout';
+
   @override
   Widget build(BuildContext context) {
     final hasQuery = _query.trim().isNotEmpty;
-    final filtered = hasQuery ? _filter(widget.stops, _query) : widget.stops;
+    final hasStatutFilter = _statutFilter != 'tout';
+    var filtered = widget.stops;
+    if (hasStatutFilter) {
+      filtered = filtered
+          .where((s) => s.statutLivraison == _statutFilter)
+          .toList();
+    }
+    if (hasQuery) {
+      filtered = _filter(filtered, _query);
+    }
+    final isFiltered = hasQuery || hasStatutFilter;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Chips de filtre par statut : visible des qu'au moins un
+        // arret est livre ou en echec (sinon Tout = tous, ca sert
+        // a rien).
+        if (widget.stops.any((s) =>
+            s.statutLivraison == 'livre' || s.statutLivraison == 'echec')) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _StatutFilterChip(
+                  label: 'Tout',
+                  value: 'tout',
+                  groupValue: _statutFilter,
+                  count: widget.stops.length,
+                  onSelected: (v) => setState(() => _statutFilter = v),
+                ),
+                const SizedBox(width: AppSpacing.x6),
+                _StatutFilterChip(
+                  label: 'A livrer',
+                  value: 'a_livrer',
+                  groupValue: _statutFilter,
+                  count: widget.stops
+                      .where((s) => s.statutLivraison == 'a_livrer')
+                      .length,
+                  onSelected: (v) => setState(() => _statutFilter = v),
+                ),
+                const SizedBox(width: AppSpacing.x6),
+                _StatutFilterChip(
+                  label: 'Livres',
+                  value: 'livre',
+                  groupValue: _statutFilter,
+                  count: widget.stops
+                      .where((s) => s.statutLivraison == 'livre')
+                      .length,
+                  onSelected: (v) => setState(() => _statutFilter = v),
+                ),
+                const SizedBox(width: AppSpacing.x6),
+                _StatutFilterChip(
+                  label: 'Echecs',
+                  value: 'echec',
+                  groupValue: _statutFilter,
+                  count: widget.stops
+                      .where((s) => s.statutLivraison == 'echec')
+                      .length,
+                  onSelected: (v) => setState(() => _statutFilter = v),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+        ],
         // N'afficher le champ de recherche que si la liste est assez
         // longue pour en valoir la peine.
         if (widget.stops.length >= 5) ...[
@@ -514,7 +579,7 @@ class _StopsSectionState extends State<_StopsSection> {
             ),
             onChanged: (v) => setState(() => _query = v),
           ),
-          if (hasQuery) ...[
+          if (isFiltered) ...[
             const SizedBox(height: AppSpacing.x6),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x6),
@@ -532,7 +597,7 @@ class _StopsSectionState extends State<_StopsSection> {
           ],
           const SizedBox(height: AppSpacing.x10),
         ],
-        if (filtered.isEmpty && hasQuery)
+        if (filtered.isEmpty && isFiltered)
           Container(
             padding: const EdgeInsets.all(AppSpacing.x22),
             decoration: BoxDecoration(
@@ -541,13 +606,13 @@ class _StopsSectionState extends State<_StopsSection> {
               border: Border.all(color: AppColors.divider),
             ),
             child: const Text(
-              'Aucun arret ne correspond a ta recherche.',
+              'Aucun arret ne correspond.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textMute),
             ),
           )
         else
-          _StopsList(stops: filtered, reorderable: !hasQuery),
+          _StopsList(stops: filtered, reorderable: !isFiltered),
       ],
     );
   }
@@ -584,6 +649,45 @@ class _StopsSectionState extends State<_StopsSection> {
       buf.write(map[ch] ?? ch);
     }
     return buf.toString();
+  }
+}
+
+/// Chip de filtre par statut au-dessus de la liste des arrets.
+/// Affiche le compteur a cote du label : "A livrer (12)".
+class _StatutFilterChip extends StatelessWidget {
+  const _StatutFilterChip({
+    required this.label,
+    required this.value,
+    required this.groupValue,
+    required this.count,
+    required this.onSelected,
+  });
+
+  final String label;
+  final String value;
+  final String groupValue;
+  final int count;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = value == groupValue;
+    return ChoiceChip(
+      label: Text('$label ($count)'),
+      selected: selected,
+      onSelected: (_) => onSelected(value),
+      selectedColor: AppColors.lime,
+      backgroundColor: AppColors.paper,
+      side: BorderSide(
+        color: selected ? AppColors.lime : AppColors.inkLine,
+      ),
+      labelStyle: TextStyle(
+        color: AppColors.ink,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        fontSize: 12,
+      ),
+      visualDensity: VisualDensity.compact,
+    );
   }
 }
 
