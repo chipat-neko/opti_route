@@ -58,11 +58,18 @@ Auto-cancel quand la tournée passe en `terminee` ou est supprimée.
 **Helpers extraits** : `GeoUtils.haversineMeters` + areClose dans
 `lib/data/geo_utils.dart` (testable sans Flutter).
 
-**Tests** : 85 → 167 (+82). Nouveaux fichiers : geo_utils,
+**Tests** : 85 → 182 (+97). Nouveaux fichiers : geo_utils,
 geocode_cache_repository, bordereau_extraction, parametres_repository,
-stops_geocode_retry, tournee_text_share, carnet_vcard_export. Extensions
-sur stats_service, stops_repository, tournees_repository,
-openroute_optimization_service. `flutter analyze` : 0 erreur.
+stops_geocode_retry, tournee_text_share, carnet_vcard_export,
+ban_geocoding_service, photon_service, france_geocoding_service.
+Extensions sur stats_service, stops_repository, tournees_repository,
+openroute_optimization_service.
+
+`flutter analyze` : **0 issue** (dart fix appliqué + docstrings tool/
+nettoyées).
+
+**Nettoyage** : suppression de `nominatim_service.dart` (~204 lignes
+de code mort) — remplacé par FranceGeocodingService depuis longtemps.
 
 **Documentation** :
 - `docs/user-guide.md` : guide utilisateur exhaustif
