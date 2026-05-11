@@ -31,4 +31,11 @@ class SavedDestinations extends Table {
   DateTimeColumn get lastUsedAt =>
       dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
+
+  /// Marqueur "favori" choisi manuellement par l'utilisateur depuis
+  /// l'ecran de detail du carnet. Les favoris remontent en haut de la
+  /// liste, peu importe le useCount ou lastUsedAt. Sert a epingler
+  /// les clients critiques / fragiles / a soigner.
+  BoolColumn get isFavori =>
+      boolean().withDefault(const Constant(false))();
 }
