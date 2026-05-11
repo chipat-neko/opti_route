@@ -339,6 +339,13 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         tournee: widget.tournee,
         stops: geocodedRefreshed,
       );
+      // Incremente le compteur du quota ORS pour Parametres.
+      // Best-effort : si l'ecriture echoue, on ne casse pas l'optim.
+      try {
+        await ref
+            .read(parametresRepositoryProvider)
+            .incrementOrsUsed();
+      } catch (_) {}
 
       await ref
           .read(stopsRepositoryProvider)

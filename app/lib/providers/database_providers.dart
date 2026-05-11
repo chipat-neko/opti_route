@@ -45,6 +45,14 @@ final onboardingDoneStreamProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchOnboardingDone();
 });
 
+/// Compteur d'optimisations OpenRouteService consommees aujourd'hui.
+/// Reset auto au passage minuit (gere dans le repo). Affiche dans
+/// Parametres pour qu'on voie ou on en est par rapport au quota
+/// 500/jour du plan free ORS.
+final orsUsedTodayProvider = StreamProvider<int>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchOrsUsedToday();
+});
+
 /// Stats cumulatives depuis [days] jours (typiquement 7, 30, 365).
 /// Recalcule a chaque modif d'une tournee ou d'un stop (le stream
 /// `tourneesStreamProvider` pousse, on relance le compute).
