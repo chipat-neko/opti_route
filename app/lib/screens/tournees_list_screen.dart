@@ -11,11 +11,19 @@ import '../widgets/drawer_badge_icon.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
 
-class TourneesListScreen extends ConsumerWidget {
+class TourneesListScreen extends ConsumerStatefulWidget {
   const TourneesListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TourneesListScreen> createState() =>
+      _TourneesListScreenState();
+}
+
+class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
     final tourneesAsync = ref.watch(tourneesStreamProvider);
 
     return Scaffold(
@@ -24,12 +32,63 @@ class TourneesListScreen extends ConsumerWidget {
         leading: const DrawerBadgeIcon(),
         title: const Text('Historique des tournees'),
       ),
-      body: tourneesAsync.when(
-        data: (tournees) => tournees.isEmpty
-            ? const _EmptyState()
-            : _TourneesList(tournees: tournees),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Erreur : $err')),
+      body: Column(
+        children: [
+          // Champ recherche, visible des qu'on a >= 3 tournees pour
+          // ne pas polluer les nouveaux utilisateurs.
+          tourneesAsync.maybeWhen(
+            data: (list) {
+              if (list.length < 3) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x14,
+                  AppSpacing.x10,
+                  AppSpacing.x14,
+                  AppSpacing.x4,
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    hintText: 'Rechercher par nom, client, date...',
+                    isDense: true,
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () => setState(() => _query = ''),
+                          )
+                        : null,
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+              );
+            },
+            orElse: () => const SizedBox.shrink(),
+          ),
+          Expanded(
+            child: tourneesAsync.when(
+              data: (tournees) {
+                final filtered = _filter(tournees, _query);
+                if (tournees.isEmpty) return const _EmptyState();
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.x22),
+                      child: Text(
+                        'Aucune tournee ne correspond a "$_query".',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textMute),
+                      ),
+                    ),
+                  );
+                }
+                return _TourneesList(tournees: filtered);
+              },
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Erreur : $err')),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(context),
@@ -45,6 +104,18 @@ class TourneesListScreen extends ConsumerWidget {
         builder: (_) => TourneeFormScreen(initial: tournee),
       ),
     );
+  }
+
+  static List<Tournee> _filter(List<Tournee> all, String q) {
+    final query = q.trim().toLowerCase();
+    if (query.isEmpty) return all;
+    return all.where((t) {
+      // Match sur le nom, le point de depart, et le mois/jour formate.
+      final hay =
+          '${t.nom} ${t.pointDepartLabel} ${DateFormat('d MMM y', 'fr').format(t.date)}'
+              .toLowerCase();
+      return hay.contains(query);
+    }).toList();
   }
 }
 
