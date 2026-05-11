@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' show Position;
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
@@ -485,21 +486,26 @@ class _Body extends StatelessWidget {
 /// affiche uniquement les arrets qui matchent (par nom client / adresse
 /// / notes, normalisation des accents) et le drag est desactive
 /// puisque l'ordre n'a pas de sens sur un sous-ensemble.
-class _StopsSection extends StatefulWidget {
+class _StopsSection extends ConsumerStatefulWidget {
   const _StopsSection({required this.stops});
 
   final List<Stop> stops;
 
   @override
-  State<_StopsSection> createState() => _StopsSectionState();
+  ConsumerState<_StopsSection> createState() => _StopsSectionState();
 }
 
-class _StopsSectionState extends State<_StopsSection> {
+class _StopsSectionState extends ConsumerState<_StopsSection> {
   String _query = '';
 
   /// Filtre par statut applique en plus de la recherche texte :
   /// 'tout' / 'a_livrer' / 'livre' / 'echec'.
   String _statutFilter = 'tout';
+
+  /// Mode "tri par distance GPS" : remplace l'ordre optimise par
+  /// la proximite a ma position actuelle. Utile quand je devie de
+  /// l'itineraire ou pour decider du prochain arret le plus proche.
+  bool _sortByDistance = false;
 
   @override
   Widget build(BuildContext context) {
@@ -514,7 +520,18 @@ class _StopsSectionState extends State<_StopsSection> {
     if (hasQuery) {
       filtered = _filter(filtered, _query);
     }
-    final isFiltered = hasQuery || hasStatutFilter;
+    if (_sortByDistance) {
+      final pos = ref.watch(currentPositionProvider).asData?.value;
+      if (pos != null) {
+        filtered = List.of(filtered)
+          ..sort((a, b) {
+            final da = _distanceFromPos(pos, a);
+            final db = _distanceFromPos(pos, b);
+            return da.compareTo(db);
+          });
+      }
+    }
+    final isFiltered = hasQuery || hasStatutFilter || _sortByDistance;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -564,6 +581,37 @@ class _StopsSectionState extends State<_StopsSection> {
                       .where((s) => s.statutLivraison == 'echec')
                       .length,
                   onSelected: (v) => setState(() => _statutFilter = v),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                // Toggle "tri par distance GPS" : remplace l'ordre
+                // optimise par la proximite GPS. Utile en cours de
+                // tournee quand on devie de l'itineraire.
+                FilterChip(
+                  label: const Text('Par distance'),
+                  selected: _sortByDistance,
+                  onSelected: (v) => setState(() => _sortByDistance = v),
+                  avatar: Icon(
+                    Icons.my_location,
+                    size: 14,
+                    color: _sortByDistance
+                        ? AppColors.ink
+                        : AppColors.textMute,
+                  ),
+                  selectedColor: AppColors.lime,
+                  backgroundColor: AppColors.paper,
+                  side: BorderSide(
+                    color: _sortByDistance
+                        ? AppColors.lime
+                        : AppColors.inkLine,
+                  ),
+                  labelStyle: TextStyle(
+                    color: AppColors.ink,
+                    fontWeight: _sortByDistance
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    fontSize: 12,
+                  ),
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
@@ -622,6 +670,18 @@ class _StopsSectionState extends State<_StopsSection> {
         else
           _StopsList(stops: filtered, reorderable: !isFiltered),
       ],
+    );
+  }
+
+  /// Distance vol d'oiseau entre la position GPS et l'arret (Geolocator
+  /// haversine). Stops sans coords -> infini (relegues a la fin).
+  static double _distanceFromPos(Position pos, Stop s) {
+    if (s.lat == null || s.lng == null) return double.infinity;
+    return LocationService.distanceMeters(
+      fromLat: pos.latitude,
+      fromLng: pos.longitude,
+      toLat: s.lat!,
+      toLng: s.lng!,
     );
   }
 
