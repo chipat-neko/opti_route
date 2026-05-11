@@ -1177,7 +1177,75 @@ class _ProchainArretCard extends ConsumerWidget {
               ),
             ],
           ),
+          // Bouton "Livre" gros et direct : mode livraison rapide ;
+          // pas besoin d'ouvrir la bottom sheet pour valider l'arret.
+          // Capture la position GPS comme preuve et passe au prochain.
+          const SizedBox(height: AppSpacing.x10),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.emerald,
+              foregroundColor: AppColors.paper,
+              minimumSize: const Size(double.infinity, 48),
+            ),
+            onPressed: () => _markLivreFromCard(context, ref, prochain),
+            icon: const Icon(Icons.check_circle, size: 20),
+            label: const Text(
+              'Marquer livre',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  static Future<void> _markLivreFromCard(
+    BuildContext context,
+    WidgetRef ref,
+    Stop stop,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    // Capture GPS best-effort en parallele du markLivre (4 s max).
+    ({double lat, double lng})? pos;
+    try {
+      final ok = await LocationService.ensurePermission();
+      if (ok) {
+        final p = await LocationService.currentPosition()
+            .timeout(const Duration(seconds: 4));
+        pos = (lat: p.latitude, lng: p.longitude);
+      }
+    } catch (_) {/* best-effort */}
+
+    await ref.read(stopsRepositoryProvider).markLivre(stop.id, position: pos);
+
+    // Bascule auto en 'terminee' si tous les arrets ont un statut.
+    // Meme logique que _TourneeDuJourScreenState._maybeFinishTournee
+    // (qu'on duplique ici car cette methode est static).
+    final stopsRepo = ref.read(stopsRepositoryProvider);
+    final tourneesRepo = ref.read(tourneesRepositoryProvider);
+    final allStops = await stopsRepo.getByTournee(stop.tourneeId);
+    final tousValides = allStops.isNotEmpty &&
+        allStops.every((s) =>
+            s.statutLivraison == 'livre' || s.statutLivraison == 'echec');
+    if (tousValides) {
+      await tourneesRepo.update(
+        stop.tourneeId,
+        const TourneesCompanion(statut: Value('terminee')),
+      );
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          stop.nomClient?.isNotEmpty == true
+              ? '${stop.nomClient} marque livre'
+              : 'Arret marque livre',
+        ),
+        backgroundColor: AppColors.emerald,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
