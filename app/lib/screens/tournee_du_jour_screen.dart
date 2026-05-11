@@ -331,9 +331,21 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       final stops =
           await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
       final service = TourneePdfService();
+      // Calcule le cout carburant pour l'inclure dans le PDF si la
+      // tournee a une distance.
+      double? cout;
+      if (widget.tournee.distanceTotaleM != null &&
+          widget.tournee.distanceTotaleM! > 0) {
+        cout = await ref
+            .read(parametresRepositoryProvider)
+            .estimerCoutCarburant(
+              distanceMeters: widget.tournee.distanceTotaleM!,
+            );
+      }
       await service.exportAndShare(
         tournee: widget.tournee,
         stops: stops,
+        coutCarburantEur: cout,
       );
     } catch (e) {
       if (!mounted) return;

@@ -15,11 +15,20 @@ import 'database.dart';
 class TourneePdfService {
   /// Genere le PDF, le sauve dans un fichier temporaire, et lance le
   /// partage. Retourne le chemin du fichier genere.
+  ///
+  /// [coutCarburantEur] : si fourni, ajoute une ligne "Cout carburant"
+  /// dans le tableau de stats. Calcule en amont via
+  /// `ParametresRepository.estimerCoutCarburant`.
   Future<String> exportAndShare({
     required Tournee tournee,
     required List<Stop> stops,
+    double? coutCarburantEur,
   }) async {
-    final pdf = await _buildDocument(tournee: tournee, stops: stops);
+    final pdf = await _buildDocument(
+      tournee: tournee,
+      stops: stops,
+      coutCarburantEur: coutCarburantEur,
+    );
     final dir = await getTemporaryDirectory();
     final dateStr = DateFormat('yyyy-MM-dd').format(tournee.date);
     final safeNom = tournee.nom
@@ -45,6 +54,7 @@ class TourneePdfService {
   Future<pw.Document> _buildDocument({
     required Tournee tournee,
     required List<Stop> stops,
+    double? coutCarburantEur,
   }) async {
     final pdf = pw.Document(
       title: 'Tournee ${tournee.nom}',
@@ -120,6 +130,7 @@ class TourneePdfService {
             colisLivres: colisLivres,
             km: km,
             duree: dur,
+            coutCarburantEur: coutCarburantEur,
           ),
           pw.SizedBox(height: 18),
           // Liste des arrets
@@ -157,6 +168,7 @@ class TourneePdfService {
     required int colisLivres,
     required String km,
     required String duree,
+    double? coutCarburantEur,
   }) {
     pw.Widget cell(String label, String value) {
       return pw.Container(
@@ -211,6 +223,18 @@ class TourneePdfService {
             cell('Statut', _statutLabel(_inferStatut(arretsTotal, livres, echecs))),
           ],
         ),
+        if (coutCarburantEur != null && coutCarburantEur > 0)
+          pw.TableRow(
+            children: [
+              cell(
+                'Cout carburant',
+                '${coutCarburantEur.toStringAsFixed(2).replaceAll('.', ',')} EUR',
+              ),
+              cell('', ''),
+              cell('', ''),
+              cell('', ''),
+            ],
+          ),
       ],
     );
   }
