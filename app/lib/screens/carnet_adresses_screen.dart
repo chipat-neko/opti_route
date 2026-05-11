@@ -301,9 +301,14 @@ class _CarnetTile extends ConsumerWidget {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: entry.isFavori
-                            ? AppColors.amber
-                            : AppColors.lime,
+                        // Priorite : colorTag custom > favori amber >
+                        // lime par defaut.
+                        color: colorFromTag(
+                          entry.colorTag,
+                          defaultColor: entry.isFavori
+                              ? AppColors.amber
+                              : AppColors.lime,
+                        ),
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,

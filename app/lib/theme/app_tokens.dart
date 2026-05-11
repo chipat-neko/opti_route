@@ -69,6 +69,31 @@ abstract final class AppRadius {
   static const r28 = 28.0;
 }
 
+/// Mapping nom de tag -> Color de la palette. Sert pour la couleur
+/// custom d'un client dans le carnet (`SavedDestination.colorTag`).
+/// Tag null ou inconnu -> retourne `defaultColor`.
+Color colorFromTag(String? tag, {required Color defaultColor}) {
+  return switch (tag) {
+    'lime' => AppColors.lime,
+    'emerald' => AppColors.emerald,
+    'red' => AppColors.red,
+    'amber' => AppColors.amber,
+    'cream' => AppColors.creamSoft,
+    'ink' => AppColors.ink,
+    _ => defaultColor,
+  };
+}
+
+/// Liste des tags de couleur exposes dans le picker UI.
+const colorTagOptions = <(String, Color)>[
+  ('lime', AppColors.lime),
+  ('emerald', AppColors.emerald),
+  ('amber', AppColors.amber),
+  ('red', AppColors.red),
+  ('cream', AppColors.creamSoft),
+  ('ink', AppColors.ink),
+];
+
 /// Palette context-aware qui bascule selon le ThemeMode (clair / sombre).
 /// Sert aux widgets custom qui veulent supporter le mode sombre sans
 /// passer par le `colorScheme` Material standard.
