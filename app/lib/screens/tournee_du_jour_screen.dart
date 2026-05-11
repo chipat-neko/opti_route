@@ -213,7 +213,14 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     if (!mounted) return;
     await ref.read(tourneesRepositoryProvider).update(
           widget.tournee.id,
-          const TourneesCompanion(statut: Value('en_cours')),
+          TourneesCompanion(
+            statut: const Value('en_cours'),
+            // Pose le timestamp de demarrage seulement s'il n'y en a
+            // pas deja un (ex: reprise apres Pause -> on garde le 1er).
+            demareeLe: widget.tournee.demareeLe == null
+                ? Value(DateTime.now())
+                : const Value.absent(),
+          ),
         );
     if (!mounted) return;
     messenger.showSnackBar(
@@ -455,6 +462,7 @@ class _Body extends StatelessWidget {
           _ProgressBanner(
             stops: stops,
             tourneeTerminee: tournee.statut == 'terminee',
+            demareeLe: tournee.demareeLe,
           ),
         ],
         if (tournee.statut == 'en_cours') ...[
@@ -1430,10 +1438,15 @@ class _ProgressBanner extends StatelessWidget {
   const _ProgressBanner({
     required this.stops,
     required this.tourneeTerminee,
+    this.demareeLe,
   });
 
   final List<Stop> stops;
   final bool tourneeTerminee;
+
+  /// Timestamp du tap "Demarrer" pour calculer le temps ecoule depuis.
+  /// Null = tournee jamais demarree (pas d'affichage dans le bandeau).
+  final DateTime? demareeLe;
 
   @override
   Widget build(BuildContext context) {
@@ -1476,15 +1489,32 @@ class _ProgressBanner extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.x8),
               Expanded(
-                child: Text(
-                  tourneeTerminee
-                      ? 'Tournee terminee'
-                      : 'Avancement : $livres / $total',
-                  style: TextStyle(
-                    color: fg,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tourneeTerminee
+                          ? 'Tournee terminee'
+                          : 'Avancement : $livres / $total',
+                      style: TextStyle(
+                        color: fg,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (demareeLe != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Text(
+                          'Demarree il y a ${_formatElapsed(demareeLe!)}',
+                          style: appMonoStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: mute,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               if (colisTotal > 0)
@@ -1562,6 +1592,23 @@ class _ProgressBanner extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Formate la duree ecoulee depuis [start] sous forme courte :
+  /// "8 min", "1h32", "2j 4h". Pas de secondes, on rafraichit la
+  /// minute pres au prochain rebuild.
+  static String _formatElapsed(DateTime start) {
+    final d = DateTime.now().difference(start);
+    if (d.inMinutes < 1) return 'moins d\'une min';
+    if (d.inHours < 1) return '${d.inMinutes} min';
+    if (d.inDays < 1) {
+      final h = d.inHours;
+      final m = d.inMinutes % 60;
+      return '${h}h${m.toString().padLeft(2, '0')}';
+    }
+    final j = d.inDays;
+    final h = d.inHours % 24;
+    return '${j}j ${h}h';
   }
 }
 
