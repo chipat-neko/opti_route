@@ -49,32 +49,60 @@ class StopsRepository {
 
   /// Marque un arret comme livre. Reset la raison d'echec si elle
   /// avait ete remplie precedemment.
-  Future<int> markLivre(int id) {
+  ///
+  /// Si [position] est fourni (best-effort GPS au moment du tap), on
+  /// l'enregistre comme preuve de passage (utile en cas de litige
+  /// client). Idem pour [livreLe] qui timestamp la validation.
+  Future<int> markLivre(
+    int id, {
+    ({double lat, double lng})? position,
+    DateTime? livreLe,
+  }) {
     return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
-      const StopsCompanion(
-        statutLivraison: Value('livre'),
-        raisonEchec: Value(null),
+      StopsCompanion(
+        statutLivraison: const Value('livre'),
+        raisonEchec: const Value(null),
+        livreLat:
+            position == null ? const Value(null) : Value(position.lat),
+        livreLng:
+            position == null ? const Value(null) : Value(position.lng),
+        livreLe: Value(livreLe ?? DateTime.now()),
       ),
     );
   }
 
   /// Marque un arret en echec avec une raison ('absent', 'refuse',
-  /// 'adresse_fausse', 'autre').
-  Future<int> markEchec(int id, String raison) {
+  /// 'adresse_fausse', 'autre'). Idem [markLivre] pour la position
+  /// GPS optionnelle.
+  Future<int> markEchec(
+    int id,
+    String raison, {
+    ({double lat, double lng})? position,
+    DateTime? livreLe,
+  }) {
     return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
       StopsCompanion(
         statutLivraison: const Value('echec'),
         raisonEchec: Value(raison),
+        livreLat:
+            position == null ? const Value(null) : Value(position.lat),
+        livreLng:
+            position == null ? const Value(null) : Value(position.lng),
+        livreLe: Value(livreLe ?? DateTime.now()),
       ),
     );
   }
 
-  /// Annule un statut deja pose : remet en 'a_livrer'.
+  /// Annule un statut deja pose : remet en 'a_livrer' et efface la
+  /// position GPS / timestamp de validation.
   Future<int> markAaLivrer(int id) {
     return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(
       const StopsCompanion(
         statutLivraison: Value('a_livrer'),
         raisonEchec: Value(null),
+        livreLat: Value(null),
+        livreLng: Value(null),
+        livreLe: Value(null),
       ),
     );
   }

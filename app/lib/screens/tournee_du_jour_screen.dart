@@ -1762,7 +1762,8 @@ class _StopRow extends ConsumerWidget {
     var statutChange = false;
     switch (action) {
       case MarkLivreAction():
-        await repo.markLivre(stop.id);
+        final pos = await _captureGpsPosition();
+        await repo.markLivre(stop.id, position: pos);
         statutChange = true;
         messenger.showSnackBar(
           SnackBar(
@@ -1772,7 +1773,8 @@ class _StopRow extends ConsumerWidget {
           ),
         );
       case MarkEchecAction(raison: final r):
-        await repo.markEchec(stop.id, r);
+        final pos = await _captureGpsPosition();
+        await repo.markEchec(stop.id, r, position: pos);
         statutChange = true;
         messenger.showSnackBar(
           SnackBar(
@@ -1840,6 +1842,25 @@ class _StopRow extends ConsumerWidget {
       'autre' => 'autre',
       _ => 'sans raison',
     };
+  }
+
+  /// Best-effort : retourne la position GPS actuelle pour servir de
+  /// preuve de passage. Si la permission n'a pas ete accordee ou si
+  /// le GPS est down (offline, batterie faible, indoors), retourne
+  /// null -- on stocke quand meme le statut sans coords.
+  ///
+  /// Timeout court (4 s) : on ne veut pas bloquer l'UX pendant que
+  /// Noah enchaine les "Marquer livre" en sortant des voitures.
+  static Future<({double lat, double lng})?> _captureGpsPosition() async {
+    try {
+      final ok = await LocationService.ensurePermission();
+      if (!ok) return null;
+      final pos = await LocationService.currentPosition()
+          .timeout(const Duration(seconds: 4));
+      return (lat: pos.latitude, lng: pos.longitude);
+    } catch (_) {
+      return null;
+    }
   }
 
   String _primaryLine(Stop s) {
