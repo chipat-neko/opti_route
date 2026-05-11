@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/parametres_repository.dart';
+import '../data/client_stats_service.dart';
 import '../data/saved_destinations_repository.dart';
 import '../data/sheets_repository.dart';
 import '../data/stats_service.dart';
@@ -38,6 +39,22 @@ final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
 
 final statsServiceProvider = Provider<StatsService>((ref) {
   return StatsService(ref.watch(appDatabaseProvider));
+});
+
+final clientStatsServiceProvider = Provider<ClientStatsService>((ref) {
+  return ClientStatsService(ref.watch(appDatabaseProvider));
+});
+
+/// Stats agregees pour un client donne du carnet (livraisons, echecs,
+/// derniere visite, raisons d'echec). Recalcule a chaque modif des
+/// stops via le watch implicite sur tourneesStreamProvider.
+final clientStatsProvider = FutureProvider.family<ClientStats, int>(
+    (ref, savedDestinationId) async {
+  ref.watch(tourneesStreamProvider);
+  final repo = ref.read(savedDestinationsRepositoryProvider);
+  final entry = await repo.getById(savedDestinationId);
+  if (entry == null) return ClientStats.empty;
+  return ref.read(clientStatsServiceProvider).computeFor(entry);
 });
 
 /// Stream du flag "onboarding deja fait". Sert au routeur d'app a
