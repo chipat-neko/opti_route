@@ -290,6 +290,47 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Apparence'),
+          const SizedBox(height: AppSpacing.x10),
+          const Text(
+            'Mode sombre pour la conduite de nuit. "Auto" suit les '
+            'reglages Android.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Consumer(
+            builder: (context, ref, _) {
+              final mode = ref.watch(themeModeProvider).asData?.value ??
+                  ThemeMode.system;
+              return Wrap(
+                spacing: AppSpacing.x8,
+                children: [
+                  _ThemeChip(
+                    label: 'Auto',
+                    value: ThemeMode.system,
+                    groupValue: mode,
+                  ),
+                  _ThemeChip(
+                    label: 'Clair',
+                    value: ThemeMode.light,
+                    groupValue: mode,
+                  ),
+                  _ThemeChip(
+                    label: 'Sombre',
+                    value: ThemeMode.dark,
+                    groupValue: mode,
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('A propos'),
           const SizedBox(height: AppSpacing.x10),
           ListTile(
@@ -449,6 +490,44 @@ class _SectionTitle extends StatelessWidget {
         fontWeight: FontWeight.w600,
         letterSpacing: 0.6,
         color: AppColors.textMute,
+      ),
+    );
+  }
+}
+
+class _ThemeChip extends ConsumerWidget {
+  const _ThemeChip({
+    required this.label,
+    required this.value,
+    required this.groupValue,
+  });
+
+  final String label;
+  final ThemeMode value;
+  final ThemeMode groupValue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = value == groupValue;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) async {
+        final repo = ref.read(parametresRepositoryProvider);
+        await repo.setThemeMode(switch (value) {
+          ThemeMode.light => 'light',
+          ThemeMode.dark => 'dark',
+          ThemeMode.system => 'system',
+        });
+      },
+      selectedColor: AppColors.lime,
+      backgroundColor: AppColors.paper,
+      side: BorderSide(
+        color: selected ? AppColors.lime : AppColors.inkLine,
+      ),
+      labelStyle: TextStyle(
+        color: AppColors.ink,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
       ),
     );
   }

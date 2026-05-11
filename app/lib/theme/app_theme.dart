@@ -9,38 +9,68 @@ import 'app_tokens.dart';
 /// - **Police UI** : Manrope (Google Fonts) — 400/500/600/700/800.
 /// - **Police chiffres / mono** : JetBrains Mono — exposée via [appMonoStyle].
 /// - **Couleurs** : palette cream/ink/lime/emerald de la spec.
-ThemeData buildAppTheme() {
-  final base = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-  );
+ThemeData buildAppTheme() => _buildTheme(brightness: Brightness.light);
+
+/// Variante sombre du thème pour la conduite de nuit (#73).
+///
+/// Inverse les surfaces (background ink, paper -> inkSoft) tout en
+/// conservant les couleurs de marque (lime / emerald / red / amber)
+/// qui restent lisibles sur fond sombre.
+///
+/// **Limite connue** : certains widgets custom utilisent encore les
+/// constantes `AppColors.*` en dur (cream/paper/ink) et ne basculent
+/// pas. Ils gardent leur apparence claire. Refactor complet à faire
+/// dans une PR future si ce n'est pas assez sombre la nuit.
+ThemeData buildAppThemeDark() => _buildTheme(brightness: Brightness.dark);
+
+ThemeData _buildTheme({required Brightness brightness}) {
+  final isDark = brightness == Brightness.dark;
+
+  // Palette dynamique selon le mode.
+  final bg = isDark ? AppColors.ink : AppColors.cream;
+  final bgSoft = isDark ? AppColors.inkSoft : AppColors.creamSoft;
+  final surface = isDark ? AppColors.inkSoft : AppColors.paper;
+  final onSurface = isDark ? AppColors.cream : AppColors.ink;
+  final onSurfaceMute = isDark
+      ? AppColors.cream.withValues(alpha: 0.65)
+      : AppColors.textMute;
+  final outline = isDark
+      ? AppColors.cream.withValues(alpha: 0.15)
+      : AppColors.inkLine;
+  final divider = isDark
+      ? AppColors.cream.withValues(alpha: 0.08)
+      : AppColors.divider;
+  final primaryFg = isDark ? AppColors.lime : AppColors.lime;
+  final primaryBg = isDark ? AppColors.cream : AppColors.ink;
+
+  final base = ThemeData(useMaterial3: true, brightness: brightness);
 
   final colorScheme = ColorScheme(
-    brightness: Brightness.light,
-    primary: AppColors.ink,
-    onPrimary: AppColors.paper,
+    brightness: brightness,
+    primary: primaryBg,
+    onPrimary: primaryFg,
     secondary: AppColors.lime,
     onSecondary: AppColors.ink,
     tertiary: AppColors.emerald,
     onTertiary: AppColors.paper,
     error: AppColors.red,
     onError: AppColors.paper,
-    surface: AppColors.cream,
-    onSurface: AppColors.ink,
-    surfaceContainerLowest: AppColors.paper,
-    surfaceContainerLow: AppColors.cream,
-    surfaceContainer: AppColors.creamSoft,
-    surfaceContainerHigh: AppColors.creamSoft,
-    surfaceContainerHighest: AppColors.creamSoft,
-    onSurfaceVariant: AppColors.textMute,
-    outline: AppColors.inkLine,
-    outlineVariant: AppColors.divider,
+    surface: bg,
+    onSurface: onSurface,
+    surfaceContainerLowest: surface,
+    surfaceContainerLow: bg,
+    surfaceContainer: bgSoft,
+    surfaceContainerHigh: bgSoft,
+    surfaceContainerHighest: bgSoft,
+    onSurfaceVariant: onSurfaceMute,
+    outline: outline,
+    outlineVariant: divider,
     shadow: AppColors.ink,
   );
 
   final manropeText = GoogleFonts.manropeTextTheme(base.textTheme).apply(
-    bodyColor: AppColors.ink,
-    displayColor: AppColors.ink,
+    bodyColor: onSurface,
+    displayColor: onSurface,
   );
 
   final textTheme = manropeText.copyWith(
@@ -58,52 +88,52 @@ ThemeData buildAppTheme() {
     labelSmall: manropeText.labelSmall?.copyWith(
       fontWeight: FontWeight.w600,
       letterSpacing: 0.6,
-      color: AppColors.textMute,
+      color: onSurfaceMute,
     ),
   );
 
   return base.copyWith(
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: AppColors.cream,
+    scaffoldBackgroundColor: bg,
     textTheme: textTheme,
     primaryTextTheme: textTheme,
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColors.cream,
-      foregroundColor: AppColors.ink,
+      backgroundColor: bg,
+      foregroundColor: onSurface,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: textTheme.titleLarge,
       surfaceTintColor: Colors.transparent,
     ),
-    cardTheme: const CardThemeData(
-      color: AppColors.paper,
+    cardTheme: CardThemeData(
+      color: surface,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadius.r18)),
       ),
     ),
-    dividerTheme: const DividerThemeData(
-      color: AppColors.divider,
+    dividerTheme: DividerThemeData(
+      color: divider,
       thickness: 1,
       space: 1,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.paper,
+      fillColor: surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.r14),
-        borderSide: const BorderSide(color: AppColors.inkLine),
+        borderSide: BorderSide(color: outline),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.r14),
-        borderSide: const BorderSide(color: AppColors.inkLine),
+        borderSide: BorderSide(color: outline),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.r14),
-        borderSide: const BorderSide(color: AppColors.ink, width: 1.5),
+        borderSide: BorderSide(color: onSurface, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.r14),
@@ -113,13 +143,13 @@ ThemeData buildAppTheme() {
         horizontal: AppSpacing.x16,
         vertical: AppSpacing.x14,
       ),
-      labelStyle: const TextStyle(color: AppColors.textMute),
-      hintStyle: const TextStyle(color: AppColors.textFaint),
+      labelStyle: TextStyle(color: onSurfaceMute),
+      hintStyle: TextStyle(color: onSurfaceMute.withValues(alpha: 0.7)),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.ink,
-        foregroundColor: AppColors.lime,
+        backgroundColor: primaryBg,
+        foregroundColor: primaryFg,
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.x22,
@@ -133,8 +163,8 @@ ThemeData buildAppTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.ink,
-        side: const BorderSide(color: AppColors.ink, width: 1.5),
+        foregroundColor: onSurface,
+        side: BorderSide(color: onSurface, width: 1.5),
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.x22,
@@ -148,39 +178,41 @@ ThemeData buildAppTheme() {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: AppColors.ink,
+        foregroundColor: onSurface,
         textStyle: textTheme.labelLarge,
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: AppColors.ink,
-      foregroundColor: AppColors.lime,
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: primaryBg,
+      foregroundColor: primaryFg,
       elevation: 6,
-      extendedTextStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+      extendedTextStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
     ),
-    listTileTheme: const ListTileThemeData(
-      tileColor: AppColors.paper,
-      iconColor: AppColors.ink,
-      textColor: AppColors.ink,
+    listTileTheme: ListTileThemeData(
+      tileColor: surface,
+      iconColor: onSurface,
+      textColor: onSurface,
     ),
-    chipTheme: const ChipThemeData(
-      backgroundColor: AppColors.creamSoft,
-      labelStyle: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
+    chipTheme: ChipThemeData(
+      backgroundColor: bgSoft,
+      labelStyle: TextStyle(color: onSurface, fontWeight: FontWeight.w600),
       side: BorderSide.none,
-      shape: StadiumBorder(),
+      shape: const StadiumBorder(),
     ),
-    dialogTheme: const DialogThemeData(
-      backgroundColor: AppColors.paper,
+    dialogTheme: DialogThemeData(
+      backgroundColor: surface,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadius.r22)),
       ),
     ),
-    snackBarTheme: const SnackBarThemeData(
-      backgroundColor: AppColors.ink,
-      contentTextStyle: TextStyle(color: AppColors.paper),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: isDark ? AppColors.cream : AppColors.ink,
+      contentTextStyle: TextStyle(
+        color: isDark ? AppColors.ink : AppColors.paper,
+      ),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadius.r14)),
       ),
     ),
