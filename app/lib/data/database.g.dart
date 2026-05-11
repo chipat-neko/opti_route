@@ -964,6 +964,39 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _livreLatMeta = const VerificationMeta(
+    'livreLat',
+  );
+  @override
+  late final GeneratedColumn<double> livreLat = GeneratedColumn<double>(
+    'livre_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _livreLngMeta = const VerificationMeta(
+    'livreLng',
+  );
+  @override
+  late final GeneratedColumn<double> livreLng = GeneratedColumn<double>(
+    'livre_lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _livreLeMeta = const VerificationMeta(
+    'livreLe',
+  );
+  @override
+  late final GeneratedColumn<DateTime> livreLe = GeneratedColumn<DateTime>(
+    'livre_le',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _ordreOptimiseMeta = const VerificationMeta(
     'ordreOptimise',
   );
@@ -1013,6 +1046,9 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     nomClient,
     statutLivraison,
     raisonEchec,
+    livreLat,
+    livreLng,
+    livreLe,
     ordreOptimise,
     ordrePriorite,
     creeLe,
@@ -1138,6 +1174,24 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('livre_lat')) {
+      context.handle(
+        _livreLatMeta,
+        livreLat.isAcceptableOrUnknown(data['livre_lat']!, _livreLatMeta),
+      );
+    }
+    if (data.containsKey('livre_lng')) {
+      context.handle(
+        _livreLngMeta,
+        livreLng.isAcceptableOrUnknown(data['livre_lng']!, _livreLngMeta),
+      );
+    }
+    if (data.containsKey('livre_le')) {
+      context.handle(
+        _livreLeMeta,
+        livreLe.isAcceptableOrUnknown(data['livre_le']!, _livreLeMeta),
+      );
+    }
     if (data.containsKey('ordre_optimise')) {
       context.handle(
         _ordreOptimiseMeta,
@@ -1231,6 +1285,18 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}raison_echec'],
       ),
+      livreLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}livre_lat'],
+      ),
+      livreLng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}livre_lng'],
+      ),
+      livreLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}livre_le'],
+      ),
       ordreOptimise: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}ordre_optimise'],
@@ -1271,6 +1337,16 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// Raison de l'echec quand `statutLivraison == 'echec'` :
   /// 'absent' / 'refuse' / 'adresse_fausse' / 'autre'. Null sinon.
   final String? raisonEchec;
+
+  /// Position GPS au moment du "Marquer livre" / "Marquer echec" --
+  /// sert de preuve de passage en cas de litige client.
+  /// Null si la permission GPS etait refusee ou l'app etait offline.
+  final double? livreLat;
+  final double? livreLng;
+
+  /// Timestamp de la validation (livre OU echec). Sert aussi a calculer
+  /// le temps passe sur la tournee a posteriori.
+  final DateTime? livreLe;
   final int? ordreOptimise;
 
   /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
@@ -1295,6 +1371,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.nomClient,
     required this.statutLivraison,
     this.raisonEchec,
+    this.livreLat,
+    this.livreLng,
+    this.livreLe,
     this.ordreOptimise,
     this.ordrePriorite,
     required this.creeLe,
@@ -1332,6 +1411,15 @@ class Stop extends DataClass implements Insertable<Stop> {
     map['statut_livraison'] = Variable<String>(statutLivraison);
     if (!nullToAbsent || raisonEchec != null) {
       map['raison_echec'] = Variable<String>(raisonEchec);
+    }
+    if (!nullToAbsent || livreLat != null) {
+      map['livre_lat'] = Variable<double>(livreLat);
+    }
+    if (!nullToAbsent || livreLng != null) {
+      map['livre_lng'] = Variable<double>(livreLng);
+    }
+    if (!nullToAbsent || livreLe != null) {
+      map['livre_le'] = Variable<DateTime>(livreLe);
     }
     if (!nullToAbsent || ordreOptimise != null) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise);
@@ -1372,6 +1460,15 @@ class Stop extends DataClass implements Insertable<Stop> {
       raisonEchec: raisonEchec == null && nullToAbsent
           ? const Value.absent()
           : Value(raisonEchec),
+      livreLat: livreLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(livreLat),
+      livreLng: livreLng == null && nullToAbsent
+          ? const Value.absent()
+          : Value(livreLng),
+      livreLe: livreLe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(livreLe),
       ordreOptimise: ordreOptimise == null && nullToAbsent
           ? const Value.absent()
           : Value(ordreOptimise),
@@ -1405,6 +1502,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       nomClient: serializer.fromJson<String?>(json['nomClient']),
       statutLivraison: serializer.fromJson<String>(json['statutLivraison']),
       raisonEchec: serializer.fromJson<String?>(json['raisonEchec']),
+      livreLat: serializer.fromJson<double?>(json['livreLat']),
+      livreLng: serializer.fromJson<double?>(json['livreLng']),
+      livreLe: serializer.fromJson<DateTime?>(json['livreLe']),
       ordreOptimise: serializer.fromJson<int?>(json['ordreOptimise']),
       ordrePriorite: serializer.fromJson<int?>(json['ordrePriorite']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
@@ -1429,6 +1529,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       'nomClient': serializer.toJson<String?>(nomClient),
       'statutLivraison': serializer.toJson<String>(statutLivraison),
       'raisonEchec': serializer.toJson<String?>(raisonEchec),
+      'livreLat': serializer.toJson<double?>(livreLat),
+      'livreLng': serializer.toJson<double?>(livreLng),
+      'livreLe': serializer.toJson<DateTime?>(livreLe),
       'ordreOptimise': serializer.toJson<int?>(ordreOptimise),
       'ordrePriorite': serializer.toJson<int?>(ordrePriorite),
       'creeLe': serializer.toJson<DateTime>(creeLe),
@@ -1451,6 +1554,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<String?> nomClient = const Value.absent(),
     String? statutLivraison,
     Value<String?> raisonEchec = const Value.absent(),
+    Value<double?> livreLat = const Value.absent(),
+    Value<double?> livreLng = const Value.absent(),
+    Value<DateTime?> livreLe = const Value.absent(),
     Value<int?> ordreOptimise = const Value.absent(),
     Value<int?> ordrePriorite = const Value.absent(),
     DateTime? creeLe,
@@ -1472,6 +1578,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
     statutLivraison: statutLivraison ?? this.statutLivraison,
     raisonEchec: raisonEchec.present ? raisonEchec.value : this.raisonEchec,
+    livreLat: livreLat.present ? livreLat.value : this.livreLat,
+    livreLng: livreLng.present ? livreLng.value : this.livreLng,
+    livreLe: livreLe.present ? livreLe.value : this.livreLe,
     ordreOptimise: ordreOptimise.present
         ? ordreOptimise.value
         : this.ordreOptimise,
@@ -1511,6 +1620,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       raisonEchec: data.raisonEchec.present
           ? data.raisonEchec.value
           : this.raisonEchec,
+      livreLat: data.livreLat.present ? data.livreLat.value : this.livreLat,
+      livreLng: data.livreLng.present ? data.livreLng.value : this.livreLng,
+      livreLe: data.livreLe.present ? data.livreLe.value : this.livreLe,
       ordreOptimise: data.ordreOptimise.present
           ? data.ordreOptimise.value
           : this.ordreOptimise,
@@ -1539,6 +1651,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('nomClient: $nomClient, ')
           ..write('statutLivraison: $statutLivraison, ')
           ..write('raisonEchec: $raisonEchec, ')
+          ..write('livreLat: $livreLat, ')
+          ..write('livreLng: $livreLng, ')
+          ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('creeLe: $creeLe')
@@ -1547,7 +1662,7 @@ class Stop extends DataClass implements Insertable<Stop> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     tourneeId,
     adresseBrute,
@@ -1563,10 +1678,13 @@ class Stop extends DataClass implements Insertable<Stop> {
     nomClient,
     statutLivraison,
     raisonEchec,
+    livreLat,
+    livreLng,
+    livreLe,
     ordreOptimise,
     ordrePriorite,
     creeLe,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1586,6 +1704,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.nomClient == this.nomClient &&
           other.statutLivraison == this.statutLivraison &&
           other.raisonEchec == this.raisonEchec &&
+          other.livreLat == this.livreLat &&
+          other.livreLng == this.livreLng &&
+          other.livreLe == this.livreLe &&
           other.ordreOptimise == this.ordreOptimise &&
           other.ordrePriorite == this.ordrePriorite &&
           other.creeLe == this.creeLe);
@@ -1607,6 +1728,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<String?> nomClient;
   final Value<String> statutLivraison;
   final Value<String?> raisonEchec;
+  final Value<double?> livreLat;
+  final Value<double?> livreLng;
+  final Value<DateTime?> livreLe;
   final Value<int?> ordreOptimise;
   final Value<int?> ordrePriorite;
   final Value<DateTime> creeLe;
@@ -1626,6 +1750,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.nomClient = const Value.absent(),
     this.statutLivraison = const Value.absent(),
     this.raisonEchec = const Value.absent(),
+    this.livreLat = const Value.absent(),
+    this.livreLng = const Value.absent(),
+    this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.creeLe = const Value.absent(),
@@ -1646,6 +1773,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.nomClient = const Value.absent(),
     this.statutLivraison = const Value.absent(),
     this.raisonEchec = const Value.absent(),
+    this.livreLat = const Value.absent(),
+    this.livreLng = const Value.absent(),
+    this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.creeLe = const Value.absent(),
@@ -1667,6 +1797,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<String>? nomClient,
     Expression<String>? statutLivraison,
     Expression<String>? raisonEchec,
+    Expression<double>? livreLat,
+    Expression<double>? livreLng,
+    Expression<DateTime>? livreLe,
     Expression<int>? ordreOptimise,
     Expression<int>? ordrePriorite,
     Expression<DateTime>? creeLe,
@@ -1687,6 +1820,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (nomClient != null) 'nom_client': nomClient,
       if (statutLivraison != null) 'statut_livraison': statutLivraison,
       if (raisonEchec != null) 'raison_echec': raisonEchec,
+      if (livreLat != null) 'livre_lat': livreLat,
+      if (livreLng != null) 'livre_lng': livreLng,
+      if (livreLe != null) 'livre_le': livreLe,
       if (ordreOptimise != null) 'ordre_optimise': ordreOptimise,
       if (ordrePriorite != null) 'ordre_priorite': ordrePriorite,
       if (creeLe != null) 'cree_le': creeLe,
@@ -1709,6 +1845,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<String?>? nomClient,
     Value<String>? statutLivraison,
     Value<String?>? raisonEchec,
+    Value<double?>? livreLat,
+    Value<double?>? livreLng,
+    Value<DateTime?>? livreLe,
     Value<int?>? ordreOptimise,
     Value<int?>? ordrePriorite,
     Value<DateTime>? creeLe,
@@ -1729,6 +1868,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       nomClient: nomClient ?? this.nomClient,
       statutLivraison: statutLivraison ?? this.statutLivraison,
       raisonEchec: raisonEchec ?? this.raisonEchec,
+      livreLat: livreLat ?? this.livreLat,
+      livreLng: livreLng ?? this.livreLng,
+      livreLe: livreLe ?? this.livreLe,
       ordreOptimise: ordreOptimise ?? this.ordreOptimise,
       ordrePriorite: ordrePriorite ?? this.ordrePriorite,
       creeLe: creeLe ?? this.creeLe,
@@ -1783,6 +1925,15 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (raisonEchec.present) {
       map['raison_echec'] = Variable<String>(raisonEchec.value);
     }
+    if (livreLat.present) {
+      map['livre_lat'] = Variable<double>(livreLat.value);
+    }
+    if (livreLng.present) {
+      map['livre_lng'] = Variable<double>(livreLng.value);
+    }
+    if (livreLe.present) {
+      map['livre_le'] = Variable<DateTime>(livreLe.value);
+    }
     if (ordreOptimise.present) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise.value);
     }
@@ -1813,6 +1964,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('nomClient: $nomClient, ')
           ..write('statutLivraison: $statutLivraison, ')
           ..write('raisonEchec: $raisonEchec, ')
+          ..write('livreLat: $livreLat, ')
+          ..write('livreLng: $livreLng, ')
+          ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('creeLe: $creeLe')
@@ -4126,6 +4280,9 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<String?> nomClient,
       Value<String> statutLivraison,
       Value<String?> raisonEchec,
+      Value<double?> livreLat,
+      Value<double?> livreLng,
+      Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
       Value<DateTime> creeLe,
@@ -4147,6 +4304,9 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<String?> nomClient,
       Value<String> statutLivraison,
       Value<String?> raisonEchec,
+      Value<double?> livreLat,
+      Value<double?> livreLng,
+      Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
       Value<DateTime> creeLe,
@@ -4268,6 +4428,21 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get raisonEchec => $composableBuilder(
     column: $table.raisonEchec,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get livreLat => $composableBuilder(
+    column: $table.livreLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get livreLng => $composableBuilder(
+    column: $table.livreLng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get livreLe => $composableBuilder(
+    column: $table.livreLe,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4414,6 +4589,21 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get livreLat => $composableBuilder(
+    column: $table.livreLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get livreLng => $composableBuilder(
+    column: $table.livreLng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get livreLe => $composableBuilder(
+    column: $table.livreLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get ordreOptimise => $composableBuilder(
     column: $table.ordreOptimise,
     builder: (column) => ColumnOrderings(column),
@@ -4517,6 +4707,15 @@ class $$StopsTableAnnotationComposer
     column: $table.raisonEchec,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get livreLat =>
+      $composableBuilder(column: $table.livreLat, builder: (column) => column);
+
+  GeneratedColumn<double> get livreLng =>
+      $composableBuilder(column: $table.livreLng, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get livreLe =>
+      $composableBuilder(column: $table.livreLe, builder: (column) => column);
 
   GeneratedColumn<int> get ordreOptimise => $composableBuilder(
     column: $table.ordreOptimise,
@@ -4623,6 +4822,9 @@ class $$StopsTableTableManager
                 Value<String?> nomClient = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
                 Value<String?> raisonEchec = const Value.absent(),
+                Value<double?> livreLat = const Value.absent(),
+                Value<double?> livreLng = const Value.absent(),
+                Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
@@ -4642,6 +4844,9 @@ class $$StopsTableTableManager
                 nomClient: nomClient,
                 statutLivraison: statutLivraison,
                 raisonEchec: raisonEchec,
+                livreLat: livreLat,
+                livreLng: livreLng,
+                livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
                 creeLe: creeLe,
@@ -4663,6 +4868,9 @@ class $$StopsTableTableManager
                 Value<String?> nomClient = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
                 Value<String?> raisonEchec = const Value.absent(),
+                Value<double?> livreLat = const Value.absent(),
+                Value<double?> livreLng = const Value.absent(),
+                Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
@@ -4682,6 +4890,9 @@ class $$StopsTableTableManager
                 nomClient: nomClient,
                 statutLivraison: statutLivraison,
                 raisonEchec: raisonEchec,
+                livreLat: livreLat,
+                livreLng: livreLng,
+                livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
                 creeLe: creeLe,

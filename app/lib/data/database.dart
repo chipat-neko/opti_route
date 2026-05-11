@@ -44,6 +44,14 @@ class Stops extends Table {
   /// Raison de l'echec quand `statutLivraison == 'echec'` :
   /// 'absent' / 'refuse' / 'adresse_fausse' / 'autre'. Null sinon.
   TextColumn get raisonEchec => text().nullable()();
+  /// Position GPS au moment du "Marquer livre" / "Marquer echec" --
+  /// sert de preuve de passage en cas de litige client.
+  /// Null si la permission GPS etait refusee ou l'app etait offline.
+  RealColumn get livreLat => real().nullable()();
+  RealColumn get livreLng => real().nullable()();
+  /// Timestamp de la validation (livre OU echec). Sert aussi a calculer
+  /// le temps passe sur la tournee a posteriori.
+  DateTimeColumn get livreLe => dateTime().nullable()();
   IntColumn get ordreOptimise => integer().nullable()();
   /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
   /// priorite egale (obligatoire_premier ou obligatoire_dernier).
@@ -137,7 +145,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -167,6 +175,11 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 8) {
             await m.addColumn(tournees, tournees.traceGeojson);
+          }
+          if (from < 9) {
+            await m.addColumn(stops, stops.livreLat);
+            await m.addColumn(stops, stops.livreLng);
+            await m.addColumn(stops, stops.livreLe);
           }
         },
         beforeOpen: (details) async {
