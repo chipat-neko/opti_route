@@ -19,6 +19,7 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasEnCours = ref.watch(hasTourneeEnCoursProvider);
+    final tourneesAujourdhui = ref.watch(tourneesDuJourProvider);
     final p = context.palette;
     return Drawer(
       backgroundColor: p.cream,
@@ -48,10 +49,16 @@ class AppDrawer extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.x4),
                   Text(
-                    'Optimisation de tournees',
+                    tourneesAujourdhui.isEmpty
+                        ? 'Aucune tournee aujourd\'hui'
+                        : tourneesAujourdhui.length == 1
+                            ? '1 tournee aujourd\'hui'
+                            : '${tourneesAujourdhui.length} tournees '
+                                'aujourd\'hui',
                     style: TextStyle(
                       fontSize: 12,
                       color: p.textMute,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

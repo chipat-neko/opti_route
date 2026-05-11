@@ -114,4 +114,80 @@ void main() {
       expect(s.notes, 'code 1234B');
     });
   });
+
+  group('StopsRepository - undo dernier statut', () {
+    late AppDatabase db;
+    late StopsRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = StopsRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<(int, int)> seedTourneeWithStop() async {
+      final tId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 10),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+      final sId = await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'A',
+              lat: const Value(48.5),
+              lng: const Value(1.5),
+            ),
+          );
+      return (tId, sId);
+    }
+
+    test('getLastTransitionedStop : null si aucun stop transitionne',
+        () async {
+      final (tId, _) = await seedTourneeWithStop();
+      final last = await repo.getLastTransitionedStop(tId);
+      expect(last, isNull);
+    });
+
+    test('getLastTransitionedStop : retourne le dernier livre/echec',
+        () async {
+      final (tId, sId) = await seedTourneeWithStop();
+      await repo.markLivre(sId);
+      final last = await repo.getLastTransitionedStop(tId);
+      expect(last, isNotNull);
+      expect(last!.id, sId);
+    });
+
+    test('revertStatus : repasse a_livrer + reset raisonEchec',
+        () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markEchec(sId, 'absent');
+      var s = await repo.getById(sId);
+      expect(s!.statutLivraison, 'echec');
+      expect(s.raisonEchec, 'absent');
+
+      await repo.revertStatus(sId);
+      s = await repo.getById(sId);
+      expect(s!.statutLivraison, 'a_livrer');
+      expect(s.raisonEchec, isNull);
+    });
+
+    test('revertStatus log dans history avec action revert', () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markLivre(sId);
+      await repo.revertStatus(sId);
+      final hist = await repo.getHistory(sId);
+      expect(hist, isNotEmpty);
+      final revert = hist.firstWhere((h) => h.action == 'revert');
+      expect(revert.fromStatus, 'livre');
+      expect(revert.toStatus, 'a_livrer');
+    });
+  });
 }
