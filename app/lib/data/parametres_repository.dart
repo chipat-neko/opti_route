@@ -1,4 +1,5 @@
 import 'database.dart';
+import 'tour_assistant/assistant_suggestion.dart';
 
 /// Wrapper type-safe sur la table `parametres` (cle/valeur).
 ///
@@ -18,6 +19,16 @@ class ParametresRepository {
   static const _kOrsUsedCount = 'ors_used_count';
   static const _kOrsUsedDate = 'ors_used_date';
   static const _kThemeMode = 'theme_mode';
+  // TourAssistant (cles dynamiques par kind, prefixe + nom enum)
+  static const _kAssistantEnabled = 'assistant_enabled';
+  static const _kAssistantProximityEnabled = 'assistant_proximity_enabled';
+  static const _kAssistantProximityThresholdM = 'assistant_proximity_threshold_m';
+  static const _kAssistantCooldownMin = 'assistant_cooldown_minutes';
+  static const _kAssistantAcceptPrefix = 'assistant_accept_';
+  static const _kAssistantRefusePrefix = 'assistant_refuse_';
+
+  static const int _defaultProximityThresholdM = 300;
+  static const int _defaultCooldownMin = 5;
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -133,6 +144,85 @@ class ParametresRepository {
   Future<void> setThemeMode(String mode) {
     assert(mode == 'system' || mode == 'light' || mode == 'dark');
     return _write(_kThemeMode, mode);
+  }
+
+  // ─── TourAssistant (systeme expert d'aide a la tournee) ──────────
+
+  /// Master switch : si false, aucune suggestion n'est produite.
+  Future<bool> isAssistantEnabled() async {
+    final v = await _readKey(_kAssistantEnabled);
+    return v != '0'; // default true (si jamais ecrit, on est actif)
+  }
+
+  Stream<bool> watchAssistantEnabled() =>
+      _watchKey(_kAssistantEnabled).map((v) => v != '0');
+
+  Future<void> setAssistantEnabled(bool enabled) =>
+      _write(_kAssistantEnabled, enabled ? '1' : '0');
+
+  /// Toggle de la regle "proximity" (livrer au passage GPS).
+  Future<bool> isAssistantProximityEnabled() async {
+    final v = await _readKey(_kAssistantProximityEnabled);
+    return v != '0';
+  }
+
+  Stream<bool> watchAssistantProximityEnabled() =>
+      _watchKey(_kAssistantProximityEnabled).map((v) => v != '0');
+
+  Future<void> setAssistantProximityEnabled(bool enabled) =>
+      _write(_kAssistantProximityEnabled, enabled ? '1' : '0');
+
+  /// Rayon en metres pour la regle proximity. Ajuste automatiquement
+  /// par AssistantCalibration. Default 300, plage [100, 800].
+  Future<int> assistantProximityThresholdM() async {
+    final v = await _readKey(_kAssistantProximityThresholdM);
+    return int.tryParse(v ?? '') ?? _defaultProximityThresholdM;
+  }
+
+  Stream<int> watchAssistantProximityThresholdM() =>
+      _watchKey(_kAssistantProximityThresholdM)
+          .map((v) => int.tryParse(v ?? '') ?? _defaultProximityThresholdM);
+
+  Future<void> setAssistantProximityThresholdM(int meters) =>
+      _write(_kAssistantProximityThresholdM, meters.toString());
+
+  /// Minutes avant qu'une suggestion refusee pour un (kind, stopId)
+  /// soit a nouveau proposable. Default 5 min.
+  Future<int> assistantCooldownMinutes() async {
+    final v = await _readKey(_kAssistantCooldownMin);
+    return int.tryParse(v ?? '') ?? _defaultCooldownMin;
+  }
+
+  Future<void> setAssistantCooldownMinutes(int minutes) =>
+      _write(_kAssistantCooldownMin, minutes.toString());
+
+  /// Incremente le compteur accept ou refuse pour un kind donne. Sert
+  /// a la calibration progressive.
+  Future<void> assistantIncrement(
+    SuggestionKind kind, {
+    required bool accept,
+  }) async {
+    final key = (accept ? _kAssistantAcceptPrefix : _kAssistantRefusePrefix) +
+        kind.name;
+    final v = int.tryParse((await _readKey(key)) ?? '') ?? 0;
+    await _write(key, (v + 1).toString());
+  }
+
+  Future<int> assistantAcceptCount(SuggestionKind kind) async {
+    final v = await _readKey(_kAssistantAcceptPrefix + kind.name);
+    return int.tryParse(v ?? '') ?? 0;
+  }
+
+  Future<int> assistantRefuseCount(SuggestionKind kind) async {
+    final v = await _readKey(_kAssistantRefusePrefix + kind.name);
+    return int.tryParse(v ?? '') ?? 0;
+  }
+
+  /// Reset les 2 compteurs (accept + refuse) pour un kind. Appele
+  /// apres un ajustement de seuil dans AssistantCalibration.
+  Future<void> assistantResetCounters(SuggestionKind kind) async {
+    await _delete(_kAssistantAcceptPrefix + kind.name);
+    await _delete(_kAssistantRefusePrefix + kind.name);
   }
 
   static String _todayIso() {

@@ -18,6 +18,7 @@ import '../providers/optimization_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/assistant_banner.dart';
 import '../widgets/drawer_badge_icon.dart';
 import '../widgets/ordre_priorite_dialog.dart';
 import '../widgets/stop_action_sheet.dart';
@@ -558,6 +559,8 @@ class _Body extends StatelessWidget {
         if (tournee.statut == 'en_cours') ...[
           const SizedBox(height: AppSpacing.x12),
           _ProchainArretCard(stops: stops),
+          const SizedBox(height: AppSpacing.x12),
+          AssistantBanner(tourneeId: tournee.id),
         ],
         const SizedBox(height: AppSpacing.x18),
         if (stops.isEmpty)

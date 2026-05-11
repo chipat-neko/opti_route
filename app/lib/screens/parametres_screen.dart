@@ -308,6 +308,25 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Assistant intelligent'),
+          const SizedBox(height: AppSpacing.x10),
+          const Text(
+            'Pendant la tournee en cours, l\'app surveille ta position GPS '
+            'et te propose des actions intelligentes (par ex. livrer un '
+            'arret quand tu passes devant). Aucune donnee n\'est envoyee, '
+            'tout est calcule localement. Le seuil s\'auto-calibre selon '
+            'tes acceptations / refus.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          const _AssistantSettings(),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Notifications'),
           const SizedBox(height: AppSpacing.x10),
           const Text(
@@ -607,6 +626,154 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+/// Bloc de reglages du TourAssistant : master toggle + toggle regle
+/// proximity + slider de seuil + apercu du seuil auto-calibre.
+class _AssistantSettings extends ConsumerStatefulWidget {
+  const _AssistantSettings();
+
+  @override
+  ConsumerState<_AssistantSettings> createState() => _AssistantSettingsState();
+}
+
+class _AssistantSettingsState extends ConsumerState<_AssistantSettings> {
+  @override
+  Widget build(BuildContext context) {
+    final repo = ref.watch(parametresRepositoryProvider);
+    return StreamBuilder<bool>(
+      stream: repo.watchAssistantEnabled(),
+      builder: (context, snap) {
+        final enabled = snap.data ?? true;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Assistant actif',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
+              subtitle: const Text(
+                'Master switch. Si desactive, aucune suggestion n\'apparait pendant les tournees.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMute,
+                  height: 1.4,
+                ),
+              ),
+              value: enabled,
+              activeThumbColor: AppColors.emerald,
+              onChanged: (v) => repo.setAssistantEnabled(v),
+            ),
+            if (enabled) const _ProximityRuleSettings(),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProximityRuleSettings extends ConsumerWidget {
+  const _ProximityRuleSettings();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repo = ref.watch(parametresRepositoryProvider);
+    return StreamBuilder<bool>(
+      stream: repo.watchAssistantProximityEnabled(),
+      builder: (context, snap) {
+        final enabled = snap.data ?? true;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Livrer au passage',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
+              subtitle: const Text(
+                'Si un arret a livrer est a proximite GPS de ma position, l\'app suggere de le livrer avant le prochain prevu.',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.textMute,
+                  height: 1.4,
+                ),
+              ),
+              value: enabled,
+              activeThumbColor: AppColors.emerald,
+              onChanged: (v) => repo.setAssistantProximityEnabled(v),
+            ),
+            if (enabled)
+              StreamBuilder<int>(
+                stream: repo.watchAssistantProximityThresholdM(),
+                builder: (context, snap) {
+                  final value = snap.data ?? 300;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.x8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Rayon de detection',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$value m',
+                              style: appMonoStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.emerald,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Slider(
+                          value: value.toDouble().clamp(100, 800),
+                          min: 100,
+                          max: 800,
+                          divisions: 14,
+                          activeColor: AppColors.emerald,
+                          onChanged: (v) => repo
+                              .setAssistantProximityThresholdM(v.round()),
+                        ),
+                        const Text(
+                          'Ce seuil s\'auto-ajuste selon tes acceptations / refus. Tu peux le forcer ici si tu veux un comportement specifique.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textFaint,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
