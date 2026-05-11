@@ -133,5 +133,75 @@ void main() {
       expect(await repo.search('a'), isEmpty);
       expect(await repo.search(''), isEmpty);
     });
+
+    test('toggleFavori : false -> true -> false', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'A',
+        lat: 0,
+        lng: 0,
+      );
+      final entries = await repo.watchAll().first;
+      final id = entries.first.id;
+
+      await repo.toggleFavori(id);
+      var fresh = await repo.getById(id);
+      expect(fresh!.isFavori, isTrue);
+
+      await repo.toggleFavori(id);
+      fresh = await repo.getById(id);
+      expect(fresh!.isFavori, isFalse);
+    });
+
+    test('setColorTag : update + null pour reset', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'A',
+        lat: 0,
+        lng: 0,
+      );
+      final entries = await repo.watchAll().first;
+      final id = entries.first.id;
+
+      await repo.setColorTag(id, 'lime');
+      var fresh = await repo.getById(id);
+      expect(fresh!.colorTag, 'lime');
+
+      await repo.setColorTag(id, null);
+      fresh = await repo.getById(id);
+      expect(fresh!.colorTag, isNull);
+    });
+
+    test('count : nb d\'entrees', () async {
+      expect(await repo.count(), 0);
+      await repo.upsertFromValidatedStop(
+        nomClient: 'A',
+        adresseDisplay: 'A',
+        lat: 0,
+        lng: 0,
+      );
+      await repo.upsertFromValidatedStop(
+        nomClient: 'B',
+        adresseDisplay: 'B',
+        lat: 1,
+        lng: 1,
+      );
+      expect(await repo.count(), 2);
+    });
+
+    test('update : modifie notesCarnet', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'addr',
+        lat: 0,
+        lng: 0,
+      );
+      final entries = await repo.watchAll().first;
+      final id = entries.first.id;
+
+      await repo.update(id, notesCarnet: 'Code 1234B');
+      final fresh = await repo.getById(id);
+      expect(fresh!.notesCarnet, 'Code 1234B');
+    });
   });
 }
