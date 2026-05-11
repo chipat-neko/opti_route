@@ -84,4 +84,60 @@ void main() {
       expect(await repo.getThemeMode(), 'light');
     });
   });
+
+  group('ParametresRepository - orsUsedToday', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('compteur a zero par defaut', () async {
+      expect(await repo.getOrsUsedToday(), 0);
+    });
+
+    test('incrementOrsUsed incremente le compteur du jour', () async {
+      await repo.incrementOrsUsed();
+      await repo.incrementOrsUsed();
+      await repo.incrementOrsUsed();
+      expect(await repo.getOrsUsedToday(), 3);
+    });
+  });
+
+  group('ParametresRepository - capacite + duree defaults', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('capaciteDefault null par defaut', () async {
+      expect(await repo.getCapaciteDefault(), isNull);
+    });
+
+    test('set + clear capaciteDefault', () async {
+      await repo.setCapaciteDefault(50);
+      expect(await repo.getCapaciteDefault(), 50);
+      await repo.clearCapaciteDefault();
+      expect(await repo.getCapaciteDefault(), isNull);
+    });
+
+    test('dureeArretDefault round-trip', () async {
+      expect(await repo.getDureeArretDefault(), isNull);
+      await repo.setDureeArretDefault(5);
+      expect(await repo.getDureeArretDefault(), 5);
+    });
+  });
 }
