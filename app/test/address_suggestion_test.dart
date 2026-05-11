@@ -58,4 +58,23 @@ void main() {
       expect(s.adressePostale, 'Quelque part en France');
     });
   });
+
+  group('AddressSuggestion - notesCarnet (V8 carnet enrichi)', () {
+    test('null par defaut', () {
+      const s = AddressSuggestion(displayName: 'A', lat: 48, lon: 1);
+      expect(s.notesCarnet, isNull);
+    });
+
+    test('fournit la valeur quand passe en constructeur', () {
+      const s = AddressSuggestion(
+        displayName: 'A',
+        lat: 48,
+        lon: 1,
+        fromCarnet: true,
+        notesCarnet: 'Code 1234B, sonner 2 fois',
+      );
+      expect(s.notesCarnet, 'Code 1234B, sonner 2 fois');
+      expect(s.fromCarnet, isTrue);
+    });
+  });
 }
