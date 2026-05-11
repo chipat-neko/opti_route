@@ -40,7 +40,11 @@ Saisis tes arrêts, opti_route calcule le meilleur ordre de passage pour
 minimiser la distance et le temps. Sous le capot : OpenRouteService et
 VROOM, les mêmes algorithmes que les grandes flottes professionnelles.
 
-• Distance et durée totales affichées avant le départ
+• Profil Voiture/VUL ou Camion >3.5t (respecte les restrictions
+  hauteur/poids et évite les centres piétonnisés)
+• Capacité véhicule respectée par le solveur
+• Évitement des péages
+• Distance, durée et coût carburant estimé affichés avant le départ
 • Tracé du parcours sur la carte (tuiles OpenStreetMap)
 • Priorités "en premier" / "en dernier" / "éviter"
 • Réordonnancement manuel par glisser-déposer
@@ -57,11 +61,22 @@ ML Kit de Google — aucune photo n'est envoyée sur internet.
 MODE TERRAIN
 ══════════════════════════════════
 
+• Carte "Prochain arrêt" avec distance GPS live
 • Bouton "Livré" / "Échec" par arrêt, avec motif
 • Lancement direct Google Maps ou Waze
 • Stepper colis pour ajuster sur place
-• Notes par arrêt
-• Notifications de rappel locales
+• Notes auto-sauvegardées
+• Édition des fenêtres horaires d'un tap
+• Annulation du dernier statut (en cas d'erreur)
+• Notifications de rappel locales programmables par tournée
+
+══════════════════════════════════
+ZONE RURALE SANS 4G ?
+══════════════════════════════════
+
+Mode "Saisie hors ligne" : tu tapes l'adresse à la main, l'arrêt est
+créé sans GPS. De retour en zone couverte, un seul tap "Géolocaliser
+hors-ligne" et tous les arrêts sont rattrapés en batch.
 
 ══════════════════════════════════
 CARNET D'ADRESSES INTELLIGENT
@@ -69,14 +84,21 @@ CARNET D'ADRESSES INTELLIGENT
 
 Chaque arrêt validé est mémorisé. La prochaine fois que tu tapes le nom
 du client, l'adresse remonte en un clic, avec le compteur de livraisons
-déjà effectuées. Export CSV pour sauvegarde.
+déjà effectuées et la date du dernier passage. Notes pré-définies par
+client (code interphone, instructions) reproposées automatiquement.
+
+Filtre par couleur / favoris. Export CSV ou vCard pour sauvegarde ou
+import dans les Contacts Android.
 
 ══════════════════════════════════
 STATISTIQUES
 ══════════════════════════════════
 
-7 jours / 30 jours / 12 mois : nombre de tournées, distance parcourue,
-durée cumulée. Stats par client aussi.
+7 jours / 30 jours / 12 mois : nombre de tournées, arrêts, distance
+parcourue, durée, **coût carburant estimé**. Plus :
+• Colis par jour de la semaine (barchart)
+• Top 5 de tes clients les plus livrés
+• Stats par client (depuis le carnet)
 
 ══════════════════════════════════
 TES DONNÉES RESTENT CHEZ TOI
