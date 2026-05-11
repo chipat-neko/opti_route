@@ -140,4 +140,103 @@ void main() {
       expect(s.tauxReussite, 0);
     });
   });
+
+  group('StatsService.computeDaily', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<int> seedTournee({required DateTime date}) async {
+      return db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T-${date.toIso8601String()}',
+              date: date,
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+    }
+
+    Future<void> seedStop({
+      required int tourneeId,
+      required String statut,
+      int nbColis = 1,
+    }) async {
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: 'addr',
+              statutLivraison: Value(statut),
+              nbColis: Value(nbColis),
+            ),
+          );
+    }
+
+    test('pas de tournees -> liste de N jours avec colis=0', () async {
+      final list = await stats.computeDaily(days: 7);
+      expect(list.length, 7);
+      expect(list.every((s) => s.colis == 0 && s.echecs == 0), isTrue);
+    });
+
+    test('triee chronologiquement (le plus ancien en premier)', () async {
+      final list = await stats.computeDaily(days: 5);
+      for (var i = 0; i < list.length - 1; i++) {
+        expect(list[i].day.isBefore(list[i + 1].day), isTrue);
+      }
+    });
+
+    test('agrege colis livres + echecs par jour de tournee', () async {
+      final today = DateTime.now();
+      final hier = today.subtract(const Duration(days: 1));
+
+      final tAujd = await seedTournee(date: today);
+      await seedStop(tourneeId: tAujd, statut: 'livre', nbColis: 3);
+      await seedStop(tourneeId: tAujd, statut: 'livre', nbColis: 2);
+      await seedStop(tourneeId: tAujd, statut: 'echec', nbColis: 1);
+
+      final tHier = await seedTournee(date: hier);
+      await seedStop(tourneeId: tHier, statut: 'livre', nbColis: 4);
+
+      final list = await stats.computeDaily(days: 7);
+      // Le dernier element correspond a aujourd'hui
+      final aujd = list.last;
+      expect(aujd.colis, 5); // 3 + 2
+      expect(aujd.echecs, 1);
+
+      // L'avant-dernier = hier
+      final hierStat = list[list.length - 2];
+      expect(hierStat.colis, 4);
+      expect(hierStat.echecs, 0);
+    });
+
+    test('ignore stops a_livrer (pas encore valides)', () async {
+      final today = DateTime.now();
+      final t = await seedTournee(date: today);
+      await seedStop(tourneeId: t, statut: 'a_livrer', nbColis: 10);
+
+      final list = await stats.computeDaily(days: 3);
+      expect(list.every((s) => s.colis == 0 && s.echecs == 0), isTrue);
+    });
+
+    test('exclut les tournees hors fenetre', () async {
+      final today = DateTime.now();
+      // 20 jours en arriere : hors fenetre 7j
+      final tVieux = await seedTournee(
+        date: today.subtract(const Duration(days: 20)),
+      );
+      await seedStop(tourneeId: tVieux, statut: 'livre', nbColis: 99);
+
+      final list = await stats.computeDaily(days: 7);
+      expect(list.every((s) => s.colis == 0), isTrue);
+    });
+  });
 }
