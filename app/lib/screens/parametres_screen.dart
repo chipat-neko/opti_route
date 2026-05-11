@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../providers/optimization_providers.dart';
+import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import 'mentions_legales_screen.dart';
@@ -267,6 +268,24 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               height: 1.4,
             ),
           ),
+          const SizedBox(height: AppSpacing.x14),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _purgeTilesCache,
+            icon: const Icon(Icons.layers_clear_outlined),
+            label: const Text('Vider le cache des cartes'),
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          const Text(
+            'Supprime les tuiles OpenStreetMap stockees localement '
+            '(utilisees comme cache pour fonctionner hors-ligne dans les '
+            'zones deja visitees). Les tuiles seront re-telechargees a '
+            'la prochaine visite.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
@@ -372,6 +391,26 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
       await repo.clearNavAppDefault();
     } else {
       await repo.setNavAppDefault(value);
+    }
+  }
+
+  Future<void> _purgeTilesCache() async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(cachedTileProviderInstance).clearCache();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cache des cartes vide'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 

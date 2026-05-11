@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../data/database.dart';
 import '../providers/database_providers.dart';
+import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -82,6 +83,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.optiroute.opti_route',
+              tileProvider: ref.read(cachedTileProviderInstance),
             ),
             if (tracePoints.length >= 2)
               PolylineLayer(

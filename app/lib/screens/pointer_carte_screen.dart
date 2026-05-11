@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../data/address_suggestion.dart';
 import '../data/geocoding_service.dart';
 import '../providers/geocoding_providers.dart';
+import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -59,6 +60,7 @@ class _PointerCarteScreenState extends ConsumerState<PointerCarteScreen> {
                 urlTemplate:
                     'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.optiroute.opti_route',
+                tileProvider: ref.read(cachedTileProviderInstance),
               ),
               if (_picked != null)
                 MarkerLayer(
