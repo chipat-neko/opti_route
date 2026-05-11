@@ -20,5 +20,11 @@ class Tournees extends Table {
   /// fournisseurs d'optimisation renvoient une trace.
   TextColumn get traceGeojson => text().nullable()();
 
+  /// Timestamp du tap "Demarrer" sur le FAB de la tournee. Sert a
+  /// calculer le temps ecoule et l'afficher dans le bandeau "Prochain
+  /// arret" / les stats post-tournee. Null si jamais demarre, conserve
+  /// meme apres Pause / Terminee (utile pour l'historique).
+  DateTimeColumn get demareeLe => dateTime().nullable()();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }
