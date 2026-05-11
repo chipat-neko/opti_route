@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
@@ -26,15 +27,33 @@ class CarteScreen extends ConsumerStatefulWidget {
 class _CarteScreenState extends ConsumerState<CarteScreen> {
   final _mapController = MapController();
   CameraFit? _currentFit;
+  bool _fullscreen = false;
+
+  @override
+  void dispose() {
+    // Restore les barres systeme au cas ou l'utilisateur quitte
+    // l'ecran en plein ecran.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
+
+  void _toggleFullscreen() {
+    setState(() => _fullscreen = !_fullscreen);
+    SystemChrome.setEnabledSystemUIMode(
+      _fullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final stopsAsync = ref.watch(stopsByTourneeProvider(widget.tournee.id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Carte'),
-      ),
+      appBar: _fullscreen
+          ? null
+          : AppBar(
+              title: const Text('Carte'),
+            ),
       body: stopsAsync.when(
         data: _buildMap,
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -114,18 +133,52 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
         Positioned(
           right: AppSpacing.x16,
           bottom: AppSpacing.x18,
-          child: FloatingActionButton.small(
-            heroTag: 'recentrer',
-            backgroundColor: AppColors.paper,
-            foregroundColor: AppColors.ink,
-            elevation: 4,
-            onPressed: () {
-              final fit = _currentFit;
-              if (fit != null) _mapController.fitCamera(fit);
-            },
-            child: const Icon(Icons.fit_screen_outlined),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                heroTag: 'fullscreen',
+                backgroundColor: AppColors.paper,
+                foregroundColor: AppColors.ink,
+                elevation: 4,
+                onPressed: _toggleFullscreen,
+                child: Icon(_fullscreen
+                    ? Icons.fullscreen_exit
+                    : Icons.fullscreen),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              FloatingActionButton.small(
+                heroTag: 'recentrer',
+                backgroundColor: AppColors.paper,
+                foregroundColor: AppColors.ink,
+                elevation: 4,
+                onPressed: () {
+                  final fit = _currentFit;
+                  if (fit != null) _mapController.fitCamera(fit);
+                },
+                child: const Icon(Icons.fit_screen_outlined),
+              ),
+            ],
           ),
         ),
+        if (_fullscreen)
+          // Bouton "retour" flottant en haut a gauche puisqu'on a
+          // masque l'AppBar. Utilise SafeArea pour rester sous le
+          // notch / barre statut si elle revient.
+          Positioned(
+            top: AppSpacing.x12,
+            left: AppSpacing.x12,
+            child: SafeArea(
+              child: FloatingActionButton.small(
+                heroTag: 'back-fullscreen',
+                backgroundColor: AppColors.paper,
+                foregroundColor: AppColors.ink,
+                elevation: 4,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Icon(Icons.arrow_back),
+              ),
+            ),
+          ),
       ],
     );
   }
