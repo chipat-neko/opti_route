@@ -8,6 +8,11 @@ Avant : on passait par Edge headless avec --print-to-pdf, mais c'etait
 fragile (tronquage a 1 page selon les versions, faux succes silencieux
 quand subprocess Python). Maintenant on genere directement avec fpdf2
 (pur Python, deterministe, pas de navigateur).
+
+Si les .ttf Manrope + JetBrainsMono sont presents dans `_fonts/`,
+on les utilise pour respecter la typographie de l'app (cf
+`docs/design/handoff/`). Sinon fallback Helvetica/Courier (les
+caracteres unicode sont alors strippes en ASCII).
 """
 import re
 import sys
@@ -17,23 +22,60 @@ from pathlib import Path
 from fpdf import FPDF
 
 HERE = Path(__file__).parent
+FONTS_DIR = HERE / "_fonts"
+
+# ─── Detection des fonts custom de l'app ─────────────────────────────
+# Manrope (variable wght axis, fpdf2 prend l'instance default ~400 + fait
+# du synthetic bold pour le style="B"). JetBrains Mono pour le code.
+MANROPE_PATH = FONTS_DIR / "Manrope-Variable.ttf"
+JETBRAINS_REG = FONTS_DIR / "JetBrainsMono-Regular.ttf"
+JETBRAINS_BOLD = FONTS_DIR / "JetBrainsMono-Bold.ttf"
+HAS_CUSTOM_FONTS = (
+    MANROPE_PATH.exists() and JETBRAINS_REG.exists() and JETBRAINS_BOLD.exists()
+)
+
+FONT_BODY = "Manrope" if HAS_CUSTOM_FONTS else "Helvetica"
+FONT_MONO = "JetBrainsMono" if HAS_CUSTOM_FONTS else "Courier"
 
 
-# ─── Couleurs (depuis l'ancien CSS) ──────────────────────────────────
-COLOR_H1 = (44, 82, 130)        # #2c5282
-COLOR_H2 = (44, 82, 130)
-COLOR_H3 = (45, 55, 72)         # #2d3748
-COLOR_TEXT = (34, 34, 34)
-COLOR_MUTE = (74, 85, 104)      # #4a5568
-COLOR_BORDER = (203, 213, 224)  # #cbd5e0
-COLOR_TABLE_HEAD = (237, 242, 247)  # #edf2f7
-COLOR_CODE_BG = (241, 243, 245)  # #f1f3f5
+# ─── Couleurs (palette de l'app si custom fonts, sinon ancien CSS) ──
+if HAS_CUSTOM_FONTS:
+    # Palette opti_route (cf app/lib/theme/app_tokens.dart).
+    COLOR_H1 = (14, 124, 90)        # emerald #0E7C5A
+    COLOR_H2 = (14, 124, 90)
+    COLOR_H3 = (14, 20, 16)         # ink #0E1410
+    COLOR_TEXT = (14, 20, 16)       # ink
+    COLOR_MUTE = (92, 102, 96)      # textMute #5C6660
+    COLOR_BORDER = (227, 222, 209)  # inkLine #E3DED1
+    COLOR_TABLE_HEAD = (213, 235, 224)  # emeraldSoft #D5EBE0
+    COLOR_CODE_BG = (239, 234, 224)  # creamSoft #EFEAE0
+    COLOR_ACCENT = (184, 242, 74)   # lime #B8F24A (pour highlights)
+else:
+    COLOR_H1 = (44, 82, 130)
+    COLOR_H2 = (44, 82, 130)
+    COLOR_H3 = (45, 55, 72)
+    COLOR_TEXT = (34, 34, 34)
+    COLOR_MUTE = (74, 85, 104)
+    COLOR_BORDER = (203, 213, 224)
+    COLOR_TABLE_HEAD = (237, 242, 247)
+    COLOR_CODE_BG = (241, 243, 245)
+    COLOR_ACCENT = (44, 82, 130)
 
 
 def _strip_accents(s: str) -> str:
     """fpdf2 avec polices builtin (Helvetica) supporte mal l'UTF-8 hors
     Latin-1. On normalise les accents et caracteres speciaux courants.
+
+    Si on a charge Manrope (Unicode complet), on bypasse ce strip et on
+    laisse les accents tels quels -- le rendu est correct.
     """
+    if HAS_CUSTOM_FONTS:
+        # Manrope gere l'Unicode. Cleanup minimal des emojis non couverts
+        # par la fonte (drapeaux de couleur, etc.) qui resteraient en
+        # placeholder de toute facon.
+        for ch in ("\U0001f7e2", "\U0001f7e1", "\U0001f535", "\U0001f534"):
+            s = s.replace(ch, "*")
+        return s
     # Remplacement explicite des caracteres qui passent mal en Latin-1.
     s = s.replace("’", "'")  # ’
     s = s.replace("‘", "'")
@@ -75,6 +117,16 @@ class _Renderer(FPDF):
         super().__init__(format="A4")
         self.set_margins(left=16, top=18, right=16)
         self.set_auto_page_break(auto=True, margin=18)
+        if HAS_CUSTOM_FONTS:
+            # Manrope variable font : fpdf2 charge l'instance default
+            # (poids ~400). Le style="B" donnera un synthetic bold (fpdf2
+            # epaissit les glyphes). Visuellement OK pour un rapport.
+            self.add_font("Manrope", "", str(MANROPE_PATH))
+            self.add_font("Manrope", "B", str(MANROPE_PATH))
+            self.add_font("Manrope", "I", str(MANROPE_PATH))
+            self.add_font("Manrope", "BI", str(MANROPE_PATH))
+            self.add_font("JetBrainsMono", "", str(JETBRAINS_REG))
+            self.add_font("JetBrainsMono", "B", str(JETBRAINS_BOLD))
 
     # Helpers de format
     def _font(self, size: float, bold: bool = False, italic: bool = False):
@@ -83,7 +135,7 @@ class _Renderer(FPDF):
             style += "B"
         if italic:
             style += "I"
-        self.set_font("Helvetica", style, size=size)
+        self.set_font(FONT_BODY, style, size=size)
 
     def _color(self, rgb):
         self.set_text_color(*rgb)
@@ -133,7 +185,7 @@ class _Renderer(FPDF):
                     self.write(base_size * 0.55, line)
                     line = ""
                 # Code inline : juste en mono-equivalent
-                self.set_font("Courier", "", base_size - 0.5)
+                self.set_font(FONT_MONO, "", base_size - 0.5)
                 self.write(base_size * 0.55, part[1:-1])
                 self._font(base_size)
             else:
@@ -281,7 +333,7 @@ def parse_md_to_pdf(md_text: str, pdf_path: Path):
                 block.append(lines[i])
                 i += 1
             i += 1  # skip closing ```
-            pdf.set_font("Courier", "", 8.5)
+            pdf.set_font(FONT_MONO, "", 8.5)
             pdf.set_text_color(*COLOR_TEXT)
             pdf.set_fill_color(*COLOR_CODE_BG)
             for bl in block:
