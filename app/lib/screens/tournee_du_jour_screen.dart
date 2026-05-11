@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' show Position;
 import 'package:intl/intl.dart';
@@ -2059,6 +2060,7 @@ class _StopRow extends ConsumerWidget {
       },
       child: InkWell(
         onTap: () => _onTap(context, ref),
+        onLongPress: () => _onLongPressCopyAdresse(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.x14,
@@ -2167,6 +2169,24 @@ class _StopRow extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _onLongPressCopyAdresse(BuildContext context) async {
+    final adresse = stop.adresseNormalisee?.isNotEmpty == true
+        ? stop.adresseNormalisee!
+        : stop.adresseBrute;
+    await Clipboard.setData(ClipboardData(text: adresse));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Adresse copiee : ${_truncateAdresse(adresse)}'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  static String _truncateAdresse(String s) =>
+      s.length <= 50 ? s : '${s.substring(0, 47)}...';
 
   Future<void> _onTap(BuildContext context, WidgetRef ref) async {
     final navigator = Navigator.of(context);
