@@ -114,5 +114,69 @@ void main() {
       expect(() => repo.duplicate(99999),
           throwsA(isA<StateError>()));
     });
+
+    test('duplicate avec targetDate : la date du clone = targetDate',
+        () async {
+      final id = await seedTournee();
+      final target = DateTime(2026, 6, 1, 9, 30);
+      final newId = await repo.duplicate(id, targetDate: target);
+      final t = await repo.getById(newId);
+      expect(t!.date, target);
+    });
+
+    test('duplicate sans targetDate : date du clone proche de now', () async {
+      final id = await seedTournee();
+      final newId = await repo.duplicate(id);
+      final t = await repo.getById(newId);
+      final delta = DateTime.now().difference(t!.date).inSeconds.abs();
+      expect(delta, lessThan(5),
+          reason:
+              'La date du clone devrait etre a moins de 5s de now()');
+    });
+
+    test('duplicate copie profilOrs + eviterPeages + capacite', () async {
+      // Mise a jour de la tournee source avec un profil HGV + peages
+      // evites.
+      final id = await seedTournee();
+      await db.into(db.tournees).insertOnConflictUpdate(
+            TourneesCompanion(
+              id: Value(id),
+              nom: const Value('Source'),
+              date: Value(DateTime(2026, 5, 1)),
+              pointDepartLat: const Value(48.0),
+              pointDepartLng: const Value(1.0),
+              pointDepartLabel: const Value('Depot Paris 11'),
+              vehiculeCapaciteColis: const Value(20),
+              profilOrs: const Value('driving-hgv'),
+              eviterPeages: const Value(true),
+            ),
+          );
+
+      final newId = await repo.duplicate(id);
+      final t = await repo.getById(newId);
+      expect(t!.profilOrs, 'driving-hgv');
+      expect(t.eviterPeages, isTrue);
+      expect(t.vehiculeCapaciteColis, 20);
+    });
+
+    test('duplicate ne copie PAS rappelLe (chaque clone reprogramme '
+        'son propre rappel)', () async {
+      final id = await seedTournee();
+      await db.into(db.tournees).insertOnConflictUpdate(
+            TourneesCompanion(
+              id: Value(id),
+              nom: const Value('Source'),
+              date: Value(DateTime(2026, 5, 1)),
+              pointDepartLat: const Value(48.0),
+              pointDepartLng: const Value(1.0),
+              pointDepartLabel: const Value('Depot Paris 11'),
+              rappelLe: Value(DateTime(2026, 5, 1, 6, 45)),
+            ),
+          );
+
+      final newId = await repo.duplicate(id);
+      final t = await repo.getById(newId);
+      expect(t!.rappelLe, isNull);
+    });
   });
 }
