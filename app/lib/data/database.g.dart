@@ -3986,6 +3986,460 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   }
 }
 
+class $StopHistoryTable extends StopHistory
+    with TableInfo<$StopHistoryTable, StopHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StopHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _stopIdMeta = const VerificationMeta('stopId');
+  @override
+  late final GeneratedColumn<int> stopId = GeneratedColumn<int>(
+    'stop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stops (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _actionMeta = const VerificationMeta('action');
+  @override
+  late final GeneratedColumn<String> action = GeneratedColumn<String>(
+    'action',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fromStatusMeta = const VerificationMeta(
+    'fromStatus',
+  );
+  @override
+  late final GeneratedColumn<String> fromStatus = GeneratedColumn<String>(
+    'from_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toStatusMeta = const VerificationMeta(
+    'toStatus',
+  );
+  @override
+  late final GeneratedColumn<String> toStatus = GeneratedColumn<String>(
+    'to_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _raisonMeta = const VerificationMeta('raison');
+  @override
+  late final GeneratedColumn<String> raison = GeneratedColumn<String>(
+    'raison',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    stopId,
+    action,
+    fromStatus,
+    toStatus,
+    raison,
+    timestamp,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stop_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StopHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('stop_id')) {
+      context.handle(
+        _stopIdMeta,
+        stopId.isAcceptableOrUnknown(data['stop_id']!, _stopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stopIdMeta);
+    }
+    if (data.containsKey('action')) {
+      context.handle(
+        _actionMeta,
+        action.isAcceptableOrUnknown(data['action']!, _actionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_actionMeta);
+    }
+    if (data.containsKey('from_status')) {
+      context.handle(
+        _fromStatusMeta,
+        fromStatus.isAcceptableOrUnknown(data['from_status']!, _fromStatusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fromStatusMeta);
+    }
+    if (data.containsKey('to_status')) {
+      context.handle(
+        _toStatusMeta,
+        toStatus.isAcceptableOrUnknown(data['to_status']!, _toStatusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_toStatusMeta);
+    }
+    if (data.containsKey('raison')) {
+      context.handle(
+        _raisonMeta,
+        raison.isAcceptableOrUnknown(data['raison']!, _raisonMeta),
+      );
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StopHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StopHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      stopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stop_id'],
+      )!,
+      action: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}action'],
+      )!,
+      fromStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}from_status'],
+      )!,
+      toStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}to_status'],
+      )!,
+      raison: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raison'],
+      ),
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timestamp'],
+      )!,
+    );
+  }
+
+  @override
+  $StopHistoryTable createAlias(String alias) {
+    return $StopHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class StopHistoryData extends DataClass implements Insertable<StopHistoryData> {
+  final int id;
+  final int stopId;
+
+  /// Action effectuee. Valeurs : 'mark_livre' / 'mark_echec' /
+  /// 'mark_a_livrer'.
+  final String action;
+
+  /// Statut precedent ('a_livrer' / 'livre' / 'echec').
+  final String fromStatus;
+
+  /// Statut apres l'action.
+  final String toStatus;
+
+  /// Raison d'echec saisie pour 'mark_echec'. Null sinon.
+  final String? raison;
+  final DateTime timestamp;
+  const StopHistoryData({
+    required this.id,
+    required this.stopId,
+    required this.action,
+    required this.fromStatus,
+    required this.toStatus,
+    this.raison,
+    required this.timestamp,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['stop_id'] = Variable<int>(stopId);
+    map['action'] = Variable<String>(action);
+    map['from_status'] = Variable<String>(fromStatus);
+    map['to_status'] = Variable<String>(toStatus);
+    if (!nullToAbsent || raison != null) {
+      map['raison'] = Variable<String>(raison);
+    }
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    return map;
+  }
+
+  StopHistoryCompanion toCompanion(bool nullToAbsent) {
+    return StopHistoryCompanion(
+      id: Value(id),
+      stopId: Value(stopId),
+      action: Value(action),
+      fromStatus: Value(fromStatus),
+      toStatus: Value(toStatus),
+      raison: raison == null && nullToAbsent
+          ? const Value.absent()
+          : Value(raison),
+      timestamp: Value(timestamp),
+    );
+  }
+
+  factory StopHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StopHistoryData(
+      id: serializer.fromJson<int>(json['id']),
+      stopId: serializer.fromJson<int>(json['stopId']),
+      action: serializer.fromJson<String>(json['action']),
+      fromStatus: serializer.fromJson<String>(json['fromStatus']),
+      toStatus: serializer.fromJson<String>(json['toStatus']),
+      raison: serializer.fromJson<String?>(json['raison']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'stopId': serializer.toJson<int>(stopId),
+      'action': serializer.toJson<String>(action),
+      'fromStatus': serializer.toJson<String>(fromStatus),
+      'toStatus': serializer.toJson<String>(toStatus),
+      'raison': serializer.toJson<String?>(raison),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+    };
+  }
+
+  StopHistoryData copyWith({
+    int? id,
+    int? stopId,
+    String? action,
+    String? fromStatus,
+    String? toStatus,
+    Value<String?> raison = const Value.absent(),
+    DateTime? timestamp,
+  }) => StopHistoryData(
+    id: id ?? this.id,
+    stopId: stopId ?? this.stopId,
+    action: action ?? this.action,
+    fromStatus: fromStatus ?? this.fromStatus,
+    toStatus: toStatus ?? this.toStatus,
+    raison: raison.present ? raison.value : this.raison,
+    timestamp: timestamp ?? this.timestamp,
+  );
+  StopHistoryData copyWithCompanion(StopHistoryCompanion data) {
+    return StopHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      stopId: data.stopId.present ? data.stopId.value : this.stopId,
+      action: data.action.present ? data.action.value : this.action,
+      fromStatus: data.fromStatus.present
+          ? data.fromStatus.value
+          : this.fromStatus,
+      toStatus: data.toStatus.present ? data.toStatus.value : this.toStatus,
+      raison: data.raison.present ? data.raison.value : this.raison,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StopHistoryData(')
+          ..write('id: $id, ')
+          ..write('stopId: $stopId, ')
+          ..write('action: $action, ')
+          ..write('fromStatus: $fromStatus, ')
+          ..write('toStatus: $toStatus, ')
+          ..write('raison: $raison, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, stopId, action, fromStatus, toStatus, raison, timestamp);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StopHistoryData &&
+          other.id == this.id &&
+          other.stopId == this.stopId &&
+          other.action == this.action &&
+          other.fromStatus == this.fromStatus &&
+          other.toStatus == this.toStatus &&
+          other.raison == this.raison &&
+          other.timestamp == this.timestamp);
+}
+
+class StopHistoryCompanion extends UpdateCompanion<StopHistoryData> {
+  final Value<int> id;
+  final Value<int> stopId;
+  final Value<String> action;
+  final Value<String> fromStatus;
+  final Value<String> toStatus;
+  final Value<String?> raison;
+  final Value<DateTime> timestamp;
+  const StopHistoryCompanion({
+    this.id = const Value.absent(),
+    this.stopId = const Value.absent(),
+    this.action = const Value.absent(),
+    this.fromStatus = const Value.absent(),
+    this.toStatus = const Value.absent(),
+    this.raison = const Value.absent(),
+    this.timestamp = const Value.absent(),
+  });
+  StopHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required int stopId,
+    required String action,
+    required String fromStatus,
+    required String toStatus,
+    this.raison = const Value.absent(),
+    this.timestamp = const Value.absent(),
+  }) : stopId = Value(stopId),
+       action = Value(action),
+       fromStatus = Value(fromStatus),
+       toStatus = Value(toStatus);
+  static Insertable<StopHistoryData> custom({
+    Expression<int>? id,
+    Expression<int>? stopId,
+    Expression<String>? action,
+    Expression<String>? fromStatus,
+    Expression<String>? toStatus,
+    Expression<String>? raison,
+    Expression<DateTime>? timestamp,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (stopId != null) 'stop_id': stopId,
+      if (action != null) 'action': action,
+      if (fromStatus != null) 'from_status': fromStatus,
+      if (toStatus != null) 'to_status': toStatus,
+      if (raison != null) 'raison': raison,
+      if (timestamp != null) 'timestamp': timestamp,
+    });
+  }
+
+  StopHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<int>? stopId,
+    Value<String>? action,
+    Value<String>? fromStatus,
+    Value<String>? toStatus,
+    Value<String?>? raison,
+    Value<DateTime>? timestamp,
+  }) {
+    return StopHistoryCompanion(
+      id: id ?? this.id,
+      stopId: stopId ?? this.stopId,
+      action: action ?? this.action,
+      fromStatus: fromStatus ?? this.fromStatus,
+      toStatus: toStatus ?? this.toStatus,
+      raison: raison ?? this.raison,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (stopId.present) {
+      map['stop_id'] = Variable<int>(stopId.value);
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(action.value);
+    }
+    if (fromStatus.present) {
+      map['from_status'] = Variable<String>(fromStatus.value);
+    }
+    if (toStatus.present) {
+      map['to_status'] = Variable<String>(toStatus.value);
+    }
+    if (raison.present) {
+      map['raison'] = Variable<String>(raison.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StopHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('stopId: $stopId, ')
+          ..write('action: $action, ')
+          ..write('fromStatus: $fromStatus, ')
+          ..write('toStatus: $toStatus, ')
+          ..write('raison: $raison, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3996,6 +4450,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GeocodeCacheTable geocodeCache = $GeocodeCacheTable(this);
   late final $SavedDestinationsTable savedDestinations =
       $SavedDestinationsTable(this);
+  late final $StopHistoryTable stopHistory = $StopHistoryTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4007,6 +4462,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     sheets,
     geocodeCache,
     savedDestinations,
+    stopHistory,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4023,6 +4479,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('sheets', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'stops',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('stop_history', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -4611,6 +5074,24 @@ final class $$StopsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$StopHistoryTable, List<StopHistoryData>>
+  _stopHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.stopHistory,
+    aliasName: $_aliasNameGenerator(db.stops.id, db.stopHistory.stopId),
+  );
+
+  $$StopHistoryTableProcessedTableManager get stopHistoryRefs {
+    final manager = $$StopHistoryTableTableManager(
+      $_db,
+      $_db.stopHistory,
+    ).filter((f) => f.stopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_stopHistoryRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
@@ -4760,6 +5241,31 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
           }) => $$SheetsTableFilterComposer(
             $db: $db,
             $table: $db.sheets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> stopHistoryRefs(
+    Expression<bool> Function($$StopHistoryTableFilterComposer f) f,
+  ) {
+    final $$StopHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stopHistory,
+      getReferencedColumn: (t) => t.stopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.stopHistory,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5037,6 +5543,31 @@ class $$StopsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> stopHistoryRefs<T extends Object>(
+    Expression<T> Function($$StopHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$StopHistoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stopHistory,
+      getReferencedColumn: (t) => t.stopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopHistoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stopHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$StopsTableTableManager
@@ -5052,7 +5583,11 @@ class $$StopsTableTableManager
           $$StopsTableUpdateCompanionBuilder,
           (Stop, $$StopsTableReferences),
           Stop,
-          PrefetchHooks Function({bool tourneeId, bool sheetsRefs})
+          PrefetchHooks Function({
+            bool tourneeId,
+            bool sheetsRefs,
+            bool stopHistoryRefs,
+          })
         > {
   $$StopsTableTableManager(_$AppDatabase db, $StopsTable table)
     : super(
@@ -5163,60 +5698,90 @@ class $$StopsTableTableManager
                     (e.readTable(table), $$StopsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({tourneeId = false, sheetsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (sheetsRefs) db.sheets],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (tourneeId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.tourneeId,
-                                referencedTable: $$StopsTableReferences
-                                    ._tourneeIdTable(db),
-                                referencedColumn: $$StopsTableReferences
-                                    ._tourneeIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                tourneeId = false,
+                sheetsRefs = false,
+                stopHistoryRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (sheetsRefs) db.sheets,
+                    if (stopHistoryRefs) db.stopHistory,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (tourneeId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.tourneeId,
+                                    referencedTable: $$StopsTableReferences
+                                        ._tourneeIdTable(db),
+                                    referencedColumn: $$StopsTableReferences
+                                        ._tourneeIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (sheetsRefs)
+                        await $_getPrefetchedData<Stop, $StopsTable, Sheet>(
+                          currentTable: table,
+                          referencedTable: $$StopsTableReferences
+                              ._sheetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StopsTableReferences(db, table, p0).sheetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.stopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stopHistoryRefs)
+                        await $_getPrefetchedData<
+                          Stop,
+                          $StopsTable,
+                          StopHistoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StopsTableReferences
+                              ._stopHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stopHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.stopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (sheetsRefs)
-                    await $_getPrefetchedData<Stop, $StopsTable, Sheet>(
-                      currentTable: table,
-                      referencedTable: $$StopsTableReferences._sheetsRefsTable(
-                        db,
-                      ),
-                      managerFromTypedResult: (p0) =>
-                          $$StopsTableReferences(db, table, p0).sheetsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.stopId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -5233,7 +5798,11 @@ typedef $$StopsTableProcessedTableManager =
       $$StopsTableUpdateCompanionBuilder,
       (Stop, $$StopsTableReferences),
       Stop,
-      PrefetchHooks Function({bool tourneeId, bool sheetsRefs})
+      PrefetchHooks Function({
+        bool tourneeId,
+        bool sheetsRefs,
+        bool stopHistoryRefs,
+      })
     >;
 typedef $$ParametresTableCreateCompanionBuilder =
     ParametresCompanion Function({
@@ -6329,6 +6898,358 @@ typedef $$SavedDestinationsTableProcessedTableManager =
       SavedDestination,
       PrefetchHooks Function()
     >;
+typedef $$StopHistoryTableCreateCompanionBuilder =
+    StopHistoryCompanion Function({
+      Value<int> id,
+      required int stopId,
+      required String action,
+      required String fromStatus,
+      required String toStatus,
+      Value<String?> raison,
+      Value<DateTime> timestamp,
+    });
+typedef $$StopHistoryTableUpdateCompanionBuilder =
+    StopHistoryCompanion Function({
+      Value<int> id,
+      Value<int> stopId,
+      Value<String> action,
+      Value<String> fromStatus,
+      Value<String> toStatus,
+      Value<String?> raison,
+      Value<DateTime> timestamp,
+    });
+
+final class $$StopHistoryTableReferences
+    extends BaseReferences<_$AppDatabase, $StopHistoryTable, StopHistoryData> {
+  $$StopHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $StopsTable _stopIdTable(_$AppDatabase db) => db.stops.createAlias(
+    $_aliasNameGenerator(db.stopHistory.stopId, db.stops.id),
+  );
+
+  $$StopsTableProcessedTableManager get stopId {
+    final $_column = $_itemColumn<int>('stop_id')!;
+
+    final manager = $$StopsTableTableManager(
+      $_db,
+      $_db.stops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_stopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StopHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $StopHistoryTable> {
+  $$StopHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fromStatus => $composableBuilder(
+    column: $table.fromStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toStatus => $composableBuilder(
+    column: $table.toStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get raison => $composableBuilder(
+    column: $table.raison,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StopsTableFilterComposer get stopId {
+    final $$StopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableFilterComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StopHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $StopHistoryTable> {
+  $$StopHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fromStatus => $composableBuilder(
+    column: $table.fromStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toStatus => $composableBuilder(
+    column: $table.toStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get raison => $composableBuilder(
+    column: $table.raison,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StopsTableOrderingComposer get stopId {
+    final $$StopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StopHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StopHistoryTable> {
+  $$StopHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get action =>
+      $composableBuilder(column: $table.action, builder: (column) => column);
+
+  GeneratedColumn<String> get fromStatus => $composableBuilder(
+    column: $table.fromStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get toStatus =>
+      $composableBuilder(column: $table.toStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get raison =>
+      $composableBuilder(column: $table.raison, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  $$StopsTableAnnotationComposer get stopId {
+    final $$StopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StopHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StopHistoryTable,
+          StopHistoryData,
+          $$StopHistoryTableFilterComposer,
+          $$StopHistoryTableOrderingComposer,
+          $$StopHistoryTableAnnotationComposer,
+          $$StopHistoryTableCreateCompanionBuilder,
+          $$StopHistoryTableUpdateCompanionBuilder,
+          (StopHistoryData, $$StopHistoryTableReferences),
+          StopHistoryData,
+          PrefetchHooks Function({bool stopId})
+        > {
+  $$StopHistoryTableTableManager(_$AppDatabase db, $StopHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StopHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StopHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StopHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> stopId = const Value.absent(),
+                Value<String> action = const Value.absent(),
+                Value<String> fromStatus = const Value.absent(),
+                Value<String> toStatus = const Value.absent(),
+                Value<String?> raison = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+              }) => StopHistoryCompanion(
+                id: id,
+                stopId: stopId,
+                action: action,
+                fromStatus: fromStatus,
+                toStatus: toStatus,
+                raison: raison,
+                timestamp: timestamp,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int stopId,
+                required String action,
+                required String fromStatus,
+                required String toStatus,
+                Value<String?> raison = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+              }) => StopHistoryCompanion.insert(
+                id: id,
+                stopId: stopId,
+                action: action,
+                fromStatus: fromStatus,
+                toStatus: toStatus,
+                raison: raison,
+                timestamp: timestamp,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StopHistoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({stopId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (stopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.stopId,
+                                referencedTable: $$StopHistoryTableReferences
+                                    ._stopIdTable(db),
+                                referencedColumn: $$StopHistoryTableReferences
+                                    ._stopIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StopHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StopHistoryTable,
+      StopHistoryData,
+      $$StopHistoryTableFilterComposer,
+      $$StopHistoryTableOrderingComposer,
+      $$StopHistoryTableAnnotationComposer,
+      $$StopHistoryTableCreateCompanionBuilder,
+      $$StopHistoryTableUpdateCompanionBuilder,
+      (StopHistoryData, $$StopHistoryTableReferences),
+      StopHistoryData,
+      PrefetchHooks Function({bool stopId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6345,4 +7266,6 @@ class $AppDatabaseManager {
       $$GeocodeCacheTableTableManager(_db, _db.geocodeCache);
   $$SavedDestinationsTableTableManager get savedDestinations =>
       $$SavedDestinationsTableTableManager(_db, _db.savedDestinations);
+  $$StopHistoryTableTableManager get stopHistory =>
+      $$StopHistoryTableTableManager(_db, _db.stopHistory);
 }

@@ -5,6 +5,7 @@ import 'tables/geocode_cache.dart';
 import 'tables/parametres.dart';
 import 'tables/saved_destinations.dart';
 import 'tables/sheets.dart';
+import 'tables/stop_history.dart';
 import 'tables/stops.dart';
 import 'tables/tournees.dart';
 
@@ -15,20 +16,29 @@ export 'tables/geocode_cache.dart';
 export 'tables/parametres.dart';
 export 'tables/saved_destinations.dart';
 export 'tables/sheets.dart';
+export 'tables/stop_history.dart';
 export 'tables/stops.dart';
 export 'tables/tournees.dart';
 
 part 'database.g.dart';
 
 @DriftDatabase(
-  tables: [Tournees, Stops, Parametres, Sheets, GeocodeCache, SavedDestinations],
+  tables: [
+    Tournees,
+    Stops,
+    Parametres,
+    Sheets,
+    GeocodeCache,
+    SavedDestinations,
+    StopHistory,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,6 +86,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 13) {
             await m.addColumn(
                 savedDestinations, savedDestinations.colorTag);
+          }
+          if (from < 14) {
+            await m.createTable(stopHistory);
           }
         },
         beforeOpen: (details) async {
