@@ -176,9 +176,42 @@ f84d0d4 fix(theme): mode sombre - drawer + home + cards lime contraste
 
 ## Build APK
 
-À déclencher au réveil de Noah :
+Un APK release **v1.1.0+2** est déjà prêt à `app/build/app/outputs/flutter-apk/app-release.apk` (~96 MB, daté 22:27).
+
+Pour l'installer au réveil :
+```powershell
+./scripts/build-and-install.ps1
 ```
-cd d:/opti_route/app
-flutter build apk --release
-adb install -r build/app/outputs/flutter-apk/app-release.apk
+
+Ou manuellement :
 ```
+adb install -r app/build/app/outputs/flutter-apk/app-release.apk
+```
+
+## À faire au réveil
+
+1. **Vérifier la PR #93** sur GitHub. Si CI verte, merger dans `main`.
+2. **Installer l'APK** sur le téléphone Xiaomi (`./scripts/build-and-install.ps1`).
+3. **Tester les nouvelles features** en mode sombre :
+   - Hors-ligne : ajout d'arrêt sans GPS + badge
+   - Rappel : programmer une notif sur une tournée
+   - vCard : export carnet → ouvrir avec Contacts
+   - Top 5 clients dans Stats (avec couleurs custom du carnet)
+   - Cout carburant estime (Paramètres → Carburant)
+   - Refaire dans 7 jours (menu Plus d'une tournée terminée)
+4. **Captures Play Store** : 8 photos prises dans l'app installée
+   (cf. liste dans `docs/play_store/listing.md`).
+5. **Générer la keystore** (cf. `docs/keystore-release.md`) puis
+   `flutter build appbundle --release` pour le Play Store.
+
+## Bilan en chiffres
+
+- **30+ commits** sur `feat/vague-8-quality`
+- **+97 tests** (85 → 182)
+- **3 migrations Drift** (v15 / v16 / v17)
+- **11 nouveaux fichiers de tests**
+- **5 nouveaux services** (`StopsGeocodeRetryService`,
+  `TourneeTextShareService`, `CarnetVcardExportService`,
+  `GeoUtils`)
+- **0 issue** `flutter analyze`
+- **204 lignes** de code mort retirées (`NominatimService`)
