@@ -338,6 +338,8 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               height: 1.4,
             ),
           ),
+          const SizedBox(height: AppSpacing.x14),
+          const _DailyReminderToggle(),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
@@ -609,6 +611,59 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+/// Toggle "Rappel quotidien tournee" : si ON, planifie une notif
+/// recurrente a 19h00 pour rappeler a Noah de verifier la tournee du
+/// lendemain. Quand OFF, cancel la notif programmee. Persiste l'etat
+/// dans ParametresRepository.
+class _DailyReminderToggle extends ConsumerWidget {
+  const _DailyReminderToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref
+            .watch(parametresRepositoryProvider)
+            .watchDailyReminderEnabled();
+    return StreamBuilder<bool>(
+      stream: enabled,
+      builder: (context, snap) {
+        final value = snap.data ?? false;
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text(
+            'Rappel quotidien a 19h00',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          subtitle: const Text(
+            'Une notif chaque soir pour penser a verifier la tournee du lendemain.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          value: value,
+          activeThumbColor: AppColors.emerald,
+          onChanged: (v) async {
+            await ref
+                .read(parametresRepositoryProvider)
+                .setDailyReminderEnabled(v);
+            if (v) {
+              await NotificationsService.instance
+                  .scheduleDailyTourneeReminder();
+            } else {
+              await NotificationsService.instance.cancelDailyTourneeReminder();
+            }
+          },
+        );
+      },
+    );
   }
 }
 

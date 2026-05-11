@@ -19,6 +19,7 @@ class ParametresRepository {
   static const _kOrsUsedDate = 'ors_used_date';
   static const _kThemeMode = 'theme_mode';
   static const _kLastCarnetExport = 'last_carnet_export_at';
+  static const _kDailyReminderEnabled = 'daily_tournee_reminder';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -152,6 +153,20 @@ class ParametresRepository {
 
   Future<void> markCarnetExported() =>
       _write(_kLastCarnetExport, DateTime.now().toIso8601String());
+
+  /// Rappel quotidien "tournee a preparer" : si actif, une notification
+  /// locale est planifiee a heure fixe pour rappeler a Noah de verifier
+  /// la tournee du lendemain.
+  Future<bool> isDailyReminderEnabled() async {
+    final v = await _readKey(_kDailyReminderEnabled);
+    return v == '1';
+  }
+
+  Stream<bool> watchDailyReminderEnabled() =>
+      _watchKey(_kDailyReminderEnabled).map((v) => v == '1');
+
+  Future<void> setDailyReminderEnabled(bool enabled) =>
+      _write(_kDailyReminderEnabled, enabled ? '1' : '0');
 
   static String _todayIso() {
     final now = DateTime.now();

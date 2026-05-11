@@ -62,7 +62,59 @@ class NotificationsService {
 
   Future<void> cancelTest() => _plugin.cancel(_testId);
 
+  /// Planifie une notification recurrente quotidienne a [hour]:[minute]
+  /// (heure locale Europe/Paris) qui rappelle a Noah de verifier la
+  /// tournee du lendemain. Reprogramme automatiquement chaque jour grace
+  /// a `matchDateTimeComponents: DateTimeComponents.time`.
+  ///
+  /// Appel idempotent : on annule d'abord l'eventuelle planif precedente
+  /// pour eviter les doublons quand l'utilisateur change l'heure.
+  Future<void> scheduleDailyTourneeReminder({
+    int hour = 19,
+    int minute = 0,
+  }) async {
+    await init();
+    await _plugin.cancel(_dailyReminderId);
+
+    var when = tz.TZDateTime(
+      tz.local,
+      tz.TZDateTime.now(tz.local).year,
+      tz.TZDateTime.now(tz.local).month,
+      tz.TZDateTime.now(tz.local).day,
+      hour,
+      minute,
+    );
+    // Si l'heure cible est deja passee aujourd'hui, on cale sur demain.
+    if (when.isBefore(tz.TZDateTime.now(tz.local))) {
+      when = when.add(const Duration(days: 1));
+    }
+
+    await _plugin.zonedSchedule(
+      _dailyReminderId,
+      'Tournee a preparer ?',
+      'Pense a verifier les arrets du lendemain dans opti_route.',
+      when,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> cancelDailyTourneeReminder() =>
+      _plugin.cancel(_dailyReminderId);
+
   static const _testId = 9999;
+  static const _dailyReminderId = 9998;
   static const _channelId = 'opti_route_reminders';
 
   static String _format(tz.TZDateTime dt) {
