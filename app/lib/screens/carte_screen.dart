@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../data/database.dart';
 import '../providers/database_providers.dart';
+import '../providers/location_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -125,6 +126,12 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                     index: i + 1,
                     onTap: () => _showStopInfo(stopsGeoreferenced[i], i + 1),
                   ),
+                // Pin "moi" live : visible uniquement quand la tournee
+                // est en cours ET qu'on a une position GPS recente.
+                // Pas affiche pour les tournees brouillon / terminees
+                // (pas d'interet operationnel + economise du redraw).
+                if (widget.tournee.statut == 'en_cours')
+                  ..._buildLiveMeMarker(),
               ],
             ),
           ],
@@ -181,6 +188,22 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
           ),
       ],
     );
+  }
+
+  /// Construit le marker "moi" (cercle bleu avec halo) a partir de la
+  /// position GPS live, ou retourne `[]` si on n'a pas encore de fix.
+  List<Marker> _buildLiveMeMarker() {
+    final pos = ref.watch(currentPositionProvider).asData?.value;
+    if (pos == null) return const [];
+    return [
+      Marker(
+        point: LatLng(pos.latitude, pos.longitude),
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        child: const _MeMarker(),
+      ),
+    ];
   }
 
   /// Decode la trace stockee dans `Tournee.traceGeojson` (string JSON
@@ -447,6 +470,43 @@ class _StopMarker {
         ),
       _ => (AppColors.paper, AppColors.ink, '$index'),
     };
+  }
+}
+
+/// Pin "moi" : cercle bleu plein avec halo plus clair autour. Visible
+/// au-dessus des autres markers grace au z-order (dernier ajoute dans
+/// la MarkerLayer = au-dessus).
+class _MeMarker extends StatelessWidget {
+  const _MeMarker();
+
+  static const _meBlue = Color(0xFF2F80FF);
+  static const _meHalo = Color(0x332F80FF);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: _meHalo,
+            shape: BoxShape.circle,
+          ),
+        ),
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: _meBlue,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.paper, width: 2),
+            boxShadow: AppShadows.fab,
+          ),
+        ),
+      ],
+    );
   }
 }
 
