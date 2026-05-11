@@ -85,5 +85,30 @@ void main() {
         isTrue,
       );
     });
+
+    test('meme point : toujours close (distance = 0)', () {
+      expect(
+        GeoUtils.areClose(
+          lat1: 48.7372,
+          lon1: 1.3661,
+          lat2: 48.7372,
+          lon2: 1.3661,
+        ),
+        isTrue,
+      );
+    });
+
+    test('Paris vs Lyon : jamais close', () {
+      expect(
+        GeoUtils.areClose(
+          lat1: 48.8566,
+          lon1: 2.3522,
+          lat2: 45.764,
+          lon2: 4.8357,
+          thresholdMeters: 100000, // 100 km
+        ),
+        isFalse,
+      );
+    });
   });
 }
