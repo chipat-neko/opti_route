@@ -167,6 +167,29 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _pausedAtLastMeta = const VerificationMeta(
+    'pausedAtLast',
+  );
+  @override
+  late final GeneratedColumn<DateTime> pausedAtLast = GeneratedColumn<DateTime>(
+    'paused_at_last',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pausedTotalSMeta = const VerificationMeta(
+    'pausedTotalS',
+  );
+  @override
+  late final GeneratedColumn<int> pausedTotalS = GeneratedColumn<int>(
+    'paused_total_s',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -193,6 +216,8 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     traceGeojson,
     demareeLe,
     isTemplate,
+    pausedAtLast,
+    pausedTotalS,
     creeLe,
   ];
   @override
@@ -322,6 +347,24 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         isTemplate.isAcceptableOrUnknown(data['is_template']!, _isTemplateMeta),
       );
     }
+    if (data.containsKey('paused_at_last')) {
+      context.handle(
+        _pausedAtLastMeta,
+        pausedAtLast.isAcceptableOrUnknown(
+          data['paused_at_last']!,
+          _pausedAtLastMeta,
+        ),
+      );
+    }
+    if (data.containsKey('paused_total_s')) {
+      context.handle(
+        _pausedTotalSMeta,
+        pausedTotalS.isAcceptableOrUnknown(
+          data['paused_total_s']!,
+          _pausedTotalSMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -393,6 +436,14 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_template'],
       )!,
+      pausedAtLast: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}paused_at_last'],
+      ),
+      pausedTotalS: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}paused_total_s'],
+      )!,
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -437,6 +488,18 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// Sert pour les tournees recurrentes (memes 30 clients chaque
   /// semaine).
   final bool isTemplate;
+
+  /// Timestamp du dernier tap "Pause" non encore repris : non null
+  /// uniquement quand la tournee est sur PAUSE en ce moment. La
+  /// reprise (tap "Reprendre") remet cette colonne a null et ajoute
+  /// (now - pausedAtLast) a `pausedTotalS`. Sert au calcul du temps
+  /// ecoule en excluant les pauses.
+  final DateTime? pausedAtLast;
+
+  /// Cumul total des pauses passees (en secondes). Croit a chaque
+  /// reprise. Le temps ecoule "actif" d'une tournee demarree est :
+  /// (now - demareeLe) - pausedTotalS - (now - pausedAtLast if paused).
+  final int pausedTotalS;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -453,6 +516,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     this.traceGeojson,
     this.demareeLe,
     required this.isTemplate,
+    this.pausedAtLast,
+    required this.pausedTotalS,
     required this.creeLe,
   });
   @override
@@ -482,6 +547,10 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       map['demaree_le'] = Variable<DateTime>(demareeLe);
     }
     map['is_template'] = Variable<bool>(isTemplate);
+    if (!nullToAbsent || pausedAtLast != null) {
+      map['paused_at_last'] = Variable<DateTime>(pausedAtLast);
+    }
+    map['paused_total_s'] = Variable<int>(pausedTotalS);
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -512,6 +581,10 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ? const Value.absent()
           : Value(demareeLe),
       isTemplate: Value(isTemplate),
+      pausedAtLast: pausedAtLast == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pausedAtLast),
+      pausedTotalS: Value(pausedTotalS),
       creeLe: Value(creeLe),
     );
   }
@@ -538,6 +611,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       traceGeojson: serializer.fromJson<String?>(json['traceGeojson']),
       demareeLe: serializer.fromJson<DateTime?>(json['demareeLe']),
       isTemplate: serializer.fromJson<bool>(json['isTemplate']),
+      pausedAtLast: serializer.fromJson<DateTime?>(json['pausedAtLast']),
+      pausedTotalS: serializer.fromJson<int>(json['pausedTotalS']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -559,6 +634,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'traceGeojson': serializer.toJson<String?>(traceGeojson),
       'demareeLe': serializer.toJson<DateTime?>(demareeLe),
       'isTemplate': serializer.toJson<bool>(isTemplate),
+      'pausedAtLast': serializer.toJson<DateTime?>(pausedAtLast),
+      'pausedTotalS': serializer.toJson<int>(pausedTotalS),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -578,6 +655,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     Value<String?> traceGeojson = const Value.absent(),
     Value<DateTime?> demareeLe = const Value.absent(),
     bool? isTemplate,
+    Value<DateTime?> pausedAtLast = const Value.absent(),
+    int? pausedTotalS,
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -596,6 +675,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     traceGeojson: traceGeojson.present ? traceGeojson.value : this.traceGeojson,
     demareeLe: demareeLe.present ? demareeLe.value : this.demareeLe,
     isTemplate: isTemplate ?? this.isTemplate,
+    pausedAtLast: pausedAtLast.present ? pausedAtLast.value : this.pausedAtLast,
+    pausedTotalS: pausedTotalS ?? this.pausedTotalS,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -632,6 +713,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       isTemplate: data.isTemplate.present
           ? data.isTemplate.value
           : this.isTemplate,
+      pausedAtLast: data.pausedAtLast.present
+          ? data.pausedAtLast.value
+          : this.pausedAtLast,
+      pausedTotalS: data.pausedTotalS.present
+          ? data.pausedTotalS.value
+          : this.pausedTotalS,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -653,6 +740,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
           ..write('isTemplate: $isTemplate, ')
+          ..write('pausedAtLast: $pausedAtLast, ')
+          ..write('pausedTotalS: $pausedTotalS, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -674,6 +763,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     traceGeojson,
     demareeLe,
     isTemplate,
+    pausedAtLast,
+    pausedTotalS,
     creeLe,
   );
   @override
@@ -694,6 +785,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.traceGeojson == this.traceGeojson &&
           other.demareeLe == this.demareeLe &&
           other.isTemplate == this.isTemplate &&
+          other.pausedAtLast == this.pausedAtLast &&
+          other.pausedTotalS == this.pausedTotalS &&
           other.creeLe == this.creeLe);
 }
 
@@ -712,6 +805,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<String?> traceGeojson;
   final Value<DateTime?> demareeLe;
   final Value<bool> isTemplate;
+  final Value<DateTime?> pausedAtLast;
+  final Value<int> pausedTotalS;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -728,6 +823,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
     this.isTemplate = const Value.absent(),
+    this.pausedAtLast = const Value.absent(),
+    this.pausedTotalS = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -745,6 +842,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
     this.isTemplate = const Value.absent(),
+    this.pausedAtLast = const Value.absent(),
+    this.pausedTotalS = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -766,6 +865,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<String>? traceGeojson,
     Expression<DateTime>? demareeLe,
     Expression<bool>? isTemplate,
+    Expression<DateTime>? pausedAtLast,
+    Expression<int>? pausedTotalS,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -784,6 +885,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (traceGeojson != null) 'trace_geojson': traceGeojson,
       if (demareeLe != null) 'demaree_le': demareeLe,
       if (isTemplate != null) 'is_template': isTemplate,
+      if (pausedAtLast != null) 'paused_at_last': pausedAtLast,
+      if (pausedTotalS != null) 'paused_total_s': pausedTotalS,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -803,6 +906,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<String?>? traceGeojson,
     Value<DateTime?>? demareeLe,
     Value<bool>? isTemplate,
+    Value<DateTime?>? pausedAtLast,
+    Value<int>? pausedTotalS,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -821,6 +926,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       traceGeojson: traceGeojson ?? this.traceGeojson,
       demareeLe: demareeLe ?? this.demareeLe,
       isTemplate: isTemplate ?? this.isTemplate,
+      pausedAtLast: pausedAtLast ?? this.pausedAtLast,
+      pausedTotalS: pausedTotalS ?? this.pausedTotalS,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -872,6 +979,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (isTemplate.present) {
       map['is_template'] = Variable<bool>(isTemplate.value);
     }
+    if (pausedAtLast.present) {
+      map['paused_at_last'] = Variable<DateTime>(pausedAtLast.value);
+    }
+    if (pausedTotalS.present) {
+      map['paused_total_s'] = Variable<int>(pausedTotalS.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -895,6 +1008,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
           ..write('isTemplate: $isTemplate, ')
+          ..write('pausedAtLast: $pausedAtLast, ')
+          ..write('pausedTotalS: $pausedTotalS, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -4506,6 +4621,8 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
       Value<bool> isTemplate,
+      Value<DateTime?> pausedAtLast,
+      Value<int> pausedTotalS,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -4524,6 +4641,8 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
       Value<bool> isTemplate,
+      Value<DateTime?> pausedAtLast,
+      Value<int> pausedTotalS,
       Value<DateTime> creeLe,
     });
 
@@ -4627,6 +4746,16 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<bool> get isTemplate => $composableBuilder(
     column: $table.isTemplate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get pausedAtLast => $composableBuilder(
+    column: $table.pausedAtLast,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pausedTotalS => $composableBuilder(
+    column: $table.pausedTotalS,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4740,6 +4869,16 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get pausedAtLast => $composableBuilder(
+    column: $table.pausedAtLast,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pausedTotalS => $composableBuilder(
+    column: $table.pausedTotalS,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -4815,6 +4954,16 @@ class $$TourneesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<DateTime> get pausedAtLast => $composableBuilder(
+    column: $table.pausedAtLast,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pausedTotalS => $composableBuilder(
+    column: $table.pausedTotalS,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
 
@@ -4886,6 +5035,8 @@ class $$TourneesTableTableManager
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
                 Value<bool> isTemplate = const Value.absent(),
+                Value<DateTime?> pausedAtLast = const Value.absent(),
+                Value<int> pausedTotalS = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -4902,6 +5053,8 @@ class $$TourneesTableTableManager
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
                 isTemplate: isTemplate,
+                pausedAtLast: pausedAtLast,
+                pausedTotalS: pausedTotalS,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -4920,6 +5073,8 @@ class $$TourneesTableTableManager
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
                 Value<bool> isTemplate = const Value.absent(),
+                Value<DateTime?> pausedAtLast = const Value.absent(),
+                Value<int> pausedTotalS = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -4936,6 +5091,8 @@ class $$TourneesTableTableManager
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
                 isTemplate: isTemplate,
+                pausedAtLast: pausedAtLast,
+                pausedTotalS: pausedTotalS,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0

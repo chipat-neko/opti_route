@@ -554,7 +554,7 @@ class _Body extends StatelessWidget {
           _ProgressBanner(
             stops: stops,
             tourneeTerminee: tournee.statut == 'terminee',
-            demareeLe: tournee.demareeLe,
+            tournee: tournee,
           ),
         ],
         if (tournee.statut == 'en_cours') ...[
@@ -1595,22 +1595,45 @@ class _Fabs extends StatelessWidget {
 /// Bandeau de progression / bilan qui s'affiche des qu'au moins un
 /// arret a un statut definitif. Quand toute la tournee est terminee,
 /// passe en mode "Tournee terminee" avec un fond vert.
-class _ProgressBanner extends StatelessWidget {
+class _ProgressBanner extends ConsumerWidget {
   const _ProgressBanner({
     required this.stops,
     required this.tourneeTerminee,
-    this.demareeLe,
+    required this.tournee,
   });
 
   final List<Stop> stops;
   final bool tourneeTerminee;
+  final Tournee tournee;
 
-  /// Timestamp du tap "Demarrer" pour calculer le temps ecoule depuis.
-  /// Null = tournee jamais demarree (pas d'affichage dans le bandeau).
-  final DateTime? demareeLe;
+  /// Vrai si la tournee est sur pause (timestamp pausedAtLast non null).
+  bool get _isPaused => tournee.pausedAtLast != null;
+
+  /// Temps actif depuis le demarrage, en excluant les pauses passees
+  /// + la pause courante. Null si jamais demarree.
+  Duration? _elapsedActive() {
+    final start = tournee.demareeLe;
+    if (start == null) return null;
+    final raw = DateTime.now().difference(start);
+    final currentPause = _isPaused
+        ? DateTime.now().difference(tournee.pausedAtLast!)
+        : Duration.zero;
+    final past = Duration(seconds: tournee.pausedTotalS);
+    final active = raw - past - currentPause;
+    return active.isNegative ? Duration.zero : active;
+  }
+
+  Future<void> _togglePause(WidgetRef ref) async {
+    final repo = ref.read(tourneesRepositoryProvider);
+    if (_isPaused) {
+      await repo.resumeTournee(tournee.id);
+    } else {
+      await repo.pauseTournee(tournee.id);
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final livres =
         stops.where((s) => s.statutLivraison == 'livre').length;
     final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
@@ -1663,21 +1686,35 @@ class _ProgressBanner extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    if (demareeLe != null)
+                    if (_elapsedActive() != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 1),
                         child: Text(
-                          'Demarree il y a ${_formatElapsed(demareeLe!)}',
+                          _isPaused
+                              ? 'En pause · actif ${_formatDuration(_elapsedActive()!)}'
+                              : 'Actif depuis ${_formatDuration(_elapsedActive()!)}',
                           style: appMonoStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: mute,
+                            color: _isPaused ? AppColors.amber : mute,
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
+              if (!tourneeTerminee && tournee.demareeLe != null)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    _isPaused
+                        ? Icons.play_arrow_outlined
+                        : Icons.pause_outlined,
+                    color: _isPaused ? AppColors.amber : AppColors.ink,
+                  ),
+                  tooltip: _isPaused ? 'Reprendre' : 'Pause',
+                  onPressed: () => _togglePause(ref),
+                ),
               if (colisTotal > 0)
                 Text(
                   '$colisLivres / $colisTotal colis',
@@ -1755,11 +1792,9 @@ class _ProgressBanner extends StatelessWidget {
     );
   }
 
-  /// Formate la duree ecoulee depuis [start] sous forme courte :
-  /// "8 min", "1h32", "2j 4h". Pas de secondes, on rafraichit la
-  /// minute pres au prochain rebuild.
-  static String _formatElapsed(DateTime start) {
-    final d = DateTime.now().difference(start);
+  /// Formate une duree (typiquement le temps actif d'une tournee)
+  /// sous forme courte : "8 min", "1h32", "2j 4h".
+  static String _formatDuration(Duration d) {
     if (d.inMinutes < 1) return 'moins d\'une min';
     if (d.inHours < 1) return '${d.inMinutes} min';
     if (d.inDays < 1) {

@@ -157,6 +157,7 @@ Tournee _tournee({
     distanceTotaleM: distanceTotaleM,
     dureeTotaleS: dureeTotaleS,
     isTemplate: false,
+    pausedTotalS: 0,
     creeLe: DateTime(2026, 5, 11),
   );
 }

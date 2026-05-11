@@ -34,5 +34,18 @@ class Tournees extends Table {
   BoolColumn get isTemplate =>
       boolean().withDefault(const Constant(false))();
 
+  /// Timestamp du dernier tap "Pause" non encore repris : non null
+  /// uniquement quand la tournee est sur PAUSE en ce moment. La
+  /// reprise (tap "Reprendre") remet cette colonne a null et ajoute
+  /// (now - pausedAtLast) a `pausedTotalS`. Sert au calcul du temps
+  /// ecoule en excluant les pauses.
+  DateTimeColumn get pausedAtLast => dateTime().nullable()();
+
+  /// Cumul total des pauses passees (en secondes). Croit a chaque
+  /// reprise. Le temps ecoule "actif" d'une tournee demarree est :
+  /// (now - demareeLe) - pausedTotalS - (now - pausedAtLast if paused).
+  IntColumn get pausedTotalS =>
+      integer().withDefault(const Constant(0))();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }
