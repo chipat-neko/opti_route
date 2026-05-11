@@ -1501,44 +1501,45 @@ class _StopsPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x22),
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(AppRadius.r18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: p.divider),
       ),
       child: Column(
         children: [
           Container(
             width: 56,
             height: 56,
-            decoration: const BoxDecoration(
-              color: AppColors.creamSoft,
+            decoration: BoxDecoration(
+              color: p.creamSoft,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.add_road_outlined,
-              color: AppColors.ink,
+              color: p.ink,
               size: 26,
             ),
           ),
           const SizedBox(height: AppSpacing.x12),
-          const Text(
+          Text(
             'Pas encore d\'arrets',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: p.ink,
             ),
           ),
           const SizedBox(height: AppSpacing.x6),
-          const Text(
+          Text(
             'Tape sur "Ajouter un arret" pour commencer a remplir ta tournee.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),

@@ -69,6 +69,128 @@ abstract final class AppRadius {
   static const r28 = 28.0;
 }
 
+/// Palette context-aware qui bascule selon le ThemeMode (clair / sombre).
+/// Sert aux widgets custom qui veulent supporter le mode sombre sans
+/// passer par le `colorScheme` Material standard.
+///
+/// Usage :
+/// ```dart
+/// final p = Theme.of(context).extension<AppPalette>()!;
+/// Container(color: p.cream, ...)
+/// ```
+///
+/// Les couleurs de **marque** (lime, emerald, red, amber) restent
+/// inchangees dans `AppColors` car elles doivent rester identiques
+/// dans les 2 modes (signaux visuels universels : vert = succes,
+/// rouge = echec, etc.).
+class AppPalette extends ThemeExtension<AppPalette> {
+  const AppPalette({
+    required this.cream,
+    required this.creamSoft,
+    required this.paper,
+    required this.ink,
+    required this.inkSoft,
+    required this.inkLine,
+    required this.divider,
+    required this.text,
+    required this.textMute,
+    required this.textFaint,
+  });
+
+  final Color cream;
+  final Color creamSoft;
+  final Color paper;
+  final Color ink;
+  final Color inkSoft;
+  final Color inkLine;
+  final Color divider;
+  final Color text;
+  final Color textMute;
+  final Color textFaint;
+
+  /// Mode clair : meme palette que les anciennes constantes `AppColors`.
+  static const light = AppPalette(
+    cream: AppColors.cream,
+    creamSoft: AppColors.creamSoft,
+    paper: AppColors.paper,
+    ink: AppColors.ink,
+    inkSoft: AppColors.inkSoft,
+    inkLine: AppColors.inkLine,
+    divider: AppColors.divider,
+    text: AppColors.text,
+    textMute: AppColors.textMute,
+    textFaint: AppColors.textFaint,
+  );
+
+  /// Mode sombre : inversion des roles. La surface principale devient
+  /// l'ancien `ink` (#0E1410), les surfaces "blanc paper" deviennent
+  /// `inkSoft` (#1A211C), et le texte passe en `cream` clair.
+  static const dark = AppPalette(
+    cream: AppColors.ink,
+    creamSoft: AppColors.inkSoft,
+    paper: AppColors.inkSoft,
+    ink: AppColors.cream,
+    inkSoft: AppColors.creamSoft,
+    inkLine: Color(0x33F5F3EE), // cream 20%
+    divider: Color(0x1AF5F3EE), // cream 10%
+    text: AppColors.cream,
+    textMute: Color(0xB3F5F3EE), // cream 70%
+    textFaint: Color(0x80F5F3EE), // cream 50%
+  );
+
+  @override
+  AppPalette copyWith({
+    Color? cream,
+    Color? creamSoft,
+    Color? paper,
+    Color? ink,
+    Color? inkSoft,
+    Color? inkLine,
+    Color? divider,
+    Color? text,
+    Color? textMute,
+    Color? textFaint,
+  }) {
+    return AppPalette(
+      cream: cream ?? this.cream,
+      creamSoft: creamSoft ?? this.creamSoft,
+      paper: paper ?? this.paper,
+      ink: ink ?? this.ink,
+      inkSoft: inkSoft ?? this.inkSoft,
+      inkLine: inkLine ?? this.inkLine,
+      divider: divider ?? this.divider,
+      text: text ?? this.text,
+      textMute: textMute ?? this.textMute,
+      textFaint: textFaint ?? this.textFaint,
+    );
+  }
+
+  @override
+  AppPalette lerp(ThemeExtension<AppPalette>? other, double t) {
+    if (other is! AppPalette) return this;
+    return AppPalette(
+      cream: Color.lerp(cream, other.cream, t)!,
+      creamSoft: Color.lerp(creamSoft, other.creamSoft, t)!,
+      paper: Color.lerp(paper, other.paper, t)!,
+      ink: Color.lerp(ink, other.ink, t)!,
+      inkSoft: Color.lerp(inkSoft, other.inkSoft, t)!,
+      inkLine: Color.lerp(inkLine, other.inkLine, t)!,
+      divider: Color.lerp(divider, other.divider, t)!,
+      text: Color.lerp(text, other.text, t)!,
+      textMute: Color.lerp(textMute, other.textMute, t)!,
+      textFaint: Color.lerp(textFaint, other.textFaint, t)!,
+    );
+  }
+}
+
+/// Helper ergonomique pour acceder a la palette depuis n'importe quel
+/// `BuildContext` : `context.palette.cream`.
+extension AppPaletteContext on BuildContext {
+  AppPalette get palette {
+    return Theme.of(this).extension<AppPalette>() ?? AppPalette.light;
+  }
+}
+
 abstract final class AppShadows {
   /// Cartes "paper" (radius 16-22).
   static const card = <BoxShadow>[

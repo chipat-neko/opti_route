@@ -97,6 +97,9 @@ ThemeData _buildTheme({required Brightness brightness}) {
     scaffoldBackgroundColor: bg,
     textTheme: textTheme,
     primaryTextTheme: textTheme,
+    extensions: <ThemeExtension<dynamic>>[
+      isDark ? AppPalette.dark : AppPalette.light,
+    ],
     appBarTheme: AppBarTheme(
       backgroundColor: bg,
       foregroundColor: onSurface,
