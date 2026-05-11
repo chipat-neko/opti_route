@@ -223,4 +223,67 @@ void main() {
       expect(out, {1: 2, 5: 7});
     });
   });
+
+  group('StatsService.distanceTotaleMeters', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<int> seedTournee({
+      required DateTime date,
+      int? distance,
+    }) {
+      return db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: date,
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+              distanceTotaleM: Value(distance),
+            ),
+          );
+    }
+
+    test('aucune tournee : 0', () async {
+      final d = await stats.distanceTotaleMeters(since: DateTime(2026, 1, 1));
+      expect(d, 0);
+    });
+
+    test('cumule plusieurs distances', () async {
+      await seedTournee(date: DateTime(2026, 5, 1), distance: 10000);
+      await seedTournee(date: DateTime(2026, 5, 5), distance: 25000);
+      await seedTournee(date: DateTime(2026, 5, 10), distance: 5000);
+      final d = await stats.distanceTotaleMeters(
+        since: DateTime(2026, 4, 1),
+      );
+      expect(d, 40000);
+    });
+
+    test('tournee sans distance (null) : ignoree dans le cumul', () async {
+      await seedTournee(date: DateTime(2026, 5, 1), distance: 10000);
+      await seedTournee(date: DateTime(2026, 5, 5)); // null
+      final d = await stats.distanceTotaleMeters(
+        since: DateTime(2026, 4, 1),
+      );
+      expect(d, 10000);
+    });
+
+    test('respecte la fenetre since', () async {
+      await seedTournee(date: DateTime(2026, 3, 1), distance: 10000);
+      await seedTournee(date: DateTime(2026, 5, 1), distance: 5000);
+      final d = await stats.distanceTotaleMeters(
+        since: DateTime(2026, 4, 1),
+      );
+      expect(d, 5000); // mars exclu
+    });
+  });
 }

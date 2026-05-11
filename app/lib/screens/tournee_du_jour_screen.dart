@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../data/database.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
+import '../data/notifications_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournee_pdf_service.dart';
 import '../data/tournee_text_share_service.dart';
@@ -309,6 +310,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         widget.tournee.id,
         const TourneesCompanion(statut: Value('terminee')),
       );
+      // Tournee finie : on annule le rappel local s'il y en avait un
+      // (inutile de reveiller Noah le lendemain pour une tournee deja
+      // terminee).
+      await NotificationsService.instance
+          .cancelTourneeRappel(widget.tournee.id);
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1785,6 +1791,10 @@ class _ProchainArretCard extends ConsumerWidget {
         stop.tourneeId,
         const TourneesCompanion(statut: Value('terminee')),
       );
+      // Bascule automatique vers terminee : on annule le rappel s'il
+      // y en avait un.
+      await NotificationsService.instance
+          .cancelTourneeRappel(stop.tourneeId);
     }
 
     messenger.showSnackBar(

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../data/carnet_export_service.dart';
 import '../data/carnet_import_service.dart';
@@ -383,6 +384,17 @@ class _CarnetTile extends ConsumerWidget {
   const _CarnetTile({required this.entry});
   final SavedDestination entry;
 
+  /// "Livre N fois - dernier le J/M/A" (ou juste "Livre N fois" si la
+  /// derniere date est null). Donne du contexte temporel en une ligne
+  /// dans la liste sans cliquer pour ouvrir la fiche.
+  static String _formatLivreLine(SavedDestination e) {
+    final base = e.useCount > 1
+        ? 'Livre ${e.useCount} fois'
+        : 'Livre 1 fois';
+    final df = DateFormat('d MMM yy', 'fr');
+    return '$base - dernier ${df.format(e.lastUsedAt)}';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
@@ -509,9 +521,7 @@ class _CarnetTile extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          entry.useCount > 1
-                              ? 'Livre ${entry.useCount} fois'
-                              : 'Livre 1 fois',
+                          _formatLivreLine(entry),
                           style: appMonoStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
