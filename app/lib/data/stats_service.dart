@@ -62,6 +62,38 @@ class StatsService {
       durationSeconds: dureeS,
     );
   }
+
+  /// Decompte le nombre de colis livres par jour de la semaine sur la
+  /// fenetre `[since, now]`. Indice : 1 = lundi, 7 = dimanche (norme
+  /// ISO 8601 / DateTime.weekday). Une carte ordonnee par jour.
+  /// Permet a Noah de detecter ses jours les plus charges.
+  Future<Map<int, int>> colisParJourDeSemaine(
+      {required DateTime since}) async {
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since)))
+        .get();
+    if (tournees.isEmpty) return const {};
+
+    final tourneeIds = tournees.map((t) => t.id).toList();
+    final stops = await (_db.select(_db.stops)
+          ..where((s) =>
+              s.tourneeId.isIn(tourneeIds) &
+              s.statutLivraison.equals('livre')))
+        .get();
+
+    // Map id-tournee -> weekday pour ne pas refaire le lookup pour
+    // chaque stop.
+    final weekdayByTournee = {
+      for (final t in tournees) t.id: t.date.weekday,
+    };
+    final out = <int, int>{};
+    for (final s in stops) {
+      final wd = weekdayByTournee[s.tourneeId];
+      if (wd == null) continue;
+      out[wd] = (out[wd] ?? 0) + s.nbColis;
+    }
+    return out;
+  }
 }
 
 /// Aggregation immuable retournee par [StatsService.compute].

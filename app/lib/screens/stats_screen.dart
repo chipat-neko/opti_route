@@ -27,6 +27,8 @@ class StatsScreen extends ConsumerWidget {
           _StatsCard(label: '30 DERNIERS JOURS', days: 30),
           SizedBox(height: AppSpacing.x14),
           _StatsCard(label: 'DEPUIS 1 AN', days: 365),
+          SizedBox(height: AppSpacing.x14),
+          _JoursSemaineCard(),
         ],
       ),
     );
@@ -305,4 +307,158 @@ class _StatDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Container(width: 1, height: 32, color: context.palette.divider);
+}
+
+/// Carte qui affiche la repartition des colis livres par jour de la
+/// semaine sur les 30 derniers jours. Affiche un mini barchart "ASCII"
+/// horizontal (proportionnel au max). Aide a reperer les jours
+/// charges -> potentiellement bouger une tournee recurrente.
+class _JoursSemaineCard extends ConsumerWidget {
+  const _JoursSemaineCard();
+
+  static const _jourLabels = [
+    null, // index 0 non utilise (weekday = 1..7)
+    'Lundi',
+    'Mardi',
+    'Mercredi',
+    'Jeudi',
+    'Vendredi',
+    'Samedi',
+    'Dimanche',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final async = ref.watch(colisParJourProvider(30));
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: p.paper,
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+        border: Border.all(color: p.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'COLIS PAR JOUR (30 J)',
+            style: appMonoStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: p.textMute,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          async.when(
+            data: (map) {
+              if (map.isEmpty) {
+                return Text(
+                  'Aucun colis livre cette periode.',
+                  style: TextStyle(color: p.textMute),
+                );
+              }
+              final maxVal = map.values.fold<int>(
+                0,
+                (m, v) => v > m ? v : m,
+              );
+              return Column(
+                children: [
+                  for (var wd = 1; wd <= 7; wd++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _BarRow(
+                        label: _jourLabels[wd]!,
+                        value: map[wd] ?? 0,
+                        max: maxVal,
+                      ),
+                    ),
+                ],
+              );
+            },
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.x18),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (e, _) => Text(
+              'Erreur : $e',
+              style: const TextStyle(color: AppColors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarRow extends StatelessWidget {
+  const _BarRow({
+    required this.label,
+    required this.value,
+    required this.max,
+  });
+
+  final String label;
+  final int value;
+  final int max;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final ratio = max == 0 ? 0.0 : value / max;
+    return Row(
+      children: [
+        SizedBox(
+          width: 72,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: p.ink,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              Container(
+                height: 16,
+                decoration: BoxDecoration(
+                  color: p.creamSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.r6),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: ratio,
+                child: Container(
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: AppColors.lime,
+                    borderRadius: BorderRadius.circular(AppRadius.r6),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x10),
+        SizedBox(
+          width: 28,
+          child: Text(
+            '$value',
+            textAlign: TextAlign.right,
+            style: appMonoStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: p.ink,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

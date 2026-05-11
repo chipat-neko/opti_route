@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../data/database.dart';
+import '../data/location_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
@@ -42,6 +43,27 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
     SystemChrome.setEnabledSystemUIMode(
       _fullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
     );
+  }
+
+  /// Demande la permission GPS si necessaire, recupere la position
+  /// courante et anime la carte dessus. Snackbar en cas d'echec
+  /// (permission refusee, GPS off, timeout). Pas de pin permanent
+  /// "moi ici" -- juste un recentrage one-shot.
+  Future<void> _centerOnMe() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final ok = await LocationService.ensurePermission();
+      if (!ok || !mounted) return;
+      final pos = await LocationService.currentPosition();
+      if (!mounted) return;
+      _mapController.move(LatLng(pos.latitude, pos.longitude), 16);
+    } on LocationPermissionDenied catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Position GPS indisponible : $e')),
+      );
+    }
   }
 
   @override
@@ -158,6 +180,16 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                   if (fit != null) _mapController.fitCamera(fit);
                 },
                 child: const Icon(Icons.fit_screen_outlined),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              FloatingActionButton.small(
+                heroTag: 'me-here',
+                backgroundColor: p.paper,
+                foregroundColor: p.ink,
+                elevation: 4,
+                onPressed: _centerOnMe,
+                tooltip: 'Centrer sur ma position',
+                child: const Icon(Icons.my_location),
               ),
             ],
           ),

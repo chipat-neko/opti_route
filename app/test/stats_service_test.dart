@@ -140,4 +140,87 @@ void main() {
       expect(s.tauxReussite, 0);
     });
   });
+
+  group('StatsService.colisParJourDeSemaine', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<int> seedTourneeAt(DateTime date) async {
+      return db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: date,
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+    }
+
+    Future<void> seedStop({
+      required int tourneeId,
+      int colis = 1,
+      String statut = 'livre',
+    }) async {
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: 'A',
+              nbColis: Value(colis),
+              statutLivraison: Value(statut),
+            ),
+          );
+    }
+
+    test('aucune tournee : map vide', () async {
+      final out = await stats.colisParJourDeSemaine(
+        since: DateTime(2026, 5, 1),
+      );
+      expect(out, isEmpty);
+    });
+
+    test('1 tournee lundi avec 3 colis livres : map = {1: 3}', () async {
+      // Lundi 11 mai 2026
+      final t = await seedTourneeAt(DateTime(2026, 5, 11));
+      await seedStop(tourneeId: t, colis: 3);
+      final out = await stats.colisParJourDeSemaine(
+        since: DateTime(2026, 5, 1),
+      );
+      expect(out, {1: 3});
+    });
+
+    test('colis pas livre (a_livrer) : exclu', () async {
+      final t = await seedTourneeAt(DateTime(2026, 5, 12)); // mardi
+      await seedStop(tourneeId: t, colis: 2, statut: 'a_livrer');
+      await seedStop(tourneeId: t, colis: 5, statut: 'echec');
+      await seedStop(tourneeId: t, colis: 1, statut: 'livre');
+      final out = await stats.colisParJourDeSemaine(
+        since: DateTime(2026, 5, 1),
+      );
+      expect(out, {2: 1}); // mardi : seulement le 1 colis livre
+    });
+
+    test('plusieurs jours : agrege par weekday', () async {
+      final lundi = await seedTourneeAt(DateTime(2026, 5, 11));
+      final vendredi = await seedTourneeAt(DateTime(2026, 5, 15));
+      final autreVendredi = await seedTourneeAt(DateTime(2026, 5, 8));
+      await seedStop(tourneeId: lundi, colis: 2);
+      await seedStop(tourneeId: vendredi, colis: 4);
+      await seedStop(tourneeId: autreVendredi, colis: 3);
+      final out = await stats.colisParJourDeSemaine(
+        since: DateTime(2026, 5, 1),
+      );
+      // Lundi=1, Vendredi=5. 2 vendredis cumulent.
+      expect(out, {1: 2, 5: 7});
+    });
+  });
 }

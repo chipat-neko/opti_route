@@ -97,6 +97,15 @@ final statsProvider =
   return ref.read(statsServiceProvider).compute(since: since);
 });
 
+/// Colis livres par jour de la semaine (ISO 8601 : 1=lundi -> 7=dimanche)
+/// sur la fenetre [days]. Vide si aucune tournee.
+final colisParJourProvider =
+    FutureProvider.family<Map<int, int>, int>((ref, days) async {
+  ref.watch(tourneesStreamProvider);
+  final since = DateTime.now().subtract(Duration(days: days));
+  return ref.read(statsServiceProvider).colisParJourDeSemaine(since: since);
+});
+
 /// Stream des arrets pour une tournee donnee.
 final stopsByTourneeProvider =
     StreamProvider.family<List<Stop>, int>((ref, tourneeId) {
