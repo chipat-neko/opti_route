@@ -25,6 +25,9 @@ class CarnetAdressesScreen extends ConsumerStatefulWidget {
 
 class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   String _query = '';
+  /// Filtre couleur actif (`colorTag`). Null = tous. 'favoris' = uniquement
+  /// les `isFavori = true` (cas special pour faciliter le tri).
+  String? _colorFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +85,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
               AppSpacing.x18,
               AppSpacing.x14,
               AppSpacing.x18,
-              AppSpacing.x10,
+              AppSpacing.x4,
             ),
             child: TextField(
               decoration: const InputDecoration(
@@ -90,6 +93,42 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
                 hintText: 'Rechercher un client / une adresse',
               ),
               onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+            ),
+          ),
+          // Chips de filtre par couleur / favoris : un mini scroll
+          // horizontal pour ne pas pousser la liste vers le bas.
+          SizedBox(
+            height: 40,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x18,
+              ),
+              scrollDirection: Axis.horizontal,
+              children: [
+                _ColorFilterChip(
+                  label: 'Tous',
+                  selected: _colorFilter == null,
+                  onSelected: () => setState(() => _colorFilter = null),
+                ),
+                const SizedBox(width: 8),
+                _ColorFilterChip(
+                  label: 'Favoris',
+                  selected: _colorFilter == 'favoris',
+                  color: AppColors.amber,
+                  onSelected: () =>
+                      setState(() => _colorFilter = 'favoris'),
+                ),
+                const SizedBox(width: 8),
+                for (final (tag, color) in colorTagOptions) ...[
+                  _ColorFilterChip(
+                    label: tag,
+                    selected: _colorFilter == tag,
+                    color: color,
+                    onSelected: () => setState(() => _colorFilter = tag),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
             ),
           ),
           Expanded(
@@ -237,9 +276,18 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   }
 
   List<SavedDestination> _filter(List<SavedDestination> all, String q) {
-    if (q.isEmpty) return all;
+    Iterable<SavedDestination> filtered = all;
+    final cf = _colorFilter;
+    if (cf != null) {
+      if (cf == 'favoris') {
+        filtered = filtered.where((d) => d.isFavori);
+      } else {
+        filtered = filtered.where((d) => d.colorTag == cf);
+      }
+    }
+    if (q.isEmpty) return filtered.toList();
     final norm = _normalize(q);
-    return all.where((d) {
+    return filtered.where((d) {
       final hay = _normalize([
         d.nomClient ?? '',
         d.adresseDisplay,
@@ -275,6 +323,61 @@ final carnetStreamProvider =
     StreamProvider.autoDispose<List<SavedDestination>>((ref) {
   return ref.watch(savedDestinationsRepositoryProvider).watchAll();
 });
+
+/// Petit chip cliquable pour filtrer le carnet. Quand selectionne, fond
+/// rempli de la couleur, sinon fond cream + bordure. Le label "Tous"
+/// special n'a pas de couleur (couleur de fond du chip = cream).
+class _ColorFilterChip extends StatelessWidget {
+  const _ColorFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+    this.color,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final bg = selected ? (color ?? p.ink) : p.creamSoft;
+    // Texte : noir sur fond clair / accent, blanc sur fond ink quand
+    // selectionne sans couleur (cas "Tous").
+    final fg = selected
+        ? (color == null ? p.paper : AppColors.ink)
+        : p.ink;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r22),
+      onTap: onSelected,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x12,
+          vertical: AppSpacing.x6,
+        ),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppRadius.r22),
+          border: Border.all(
+            color: selected ? Colors.transparent : p.inkLine,
+            width: 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            color: fg,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CarnetTile extends ConsumerWidget {
   const _CarnetTile({required this.entry});

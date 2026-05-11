@@ -77,7 +77,7 @@ class TourneesRepository {
   /// La date du clone est `nouvelle DateTime.now()` (date du jour),
   /// pour qu'il apparaisse en haut de l'historique. Retourne l'id du
   /// nouveau clone.
-  Future<int> duplicate(int sourceId) async {
+  Future<int> duplicate(int sourceId, {DateTime? targetDate}) async {
     return _db.transaction(() async {
       final source = await getById(sourceId);
       if (source == null) {
@@ -86,7 +86,7 @@ class TourneesRepository {
       final newId = await _db.into(_db.tournees).insert(
             TourneesCompanion.insert(
               nom: _suffixCopie(source.nom),
-              date: DateTime.now(),
+              date: targetDate ?? DateTime.now(),
               pointDepartLat: source.pointDepartLat,
               pointDepartLng: source.pointDepartLng,
               pointDepartLabel: source.pointDepartLabel,

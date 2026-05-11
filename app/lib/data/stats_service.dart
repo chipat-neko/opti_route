@@ -63,6 +63,16 @@ class StatsService {
     );
   }
 
+  /// Somme totale des distances (en metres) des tournees dans la
+  /// fenetre. Sert ensuite a estimer le cout carburant cumule, en
+  /// passant ce nombre a `ParametresRepository.estimerCoutCarburant`.
+  Future<int> distanceTotaleMeters({required DateTime since}) async {
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since)))
+        .get();
+    return tournees.fold<int>(0, (s, t) => s + (t.distanceTotaleM ?? 0));
+  }
+
   /// Decompte le nombre de colis livres par jour de la semaine sur la
   /// fenetre `[since, now]`. Indice : 1 = lundi, 7 = dimanche (norme
   /// ISO 8601 / DateTime.weekday). Une carte ordonnee par jour.

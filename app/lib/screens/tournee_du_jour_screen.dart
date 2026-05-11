@@ -102,6 +102,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               if (value == 'batch_livre') _onBatchLivrePressed();
               if (value == 'retry_geocode') _onRetryGeocodePressed();
               if (value == 'undo_last') _onUndoLastStatusPressed();
+              if (value == 'duplicate_plus7') _onDuplicatePlus7Pressed();
             },
             itemBuilder: (_) => const [
               PopupMenuItem(
@@ -131,6 +132,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                   title: Text('Geolocaliser hors-ligne'),
                   subtitle: Text(
                     'Re-tente le GPS pour les arrets sans coords',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'duplicate_plus7',
+                child: ListTile(
+                  leading: Icon(Icons.copy_outlined),
+                  title: Text('Refaire dans 7 jours'),
+                  subtitle: Text(
+                    'Duplique a la meme heure semaine prochaine',
                     style: TextStyle(fontSize: 11),
                   ),
                   contentPadding: EdgeInsets.zero,
@@ -320,6 +333,48 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'export PDF : $e')),
+      );
+    }
+  }
+
+  /// Duplique la tournee courante a la meme date + 7 jours. Reset le
+  /// statut + statuts arrets (via `duplicate` qui le fait deja). Affiche
+  /// une confirmation et propose de basculer dessus.
+  Future<void> _onDuplicatePlus7Pressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      final repo = ref.read(tourneesRepositoryProvider);
+      final targetDate =
+          widget.tournee.date.add(const Duration(days: 7));
+      final newId = await repo.duplicate(
+        widget.tournee.id,
+        targetDate: targetDate,
+      );
+      final newTournee = await repo.getById(newId);
+      if (!mounted || newTournee == null) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Duplique en "${newTournee.nom}" pour la semaine prochaine',
+          ),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Ouvrir',
+            onPressed: () {
+              navigator.pushReplacement(
+                MaterialPageRoute<void>(
+                  builder: (_) => TourneeDuJourScreen(tournee: newTournee),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
       );
     }
   }

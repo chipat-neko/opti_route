@@ -116,6 +116,21 @@ final colisParJourProvider =
   return ref.read(statsServiceProvider).colisParJourDeSemaine(since: since);
 });
 
+/// Cout carburant cumule sur la fenetre [days]. Combine la somme des
+/// distances des tournees dans la fenetre x les parametres carburant
+/// courants. Retourne en EUR.
+final coutCarburantCumuleProvider =
+    FutureProvider.family<double, int>((ref, days) async {
+  ref.watch(tourneesStreamProvider);
+  final since = DateTime.now().subtract(Duration(days: days));
+  final stats = ref.read(statsServiceProvider);
+  final dist = await stats.distanceTotaleMeters(since: since);
+  if (dist == 0) return 0;
+  return ref
+      .read(parametresRepositoryProvider)
+      .estimerCoutCarburant(distanceMeters: dist);
+});
+
 /// Stream des arrets pour une tournee donnee.
 final stopsByTourneeProvider =
     StreamProvider.family<List<Stop>, int>((ref, tourneeId) {

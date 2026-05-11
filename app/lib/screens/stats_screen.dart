@@ -21,19 +21,31 @@ class StatsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Statistiques'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.x18),
-        children: const [
-          _StatsCard(label: '7 DERNIERS JOURS', days: 7),
-          SizedBox(height: AppSpacing.x14),
-          _StatsCard(label: '30 DERNIERS JOURS', days: 30),
-          SizedBox(height: AppSpacing.x14),
-          _StatsCard(label: 'DEPUIS 1 AN', days: 365),
-          SizedBox(height: AppSpacing.x14),
-          _JoursSemaineCard(),
-          SizedBox(height: AppSpacing.x14),
-          _TopClientsCard(),
-        ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Invalide tous les providers stats pour relancer les calculs.
+          ref.invalidate(statsProvider);
+          ref.invalidate(colisParJourProvider);
+          ref.invalidate(coutCarburantCumuleProvider);
+          // Petit delai pour laisser tourner les futures + animer le
+          // spinner Material.
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.x18),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            _StatsCard(label: '7 DERNIERS JOURS', days: 7),
+            SizedBox(height: AppSpacing.x14),
+            _StatsCard(label: '30 DERNIERS JOURS', days: 30),
+            SizedBox(height: AppSpacing.x14),
+            _StatsCard(label: 'DEPUIS 1 AN', days: 365),
+            SizedBox(height: AppSpacing.x14),
+            _JoursSemaineCard(),
+            SizedBox(height: AppSpacing.x14),
+            _TopClientsCard(),
+          ],
+        ),
       ),
     );
   }
@@ -45,10 +57,17 @@ class _StatsCard extends ConsumerWidget {
   final String label;
   final int days;
 
+  /// Helper static pour rendre le ratio "tarif estime" formate en EUR.
+  static String formatEur(double v) {
+    final cents = (v * 100).round();
+    return '${cents ~/ 100},${(cents % 100).toString().padLeft(2, "0")} EUR';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
     final async = ref.watch(statsProvider(days));
+    final coutAsync = ref.watch(coutCarburantCumuleProvider(days));
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
@@ -70,7 +89,43 @@ class _StatsCard extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.x12),
           async.when(
-            data: (stats) => _StatsBody(stats: stats),
+            data: (stats) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _StatsBody(stats: stats),
+                if (stats.distanceMeters > 0 &&
+                    coutAsync.asData != null) ...[
+                  const SizedBox(height: AppSpacing.x8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.local_gas_station_outlined,
+                              size: 14, color: p.textMute),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Cout carburant estime',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: p.textMute,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        formatEur(coutAsync.asData!.value),
+                        style: appMonoStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: p.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
             loading: () => const Center(
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.x18),
