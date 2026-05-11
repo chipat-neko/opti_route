@@ -125,8 +125,8 @@ class _Renderer(FPDF):
     def __init__(self, mode: str = "report", title: str | None = None,
                  subtitle: str | None = None, cover_logo: Path | None = None):
         super().__init__(format="A4")
-        # En mode pitch on laisse plus de top margin pour le header.
-        top = 24 if mode == "pitch" else 18
+        # Plus de header repete -> on peut redescendre le top margin.
+        top = 20 if mode == "pitch" else 18
         self.set_margins(left=18, top=top, right=18)
         self.set_auto_page_break(auto=True, margin=22 if mode == "pitch" else 18)
         self._mode = mode  # 'report' (default) ou 'pitch'
@@ -148,22 +148,10 @@ class _Renderer(FPDF):
 
     # ─── Hooks fpdf2 (header / footer) ──────────────────────────────
     def header(self):
-        # Pas de header sur la page de garde du mode pitch.
-        if self._mode != "pitch" or self.page_no() == 1:
-            return
-        self.set_y(8)
-        self._font(8.5)
-        self._color(COLOR_MUTE)
-        self.set_x(self.l_margin)
-        title = self._title or "opti_route"
-        if self._current_section:
-            title = f"{title}  ·  {self._current_section}"
-        self.cell(0, 5, _strip_accents(title), new_x="LMARGIN", new_y="NEXT")
-        # Filet sous le header
-        self.set_draw_color(*COLOR_BORDER)
-        self.set_line_width(0.2)
-        y = 14
-        self.line(self.l_margin, y, self.w - self.r_margin, y)
+        # Volontairement vide : pas de header repete en haut de chaque
+        # page (cf. retour CALOTE Noah). La pagination seule reste en
+        # footer pour la navigation.
+        return
 
     def footer(self):
         if self._mode != "pitch" or self.page_no() == 1:
