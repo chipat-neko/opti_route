@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/bordereau_extraction.dart';
-import '../data/bordereau_parser.dart';
+import '../data/bordereau/multi_parser.dart';
 import '../data/ocr_service.dart';
 import '../providers/ocr_provider.dart';
 import '../theme/app_theme.dart';
@@ -336,7 +336,10 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       }
       debugPrint('OCRDUMP === END ===');
 
-      final extraction = BordereauParser().parse(result.lines);
+      final parseResult =
+          const MultiFormatBordereauParser().parse(result.lines);
+      debugPrint('OCRDUMP format detecte : ${parseResult.format.name}');
+      final extraction = parseResult.extraction;
       setState(() {
         _imageFile = file;
         _ocr = result;

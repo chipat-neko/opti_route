@@ -19,7 +19,7 @@ void main() {
       );
     });
 
-    test('bordereau MESEXP standard -> mesexp', () {
+    test('bordereau papier MESEXP standard -> mesexp', () {
       expect(
         detector.detect(const [
           'Regime MESEXP - Messagerie Express',
@@ -34,8 +34,6 @@ void main() {
     });
 
     test('MESEXP avec marqueurs secondaires uniquement -> mesexp', () {
-      // Si "MESEXP" est mal lu par l'OCR mais qu'on a les marqueurs
-      // secondaires, on doit quand meme detecter.
       expect(
         detector.detect(const [
           'Destinataire',
@@ -61,29 +59,76 @@ void main() {
       );
     });
 
-    test('marqueurs colis -> colis', () {
+    test('etiquette colis France Alliance variante A -> colis', () {
+      // Photo de reference MVIMG_063125 : "DE MATOS ANTONIO".
       expect(
         detector.detect(const [
-          'Tracking : 1Z999AA1234567890',
-          'Suivi colis',
-          'Reference colis 42',
+          'Transports France Alliance',
+          'Centre Livreur',
+          'Eure et Loir Acheminement',
+          '28630 - GELLAINVILLE',
+          'EXP: UNIKALO',
+          'RECEP.:',
+          '28146356',
+          'UM: 1/1',
+          'Destinataire :',
+          'DE MATOS ANTONIO',
+          '1 RUE DE L\'ABREUVOIRE',
+          'FR - 28240 - LA LOUPE',
+          'PRODUIT: MESEXP',
         ]),
         BordereauFormat.colis,
       );
     });
 
-    test('mix MESEXP fort + colis faible -> mesexp gagne', () {
-      // Heuristique : on prend le score le plus eleve.
+    test('etiquette colis variante B (FA56 PNEUS sans tirets) -> colis', () {
+      // Photo de reference MVIMG_063202 : "AUTODISTRIBUTION MORIZE LOIRET".
+      expect(
+        detector.detect(const [
+          'FA56 PNEUS',
+          'AUTODISTRIBUTION MORIZE LOIRET',
+          'AVENUE DES PRES',
+          'MARGON',
+          'FR 28400 ARCISSES',
+          'COLIS 1/1',
+          'FRANCE ALLIANCE 56',
+        ]),
+        BordereauFormat.colis,
+      );
+    });
+
+    test('papier MESEXP (Lieu de livraison + Total colis) > colis', () {
+      // Bordereau papier complet : score MESEXP doit l\'emporter meme
+      // si "Transports France Alliance" apparait en filigrane.
       expect(
         detector.detect(const [
           'MESEXP Messagerie Express',
           'Destinataire',
           'CLIENT',
           'Lieu de livraison',
-          '75000 PARIS',
-          'Suivi colis 42', // 1 marqueur colis
+          '28000 CHARTRES',
+          'Total colis : 2',
+          'Contact destinataire',
+          'Lettre de voiture',
         ]),
         BordereauFormat.mesexp,
+      );
+    });
+
+    test('etiquette colis (France Alliance + FR-CP-VILLE) > papier', () {
+      // Memes mots "Destinataire" et "PRODUIT: MESEXP" mais le contexte
+      // est clairement une etiquette compacte.
+      expect(
+        detector.detect(const [
+          'Transports France Alliance',
+          'Centre Livreur',
+          'Destinataire :',
+          'ETS J.P. FRANCE',
+          'FR - 28480 - THIRON GARDAIS',
+          'PRODUIT: MESEXP',
+          'UM: 1/1',
+        ]),
+        BordereauFormat.colis,
       );
     });
   });

@@ -58,26 +58,46 @@ class BordereauFormatDetector {
     return score;
   }
 
-  /// Score Colis : marqueurs distinctifs des etiquettes collees sur les
-  /// colis. **A affiner avec les photos de reference Noah** (vague 3).
-  /// Pour l'instant, heuristique conservatrice basee sur des indices
-  /// genericistes (code barres + numero de tracking + petit format).
+  /// Score Colis : etiquettes autocollantes Transports France Alliance
+  /// (sous-type MESEXP imprime par Eure et Loir Acheminement et
+  /// derives FA56 / FA28 / FA02). Format compact distinct du bordereau
+  /// papier A4 : marqueur "France Alliance" + adresse format
+  /// `FR - <CP> - <VILLE>` + compteur `UM: X/Y` ou `COLIS X/Y` +
+  /// numero `RECEP:`.
+  ///
+  /// Calibre sur les 9 photos de reference du 11 mai 2026 (cf
+  /// `bordereaux_test/Bordereau livraison/colis/`).
   int _scoreColis(List<String> lowercased) {
     var score = 0;
-    // Marqueurs probables (a confirmer avec les photos reelles) :
-    const indicators = [
-      'tracking',
-      'suivi',
-      'colis n',
-      'code barre',
-      'envoi n',
-      'expedition n',
-      'reference colis',
+    const primary = [
+      'transports france alliance',
+      'france alliance',
+      'produit: mesexp', // en petit sur l'etiquette
+      'produit:mesexp',
+      'produit : mesexp',
     ];
+    const secondary = [
+      'recep:',
+      'recep :',
+      'recep.',
+      'um:',
+      'um :',
+      'centre livreur',
+      'autodistribution',
+    ];
+    // Pattern adresse "FR - 28240 - LA LOUPE" ou "FR 28400 ARCISSES"
+    // -- tres distinctif des etiquettes colis (papier MESEXP utilise
+    // juste "28110 LUCE" sans prefixe FR).
+    final frAddrPattern =
+        RegExp(r'\bfr\s*[- ]\s*\d{5}\s*[- ]\s*[a-z]', caseSensitive: false);
     for (final line in lowercased) {
-      for (final marker in indicators) {
-        if (line.contains(marker)) score += 2;
+      for (final marker in primary) {
+        if (line.contains(marker)) score += 3;
       }
+      for (final marker in secondary) {
+        if (line.contains(marker)) score += 1;
+      }
+      if (frAddrPattern.hasMatch(line)) score += 2;
     }
     return score;
   }
