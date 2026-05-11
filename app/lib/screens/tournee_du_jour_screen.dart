@@ -2045,6 +2045,14 @@ class _StopRow extends ConsumerWidget {
     final tags = _buildTags(stop);
     final isLivre = stop.statutLivraison == 'livre';
     final isEchec = stop.statutLivraison == 'echec';
+    // Teinte de fond pour scanner la liste d'un coup d'oeil : un arret
+    // livre se voit immediatement en vert, un echec en rouge, sans
+    // avoir a lire le chip d'index ni l'eventuelle ligne "Echec :".
+    final Color? rowTint = isLivre
+        ? AppColors.emeraldSoft
+        : isEchec
+            ? const Color(0x14D9483B) // rgba(red, 0.08)
+            : null;
     return Dismissible(
       key: ValueKey('stop-${stop.id}'),
       direction: DismissDirection.endToStart,
@@ -2058,7 +2066,9 @@ class _StopRow extends ConsumerWidget {
         onDelete();
         return false;
       },
-      child: InkWell(
+      child: Material(
+        color: rowTint ?? AppColors.paper,
+        child: InkWell(
         onTap: () => _onTap(context, ref),
         onLongPress: () => _onLongPressCopyAdresse(context),
         child: Padding(
@@ -2166,6 +2176,7 @@ class _StopRow extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
