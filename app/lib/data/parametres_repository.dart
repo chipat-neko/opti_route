@@ -15,6 +15,8 @@ class ParametresRepository {
   static const _kDureeArretDefault = 'duree_arret_default_min';
   static const _kNavAppDefault = 'nav_app_default';
   static const _kOnboardingDone = 'onboarding_done';
+  static const _kOrsUsedCount = 'ors_used_count';
+  static const _kOrsUsedDate = 'ors_used_date';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -66,6 +68,61 @@ class ParametresRepository {
 
   Future<void> setOnboardingDone() => _write(_kOnboardingDone, '1');
   Future<void> resetOnboarding() => _delete(_kOnboardingDone);
+
+  /// Compteur des optimisations OpenRouteService consommees aujourd'hui.
+  /// Quota plan free : 500/jour. Affiche dans Parametres pour eviter
+  /// la mauvaise surprise au milieu d'une tournee.
+  ///
+  /// On stocke 2 cles : `ors_used_count` (entier) et `ors_used_date`
+  /// (YYYY-MM-DD). A chaque lecture/incrementation, si la date stockee
+  /// != date du jour, on remet le compteur a zero.
+  Future<int> getOrsUsedToday() async {
+    final date = await _readKey(_kOrsUsedDate);
+    final today = _todayIso();
+    if (date != today) return 0;
+    final v = await _readKey(_kOrsUsedCount);
+    return int.tryParse(v ?? '') ?? 0;
+  }
+
+  Stream<int> watchOrsUsedToday() async* {
+    // Stream basique : on emet a chaque changement de count OU de date.
+    // En pratique, l'UI peut juste re-watch le count et l'UI re-render
+    // a chaque incrementation, ce qui suffit pour notre cas.
+    await for (final v in _watchKey(_kOrsUsedCount)) {
+      final date = await _readKey(_kOrsUsedDate);
+      if (date != _todayIso()) {
+        yield 0;
+      } else {
+        yield int.tryParse(v ?? '') ?? 0;
+      }
+    }
+  }
+
+  /// Incremente le compteur d'utilisation ORS du jour. Si on bascule
+  /// sur un nouveau jour, on reset a 1 (pas 0+1 -> on commence direct
+  /// avec ce nouvel appel).
+  Future<void> incrementOrsUsed() async {
+    final today = _todayIso();
+    final storedDate = await _readKey(_kOrsUsedDate);
+    int next;
+    if (storedDate != today) {
+      next = 1;
+    } else {
+      final current = int.tryParse(
+              (await _readKey(_kOrsUsedCount)) ?? '') ??
+          0;
+      next = current + 1;
+    }
+    await _write(_kOrsUsedCount, '$next');
+    await _write(_kOrsUsedDate, today);
+  }
+
+  static String _todayIso() {
+    final now = DateTime.now();
+    final mm = now.month.toString().padLeft(2, '0');
+    final dd = now.day.toString().padLeft(2, '0');
+    return '${now.year}-$mm-$dd';
+  }
 
   Future<String?> _readKey(String cle) async {
     final v = await _readRaw(cle);

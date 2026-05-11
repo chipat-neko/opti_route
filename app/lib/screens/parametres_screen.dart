@@ -66,6 +66,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     });
 
     final hasOrsKey = orsKeyAsync.asData?.value?.isNotEmpty ?? false;
+    final orsUsed = ref.watch(orsUsedTodayProvider).asData?.value ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -97,7 +98,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
                 ? 'OpenRouteService est actif'
                 : 'Optimisation desactivee',
             subtitle: hasOrsKey
-                ? '500 optimisations/jour, gratuit, sans CB.'
+                ? 'Aujourd\'hui : $orsUsed / 500 optimisations utilisees.'
                 : 'Saisis une cle ORS pour activer le bouton "Optimiser".',
           ),
           const SizedBox(height: AppSpacing.x18),
