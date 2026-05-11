@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart' show Position;
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../data/eta_calculator.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
 import '../data/stops_repository.dart';
@@ -563,7 +564,7 @@ class _Body extends StatelessWidget {
         if (stops.isEmpty)
           const _StopsPlaceholder()
         else
-          _StopsSection(stops: stops),
+          _StopsSection(tournee: tournee, stops: stops),
       ],
     );
   }
@@ -576,8 +577,9 @@ class _Body extends StatelessWidget {
 /// / notes, normalisation des accents) et le drag est desactive
 /// puisque l'ordre n'a pas de sens sur un sous-ensemble.
 class _StopsSection extends ConsumerStatefulWidget {
-  const _StopsSection({required this.stops});
+  const _StopsSection({required this.tournee, required this.stops});
 
+  final Tournee tournee;
   final List<Stop> stops;
 
   @override
@@ -621,6 +623,11 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
       }
     }
     final isFiltered = hasQuery || hasStatutFilter || _sortByDistance;
+
+    // ETAs calculees sur la liste **complete** dans l'ordre actuel (pas
+    // sur filtered), pour que les stops deja livres servent de point de
+    // depart aux ETAs des restants meme quand on filtre.
+    final etas = computeEtaForStops(widget.tournee, widget.stops);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -757,7 +764,11 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
             ),
           )
         else
-          _StopsList(stops: filtered, reorderable: !isFiltered),
+          _StopsList(
+            stops: filtered,
+            reorderable: !isFiltered,
+            etas: etas,
+          ),
       ],
     );
   }
@@ -1850,7 +1861,11 @@ class _StopsPlaceholder extends StatelessWidget {
 }
 
 class _StopsList extends ConsumerStatefulWidget {
-  const _StopsList({required this.stops, this.reorderable = true});
+  const _StopsList({
+    required this.stops,
+    this.reorderable = true,
+    this.etas = const {},
+  });
 
   final List<Stop> stops;
 
@@ -1859,6 +1874,10 @@ class _StopsList extends ConsumerStatefulWidget {
   /// utilise un simple `ListView` au lieu de `ReorderableListView`.
   /// L'ordre n'a pas de sens sur une liste filtree.
   final bool reorderable;
+
+  /// ETA estimee par arret (`stopId -> DateTime`). Vide si on n'a pas
+  /// pu calculer (pas de coords, etc.). Cf `computeEtaForStops`.
+  final Map<int, DateTime> etas;
 
   @override
   ConsumerState<_StopsList> createState() => _StopsListState();
@@ -1906,6 +1925,7 @@ class _StopsListState extends ConsumerState<_StopsList> {
                 index: i + 1,
                 dragIndex: i,
                 showDragHandle: false,
+                eta: widget.etas[widget.stops[i].id],
                 onDelete: () => _confirmDelete(context, ref, widget.stops[i]),
               ),
           ],
@@ -1932,6 +1952,7 @@ class _StopsListState extends ConsumerState<_StopsList> {
             stop: stop,
             index: i + 1,
             dragIndex: i,
+            eta: widget.etas[stop.id],
             onDelete: () => _confirmDelete(context, ref, stop),
           );
         },
@@ -1996,6 +2017,7 @@ class _StopRow extends ConsumerWidget {
     required this.dragIndex,
     required this.onDelete,
     this.showDragHandle = true,
+    this.eta,
   });
 
   final Stop stop;
@@ -2011,6 +2033,11 @@ class _StopRow extends ConsumerWidget {
   /// Mis a false pendant une recherche (la liste est filtree, l'ordre
   /// n'a pas de sens) : on cache la poignee de drag.
   final bool showDragHandle;
+
+  /// ETA estimee (haversine + vitesse moyenne deduite) pour cet arret.
+  /// Null pour les arrets deja livres / en echec ou si on n'a pas
+  /// assez de donnees pour calculer.
+  final DateTime? eta;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2074,6 +2101,27 @@ class _StopRow extends ConsumerWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (eta != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.schedule,
+                            size: 12,
+                            color: AppColors.textMute,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Arrivee vers ${DateFormat('HH:mm', 'fr').format(eta!)}',
+                            style: appMonoStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMute,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                     if (isEchec) ...[
