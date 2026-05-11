@@ -159,6 +159,57 @@ void main() {
       expect(t.vehiculeCapaciteColis, 20);
     });
 
+    test('toggleTemplate : false -> true -> false', () async {
+      final id = await seedTournee();
+      // Init isTemplate = false par defaut.
+      var t = await repo.getById(id);
+      expect(t!.isTemplate, isFalse);
+
+      await repo.toggleTemplate(id);
+      t = await repo.getById(id);
+      expect(t!.isTemplate, isTrue);
+
+      await repo.toggleTemplate(id);
+      t = await repo.getById(id);
+      expect(t!.isTemplate, isFalse);
+    });
+
+    test('toggleTemplate sur tournee inconnue : 0 (no-op)', () async {
+      final n = await repo.toggleTemplate(99999);
+      expect(n, 0);
+    });
+
+    test('invalidateOptimization : reset metrics + trace mais pas statut',
+        () async {
+      final id = await seedTournee();
+      // Pose des metrics
+      await db.into(db.tournees).insertOnConflictUpdate(
+            TourneesCompanion(
+              id: Value(id),
+              nom: const Value('Source'),
+              date: Value(DateTime(2026, 5, 1)),
+              pointDepartLat: const Value(48.0),
+              pointDepartLng: const Value(1.0),
+              pointDepartLabel: const Value('Depot Paris 11'),
+              distanceTotaleM: const Value(45000),
+              dureeTotaleS: const Value(3600),
+              optimiseeLe: Value(DateTime(2026, 5, 1, 10)),
+              traceGeojson: const Value('[]'),
+              statut: const Value('en_cours'),
+            ),
+          );
+
+      await repo.invalidateOptimization(id);
+
+      final t = await repo.getById(id);
+      expect(t!.distanceTotaleM, isNull);
+      expect(t.dureeTotaleS, isNull);
+      expect(t.optimiseeLe, isNull);
+      expect(t.traceGeojson, isNull);
+      // Statut reste a 'en_cours' (on ne fait pas revenir en brouillon).
+      expect(t.statut, 'en_cours');
+    });
+
     test('duplicate ne copie PAS rappelLe (chaque clone reprogramme '
         'son propre rappel)', () async {
       final id = await seedTournee();
