@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,11 +69,47 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
   /// avant que le stream Drift ne rafraichisse).
   late int _nbColis;
 
+  /// Champ notes en edition locale ; persiste sur perte de focus ou
+  /// fermeture de la bottom sheet.
+  late TextEditingController _notesCtrl;
+  Timer? _notesDebounce;
+  String _initialNotes = '';
+
   @override
   void initState() {
     super.initState();
     _nbColis = widget.stop.nbColis;
+    _initialNotes = widget.stop.notes ?? '';
+    _notesCtrl = TextEditingController(text: _initialNotes);
     _loadNavDefault();
+  }
+
+  @override
+  void dispose() {
+    _notesDebounce?.cancel();
+    // Save final si modifs en attente.
+    if (_notesCtrl.text != _initialNotes) {
+      _persistNotes(_notesCtrl.text);
+    }
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onNotesChanged(String value) {
+    _notesDebounce?.cancel();
+    _notesDebounce = Timer(const Duration(milliseconds: 600), () {
+      _persistNotes(value);
+    });
+  }
+
+  Future<void> _persistNotes(String value) async {
+    final trimmed = value.trim();
+    final v = trimmed.isEmpty ? null : trimmed;
+    await ref.read(stopsRepositoryProvider).update(
+          widget.stop.id,
+          StopsCompanion(notes: Value(v)),
+        );
+    _initialNotes = value;
   }
 
   Future<void> _adjustNbColis(int delta) async {
@@ -201,6 +239,24 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       onPressed: () => _adjustNbColis(1),
                     ),
                   ],
+                ),
+              ),
+            if (!_pickingRaison) const SizedBox(height: AppSpacing.x10),
+
+            // Edition rapide des notes : utile pour ajouter "code 1234B"
+            // ou "porte garage cote droit" sans ouvrir l'ecran complet.
+            // Auto-sauvegarde en debounce 600ms apres la derniere frappe
+            // + flush sur dispose si edits en attente.
+            if (!_pickingRaison)
+              TextField(
+                controller: _notesCtrl,
+                onChanged: _onNotesChanged,
+                maxLines: 2,
+                style: const TextStyle(fontSize: 13),
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  hintText: 'Code · porte · etage...',
+                  isDense: true,
                 ),
               ),
             if (!_pickingRaison) const SizedBox(height: AppSpacing.x14),
