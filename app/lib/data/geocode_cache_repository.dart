@@ -41,6 +41,81 @@ class GeocodeCacheRepository {
         .toList(growable: false);
   }
 
+  /// V7.5 : lit le cache par **prefixe** plutot que par cle exacte.
+  /// Permet de reutiliser les resultats d'une recherche plus large
+  /// (ex: si "char" est cache, "chart" peut taper dedans en filtrant
+  /// les resultats qui commencent par "chart").
+  ///
+  /// Garde-fous anti-faux-positifs :
+  /// - `prefix` doit avoir au moins 4 caracteres (sinon trop large).
+  /// - Apres lecture, on **filtre** les suggestions dont aucun champ
+  ///   pertinent (displayName, road, city, poiName) ne contient le
+  ///   prefixe en insensitive. Evite de proposer "Charles de Gaulle"
+  ///   quand l'utilisateur tape "chartres".
+  /// - Si moins de 2 resultats apres filtrage, on retourne null pour
+  ///   que l'appelant fasse la vraie requete reseau (gain marginal
+  ///   pas digne du risque).
+  ///
+  /// Cherche toutes les entrees `query LIKE prefix%` non expirees,
+  /// concatene les resultats et dedupe par coords.
+  Future<List<AddressSuggestion>?> readByPrefix(String prefix) async {
+    final normalized = _normalize(prefix);
+    if (normalized.length < 4) return null;
+
+    final now = DateTime.now();
+    final rows = await (_db.select(_db.geocodeCache)
+          ..where((c) =>
+              c.query.like('$normalized%') &
+              c.expireLe.isBiggerThanValue(now)))
+        .get();
+    if (rows.isEmpty) return null;
+
+    final all = <AddressSuggestion>[];
+    for (final row in rows) {
+      try {
+        final list = jsonDecode(row.responseJson) as List;
+        for (final m in list.whereType<Map<String, dynamic>>()) {
+          all.add(AddressSuggestion.fromJson(m));
+        }
+      } catch (_) {
+        // Entree corrompue : on saute.
+      }
+    }
+    if (all.isEmpty) return null;
+
+    // Filtre pertinence : au moins un champ textuel doit contenir le
+    // prefixe. La cle de cache est typiquement `<provider>:<query>` ;
+    // on ne filtre que sur la partie query, sinon "ban:chart" ne
+    // matcherait jamais un displayName qui ne commence pas par "ban:".
+    final colonIdx = normalized.indexOf(':');
+    final lower = colonIdx >= 0
+        ? normalized.substring(colonIdx + 1)
+        : normalized;
+    if (lower.length < 3) {
+      // Apres avoir retire le provider, on a moins de 3 chars : trop
+      // permissif, on refuse.
+      return null;
+    }
+    final filtered = all.where((s) {
+      bool contains(String? v) =>
+          v != null && v.toLowerCase().contains(lower);
+      return contains(s.displayName) ||
+          contains(s.road) ||
+          contains(s.city) ||
+          contains(s.poiName);
+    }).toList();
+    if (filtered.length < 2) return null;
+
+    // Dedup par coords arrondies (5 decimales = ~1m).
+    final seen = <String>{};
+    final dedup = <AddressSuggestion>[];
+    for (final s in filtered) {
+      final key = '${s.lat.toStringAsFixed(5)}_${s.lon.toStringAsFixed(5)}';
+      if (seen.add(key)) dedup.add(s);
+    }
+    return dedup;
+  }
+
   /// Ecrit (ou ecrase) une entree de cache. Si la liste est vide on
   /// stocke quand meme — c'est un signal "rien trouve" qui evite de
   /// retaper Nominatim immediatement.

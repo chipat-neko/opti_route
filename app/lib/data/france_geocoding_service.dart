@@ -2,6 +2,7 @@ import 'address_suggestion.dart';
 import 'ban_geocoding_service.dart';
 import 'geocoding_service.dart';
 import 'photon_service.dart';
+import 'query_type_detector.dart';
 import 'recherche_entreprises_service.dart';
 
 /// Geocoder hybride a 3 sources, optimise pour la livraison en France :
@@ -43,25 +44,44 @@ class FranceGeocodingService implements GeocodingService {
     int limit = 10,
     String acceptLanguage = 'fr-FR',
   }) async {
-    // V7.2 : detection des formats specifiques (SIRET, SIREN).
-    // Si Noah colle un identifiant officiel depuis un bordereau, on
-    // saute la cascade et on tape directement SIRENE -- resultat
-    // beaucoup plus precis qu'une recherche textuelle.
-    final siret = extractSiret(query);
-    if (siret != null) {
-      try {
-        final results = await entreprises.search(siret, limit: limit);
-        if (results.isNotEmpty) return _dedupe(results);
-      } catch (_) {
-        // Echec : on continue avec la cascade normale en repli.
+    // V7.4 : detection fine du type de query via QueryTypeDetector.
+    // Permet de choisir l'ordre optimal des sources et de court-
+    // circuiter sur les identifiants numeriques (SIRET/SIREN).
+    final type = QueryTypeDetector.detect(query);
+
+    // Court-circuit SIRET / SIREN -> SIRENE direct.
+    if (type == QueryType.siret || type == QueryType.siren) {
+      final siret = extractSiret(query);
+      if (siret != null) {
+        try {
+          final results = await entreprises.search(siret, limit: limit);
+          if (results.isNotEmpty) return _dedupe(results);
+        } catch (_) {
+          // Echec : on continue avec la cascade normale en repli.
+        }
       }
     }
 
-    final looksLikeAddress = _looksLikeAddress(query);
-
-    final order = looksLikeAddress
-        ? <GeocodingService>[ban, photon, entreprises]
-        : <GeocodingService>[entreprises, photon, ban];
+    // Ordre des sources selon le type detecte. Logique :
+    // - address : BAN d'abord (cadastre officiel), Photon si POI,
+    //   SIRENE en derniere chance.
+    // - locality : BAN d'abord (qui sait les communes), puis Photon
+    //   pour les POI nommes (mairies, gares...), SIRENE en derniere.
+    // - business / unknown : SIRENE d'abord (vrais noms juridiques),
+    //   Photon pour les enseignes / chaines (que SIRENE ne couvre pas),
+    //   BAN en derniere chance pour rattraper si on a un nom de
+    //   societe au milieu d'une adresse postale.
+    // - phone : pas exploite pour l'instant, cascade par defaut.
+    final order = switch (type) {
+      QueryType.address => <GeocodingService>[ban, photon, entreprises],
+      QueryType.locality => <GeocodingService>[ban, photon, entreprises],
+      QueryType.business => <GeocodingService>[entreprises, photon, ban],
+      QueryType.phone => <GeocodingService>[entreprises, photon, ban],
+      QueryType.siret ||
+      QueryType.siren =>
+        <GeocodingService>[entreprises, photon, ban],
+      QueryType.unknown => <GeocodingService>[entreprises, photon, ban],
+    };
 
     final accumulated = <AddressSuggestion>[];
 
@@ -99,10 +119,6 @@ class FranceGeocodingService implements GeocodingService {
       return const [];
     }
     return _dedupe(accumulated);
-  }
-
-  bool _looksLikeAddress(String query) {
-    return RegExp(r'^\s*\d', caseSensitive: false).hasMatch(query);
   }
 
   /// Detecte si la query contient un SIRET (14 chiffres consecutifs)

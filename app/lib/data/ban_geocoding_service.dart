@@ -40,8 +40,17 @@ class BanGeocodingService implements GeocodingService {
     if (q.length < 3) return const [];
 
     if (_cache != null) {
+      // 1. Cache exact (cle = providerKey:query).
       final cached = await _cache.read('$providerKey:$q');
       if (cached != null) return cached;
+
+      // 2. V7.5 : cache par prefixe. Si une recherche plus large
+      //    contient des resultats qui matchent notre query courante,
+      //    on les reutilise sans taper le reseau. Garde-fous dans
+      //    `readByPrefix` : prefixe >= 4 chars + filtrage des
+      //    resultats par pertinence textuelle.
+      final byPrefix = await _cache.readByPrefix('$providerKey:$q');
+      if (byPrefix != null) return byPrefix;
     }
 
     final uri = Uri.https('api-adresse.data.gouv.fr', '/search/', {
