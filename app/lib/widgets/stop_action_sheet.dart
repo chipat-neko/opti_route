@@ -256,6 +256,12 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 decoration: const InputDecoration(
                   labelText: 'Notes',
                   hintText: 'Code · porte · etage...',
+                  helperText:
+                      'Astuce : tap longtemps sur l\'espace du clavier = dictee vocale',
+                  helperStyle: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textFaint,
+                  ),
                   isDense: true,
                 ),
               ),
