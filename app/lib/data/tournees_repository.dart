@@ -34,6 +34,25 @@ class TourneesRepository {
     return (_db.delete(_db.tournees)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Compte les tournees plus anciennes que [olderThan]. Sert au
+  /// bouton "Nettoyer les vieilles tournees" dans Parametres : on
+  /// previent l'utilisateur du nombre avant d'effacer.
+  Future<int> countOlderThan(DateTime olderThan) async {
+    final list = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isSmallerThanValue(olderThan)))
+        .get();
+    return list.length;
+  }
+
+  /// Supprime les tournees datees avant [olderThan]. Les stops/sheets
+  /// associees sont supprimees en cascade via la FK `onDelete: cascade`
+  /// du schema. Retourne le nombre de tournees effacees.
+  Future<int> deleteOlderThan(DateTime olderThan) async {
+    return (_db.delete(_db.tournees)
+          ..where((t) => t.date.isSmallerThanValue(olderThan)))
+        .go();
+  }
+
   /// Duplique une tournee comme template : nouvelle ligne avec le meme
   /// nom (+ suffixe "(copie)"), la meme capacite et le meme point de
   /// depart. Tous les arrets sont copies aussi mais on **reset** les

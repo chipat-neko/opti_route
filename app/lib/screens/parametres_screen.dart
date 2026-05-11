@@ -275,6 +275,23 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             icon: const Icon(Icons.layers_clear_outlined),
             label: const Text('Vider le cache des cartes'),
           ),
+          const SizedBox(height: AppSpacing.x14),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _cleanupOldTournees,
+            icon: const Icon(Icons.history_toggle_off_outlined),
+            label: const Text('Nettoyer les tournees > 1 an'),
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          const Text(
+            'Supprime definitivement les tournees datees d\'il y a plus '
+            'd\'un an, avec tous leurs arrets. Garde l\'app legere et la '
+            'base de donnees compacte.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
           const SizedBox(height: AppSpacing.x6),
           const Text(
             'Supprime les tuiles OpenStreetMap stockees localement '
@@ -433,6 +450,66 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
       await repo.clearNavAppDefault();
     } else {
       await repo.setNavAppDefault(value);
+    }
+  }
+
+  Future<void> _cleanupOldTournees() async {
+    final repo = ref.read(tourneesRepositoryProvider);
+    final cutoff = DateTime.now().subtract(const Duration(days: 365));
+    final count = await repo.countOlderThan(cutoff);
+    if (!mounted) return;
+    if (count == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aucune tournee de plus d\'un an a nettoyer'),
+        ),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Nettoyer les vieilles tournees ?'),
+        content: Text(
+          '$count tournee(s) datee(s) d\'il y a plus d\'un an vont '
+          'etre supprimees, avec tous leurs arrets. Cette action est '
+          'definitive.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red.withValues(alpha: 0.15),
+              foregroundColor: AppColors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final deleted = await repo.deleteOlderThan(cutoff);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$deleted tournee(s) supprimee(s)'),
+          backgroundColor: AppColors.emerald,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
