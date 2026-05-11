@@ -66,6 +66,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final dateFormat = DateFormat('EEEE d MMMM y', 'fr');
 
     return Scaffold(
@@ -137,9 +138,9 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
                 onPressed: _saving ? null : _confirmDelete,
               ),
               const SizedBox(height: AppSpacing.x6),
-              const Text(
+              Text(
                 'Tous les arrets de cette tournee seront supprimes definitivement.',
-                style: TextStyle(fontSize: 12, color: AppColors.textMute),
+                style: TextStyle(fontSize: 12, color: p.textMute),
               ),
             ],
           ],

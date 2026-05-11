@@ -63,6 +63,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
   }
 
   Widget _buildMap(List<Stop> stops) {
+    final p = context.palette;
     final stopsGeoreferenced =
         stops.where((s) => s.lat != null && s.lng != null).toList();
 
@@ -111,7 +112,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                     points: tracePoints,
                     strokeWidth: 5,
                     color: AppColors.emerald,
-                    borderColor: AppColors.paper,
+                    borderColor: p.paper,
                     borderStrokeWidth: 1.5,
                   ),
                 ],
@@ -138,8 +139,8 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
             children: [
               FloatingActionButton.small(
                 heroTag: 'fullscreen',
-                backgroundColor: AppColors.paper,
-                foregroundColor: AppColors.ink,
+                backgroundColor: p.paper,
+                foregroundColor: p.ink,
                 elevation: 4,
                 onPressed: _toggleFullscreen,
                 child: Icon(_fullscreen
@@ -149,8 +150,8 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
               const SizedBox(height: AppSpacing.x8),
               FloatingActionButton.small(
                 heroTag: 'recentrer',
-                backgroundColor: AppColors.paper,
-                foregroundColor: AppColors.ink,
+                backgroundColor: p.paper,
+                foregroundColor: p.ink,
                 elevation: 4,
                 onPressed: () {
                   final fit = _currentFit;
@@ -171,8 +172,8 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
             child: SafeArea(
               child: FloatingActionButton.small(
                 heroTag: 'back-fullscreen',
-                backgroundColor: AppColors.paper,
-                foregroundColor: AppColors.ink,
+                backgroundColor: p.paper,
+                foregroundColor: p.ink,
                 elevation: 4,
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Icon(Icons.arrow_back),
@@ -204,9 +205,10 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
   }
 
   void _showStopInfo(Stop stop, int index) {
+    final p = context.palette;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.paper,
+      backgroundColor: p.paper,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppRadius.r28)),
@@ -228,7 +230,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.inkLine,
+                    color: p.inkLine,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -241,8 +243,8 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.paper,
-                      border: Border.all(color: AppColors.ink, width: 1.5),
+                      color: p.paper,
+                      border: Border.all(color: p.ink, width: 1.5),
                       borderRadius: BorderRadius.circular(AppRadius.r10),
                     ),
                     alignment: Alignment.center,
@@ -263,20 +265,20 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                             stop.nomClient!.isNotEmpty)
                           Text(
                             stop.nomClient!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.ink,
+                              color: p.ink,
                               letterSpacing: -0.3,
                             ),
                           )
                         else
                           Text(
                             stop.adresseBrute.split(',').first.trim(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.ink,
+                              color: p.ink,
                               letterSpacing: -0.3,
                             ),
                           ),
@@ -285,7 +287,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                           stop.adresseBrute,
                           style: appMonoStyle(
                             fontSize: 12,
-                            color: AppColors.textMute,
+                            color: p.textMute,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -300,14 +302,14 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.x12),
                   decoration: BoxDecoration(
-                    color: AppColors.creamSoft,
+                    color: p.creamSoft,
                     borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Text(
                     stop.notes!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.ink,
+                      color: p.ink,
                       height: 1.4,
                     ),
                   ),
@@ -326,7 +328,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                     _InfoChip(
                       icon: Icons.access_time,
                       label:
-                          '${stop.fenetreDebut ?? '—'} → ${stop.fenetreFin ?? '—'}',
+                          '${stop.fenetreDebut ?? 'â€”'} â†’ ${stop.fenetreFin ?? 'â€”'}',
                       mono: true,
                     ),
                 ],
@@ -344,6 +346,7 @@ class _EmptyOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Positioned(
       left: AppSpacing.x16,
       right: AppSpacing.x16,
@@ -351,18 +354,18 @@ class _EmptyOverlay extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.x14),
         decoration: BoxDecoration(
-          color: AppColors.paper,
+          color: p.paper,
           borderRadius: BorderRadius.circular(AppRadius.r16),
           boxShadow: AppShadows.card,
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.info_outline, color: AppColors.textMute),
+            Icon(Icons.info_outline, color: p.textMute),
             SizedBox(width: AppSpacing.x10),
             Expanded(
               child: Text(
                 'Aucun arret avec coordonnees a afficher.',
-                style: TextStyle(fontSize: 13, color: AppColors.ink),
+                style: TextStyle(fontSize: 13, color: p.ink),
               ),
             ),
           ],
@@ -379,10 +382,10 @@ class _DepotMarker {
       width: 48,
       height: 48,
       alignment: Alignment.center,
-      child: _PinShell(
+      child: const _PinShell(
         bg: AppColors.lime,
         border: AppColors.ink,
-        child: const Icon(
+        child: Icon(
           Icons.warehouse_outlined,
           size: 22,
           color: AppColors.ink,
@@ -488,28 +491,29 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x10,
         vertical: AppSpacing.x6,
       ),
       decoration: BoxDecoration(
-        color: AppColors.creamSoft,
+        color: p.creamSoft,
         borderRadius: BorderRadius.circular(AppRadius.r10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.ink),
+          Icon(icon, size: 14, color: p.ink),
           const SizedBox(width: AppSpacing.x6),
           Text(
             label,
             style: mono
                 ? appMonoStyle(fontSize: 12, fontWeight: FontWeight.w700)
-                : const TextStyle(
+                : TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
+                    color: p.ink,
                   ),
           ),
         ],

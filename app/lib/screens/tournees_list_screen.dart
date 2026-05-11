@@ -24,6 +24,7 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final tourneesAsync = ref.watch(tourneesStreamProvider);
 
     return Scaffold(
@@ -76,7 +77,7 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
                       child: Text(
                         'Aucune tournee ne correspond a "$_query".',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textMute),
+                        style: TextStyle(color: p.textMute),
                       ),
                     ),
                   );
@@ -124,6 +125,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x28),
@@ -133,14 +135,14 @@ class _EmptyState extends StatelessWidget {
             Container(
               width: 96,
               height: 96,
-              decoration: const BoxDecoration(
-                color: AppColors.creamSoft,
+              decoration: BoxDecoration(
+                color: p.creamSoft,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.local_shipping_outlined,
                 size: 44,
-                color: AppColors.ink,
+                color: p.ink,
               ),
             ),
             const SizedBox(height: AppSpacing.x18),
@@ -153,7 +155,7 @@ class _EmptyState extends StatelessWidget {
               'Tape sur "+" en bas pour creer ta premiere tournee.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMute,
+                    color: p.textMute,
                   ),
             ),
           ],
@@ -221,6 +223,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.x6,
@@ -233,7 +236,7 @@ class _SectionHeader extends StatelessWidget {
         style: appMonoStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: AppColors.textMute,
+          color: p.textMute,
           letterSpacing: 0.6,
         ),
       ),
@@ -248,6 +251,7 @@ class _TourneeRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     final dateFormat = DateFormat('EEE d MMM', 'fr');
     final isTerminee = tournee.statut == 'terminee';
     final hasStats = isTerminee &&
@@ -277,7 +281,7 @@ class _TourneeRow extends ConsumerWidget {
           );
         },
         child: Material(
-          color: AppColors.paper,
+          color: p.paper,
           borderRadius: BorderRadius.circular(AppRadius.r14),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.r14),
@@ -299,10 +303,10 @@ class _TourneeRow extends ConsumerWidget {
                       children: [
                         Text(
                           tournee.nom,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.ink,
+                            color: p.ink,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -310,15 +314,15 @@ class _TourneeRow extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           dateFormat.format(tournee.date),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textMute,
+                            color: p.textMute,
                           ),
                         ),
                         if (hasStats) ...[
                           const SizedBox(height: AppSpacing.x6),
                           Text(
-                            '${(tournee.distanceTotaleM! / 1000).toStringAsFixed(1)} km · ${_formatDuration(tournee.dureeTotaleS!)}',
+                            '${(tournee.distanceTotaleM! / 1000).toStringAsFixed(1)} km Â· ${_formatDuration(tournee.dureeTotaleS!)}',
                             style: appMonoStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
@@ -329,9 +333,9 @@ class _TourneeRow extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
-                    color: AppColors.textFaint,
+                    color: p.textFaint,
                   ),
                 ],
               ),
@@ -348,9 +352,10 @@ class _TourneeRow extends ConsumerWidget {
   Future<void> _showActions(BuildContext context, WidgetRef ref) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final p = context.palette;
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.cream,
+      backgroundColor: p.cream,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.r22),
@@ -374,7 +379,7 @@ class _TourneeRow extends ConsumerWidget {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: AppSpacing.x14),
                   decoration: BoxDecoration(
-                    color: AppColors.inkLine,
+                    color: p.inkLine,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -391,8 +396,8 @@ class _TourneeRow extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x14),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.paper,
-                  foregroundColor: AppColors.ink,
+                  backgroundColor: p.paper,
+                  foregroundColor: p.ink,
                   minimumSize: const Size(0, 52),
                   alignment: Alignment.centerLeft,
                 ),
@@ -415,7 +420,7 @@ class _TourneeRow extends ConsumerWidget {
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.lime,
-                  foregroundColor: AppColors.ink,
+                  foregroundColor: p.ink,
                   minimumSize: const Size(0, 52),
                   alignment: Alignment.centerLeft,
                 ),
@@ -461,8 +466,8 @@ class _TourneeRow extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x8),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.paper,
-                  foregroundColor: AppColors.ink,
+                  backgroundColor: p.paper,
+                  foregroundColor: p.ink,
                   minimumSize: const Size(0, 52),
                   alignment: Alignment.centerLeft,
                 ),
@@ -487,7 +492,7 @@ class _TourneeRow extends ConsumerWidget {
                   tournee.isTemplate ? Icons.star : Icons.star_border,
                   color: tournee.isTemplate
                       ? AppColors.amber
-                      : AppColors.ink,
+                      : p.ink,
                 ),
                 label: Text(
                   tournee.isTemplate
@@ -540,6 +545,7 @@ class _StatutBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     // Couleurs alignees sur les tokens du handoff :
     // - active : ink + halo lime
     // - terminee : emerald
@@ -547,10 +553,10 @@ class _StatutBadge extends StatelessWidget {
     // - brouillon (default) : paper + outline ink
     final (letter, bg, fg, border) = switch (statut) {
       'optimisee' =>
-        ('O', AppColors.creamSoft, AppColors.ink, AppColors.inkLine),
-      'en_cours' => ('E', AppColors.ink, AppColors.lime, null),
-      'terminee' => ('T', AppColors.emerald, AppColors.paper, null),
-      _ => ('B', AppColors.paper, AppColors.ink, AppColors.inkLine),
+        ('O', p.creamSoft, p.ink, p.inkLine),
+      'en_cours' => ('E', p.ink, AppColors.lime, null),
+      'terminee' => ('T', AppColors.emerald, p.paper, null),
+      _ => ('B', p.paper, p.ink, p.inkLine),
     };
     return Container(
       width: 36,

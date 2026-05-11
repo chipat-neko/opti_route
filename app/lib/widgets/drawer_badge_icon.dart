@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/database_providers.dart';
@@ -13,6 +13,7 @@ class DrawerBadgeIcon extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     final hasEnCours = ref.watch(hasTourneeEnCoursProvider);
     return Builder(
       builder: (context) => IconButton(
@@ -32,7 +33,7 @@ class DrawerBadgeIcon extends ConsumerWidget {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: Theme.of(context).appBarTheme.backgroundColor ??
-                          AppColors.cream,
+                          p.cream,
                       width: 1.5,
                     ),
                   ),
@@ -40,7 +41,7 @@ class DrawerBadgeIcon extends ConsumerWidget {
               ),
           ],
         ),
-        tooltip: hasEnCours ? 'Menu — tournee en cours' : 'Menu',
+        tooltip: hasEnCours ? 'Menu â€” tournee en cours' : 'Menu',
         onPressed: () => Scaffold.of(context).openDrawer(),
       ),
     );

@@ -139,7 +139,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         if (result.created > 0) '${result.created} ajoutee(s)',
         if (result.merged > 0) '${result.merged} fusionnee(s)',
         if (result.rejected > 0) '${result.rejected} rejetee(s)',
-      ].join(' · ');
+      ].join(' Â· ');
       messenger.showSnackBar(
         SnackBar(
           content: Text(summary.isEmpty ? 'Aucune entree' : summary),
@@ -197,15 +197,15 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   static String _normalize(String s) {
     final lower = s.toLowerCase().trim();
     const map = {
-      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
-      'ç': 'c',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
-      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
-      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
-      'ÿ': 'y', 'ý': 'y',
-      'ñ': 'n',
-      'œ': 'oe', 'æ': 'ae',
+      'Ã ': 'a', 'Ã¢': 'a', 'Ã¤': 'a', 'Ã¡': 'a', 'Ã£': 'a',
+      'Ã§': 'c',
+      'Ã¨': 'e', 'Ã©': 'e', 'Ãª': 'e', 'Ã«': 'e',
+      'Ã®': 'i', 'Ã¯': 'i', 'Ã­': 'i', 'Ã¬': 'i',
+      'Ã´': 'o', 'Ã¶': 'o', 'Ã³': 'o', 'Ãµ': 'o',
+      'Ã¹': 'u', 'Ã»': 'u', 'Ã¼': 'u', 'Ãº': 'u',
+      'Ã¿': 'y', 'Ã½': 'y',
+      'Ã±': 'n',
+      'Å“': 'oe', 'Ã¦': 'ae',
     };
     final buf = StringBuffer();
     for (final ch in lower.split('')) {
@@ -227,6 +227,7 @@ class _CarnetTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     final nom = entry.nomClient?.trim() ?? '';
     final hasNom = nom.isNotEmpty;
 
@@ -280,7 +281,7 @@ class _CarnetTile extends ConsumerWidget {
               .delete(entry.id);
         },
         child: Material(
-          color: AppColors.paper,
+          color: p.paper,
           borderRadius: BorderRadius.circular(AppRadius.r14),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.r14),
@@ -314,7 +315,7 @@ class _CarnetTile extends ConsumerWidget {
                       alignment: Alignment.center,
                       child: Icon(
                         entry.isFavori ? Icons.star : Icons.bookmark,
-                        color: AppColors.ink,
+                        color: p.ink,
                         size: 18,
                       ),
                     ),
@@ -327,10 +328,10 @@ class _CarnetTile extends ConsumerWidget {
                         if (hasNom)
                           Text(
                             nom,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.ink,
+                              color: p.ink,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -340,8 +341,8 @@ class _CarnetTile extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: hasNom ? 12 : 14,
                             color: hasNom
-                                ? AppColors.textMute
-                                : AppColors.ink,
+                                ? p.textMute
+                                : p.ink,
                             fontWeight:
                                 hasNom ? FontWeight.w500 : FontWeight.w600,
                           ),
@@ -356,14 +357,14 @@ class _CarnetTile extends ConsumerWidget {
                           style: appMonoStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textFaint,
+                            color: p.textFaint,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right,
-                      color: AppColors.textFaint),
+                  Icon(Icons.chevron_right,
+                      color: p.textFaint),
                 ],
               ),
             ),
@@ -381,6 +382,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x28),
@@ -390,14 +392,14 @@ class _EmptyState extends StatelessWidget {
             Container(
               width: 96,
               height: 96,
-              decoration: const BoxDecoration(
-                color: AppColors.creamSoft,
+              decoration: BoxDecoration(
+                color: p.creamSoft,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.bookmark_outline,
                 size: 44,
-                color: AppColors.ink,
+                color: p.ink,
               ),
             ),
             const SizedBox(height: AppSpacing.x18),
@@ -414,7 +416,7 @@ class _EmptyState extends StatelessWidget {
                       'supprimer une entree.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMute,
+                    color: p.textMute,
                   ),
             ),
           ],

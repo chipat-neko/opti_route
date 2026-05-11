@@ -57,6 +57,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final orsKeyAsync = ref.watch(orsApiKeyProvider);
 
     orsKeyAsync.whenData((value) {
@@ -83,8 +84,8 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             icon: Icons.verified_outlined,
             title: 'Geocodage 3 sources',
             subtitle:
-                'BAN (cadastre officiel) · Recherche-Entreprises '
-                '(SIRENE/INSEE) · Photon/OSM (enseignes & marques). '
+                'BAN (cadastre officiel) Â· Recherche-Entreprises '
+                '(SIRENE/INSEE) Â· Photon/OSM (enseignes & marques). '
                 'Aucune cle, aucune limite stricte.',
           ),
           const SizedBox(height: AppSpacing.x28),
@@ -108,13 +109,13 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: AppSpacing.x6),
-          const Text(
+          Text(
             'Cree gratuitement un compte sur openrouteservice.org/dev '
             '(500 optimisations/jour, sans carte de credit), puis colle '
             'ta cle ici. Sans cle, le bouton "Optimiser" reste desactive.',
             style: TextStyle(
               fontSize: 12.5,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -163,12 +164,12 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Tournee par defaut'),
           const SizedBox(height: AppSpacing.x10),
-          const Text(
+          Text(
             'Valeurs preremplies a la creation d\'une nouvelle tournee '
             'ou d\'un nouvel arret. Tu peux les modifier au cas par cas.',
             style: TextStyle(
               fontSize: 12.5,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -210,12 +211,12 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: AppSpacing.x6),
-          const Text(
+          Text(
             'Quand tu tapes sur un arret en mode tournee, l\'app de nav '
             'choisie sera mise en avant dans le bottom sheet.',
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -260,13 +261,13 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             label: const Text('Vider le cache de geocodage'),
           ),
           const SizedBox(height: AppSpacing.x6),
-          const Text(
+          Text(
             'Force toutes les recherches d\'adresse a re-interroger les '
             'sources. Utile si tu as modifie une adresse ou que tu veux '
             'reessayer une saisie qui a echoue.',
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -283,25 +284,25 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             label: const Text('Nettoyer les tournees > 1 an'),
           ),
           const SizedBox(height: AppSpacing.x6),
-          const Text(
+          Text(
             'Supprime definitivement les tournees datees d\'il y a plus '
             'd\'un an, avec tous leurs arrets. Garde l\'app legere et la '
             'base de donnees compacte.',
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
           const SizedBox(height: AppSpacing.x6),
-          const Text(
+          Text(
             'Supprime les tuiles OpenStreetMap stockees localement '
             '(utilisees comme cache pour fonctionner hors-ligne dans les '
             'zones deja visitees). Les tuiles seront re-telechargees a '
             'la prochaine visite.',
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -310,12 +311,12 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Notifications'),
           const SizedBox(height: AppSpacing.x10),
-          const Text(
+          Text(
             'Les notifications locales (rappels de tournee) sont gerees '
             'par le telephone, pas par un serveur. Aucune CB requise.',
             style: TextStyle(
               fontSize: 12.5,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -326,13 +327,13 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             label: const Text('Test : notif dans 2 min'),
           ),
           const SizedBox(height: AppSpacing.x6),
-          const Text(
+          Text(
             'Programme une notification de test 120 secondes apres le '
             'tap. Ferme l\'app ou eteins l\'ecran pour verifier que la '
             'notif arrive bien.',
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -341,12 +342,12 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Apparence'),
           const SizedBox(height: AppSpacing.x10),
-          const Text(
+          Text(
             'Mode sombre pour la conduite de nuit. "Auto" suit les '
             'reglages Android.',
             style: TextStyle(
               fontSize: 12.5,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.4,
             ),
           ),
@@ -616,13 +617,14 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.6,
-        color: AppColors.textMute,
+        color: p.textMute,
       ),
     );
   }
@@ -641,6 +643,7 @@ class _ThemeChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     final selected = value == groupValue;
     return ChoiceChip(
       label: Text(label),
@@ -654,12 +657,12 @@ class _ThemeChip extends ConsumerWidget {
         });
       },
       selectedColor: AppColors.lime,
-      backgroundColor: AppColors.paper,
+      backgroundColor: p.paper,
       side: BorderSide(
-        color: selected ? AppColors.lime : AppColors.inkLine,
+        color: selected ? AppColors.lime : p.inkLine,
       ),
       labelStyle: TextStyle(
-        color: AppColors.ink,
+        color: p.ink,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
       ),
     );
@@ -681,18 +684,19 @@ class _NavAppChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final selected = value == groupValue;
     return ChoiceChip(
       label: Text(label),
       selected: selected,
       onSelected: (_) => onSelected(value),
       selectedColor: AppColors.lime,
-      backgroundColor: AppColors.paper,
+      backgroundColor: p.paper,
       side: BorderSide(
-        color: selected ? AppColors.lime : AppColors.inkLine,
+        color: selected ? AppColors.lime : p.inkLine,
       ),
       labelStyle: TextStyle(
-        color: AppColors.ink,
+        color: p.ink,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
       ),
     );
@@ -714,16 +718,17 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        color: highlight ? AppColors.lime : AppColors.creamSoft,
+        color: highlight ? AppColors.lime : p.creamSoft,
         borderRadius: BorderRadius.circular(AppRadius.r14),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.ink),
+          Icon(icon, color: p.ink),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(
@@ -731,10 +736,10 @@ class _StatusCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
-                    color: AppColors.ink,
+                    color: p.ink,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -742,7 +747,7 @@ class _StatusCard extends StatelessWidget {
                   subtitle,
                   style: appMonoStyle(
                     fontSize: 11,
-                    color: AppColors.ink.withValues(alpha: 0.75),
+                    color: p.ink.withValues(alpha: 0.75),
                   ),
                 ),
               ],

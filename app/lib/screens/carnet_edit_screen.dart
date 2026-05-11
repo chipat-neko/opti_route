@@ -201,6 +201,7 @@ class _ClientStatsBlock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     final statsAsync = ref.watch(clientStatsProvider(savedDestinationId));
     return statsAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -211,13 +212,13 @@ class _ClientStatsBlock extends ConsumerWidget {
         }
         final tauxPct = (stats.tauxReussite * 100).toStringAsFixed(0);
         final dernier = stats.derniereLivraison == null
-            ? '—'
+            ? 'â€”'
             : DateFormat('dd/MM/yyyy', 'fr')
                 .format(stats.derniereLivraison!);
         return Container(
           padding: const EdgeInsets.all(AppSpacing.x14),
           decoration: BoxDecoration(
-            color: AppColors.creamSoft,
+            color: p.creamSoft,
             borderRadius: BorderRadius.circular(AppRadius.r14),
           ),
           child: Column(
@@ -228,7 +229,7 @@ class _ClientStatsBlock extends ConsumerWidget {
                 style: appMonoStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textMute,
+                  color: p.textMute,
                   letterSpacing: 0.6,
                 ),
               ),
@@ -248,14 +249,14 @@ class _ClientStatsBlock extends ConsumerWidget {
                       value: '${stats.nbEchecs}',
                       color: stats.nbEchecs > 0
                           ? AppColors.red
-                          : AppColors.textMute,
+                          : p.textMute,
                     ),
                   ),
                   Expanded(
                     child: _Metric(
                       label: 'Reussite',
                       value: '$tauxPct%',
-                      color: AppColors.ink,
+                      color: p.ink,
                     ),
                   ),
                 ],
@@ -263,9 +264,9 @@ class _ClientStatsBlock extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x8),
               Text(
                 'Derniere visite : $dernier',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textMute,
+                  color: p.textMute,
                 ),
               ),
               if (stats.raisonsEchecCourantes.isNotEmpty) ...[
@@ -299,6 +300,7 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -307,7 +309,7 @@ class _Metric extends StatelessWidget {
           style: appMonoStyle(
             fontSize: 9,
             fontWeight: FontWeight.w700,
-            color: AppColors.textMute,
+            color: p.textMute,
             letterSpacing: 0.4,
           ),
         ),
@@ -336,13 +338,14 @@ class _ColorPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Wrap(
       spacing: AppSpacing.x8,
       runSpacing: AppSpacing.x8,
       children: [
-        // Bouton "Aucune" : cercle rayé cream
+        // Bouton "Aucune" : cercle rayÃ© cream
         _ColorDot(
-          color: AppColors.creamSoft,
+          color: p.creamSoft,
           selected: currentTag == null,
           label: 'Aucune',
           onTap: () => onPicked(null),
@@ -374,6 +377,7 @@ class _ColorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -383,11 +387,11 @@ class _ColorDot extends StatelessWidget {
           color: color,
           shape: BoxShape.circle,
           border: selected
-              ? Border.all(color: AppColors.ink, width: 3)
-              : Border.all(color: AppColors.inkLine, width: 1),
+              ? Border.all(color: p.ink, width: 3)
+              : Border.all(color: p.inkLine, width: 1),
         ),
         child: selected
-            ? const Icon(Icons.check, size: 18, color: AppColors.ink)
+            ? Icon(Icons.check, size: 18, color: p.ink)
             : null,
       ),
     );

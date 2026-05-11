@@ -45,7 +45,7 @@ class StopActionSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet<StopAction>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.palette.cream,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.r22),
@@ -131,6 +131,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final stop = widget.stop;
     final nom = stop.nomClient?.trim() ?? '';
     final hasNom = nom.isNotEmpty;
@@ -158,7 +159,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.x14),
                 decoration: BoxDecoration(
-                  color: AppColors.inkLine,
+                  color: p.inkLine,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -167,10 +168,10 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
             if (hasNom)
               Text(
                 nom,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
+                  color: p.ink,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -180,7 +181,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               adresse,
               style: TextStyle(
                 fontSize: hasNom ? 13 : 16,
-                color: hasNom ? AppColors.textMute : AppColors.ink,
+                color: hasNom ? p.textMute : p.ink,
                 fontWeight: hasNom ? FontWeight.w500 : FontWeight.w700,
               ),
               maxLines: 2,
@@ -198,20 +199,20 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   vertical: AppSpacing.x8,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.creamSoft,
+                  color: p.creamSoft,
                   borderRadius: BorderRadius.circular(AppRadius.r10),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.inventory_2_outlined,
-                        size: 18, color: AppColors.ink),
+                    Icon(Icons.inventory_2_outlined,
+                        size: 18, color: p.ink),
                     const SizedBox(width: AppSpacing.x8),
-                    const Text(
+                    Text(
                       'Colis',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: p.ink,
                       ),
                     ),
                     const Spacer(),
@@ -227,10 +228,10 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       ),
                       child: Text(
                         '$_nbColis',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.ink,
+                          color: p.ink,
                         ),
                       ),
                     ),
@@ -255,7 +256,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 style: const TextStyle(fontSize: 13),
                 decoration: const InputDecoration(
                   labelText: 'Notes',
-                  hintText: 'Code · porte · etage...',
+                  hintText: 'Code Â· porte Â· etage...',
                   isDense: true,
                 ),
               ),
@@ -308,7 +309,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.emerald,
-                  foregroundColor: AppColors.paper,
+                  foregroundColor: p.paper,
                   minimumSize: const Size(0, 56),
                 ),
                 onPressed: isLivre
@@ -352,7 +353,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               const Divider(height: AppSpacing.x28),
               TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.ink,
+                  foregroundColor: p.ink,
                 ),
                 onPressed: () =>
                     Navigator.of(context).pop(const OpenDetailsAction()),
@@ -433,9 +434,10 @@ class _StepperButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final disabled = onPressed == null;
     return Material(
-      color: disabled ? AppColors.inkLine : AppColors.paper,
+      color: disabled ? p.inkLine : p.paper,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -446,7 +448,7 @@ class _StepperButton extends StatelessWidget {
           child: Icon(
             icon,
             size: 18,
-            color: disabled ? AppColors.textFaint : AppColors.ink,
+            color: disabled ? p.textFaint : p.ink,
           ),
         ),
       ),
@@ -473,11 +475,12 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     if (preferred) {
       return FilledButton.icon(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.emerald,
-          foregroundColor: AppColors.paper,
+          foregroundColor: p.paper,
           minimumSize: const Size(0, 48),
         ),
         onPressed: onPressed,
@@ -490,7 +493,7 @@ class _NavButton extends StatelessWidget {
     }
     return OutlinedButton.icon(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.ink,
+        foregroundColor: p.ink,
         minimumSize: const Size(0, 48),
       ),
       onPressed: onPressed,
@@ -516,22 +519,23 @@ class _RaisonEchecPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Raison de l\'echec',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: AppColors.ink,
+            color: p.ink,
           ),
         ),
         const SizedBox(height: AppSpacing.x10),
         for (final (id, label, icon) in _options) ...[
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.ink,
+              foregroundColor: p.ink,
               minimumSize: const Size(0, 48),
               alignment: Alignment.centerLeft,
             ),

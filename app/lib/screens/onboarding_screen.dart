@@ -36,8 +36,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: p.cream,
       body: SafeArea(
         child: Column(
           children: [
@@ -137,6 +138,7 @@ class _PageBienvenue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x22,
@@ -152,30 +154,30 @@ class _PageBienvenue extends StatelessWidget {
               color: AppColors.lime,
               borderRadius: BorderRadius.circular(AppRadius.r22),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.local_shipping_outlined,
               size: 40,
-              color: AppColors.ink,
+              color: p.ink,
             ),
           ),
           const SizedBox(height: AppSpacing.x22),
-          const Text(
+          Text(
             'Bienvenue dans\nopti_route',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w800,
-              color: AppColors.ink,
+              color: p.ink,
               height: 1.1,
               letterSpacing: -0.6,
             ),
           ),
           const SizedBox(height: AppSpacing.x14),
-          const Text(
+          Text(
             'Optimisation de tournees de livraison, '
             'gratuit et sans carte de credit.',
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.5,
             ),
           ),
@@ -201,9 +203,9 @@ class _PageBienvenue extends StatelessWidget {
                   Expanded(
                     child: Text(
                       f.$2,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
-                        color: AppColors.ink,
+                        color: p.ink,
                         height: 1.4,
                       ),
                     ),
@@ -242,6 +244,7 @@ class _PageConcept extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x22,
@@ -250,12 +253,12 @@ class _PageConcept extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Comment ca marche',
             style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              color: AppColors.ink,
+              color: p.ink,
               letterSpacing: -0.4,
             ),
           ),
@@ -269,8 +272,8 @@ class _PageConcept extends StatelessWidget {
                       Container(
                         width: 32,
                         height: 32,
-                        decoration: const BoxDecoration(
-                          color: AppColors.ink,
+                        decoration: BoxDecoration(
+                          color: p.ink,
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
@@ -290,18 +293,18 @@ class _PageConcept extends StatelessWidget {
                           children: [
                             Text(
                               entry.value.$1,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.ink,
+                                color: p.ink,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               entry.value.$2,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.textMute,
+                                color: p.textMute,
                                 height: 1.4,
                               ),
                             ),
@@ -344,6 +347,7 @@ class _PageOrsKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x22,
@@ -356,33 +360,33 @@ class _PageOrsKey extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.creamSoft,
+              color: p.creamSoft,
               borderRadius: BorderRadius.circular(AppRadius.r22),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.bolt_outlined,
               size: 40,
-              color: AppColors.ink,
+              color: p.ink,
             ),
           ),
           const SizedBox(height: AppSpacing.x22),
-          const Text(
+          Text(
             'Cle OpenRouteService',
             style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              color: AppColors.ink,
+              color: p.ink,
               letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: AppSpacing.x14),
-          const Text(
+          Text(
             'Pour activer l\'optimisation de tournees, il faut une cle '
             'gratuite OpenRouteService. 500 optimisations par jour, '
             'aucune carte de credit demandee.',
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textMute,
+              color: p.textMute,
               height: 1.5,
             ),
           ),
@@ -422,6 +426,7 @@ class _Indicators extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -433,7 +438,7 @@ class _Indicators extends StatelessWidget {
               width: i == currentPage ? 24 : 8,
               height: 8,
               decoration: BoxDecoration(
-                color: i == currentPage ? AppColors.ink : AppColors.inkLine,
+                color: i == currentPage ? p.ink : p.inkLine,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),

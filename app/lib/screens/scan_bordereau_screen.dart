@@ -60,6 +60,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
   }
 
   Widget _buildEmpty() {
+    final p = context.palette;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.x18),
       child: Column(
@@ -70,23 +71,23 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.x22),
             decoration: BoxDecoration(
-              color: AppColors.creamSoft,
+              color: p.creamSoft,
               borderRadius: BorderRadius.circular(AppRadius.r18),
             ),
             child: Column(
               children: [
-                const Icon(
+                Icon(
                   Icons.document_scanner_outlined,
                   size: 56,
-                  color: AppColors.ink,
+                  color: p.ink,
                 ),
                 const SizedBox(height: AppSpacing.x12),
-                const Text(
+                Text(
                   'Photographie ton bordereau',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.ink,
+                    color: p.ink,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.x6),
@@ -96,7 +97,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                   textAlign: TextAlign.center,
                   style: appMonoStyle(
                     fontSize: 11.5,
-                    color: AppColors.textMute,
+                    color: p.textMute,
                   ),
                 ),
               ],
@@ -138,9 +139,9 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.ink,
+                        color: p.ink,
                         height: 1.4,
                       ),
                     ),
@@ -155,6 +156,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
   }
 
   Widget _buildResult() {
+    final p = context.palette;
     final lines = _ocr!.lines;
     final extraction = _extraction;
     // Carte verte uniquement si confidence = high. Sinon carte orange
@@ -195,11 +197,11 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                 children: [
                   Text(
                     hasAutoExtraction
-                        ? 'OU SELECTION MANUELLE · ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}'
-                        : 'TEXTE DETECTE · ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}',
+                        ? 'OU SELECTION MANUELLE Â· ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}'
+                        : 'TEXTE DETECTE Â· ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}',
                     style: appMonoStyle(
                       fontSize: 11,
-                      color: AppColors.textMute,
+                      color: p.textMute,
                       letterSpacing: 0.6,
                     ),
                   ),
@@ -216,9 +218,9 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                         'compose l\'adresse en cochant les bonnes lignes.'
                     : 'Tape sur les lignes qui composent l\'adresse '
                         '(les lignes avec un code postal sont surlignees).',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textMute,
+                  color: p.textMute,
                   height: 1.4,
                 ),
               ),
@@ -227,13 +229,13 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.x14),
                   decoration: BoxDecoration(
-                    color: AppColors.creamSoft,
+                    color: p.creamSoft,
                     borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Aucun texte detecte. Reessaie avec une photo plus nette '
                     'et bien eclairee.',
-                    style: TextStyle(fontSize: 13, color: AppColors.ink),
+                    style: TextStyle(fontSize: 13, color: p.ink),
                   ),
                 ),
               for (var i = 0; i < lines.length; i++)
@@ -259,9 +261,9 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
             AppSpacing.x18,
             AppSpacing.x18,
           ),
-          decoration: const BoxDecoration(
-            color: AppColors.paper,
-            border: Border(top: BorderSide(color: AppColors.divider)),
+          decoration: BoxDecoration(
+            color: p.paper,
+            border: Border(top: BorderSide(color: p.divider)),
           ),
           child: Row(
             children: [
@@ -273,7 +275,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                       'SELECTION',
                       style: appMonoStyle(
                         fontSize: 10,
-                        color: AppColors.textMute,
+                        color: p.textMute,
                         letterSpacing: 0.6,
                       ),
                     ),
@@ -284,10 +286,10 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                           : _composeAddress(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: p.ink,
                       ),
                     ),
                   ],
@@ -409,6 +411,7 @@ class _UncertainDetectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
@@ -421,9 +424,9 @@ class _UncertainDetectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.warning_amber_outlined,
-                color: AppColors.ink,
+                color: p.ink,
                 size: 18,
               ),
               const SizedBox(width: AppSpacing.x8),
@@ -431,7 +434,7 @@ class _UncertainDetectionCard extends StatelessWidget {
                 'DETECTION INCERTAINE',
                 style: appMonoStyle(
                   fontSize: 11,
-                  color: AppColors.ink,
+                  color: p.ink,
                   letterSpacing: 0.6,
                   fontWeight: FontWeight.w800,
                 ),
@@ -439,13 +442,13 @@ class _UncertainDetectionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.x8),
-          const Text(
+          Text(
             'Le bordereau ne suit pas un format que je reconnais '
             'parfaitement. Verifie les bonnes lignes manuellement '
             'ci-dessous pour eviter une mauvaise adresse.',
             style: TextStyle(
               fontSize: 12.5,
-              color: AppColors.ink,
+              color: p.ink,
               height: 1.4,
             ),
           ),
@@ -457,7 +460,7 @@ class _UncertainDetectionCard extends StatelessWidget {
               'Champs detectes (a verifier) :',
               style: appMonoStyle(
                 fontSize: 10,
-                color: AppColors.ink.withValues(alpha: 0.7),
+                color: p.ink.withValues(alpha: 0.7),
                 letterSpacing: 0.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -497,6 +500,7 @@ class _AutoDetectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
@@ -508,13 +512,13 @@ class _AutoDetectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome, color: AppColors.ink, size: 18),
+              Icon(Icons.auto_awesome, color: p.ink, size: 18),
               const SizedBox(width: AppSpacing.x8),
               Text(
                 'DETECTION AUTOMATIQUE',
                 style: appMonoStyle(
                   fontSize: 11,
-                  color: AppColors.ink,
+                  color: p.ink,
                   letterSpacing: 0.6,
                   fontWeight: FontWeight.w800,
                 ),
@@ -556,7 +560,7 @@ class _AutoDetectionCard extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onUse,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.ink,
+                backgroundColor: p.ink,
                 foregroundColor: AppColors.lime,
                 minimumSize: const Size(0, 48),
               ),
@@ -585,6 +589,7 @@ class _ExtractedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -596,7 +601,7 @@ class _ExtractedRow extends StatelessWidget {
               label,
               style: appMonoStyle(
                 fontSize: 10,
-                color: AppColors.ink.withValues(alpha: 0.6),
+                color: p.ink.withValues(alpha: 0.6),
                 letterSpacing: 0.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -609,13 +614,13 @@ class _ExtractedRow extends StatelessWidget {
               style: mono
                   ? appMonoStyle(
                       fontSize: 13,
-                      color: AppColors.ink,
+                      color: p.ink,
                       fontWeight:
                           bold ? FontWeight.w800 : FontWeight.w700,
                     )
                   : TextStyle(
                       fontSize: 13,
-                      color: AppColors.ink,
+                      color: p.ink,
                       fontWeight:
                           bold ? FontWeight.w800 : FontWeight.w600,
                       height: 1.3,
@@ -630,7 +635,7 @@ class _ExtractedRow extends StatelessWidget {
 
 /// Section repliable affichant tout le texte OCR ligne par ligne avec
 /// numero, et un bouton pour copier dans le presse-papiers. Utile
-/// pour debugger le parser quand l'extraction auto se trompe — Noah
+/// pour debugger le parser quand l'extraction auto se trompe â€” Noah
 /// peut copier le texte et me l'envoyer pour que j'ajuste les
 /// heuristiques aux vraies donnees ML Kit.
 class _DebugRawTextSection extends StatefulWidget {
@@ -649,9 +654,10 @@ class _DebugRawTextSectionState extends State<_DebugRawTextSection> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.creamSoft,
+        color: p.creamSoft,
         borderRadius: BorderRadius.circular(AppRadius.r12),
       ),
       child: Column(
@@ -664,14 +670,14 @@ class _DebugRawTextSectionState extends State<_DebugRawTextSection> {
               padding: const EdgeInsets.all(AppSpacing.x14),
               child: Row(
                 children: [
-                  const Icon(Icons.bug_report_outlined, size: 18, color: AppColors.ink),
+                  Icon(Icons.bug_report_outlined, size: 18, color: p.ink),
                   const SizedBox(width: AppSpacing.x8),
                   Expanded(
                     child: Text(
                       _expanded ? 'Texte brut OCR' : 'Voir le texte brut OCR',
                       style: appMonoStyle(
                         fontSize: 11,
-                        color: AppColors.ink,
+                        color: p.ink,
                         letterSpacing: 0.6,
                         fontWeight: FontWeight.w800,
                       ),
@@ -681,14 +687,14 @@ class _DebugRawTextSectionState extends State<_DebugRawTextSection> {
                     _expanded
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
-                    color: AppColors.ink,
+                    color: p.ink,
                   ),
                 ],
               ),
             ),
           ),
           if (_expanded) ...[
-            const Divider(height: 1, color: AppColors.inkLine),
+            Divider(height: 1, color: p.inkLine),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.x14,
@@ -706,7 +712,7 @@ class _DebugRawTextSectionState extends State<_DebugRawTextSection> {
                         _numbered,
                         style: appMonoStyle(
                           fontSize: 11,
-                          color: AppColors.ink,
+                          color: p.ink,
                         ),
                       ),
                     ),
@@ -752,12 +758,13 @@ class _LineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final bg = selected
         ? AppColors.lime.withValues(alpha: 0.4)
-        : (looksLikeAddress ? AppColors.amber.withValues(alpha: 0.15) : AppColors.paper);
+        : (looksLikeAddress ? AppColors.amber.withValues(alpha: 0.15) : p.paper);
     final borderColor = selected
-        ? AppColors.ink
-        : (looksLikeAddress ? AppColors.amber : AppColors.inkLine);
+        ? p.ink
+        : (looksLikeAddress ? AppColors.amber : p.inkLine);
 
     return InkWell(
       onTap: onTap,
@@ -777,7 +784,7 @@ class _LineTile extends StatelessWidget {
             Icon(
               selected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 20,
-              color: selected ? AppColors.ink : AppColors.textMute,
+              color: selected ? p.ink : p.textMute,
             ),
             const SizedBox(width: AppSpacing.x10),
             Expanded(
@@ -786,7 +793,7 @@ class _LineTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: looksLikeAddress ? FontWeight.w700 : FontWeight.w500,
-                  color: AppColors.ink,
+                  color: p.ink,
                 ),
               ),
             ),

@@ -41,6 +41,7 @@ class _PointerCarteScreenState extends ConsumerState<PointerCarteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pointer sur la carte'),
@@ -85,24 +86,24 @@ class _PointerCarteScreenState extends ConsumerState<PointerCarteScreen> {
             left: AppSpacing.x12,
             right: AppSpacing.x12,
             child: Material(
-              color: AppColors.cream,
+              color: p.cream,
               borderRadius: BorderRadius.circular(AppRadius.r12),
               elevation: 2,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.x12),
                 child: Row(
                   children: [
-                    const Icon(Icons.touch_app_outlined,
-                        color: AppColors.ink, size: 18),
+                    Icon(Icons.touch_app_outlined,
+                        color: p.ink, size: 18),
                     const SizedBox(width: AppSpacing.x8),
                     Expanded(
                       child: Text(
                         _picked == null
                             ? 'Tape sur la carte pour poser un pin a l\'emplacement de la livraison.'
                             : 'Pin pose. Tu peux retaper pour ajuster.',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.ink,
+                          color: p.ink,
                           height: 1.3,
                         ),
                       ),
@@ -118,7 +119,7 @@ class _PointerCarteScreenState extends ConsumerState<PointerCarteScreen> {
               left: AppSpacing.x12,
               right: AppSpacing.x12,
               child: Material(
-                color: AppColors.paper,
+                color: p.paper,
                 borderRadius: BorderRadius.circular(AppRadius.r14),
                 elevation: 4,
                 child: Padding(
@@ -170,7 +171,7 @@ class _PointerCarteScreenState extends ConsumerState<PointerCarteScreen> {
                               _resolved!.secondaryLabel,
                               style: appMonoStyle(
                                 fontSize: 11,
-                                color: AppColors.textMute,
+                                color: p.textMute,
                               ),
                             ),
                           ),
@@ -184,7 +185,7 @@ class _PointerCarteScreenState extends ConsumerState<PointerCarteScreen> {
                         label: const Text('Utiliser cette position'),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.emerald,
-                          foregroundColor: AppColors.paper,
+                          foregroundColor: p.paper,
                           minimumSize: const Size(0, 48),
                         ),
                       ),

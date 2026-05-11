@@ -41,13 +41,14 @@ class _StatsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     final async = ref.watch(statsProvider(days));
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(AppRadius.r18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: p.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,7 +58,7 @@ class _StatsCard extends ConsumerWidget {
             style: appMonoStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: AppColors.textMute,
+              color: p.textMute,
               letterSpacing: 0.6,
             ),
           ),
@@ -88,12 +89,13 @@ class _StatsBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     if (stats.nbTournees == 0) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.x10),
         child: Text(
           'Aucune tournee dans cette periode.',
-          style: TextStyle(color: AppColors.textMute),
+          style: TextStyle(color: p.textMute),
         ),
       );
     }
@@ -127,7 +129,7 @@ class _StatsBody extends StatelessWidget {
                 label: 'Arrets',
                 value: '${stats.nbArrets}',
                 hint:
-                    '${stats.nbLivres} livres · ${stats.nbEchecs} echecs',
+                    '${stats.nbLivres} livres Â· ${stats.nbEchecs} echecs',
               ),
             ),
           ],
@@ -165,7 +167,7 @@ class _StatsBody extends StatelessWidget {
   }
 
   static String _formatDuration(int totalSeconds) {
-    if (totalSeconds == 0) return '—';
+    if (totalSeconds == 0) return 'â€”';
     final h = totalSeconds ~/ 3600;
     final m = (totalSeconds % 3600) ~/ 60;
     if (h == 0) return '${m}min';
@@ -186,6 +188,7 @@ class _BigNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x14,
@@ -203,7 +206,7 @@ class _BigNumber extends StatelessWidget {
             style: appMonoStyle(
               fontSize: 36,
               fontWeight: FontWeight.w800,
-              color: AppColors.ink,
+              color: p.ink,
               letterSpacing: -1,
             ),
           ),
@@ -212,10 +215,10 @@ class _BigNumber extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: AppColors.ink,
+                color: p.ink,
               ),
             ),
           ),
@@ -240,6 +243,7 @@ class _SmallStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x6),
       child: Column(
@@ -250,7 +254,7 @@ class _SmallStat extends StatelessWidget {
             style: appMonoStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: AppColors.textMute,
+              color: p.textMute,
               letterSpacing: 0.4,
             ),
           ),
@@ -260,7 +264,7 @@ class _SmallStat extends StatelessWidget {
               style: appMonoStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.ink,
+                color: p.ink,
                 letterSpacing: -0.3,
               ),
               children: [
@@ -268,9 +272,9 @@ class _SmallStat extends StatelessWidget {
                 if (unit != null)
                   TextSpan(
                     text: ' $unit',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.textMute,
+                      color: p.textMute,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -281,9 +285,9 @@ class _SmallStat extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               hint!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
-                color: AppColors.textMute,
+                color: p.textMute,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -300,5 +304,5 @@ class _StatDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Container(width: 1, height: 32, color: AppColors.divider);
+      Container(width: 1, height: 32, color: context.palette.divider);
 }

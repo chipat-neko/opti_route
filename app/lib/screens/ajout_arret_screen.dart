@@ -171,7 +171,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               controller: _nomClientCtrl,
               decoration: const InputDecoration(
                 labelText: 'Nom du client ou de l\'enseigne',
-                hintText: 'Mme Aubry · Unikalo · Carrefour · Pharmacie...',
+                hintText: 'Mme Aubry Â· Unikalo Â· Carrefour Â· Pharmacie...',
                 helperText:
                     'Astuce : si le commerce n\'apparait pas dans l\'autocomplete '
                     'd\'adresse, mets son nom ici et tape l\'adresse postale du '
@@ -185,7 +185,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               controller: _notesCtrl,
               decoration: const InputDecoration(
                 labelText: 'Notes',
-                hintText: 'Code 1234B · porte garage · 3e etage',
+                hintText: 'Code 1234B Â· porte garage Â· 3e etage',
               ),
               maxLines: 3,
               textInputAction: TextInputAction.newline,
@@ -530,13 +530,14 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.6,
-        color: AppColors.textMute,
+        color: p.textMute,
       ),
     );
   }
@@ -557,6 +558,7 @@ class _PriorityChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Wrap(
       spacing: AppSpacing.x8,
       runSpacing: AppSpacing.x8,
@@ -569,12 +571,12 @@ class _PriorityChips extends StatelessWidget {
               if (sel) onChanged(id);
             },
             selectedColor: accent,
-            backgroundColor: AppColors.paper,
+            backgroundColor: p.paper,
             side: BorderSide(
-              color: value == id ? accent : AppColors.inkLine,
+              color: value == id ? accent : p.inkLine,
             ),
             labelStyle: TextStyle(
-              color: AppColors.ink,
+              color: p.ink,
               fontWeight: value == id ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
@@ -596,8 +598,9 @@ class _TimePickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final display = value == null
-        ? '—'
+        ? 'â€”'
         : '${value!.hour.toString().padLeft(2, '0')}:${value!.minute.toString().padLeft(2, '0')}';
     return InkWell(
       borderRadius: BorderRadius.circular(AppRadius.r14),
@@ -615,13 +618,13 @@ class _TimePickerField extends StatelessWidget {
           vertical: AppSpacing.x12,
         ),
         decoration: BoxDecoration(
-          color: AppColors.paper,
+          color: p.paper,
           borderRadius: BorderRadius.circular(AppRadius.r14),
-          border: Border.all(color: AppColors.inkLine),
+          border: Border.all(color: p.inkLine),
         ),
         child: Row(
           children: [
-            const Icon(Icons.access_time, size: 18, color: AppColors.ink),
+            Icon(Icons.access_time, size: 18, color: p.ink),
             const SizedBox(width: AppSpacing.x8),
             Expanded(
               child: Column(
@@ -629,9 +632,9 @@ class _TimePickerField extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.textMute,
+                      color: p.textMute,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

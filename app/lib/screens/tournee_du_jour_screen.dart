@@ -43,11 +43,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   Widget build(BuildContext context) {
     final stopsAsync = ref.watch(stopsByTourneeProvider(widget.tournee.id));
     final optimizer = ref.watch(optimizationServiceProvider);
-    // Bouton grisé tant que `optimiseeLe != null` : la tournée est déjà
-    // optimisée et rien n'a changé depuis. Toute modif structurelle
+    // Bouton grisÃ© tant que `optimiseeLe != null` : la tournÃ©e est dÃ©jÃ 
+    // optimisÃ©e et rien n'a changÃ© depuis. Toute modif structurelle
     // (add/edit/delete arret, point de depart change) appelle
     // `invalidateOptimization` qui remet `optimiseeLe = null` et
-    // ré-active le bouton.
+    // rÃ©-active le bouton.
     final dejaOptimisee = widget.tournee.optimiseeLe != null;
 
     return Scaffold(
@@ -67,7 +67,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             tooltip: optimizer == null
                 ? 'Configure ta cle ORS dans les Parametres'
                 : dejaOptimisee
-                    ? 'Tournee deja optimisee — modifie un arret pour relancer'
+                    ? 'Tournee deja optimisee â€” modifie un arret pour relancer'
                     : 'Optimiser la tournee',
             onPressed: (_optimizing || dejaOptimisee)
                 ? null
@@ -176,7 +176,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       await ref.read(tourneesRepositoryProvider).delete(widget.tournee.id);
       if (!mounted) return;
       // Le HomeScreen va detecter qu'il n'y a plus de tournee du jour
-      // et basculer sur l'empty state — pas besoin de pop manuellement.
+      // et basculer sur l'empty state â€” pas besoin de pop manuellement.
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,7 +221,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.emerald,
-              foregroundColor: AppColors.paper,
+              foregroundColor: context.palette.paper,
             ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Tout livrer'),
@@ -469,7 +469,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       final dur = _formatDuration(result.totalDurationSeconds);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tournee optimisee : $km km · $dur'),
+          content: Text('Tournee optimisee : $km km Â· $dur'),
           backgroundColor: AppColors.emerald,
         ),
       );
@@ -598,6 +598,7 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final hasQuery = _query.trim().isNotEmpty;
     final hasStatutFilter = _statutFilter != 'tout';
     var filtered = widget.stops;
@@ -683,18 +684,18 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
                     Icons.my_location,
                     size: 14,
                     color: _sortByDistance
-                        ? AppColors.ink
-                        : AppColors.textMute,
+                        ? p.ink
+                        : p.textMute,
                   ),
                   selectedColor: AppColors.lime,
-                  backgroundColor: AppColors.paper,
+                  backgroundColor: p.paper,
                   side: BorderSide(
                     color: _sortByDistance
                         ? AppColors.lime
-                        : AppColors.inkLine,
+                        : p.inkLine,
                   ),
                   labelStyle: TextStyle(
-                    color: AppColors.ink,
+                    color: p.ink,
                     fontWeight: _sortByDistance
                         ? FontWeight.w700
                         : FontWeight.w500,
@@ -735,7 +736,7 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
                 style: appMonoStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textMute,
+                  color: p.textMute,
                 ),
               ),
             ),
@@ -746,14 +747,14 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.x22),
             decoration: BoxDecoration(
-              color: AppColors.paper,
+              color: p.paper,
               borderRadius: BorderRadius.circular(AppRadius.r18),
-              border: Border.all(color: AppColors.divider),
+              border: Border.all(color: p.divider),
             ),
-            child: const Text(
+            child: Text(
               'Aucun arret ne correspond.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textMute),
+              style: TextStyle(color: p.textMute),
             ),
           )
         else
@@ -791,15 +792,15 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
   static String _normalize(String s) {
     final lower = s.toLowerCase();
     const map = {
-      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
-      'ç': 'c',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
-      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
-      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
-      'ÿ': 'y', 'ý': 'y',
-      'ñ': 'n',
-      'œ': 'oe', 'æ': 'ae',
+      'Ã ': 'a', 'Ã¢': 'a', 'Ã¤': 'a', 'Ã¡': 'a', 'Ã£': 'a',
+      'Ã§': 'c',
+      'Ã¨': 'e', 'Ã©': 'e', 'Ãª': 'e', 'Ã«': 'e',
+      'Ã®': 'i', 'Ã¯': 'i', 'Ã­': 'i', 'Ã¬': 'i',
+      'Ã´': 'o', 'Ã¶': 'o', 'Ã³': 'o', 'Ãµ': 'o',
+      'Ã¹': 'u', 'Ã»': 'u', 'Ã¼': 'u', 'Ãº': 'u',
+      'Ã¿': 'y', 'Ã½': 'y',
+      'Ã±': 'n',
+      'Å“': 'oe', 'Ã¦': 'ae',
     };
     final buf = StringBuffer();
     for (final ch in lower.split('')) {
@@ -828,18 +829,19 @@ class _StatutFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final selected = value == groupValue;
     return ChoiceChip(
       label: Text('$label ($count)'),
       selected: selected,
       onSelected: (_) => onSelected(value),
       selectedColor: AppColors.lime,
-      backgroundColor: AppColors.paper,
+      backgroundColor: p.paper,
       side: BorderSide(
-        color: selected ? AppColors.lime : AppColors.inkLine,
+        color: selected ? AppColors.lime : p.inkLine,
       ),
       labelStyle: TextStyle(
-        color: AppColors.ink,
+        color: p.ink,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
         fontSize: 12,
       ),
@@ -859,6 +861,7 @@ class _AutresTourneesDuJourBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     final all = ref.watch(tourneesDuJourProvider);
     final autres = all.where((t) => t.id != currentTourneeId).toList();
     if (autres.isEmpty) return const SizedBox.shrink();
@@ -866,7 +869,7 @@ class _AutresTourneesDuJourBanner extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.x10),
       child: Material(
-        color: AppColors.creamSoft,
+        color: p.creamSoft,
         borderRadius: BorderRadius.circular(AppRadius.r10),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.r10),
@@ -878,9 +881,9 @@ class _AutresTourneesDuJourBanner extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.swap_horiz,
-                  color: AppColors.ink,
+                  color: p.ink,
                   size: 18,
                 ),
                 const SizedBox(width: AppSpacing.x8),
@@ -889,16 +892,16 @@ class _AutresTourneesDuJourBanner extends ConsumerWidget {
                     autres.length == 1
                         ? '1 autre tournee aujourd\'hui'
                         : '${autres.length} autres tournees aujourd\'hui',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.ink,
+                      color: p.ink,
                     ),
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.chevron_right,
-                  color: AppColors.textMute,
+                  color: p.textMute,
                   size: 18,
                 ),
               ],
@@ -913,9 +916,10 @@ class _AutresTourneesDuJourBanner extends ConsumerWidget {
     BuildContext context,
     List<Tournee> autres,
   ) async {
+    final p = context.palette;
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.cream,
+      backgroundColor: p.cream,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.r22),
@@ -939,23 +943,23 @@ class _AutresTourneesDuJourBanner extends ConsumerWidget {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: AppSpacing.x14),
                   decoration: BoxDecoration(
-                    color: AppColors.inkLine,
+                    color: p.inkLine,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              const Text(
+              Text(
                 'Autres tournees du jour',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
+                  color: p.ink,
                 ),
               ),
               const SizedBox(height: AppSpacing.x10),
               for (final t in autres) ...[
                 Material(
-                  color: AppColors.paper,
+                  color: p.paper,
                   borderRadius: BorderRadius.circular(AppRadius.r12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(AppRadius.r12),
@@ -994,9 +998,9 @@ class _AutresTourneesDuJourBanner extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.chevron_right,
-                            color: AppColors.textMute,
+                            color: p.textMute,
                           ),
                         ],
                       ),
@@ -1035,6 +1039,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final dateLabel = DateFormat('EEEE d MMMM', 'fr')
         .format(tournee.date)
         .toUpperCase();
@@ -1046,17 +1051,17 @@ class _Header extends StatelessWidget {
           style: appMonoStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: AppColors.textMute,
+            color: p.textMute,
             letterSpacing: 0.6,
           ),
         ),
         const SizedBox(height: AppSpacing.x6),
         Text(
           tournee.nom,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w800,
-            color: AppColors.ink,
+            color: p.ink,
             letterSpacing: -0.5,
             height: 1.1,
           ),
@@ -1064,9 +1069,9 @@ class _Header extends StatelessWidget {
         const SizedBox(height: AppSpacing.x4),
         Text(
           'Depart : ${tournee.pointDepartLabel}',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: AppColors.textMute,
+            color: p.textMute,
             height: 1.4,
           ),
           maxLines: 2,
@@ -1092,6 +1097,7 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final hasDistance = distanceMeters != null && distanceMeters! > 0;
     final hasDuration = durationSeconds != null && durationSeconds! > 0;
 
@@ -1101,7 +1107,7 @@ class _StatRow extends StatelessWidget {
         vertical: AppSpacing.x14,
       ),
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(AppRadius.r18),
       ),
       child: Row(
@@ -1114,13 +1120,13 @@ class _StatRow extends StatelessWidget {
             label: 'Distance',
             value: hasDistance
                 ? (distanceMeters! / 1000).toStringAsFixed(1)
-                : '—',
+                : 'â€”',
             unit: hasDistance ? 'km' : null,
           ),
           const _StatDivider(),
           _StatTile(
             label: 'Duree',
-            value: hasDuration ? _formatDuration(durationSeconds!) : '—',
+            value: hasDuration ? _formatDuration(durationSeconds!) : 'â€”',
           ),
         ],
       ),
@@ -1133,7 +1139,7 @@ class _StatDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Container(width: 1, height: 28, color: AppColors.divider);
+      Container(width: 1, height: 28, color: context.palette.divider);
 }
 
 class _StatTile extends StatelessWidget {
@@ -1145,6 +1151,7 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x6),
@@ -1156,7 +1163,7 @@ class _StatTile extends StatelessWidget {
                 style: appMonoStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.ink,
+                  color: p.ink,
                   letterSpacing: -0.5,
                 ),
                 children: [
@@ -1164,9 +1171,9 @@ class _StatTile extends StatelessWidget {
                   if (unit != null)
                     TextSpan(
                       text: ' $unit',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textMute,
+                        color: p.textMute,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1176,9 +1183,9 @@ class _StatTile extends StatelessWidget {
             const SizedBox(height: AppSpacing.x6),
             Text(
               label.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: AppColors.textMute,
+                color: p.textMute,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.6,
               ),
@@ -1197,13 +1204,14 @@ class _OptimisedBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final timeLabel = tournee.optimiseeLe == null
         ? null
         : DateFormat('HH:mm', 'fr').format(tournee.optimiseeLe!);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x12),
       decoration: BoxDecoration(
-        color: AppColors.ink,
+        color: p.ink,
         borderRadius: BorderRadius.circular(AppRadius.r14),
       ),
       child: Row(
@@ -1216,17 +1224,17 @@ class _OptimisedBanner extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.r10),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.bolt, color: AppColors.ink, size: 18),
+            child: Icon(Icons.bolt, color: p.ink, size: 18),
           ),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Itineraire optimise',
                   style: TextStyle(
-                    color: AppColors.paper,
+                    color: p.paper,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
@@ -1235,7 +1243,7 @@ class _OptimisedBanner extends StatelessWidget {
                   Text(
                     'Calcule a $timeLabel',
                     style: TextStyle(
-                      color: AppColors.paper.withValues(alpha: 0.65),
+                      color: p.paper.withValues(alpha: 0.65),
                       fontSize: 11.5,
                     ),
                   ),
@@ -1282,6 +1290,7 @@ class _ProchainArretCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     Stop? candidat;
     for (final s in stops) {
       if (s.statutLivraison == 'a_livrer' &&
@@ -1321,7 +1330,7 @@ class _ProchainArretCard extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.ink,
+        color: p.ink,
         borderRadius: BorderRadius.circular(AppRadius.r18),
         boxShadow: AppShadows.card,
       ),
@@ -1345,7 +1354,7 @@ class _ProchainArretCard extends ConsumerWidget {
                   style: appMonoStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.ink,
+                    color: p.ink,
                     letterSpacing: 0.6,
                   ),
                 ),
@@ -1377,10 +1386,10 @@ class _ProchainArretCard extends ConsumerWidget {
           if (hasNom)
             Text(
               nom,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.paper,
+                color: p.paper,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1390,7 +1399,7 @@ class _ProchainArretCard extends ConsumerWidget {
             prochain.adresseNormalisee ?? prochain.adresseBrute,
             style: TextStyle(
               fontSize: hasNom ? 13 : 16,
-              color: AppColors.paper.withValues(alpha: hasNom ? 0.7 : 1),
+              color: p.paper.withValues(alpha: hasNom ? 0.7 : 1),
               fontWeight: hasNom ? FontWeight.w500 : FontWeight.w700,
             ),
             maxLines: 2,
@@ -1402,8 +1411,8 @@ class _ProchainArretCard extends ConsumerWidget {
               Expanded(
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.paper,
-                    foregroundColor: AppColors.ink,
+                    backgroundColor: p.paper,
+                    foregroundColor: p.ink,
                     minimumSize: const Size(0, 44),
                   ),
                   onPressed: () => NavigationService.launchGoogleMaps(
@@ -1421,8 +1430,8 @@ class _ProchainArretCard extends ConsumerWidget {
               Expanded(
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.paper,
-                    foregroundColor: AppColors.ink,
+                    backgroundColor: p.paper,
+                    foregroundColor: p.ink,
                     minimumSize: const Size(0, 44),
                   ),
                   onPressed: () => NavigationService.launchWaze(
@@ -1445,7 +1454,7 @@ class _ProchainArretCard extends ConsumerWidget {
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.emerald,
-              foregroundColor: AppColors.paper,
+              foregroundColor: p.paper,
               minimumSize: const Size(double.infinity, 48),
             ),
             onPressed: () => _markLivreFromCard(context, ref, prochain),
@@ -1538,6 +1547,7 @@ class _Fabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final isOptimisee = tournee.statut == 'optimisee';
     final isEnCours = tournee.statut == 'en_cours';
     return Column(
@@ -1548,7 +1558,7 @@ class _Fabs extends StatelessWidget {
           FloatingActionButton.extended(
             heroTag: 'fab-demarrer',
             backgroundColor: AppColors.lime,
-            foregroundColor: AppColors.ink,
+            foregroundColor: p.ink,
             onPressed: onDemarrer,
             icon: const Icon(Icons.play_arrow_rounded),
             label: const Text(
@@ -1560,7 +1570,7 @@ class _Fabs extends StatelessWidget {
           FloatingActionButton.extended(
             heroTag: 'fab-arreter',
             backgroundColor: AppColors.amber,
-            foregroundColor: AppColors.ink,
+            foregroundColor: p.ink,
             onPressed: onArreter,
             icon: const Icon(Icons.pause_rounded),
             label: const Text(
@@ -1599,6 +1609,7 @@ class _ProgressBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final livres =
         stops.where((s) => s.statutLivraison == 'livre').length;
     final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
@@ -1609,11 +1620,11 @@ class _ProgressBanner extends StatelessWidget {
         .fold<int>(0, (sum, s) => sum + s.nbColis);
     final colisTotal = stops.fold<int>(0, (sum, s) => sum + s.nbColis);
 
-    final bg = tourneeTerminee ? AppColors.emerald : AppColors.paper;
-    final fg = tourneeTerminee ? AppColors.paper : AppColors.ink;
+    final bg = tourneeTerminee ? AppColors.emerald : p.paper;
+    final fg = tourneeTerminee ? p.paper : p.ink;
     final mute = tourneeTerminee
-        ? AppColors.paper.withValues(alpha: 0.75)
-        : AppColors.textMute;
+        ? p.paper.withValues(alpha: 0.75)
+        : p.textMute;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
@@ -1622,7 +1633,7 @@ class _ProgressBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.r14),
         border: tourneeTerminee
             ? null
-            : Border.all(color: AppColors.divider),
+            : Border.all(color: p.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1701,8 +1712,8 @@ class _ProgressBanner extends StatelessWidget {
                       flex: restants,
                       child: Container(
                         color: tourneeTerminee
-                            ? AppColors.paper.withValues(alpha: 0.2)
-                            : AppColors.creamSoft,
+                            ? p.paper.withValues(alpha: 0.2)
+                            : p.creamSoft,
                       ),
                     ),
                 ],
@@ -1887,13 +1898,14 @@ class _StopsListState extends ConsumerState<_StopsList> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     if (!widget.reorderable) {
       // Mode lecture seule (typiquement pendant une recherche). La liste
       // est un simple ListView ; chaque _StopRow recoit `showDragHandle:
       // false` pour cacher la poignee qui n'a pas de sens ici.
       return Container(
         decoration: BoxDecoration(
-          color: AppColors.paper,
+          color: p.paper,
           borderRadius: BorderRadius.circular(AppRadius.r18),
         ),
         clipBehavior: Clip.antiAlias,
@@ -1914,7 +1926,7 @@ class _StopsListState extends ConsumerState<_StopsList> {
     }
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(AppRadius.r18),
       ),
       clipBehavior: Clip.antiAlias,
@@ -2014,7 +2026,8 @@ class _StopRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tags = _buildTags(stop);
+    final p = context.palette;
+    final tags = _buildTags(stop, p);
     final isLivre = stop.statutLivraison == 'livre';
     final isEchec = stop.statutLivraison == 'echec';
     return Dismissible(
@@ -2055,10 +2068,10 @@ class _StopRow extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: isLivre ? AppColors.textMute : AppColors.ink,
+                        color: isLivre ? p.textMute : p.ink,
                         decoration:
                             isLivre ? TextDecoration.lineThrough : null,
-                        decorationColor: AppColors.textMute,
+                        decorationColor: p.textMute,
                         height: 1.3,
                       ),
                       maxLines: 2,
@@ -2070,7 +2083,7 @@ class _StopRow extends ConsumerWidget {
                         _secondaryLine(stop)!,
                         style: appMonoStyle(
                           fontSize: 11,
-                          color: AppColors.textMute,
+                          color: p.textMute,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -2101,14 +2114,14 @@ class _StopRow extends ConsumerWidget {
               if (showDragHandle)
                 ReorderableDragStartListener(
                   index: dragIndex,
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.x6,
                       vertical: AppSpacing.x10,
                     ),
                     child: Icon(
                       Icons.drag_handle,
-                      color: AppColors.textFaint,
+                      color: p.textFaint,
                       size: 20,
                     ),
                   ),
@@ -2247,22 +2260,22 @@ class _StopRow extends ConsumerWidget {
     return null;
   }
 
-  List<Widget> _buildTags(Stop s) {
+  List<Widget> _buildTags(Stop s, AppPalette p) {
     final out = <Widget>[];
     final priority = _priorityTag(s.priorite);
     if (priority != null) out.add(priority);
     if (s.nbColis > 1) {
       out.add(_Tag(
         label: '${s.nbColis} colis',
-        bg: AppColors.creamSoft,
-        fg: AppColors.ink,
+        bg: p.creamSoft,
+        fg: p.ink,
       ));
     }
     if (s.fenetreDebut != null || s.fenetreFin != null) {
       final start = s.fenetreDebut ?? '--:--';
       final end = s.fenetreFin ?? '--:--';
       out.add(_Tag(
-        label: '$start → $end',
+        label: '$start â†’ $end',
         bg: const Color(0x33F2A341),
         fg: const Color(0xFF7A4F0E),
         mono: true,
@@ -2306,6 +2319,7 @@ class _IndexChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     if (statut == 'livre') {
       return Container(
         width: 36,
@@ -2315,7 +2329,7 @@ class _IndexChip extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
-        child: const Icon(Icons.check, color: AppColors.paper, size: 20),
+        child: Icon(Icons.check, color: p.paper, size: 20),
       );
     }
     if (statut == 'echec') {
@@ -2327,7 +2341,7 @@ class _IndexChip extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
-        child: const Icon(Icons.close, color: AppColors.paper, size: 20),
+        child: Icon(Icons.close, color: p.paper, size: 20),
       );
     }
     final isActive =
@@ -2336,8 +2350,8 @@ class _IndexChip extends StatelessWidget {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.ink : AppColors.paper,
-        border: Border.all(color: AppColors.ink, width: 1.5),
+        color: isActive ? p.ink : p.paper,
+        border: Border.all(color: p.ink, width: 1.5),
         borderRadius: BorderRadius.circular(AppRadius.r10),
       ),
       alignment: Alignment.center,
@@ -2346,7 +2360,7 @@ class _IndexChip extends StatelessWidget {
         style: appMonoStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
-          color: isActive ? AppColors.lime : AppColors.ink,
+          color: isActive ? AppColors.lime : p.ink,
         ),
       ),
     );
