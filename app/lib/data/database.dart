@@ -1,141 +1,24 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'tables/geocode_cache.dart';
+import 'tables/parametres.dart';
+import 'tables/saved_destinations.dart';
+import 'tables/sheets.dart';
+import 'tables/stops.dart';
+import 'tables/tournees.dart';
+
+// Re-export des tables pour que les modules historiques qui faisaient
+// `import 'database.dart'` puissent continuer a utiliser
+// `TourneesCompanion`, `Stop`, etc. sans changer leurs imports.
+export 'tables/geocode_cache.dart';
+export 'tables/parametres.dart';
+export 'tables/saved_destinations.dart';
+export 'tables/sheets.dart';
+export 'tables/stops.dart';
+export 'tables/tournees.dart';
+
 part 'database.g.dart';
-
-class Tournees extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get nom => text().withLength(min: 1, max: 100)();
-  DateTimeColumn get date => dateTime()();
-  RealColumn get pointDepartLat => real()();
-  RealColumn get pointDepartLng => real()();
-  TextColumn get pointDepartLabel => text()();
-  IntColumn get vehiculeCapaciteColis =>
-      integer().withDefault(const Constant(0))();
-  TextColumn get statut => text().withDefault(const Constant('brouillon'))();
-  IntColumn get distanceTotaleM => integer().nullable()();
-  IntColumn get dureeTotaleS => integer().nullable()();
-  DateTimeColumn get optimiseeLe => dateTime().nullable()();
-  /// Trace de l'itineraire optimise au format GeoJSON LineString (juste
-  /// la liste des coordonnees [lng, lat] encodee en JSON string), pour
-  /// affichage en polyline sur la carte. Nullable : pas tous les
-  /// fournisseurs d'optimisation renvoient une trace.
-  TextColumn get traceGeojson => text().nullable()();
-  DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
-}
-
-class Stops extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get tourneeId => integer()
-      .references(Tournees, #id, onDelete: KeyAction.cascade)();
-  TextColumn get adresseBrute => text()();
-  TextColumn get adresseNormalisee => text().nullable()();
-  RealColumn get lat => real().nullable()();
-  RealColumn get lng => real().nullable()();
-  IntColumn get nbColis => integer().withDefault(const Constant(1))();
-  TextColumn get priorite => text().withDefault(const Constant('flexible'))();
-  TextColumn get fenetreDebut => text().nullable()();
-  TextColumn get fenetreFin => text().nullable()();
-  IntColumn get dureeArretMin => integer().withDefault(const Constant(3))();
-  TextColumn get notes => text().nullable()();
-  TextColumn get nomClient => text().nullable()();
-  TextColumn get statutLivraison =>
-      text().withDefault(const Constant('a_livrer'))();
-  /// Raison de l'echec quand `statutLivraison == 'echec'` :
-  /// 'absent' / 'refuse' / 'adresse_fausse' / 'autre'. Null sinon.
-  TextColumn get raisonEchec => text().nullable()();
-  /// Position GPS au moment du "Marquer livre" / "Marquer echec" --
-  /// sert de preuve de passage en cas de litige client.
-  /// Null si la permission GPS etait refusee ou l'app etait offline.
-  RealColumn get livreLat => real().nullable()();
-  RealColumn get livreLng => real().nullable()();
-  /// Timestamp de la validation (livre OU echec). Sert aussi a calculer
-  /// le temps passe sur la tournee a posteriori.
-  DateTimeColumn get livreLe => dateTime().nullable()();
-  IntColumn get ordreOptimise => integer().nullable()();
-  /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
-  /// priorite egale (obligatoire_premier ou obligatoire_dernier).
-  /// 1 = livre en premier de son groupe, 2 = en deuxieme, etc.
-  /// Null = pas applicable (priorite flexible / eviter).
-  IntColumn get ordrePriorite => integer().nullable()();
-  DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
-}
-
-class Parametres extends Table {
-  TextColumn get cle => text()();
-  TextColumn get valeur => text()();
-
-  @override
-  Set<Column> get primaryKey => {cle};
-}
-
-/// Une feuille d'expediteur attachee a un arret.
-///
-/// Cas reel : un livreur peut deposer au meme point des colis venant
-/// d'expediteurs differents (Chronopost + La Poste + Colissimo). Chaque
-/// expediteur a sa propre ref, son nb de colis, son poids, son contact.
-/// Le design `screen-delivery.jsx` montre N feuilles empilees sous une
-/// meme adresse client.
-class Sheets extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get stopId =>
-      integer().references(Stops, #id, onDelete: KeyAction.cascade)();
-  TextColumn get expediteur => text().withLength(min: 1, max: 100)();
-  TextColumn get refCode => text().nullable()();
-  TextColumn get nomDestinataire => text().nullable()();
-  TextColumn get telephone => text().nullable()();
-  IntColumn get nbColis => integer().withDefault(const Constant(1))();
-  RealColumn get poidsKg => real().nullable()();
-  TextColumn get statut => text().withDefault(const Constant('a_livrer'))();
-  TextColumn get raisonEchec => text().nullable()();
-  DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
-}
-
-/// Cache local des reponses Nominatim (et plus tard d'autres APIs).
-/// Cle = la requete normalisee (ex: "14 rue foo paris").
-/// `expire_le` permet d'invalider apres N jours sans avoir a tout
-/// purger.
-class GeocodeCache extends Table {
-  TextColumn get query => text()();
-  TextColumn get responseJson => text()();
-  DateTimeColumn get expireLe => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {query};
-}
-
-/// Carnet d'adresses local : chaque arret valide ajoute (ou rafraichit)
-/// une entree ici. Sert a pre-suggerer les adresses connues quand le
-/// livreur retape le nom d'un client deja livre.
-///
-/// 100 % local au telephone (dans la meme base SQLite que le reste).
-/// Cle d'unicite logique : `nomClient` + lat/lng arrondis (pour
-/// mutualiser les variantes orthographiques de l'adresse postale).
-class SavedDestinations extends Table {
-  IntColumn get id => integer().autoIncrement()();
-
-  /// Nom du client / enseigne (ex: "Garage Aguilar"). Optionnel : on
-  /// accepte aussi une entree adresse seule.
-  TextColumn get nomClient => text().nullable()();
-
-  /// Libelle d'adresse complet pour affichage (ex: "51 Avenue
-  /// d'Orleans, 28000 Chartres").
-  TextColumn get adresseDisplay => text()();
-
-  RealColumn get lat => real()();
-  RealColumn get lng => real()();
-
-  // Composantes optionnelles (pour matcher l'autocomplete sur la rue
-  // ou la ville isolement).
-  TextColumn get rue => text().nullable()();
-  TextColumn get codePostal => text().nullable()();
-  TextColumn get ville => text().nullable()();
-
-  IntColumn get useCount => integer().withDefault(const Constant(1))();
-  DateTimeColumn get lastUsedAt =>
-      dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
-}
 
 @DriftDatabase(
   tables: [Tournees, Stops, Parametres, Sheets, GeocodeCache, SavedDestinations],
