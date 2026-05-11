@@ -3363,6 +3363,17 @@ class $SavedDestinationsTable extends SavedDestinations
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _colorTagMeta = const VerificationMeta(
+    'colorTag',
+  );
+  @override
+  late final GeneratedColumn<String> colorTag = GeneratedColumn<String>(
+    'color_tag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3377,6 +3388,7 @@ class $SavedDestinationsTable extends SavedDestinations
     lastUsedAt,
     creeLe,
     isFavori,
+    colorTag,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3471,6 +3483,12 @@ class $SavedDestinationsTable extends SavedDestinations
         isFavori.isAcceptableOrUnknown(data['is_favori']!, _isFavoriMeta),
       );
     }
+    if (data.containsKey('color_tag')) {
+      context.handle(
+        _colorTagMeta,
+        colorTag.isAcceptableOrUnknown(data['color_tag']!, _colorTagMeta),
+      );
+    }
     return context;
   }
 
@@ -3528,6 +3546,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.bool,
         data['${effectivePrefix}is_favori'],
       )!,
+      colorTag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_tag'],
+      ),
     );
   }
 
@@ -3562,6 +3584,13 @@ class SavedDestination extends DataClass
   /// liste, peu importe le useCount ou lastUsedAt. Sert a epingler
   /// les clients critiques / fragiles / a soigner.
   final bool isFavori;
+
+  /// Couleur custom choisie pour repérer ce client visuellement (le
+  /// fond de la pastille bookmark dans la liste prend cette couleur).
+  /// Format : nom de la couleur dans la palette ('lime', 'emerald',
+  /// 'red', 'amber', 'cream', 'ink'). Null = couleur par defaut
+  /// (lime ou amber selon isFavori).
+  final String? colorTag;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -3575,6 +3604,7 @@ class SavedDestination extends DataClass
     required this.lastUsedAt,
     required this.creeLe,
     required this.isFavori,
+    this.colorTag,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3599,6 +3629,9 @@ class SavedDestination extends DataClass
     map['last_used_at'] = Variable<DateTime>(lastUsedAt);
     map['cree_le'] = Variable<DateTime>(creeLe);
     map['is_favori'] = Variable<bool>(isFavori);
+    if (!nullToAbsent || colorTag != null) {
+      map['color_tag'] = Variable<String>(colorTag);
+    }
     return map;
   }
 
@@ -3622,6 +3655,9 @@ class SavedDestination extends DataClass
       lastUsedAt: Value(lastUsedAt),
       creeLe: Value(creeLe),
       isFavori: Value(isFavori),
+      colorTag: colorTag == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorTag),
     );
   }
 
@@ -3643,6 +3679,7 @@ class SavedDestination extends DataClass
       lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       isFavori: serializer.fromJson<bool>(json['isFavori']),
+      colorTag: serializer.fromJson<String?>(json['colorTag']),
     );
   }
   @override
@@ -3661,6 +3698,7 @@ class SavedDestination extends DataClass
       'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'isFavori': serializer.toJson<bool>(isFavori),
+      'colorTag': serializer.toJson<String?>(colorTag),
     };
   }
 
@@ -3677,6 +3715,7 @@ class SavedDestination extends DataClass
     DateTime? lastUsedAt,
     DateTime? creeLe,
     bool? isFavori,
+    Value<String?> colorTag = const Value.absent(),
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -3690,6 +3729,7 @@ class SavedDestination extends DataClass
     lastUsedAt: lastUsedAt ?? this.lastUsedAt,
     creeLe: creeLe ?? this.creeLe,
     isFavori: isFavori ?? this.isFavori,
+    colorTag: colorTag.present ? colorTag.value : this.colorTag,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -3711,6 +3751,7 @@ class SavedDestination extends DataClass
           : this.lastUsedAt,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
       isFavori: data.isFavori.present ? data.isFavori.value : this.isFavori,
+      colorTag: data.colorTag.present ? data.colorTag.value : this.colorTag,
     );
   }
 
@@ -3728,7 +3769,8 @@ class SavedDestination extends DataClass
           ..write('useCount: $useCount, ')
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('creeLe: $creeLe, ')
-          ..write('isFavori: $isFavori')
+          ..write('isFavori: $isFavori, ')
+          ..write('colorTag: $colorTag')
           ..write(')'))
         .toString();
   }
@@ -3747,6 +3789,7 @@ class SavedDestination extends DataClass
     lastUsedAt,
     creeLe,
     isFavori,
+    colorTag,
   );
   @override
   bool operator ==(Object other) =>
@@ -3763,7 +3806,8 @@ class SavedDestination extends DataClass
           other.useCount == this.useCount &&
           other.lastUsedAt == this.lastUsedAt &&
           other.creeLe == this.creeLe &&
-          other.isFavori == this.isFavori);
+          other.isFavori == this.isFavori &&
+          other.colorTag == this.colorTag);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -3779,6 +3823,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<DateTime> lastUsedAt;
   final Value<DateTime> creeLe;
   final Value<bool> isFavori;
+  final Value<String?> colorTag;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -3792,6 +3837,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.lastUsedAt = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.isFavori = const Value.absent(),
+    this.colorTag = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -3806,6 +3852,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.lastUsedAt = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.isFavori = const Value.absent(),
+    this.colorTag = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -3822,6 +3869,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<DateTime>? lastUsedAt,
     Expression<DateTime>? creeLe,
     Expression<bool>? isFavori,
+    Expression<String>? colorTag,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3836,6 +3884,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (lastUsedAt != null) 'last_used_at': lastUsedAt,
       if (creeLe != null) 'cree_le': creeLe,
       if (isFavori != null) 'is_favori': isFavori,
+      if (colorTag != null) 'color_tag': colorTag,
     });
   }
 
@@ -3852,6 +3901,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<DateTime>? lastUsedAt,
     Value<DateTime>? creeLe,
     Value<bool>? isFavori,
+    Value<String?>? colorTag,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -3866,6 +3916,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
       creeLe: creeLe ?? this.creeLe,
       isFavori: isFavori ?? this.isFavori,
+      colorTag: colorTag ?? this.colorTag,
     );
   }
 
@@ -3908,6 +3959,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (isFavori.present) {
       map['is_favori'] = Variable<bool>(isFavori.value);
     }
+    if (colorTag.present) {
+      map['color_tag'] = Variable<String>(colorTag.value);
+    }
     return map;
   }
 
@@ -3925,7 +3979,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('useCount: $useCount, ')
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('creeLe: $creeLe, ')
-          ..write('isFavori: $isFavori')
+          ..write('isFavori: $isFavori, ')
+          ..write('colorTag: $colorTag')
           ..write(')'))
         .toString();
   }
@@ -5923,6 +5978,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<DateTime> lastUsedAt,
       Value<DateTime> creeLe,
       Value<bool> isFavori,
+      Value<String?> colorTag,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -5938,6 +5994,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<DateTime> lastUsedAt,
       Value<DateTime> creeLe,
       Value<bool> isFavori,
+      Value<String?> colorTag,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -6006,6 +6063,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<bool> get isFavori => $composableBuilder(
     column: $table.isFavori,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorTag => $composableBuilder(
+    column: $table.colorTag,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6078,6 +6140,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.isFavori,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get colorTag => $composableBuilder(
+    column: $table.colorTag,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -6130,6 +6197,9 @@ class $$SavedDestinationsTableAnnotationComposer
 
   GeneratedColumn<bool> get isFavori =>
       $composableBuilder(column: $table.isFavori, builder: (column) => column);
+
+  GeneratedColumn<String> get colorTag =>
+      $composableBuilder(column: $table.colorTag, builder: (column) => column);
 }
 
 class $$SavedDestinationsTableTableManager
@@ -6184,6 +6254,7 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> lastUsedAt = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<bool> isFavori = const Value.absent(),
+                Value<String?> colorTag = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -6197,6 +6268,7 @@ class $$SavedDestinationsTableTableManager
                 lastUsedAt: lastUsedAt,
                 creeLe: creeLe,
                 isFavori: isFavori,
+                colorTag: colorTag,
               ),
           createCompanionCallback:
               ({
@@ -6212,6 +6284,7 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> lastUsedAt = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<bool> isFavori = const Value.absent(),
+                Value<String?> colorTag = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -6225,6 +6298,7 @@ class $$SavedDestinationsTableTableManager
                 lastUsedAt: lastUsedAt,
                 creeLe: creeLe,
                 isFavori: isFavori,
+                colorTag: colorTag,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

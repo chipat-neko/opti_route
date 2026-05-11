@@ -38,4 +38,11 @@ class SavedDestinations extends Table {
   /// les clients critiques / fragiles / a soigner.
   BoolColumn get isFavori =>
       boolean().withDefault(const Constant(false))();
+
+  /// Couleur custom choisie pour repérer ce client visuellement (le
+  /// fond de la pastille bookmark dans la liste prend cette couleur).
+  /// Format : nom de la couleur dans la palette ('lime', 'emerald',
+  /// 'red', 'amber', 'cream', 'ink'). Null = couleur par defaut
+  /// (lime ou amber selon isFavori).
+  TextColumn get colorTag => text().nullable()();
 }

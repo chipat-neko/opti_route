@@ -74,6 +74,24 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
             initialSuggestion: _address,
             onSuggestionSelected: (s) => setState(() => _address = s),
           ),
+          const SizedBox(height: AppSpacing.x18),
+          // Picker de couleur pour reperer visuellement le client
+          // dans la liste du carnet.
+          Text(
+            'Couleur (optionnel)',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          _ColorPicker(
+            currentTag: widget.entry.colorTag,
+            onPicked: (tag) async {
+              await ref
+                  .read(savedDestinationsRepositoryProvider)
+                  .setColorTag(widget.entry.id, tag);
+              if (!context.mounted) return;
+              setState(() {});
+            },
+          ),
           const SizedBox(height: AppSpacing.x28),
           FilledButton.icon(
             onPressed: _saving ? null : _save,
@@ -303,6 +321,75 @@ class _Metric extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Picker de couleur en cercle pour le `colorTag` du client. Tap sur
+/// "Aucune" reset au default. Le cercle selectionne a un anneau ink
+/// autour.
+class _ColorPicker extends StatelessWidget {
+  const _ColorPicker({required this.currentTag, required this.onPicked});
+
+  final String? currentTag;
+  final ValueChanged<String?> onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.x8,
+      runSpacing: AppSpacing.x8,
+      children: [
+        // Bouton "Aucune" : cercle rayé cream
+        _ColorDot(
+          color: AppColors.creamSoft,
+          selected: currentTag == null,
+          label: 'Aucune',
+          onTap: () => onPicked(null),
+        ),
+        for (final (tag, color) in colorTagOptions)
+          _ColorDot(
+            color: color,
+            selected: currentTag == tag,
+            label: tag,
+            onTap: () => onPicked(tag),
+          ),
+      ],
+    );
+  }
+}
+
+class _ColorDot extends StatelessWidget {
+  const _ColorDot({
+    required this.color,
+    required this.selected,
+    required this.label,
+    required this.onTap,
+  });
+
+  final Color color;
+  final bool selected;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: selected
+              ? Border.all(color: AppColors.ink, width: 3)
+              : Border.all(color: AppColors.inkLine, width: 1),
+        ),
+        child: selected
+            ? const Icon(Icons.check, size: 18, color: AppColors.ink)
+            : null,
+      ),
     );
   }
 }

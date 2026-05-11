@@ -148,6 +148,13 @@ class SavedDestinationsRepository {
     return select.watch();
   }
 
+  /// Met a jour la couleur custom d'une entree (cf colorTag dans la
+  /// table). [tag] peut etre null pour reset a la couleur par defaut.
+  Future<int> setColorTag(int id, String? tag) {
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
+        .write(SavedDestinationsCompanion(colorTag: Value(tag)));
+  }
+
   /// Toggle l'etoile "favori" sur une entree du carnet.
   Future<int> toggleFavori(int id) async {
     final entry = await getById(id);
