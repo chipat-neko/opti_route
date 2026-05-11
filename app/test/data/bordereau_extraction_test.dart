@@ -82,4 +82,25 @@ void main() {
       expect(e.rechercheParNom, 'Carrefour Dreux');
     });
   });
+
+  group('BordereauExtraction.confidence', () {
+    test('defaut : high', () {
+      const e = BordereauExtraction();
+      expect(e.confidence, ExtractionConfidence.high);
+    });
+
+    test('low : remplace high explicitement', () {
+      const e = BordereauExtraction(
+        confidence: ExtractionConfidence.low,
+        rue: 'rue X',
+      );
+      expect(e.confidence, ExtractionConfidence.low);
+    });
+
+    test('none : aucun marqueur trouve', () {
+      const e = BordereauExtraction(confidence: ExtractionConfidence.none);
+      expect(e.confidence, ExtractionConfidence.none);
+      expect(e.hasUsefulData, isFalse);
+    });
+  });
 }
