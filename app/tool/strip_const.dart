@@ -1,10 +1,11 @@
 import 'dart:io';
 
 /// Pour chaque fichier passe en argument, enleve "const " devant chaque
-/// constructeur Widget (`const \w+(`) dont le scope de parentheses
-/// contient une reference `p.X` ou X est une couleur contextuelle.
+/// constructeur Widget commencant par une majuscule, dont le scope de
+/// parentheses contient une reference `p.X` ou X est une couleur
+/// contextuelle.
 ///
-/// Lance : dart run tool/strip_const.dart <fichier.dart> [fichier2.dart ...]
+/// Lance : `dart run tool/strip_const.dart fichier.dart [fichier2.dart ...]`
 void main(List<String> args) {
   const paletteWords = [
     'cream',
@@ -33,8 +34,11 @@ void main(List<String> args) {
       var i = startParen + 1;
       while (i < text.length && depth > 0) {
         final c = text[i];
-        if (c == '(') depth++;
-        else if (c == ')') depth--;
+        if (c == '(') {
+          depth++;
+        } else if (c == ')') {
+          depth--;
+        }
         i++;
       }
       if (depth != 0) continue;
