@@ -33,6 +33,10 @@ class TourAssistantParams {
     this.directionToleranceDeg = 90,
     this.minSpeedForHeadingMs = 1.5,
     this.fenetreEarlyMinutes = 30,
+    this.timeWindowEnabled = true,
+    this.timeWindowUrgencyMinutes = 30,
+    this.nearestAfterFailEnabled = true,
+    this.failRecentMinutes = 5,
   });
 
   /// Master switch : si false, aucune suggestion n'est produite.
@@ -72,4 +76,20 @@ class TourAssistantParams {
   /// au-dela on considere qu'on est trop tot et qu'on peut faire
   /// d'autres arrets en attendant.
   final int fenetreEarlyMinutes;
+
+  /// Activation de la regle TimeWindow (urgence fenetre horaire qui
+  /// se ferme). Par defaut active.
+  final bool timeWindowEnabled;
+
+  /// Combien de minutes avant fenetreFin on considere l'arret comme
+  /// urgent et on propose de le passer en premier. Default 30 min.
+  final int timeWindowUrgencyMinutes;
+
+  /// Activation de la regle NearestAfterFail (proposer le voisin le
+  /// plus proche apres un echec recent). Par defaut active.
+  final bool nearestAfterFailEnabled;
+
+  /// Combien de minutes apres un echec on considere ca comme "recent"
+  /// et on declenche la regle NearestAfterFail. Default 5 min.
+  final int failRecentMinutes;
 }

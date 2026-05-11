@@ -672,7 +672,83 @@ class _AssistantSettingsState extends ConsumerState<_AssistantSettings> {
               onChanged: (v) => repo.setAssistantEnabled(v),
             ),
             if (enabled) const _ProximityRuleSettings(),
+            if (enabled) const _TimeWindowRuleSettings(),
+            if (enabled) const _NearestAfterFailRuleSettings(),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _TimeWindowRuleSettings extends ConsumerWidget {
+  const _TimeWindowRuleSettings();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repo = ref.watch(parametresRepositoryProvider);
+    return StreamBuilder<bool>(
+      stream: repo.watchAssistantTimeWindowEnabled(),
+      builder: (context, snap) {
+        final enabled = snap.data ?? true;
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text(
+            'Urgence fenetre horaire',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          subtitle: const Text(
+            'Si un arret a une fenetre horaire qui se ferme dans <30 min, l\'assistant propose de le passer en 1er pour eviter un echec.',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          value: enabled,
+          activeThumbColor: AppColors.emerald,
+          onChanged: (v) => repo.setAssistantTimeWindowEnabled(v),
+        );
+      },
+    );
+  }
+}
+
+class _NearestAfterFailRuleSettings extends ConsumerWidget {
+  const _NearestAfterFailRuleSettings();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repo = ref.watch(parametresRepositoryProvider);
+    return StreamBuilder<bool>(
+      stream: repo.watchAssistantNearestAfterFailEnabled(),
+      builder: (context, snap) {
+        final enabled = snap.data ?? true;
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text(
+            'Voisin apres echec',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          subtitle: const Text(
+            'Apres un echec recent, l\'assistant propose le client le plus proche de ta position (au lieu de l\'ordre initial), pour rentabiliser le detour.',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          value: enabled,
+          activeThumbColor: AppColors.emerald,
+          onChanged: (v) => repo.setAssistantNearestAfterFailEnabled(v),
         );
       },
     );

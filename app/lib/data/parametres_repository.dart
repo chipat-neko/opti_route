@@ -24,6 +24,9 @@ class ParametresRepository {
   static const _kAssistantProximityEnabled = 'assistant_proximity_enabled';
   static const _kAssistantProximityThresholdM = 'assistant_proximity_threshold_m';
   static const _kAssistantCooldownMin = 'assistant_cooldown_minutes';
+  static const _kAssistantTimeWindowEnabled = 'assistant_timewindow_enabled';
+  static const _kAssistantNearestAfterFailEnabled =
+      'assistant_nearestafterfail_enabled';
   static const _kAssistantAcceptPrefix = 'assistant_accept_';
   static const _kAssistantRefusePrefix = 'assistant_refuse_';
 
@@ -171,6 +174,31 @@ class ParametresRepository {
 
   Future<void> setAssistantProximityEnabled(bool enabled) =>
       _write(_kAssistantProximityEnabled, enabled ? '1' : '0');
+
+  /// Toggle de la regle TimeWindow (urgence fenetre horaire qui se ferme).
+  Future<bool> isAssistantTimeWindowEnabled() async {
+    final v = await _readKey(_kAssistantTimeWindowEnabled);
+    return v != '0';
+  }
+
+  Stream<bool> watchAssistantTimeWindowEnabled() =>
+      _watchKey(_kAssistantTimeWindowEnabled).map((v) => v != '0');
+
+  Future<void> setAssistantTimeWindowEnabled(bool enabled) =>
+      _write(_kAssistantTimeWindowEnabled, enabled ? '1' : '0');
+
+  /// Toggle de la regle NearestAfterFail (proposer le voisin le plus
+  /// proche apres un echec recent).
+  Future<bool> isAssistantNearestAfterFailEnabled() async {
+    final v = await _readKey(_kAssistantNearestAfterFailEnabled);
+    return v != '0';
+  }
+
+  Stream<bool> watchAssistantNearestAfterFailEnabled() =>
+      _watchKey(_kAssistantNearestAfterFailEnabled).map((v) => v != '0');
+
+  Future<void> setAssistantNearestAfterFailEnabled(bool enabled) =>
+      _write(_kAssistantNearestAfterFailEnabled, enabled ? '1' : '0');
 
   /// Rayon en metres pour la regle proximity. Ajuste automatiquement
   /// par AssistantCalibration. Default 300, plage [100, 800].
