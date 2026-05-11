@@ -55,4 +55,33 @@ void main() {
       expect(cout, closeTo(16.575, 0.001));
     });
   });
+
+  group('ParametresRepository - themeMode', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('defaut : system', () async {
+      final m = await repo.getThemeMode();
+      expect(m, 'system');
+    });
+
+    test('set + get round-trip dark', () async {
+      await repo.setThemeMode('dark');
+      expect(await repo.getThemeMode(), 'dark');
+    });
+
+    test('set + get round-trip light', () async {
+      await repo.setThemeMode('light');
+      expect(await repo.getThemeMode(), 'light');
+    });
+  });
 }
