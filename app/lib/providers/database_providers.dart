@@ -97,6 +97,14 @@ final statsProvider =
   return ref.read(statsServiceProvider).compute(since: since);
 });
 
+/// Stats jour par jour sur les [days] derniers jours (aujourd'hui
+/// inclus). Sert au mini bar chart en tete de l'ecran Statistiques.
+final dailyStatsProvider =
+    FutureProvider.family<List<DailyStat>, int>((ref, days) async {
+  ref.watch(tourneesStreamProvider);
+  return ref.read(statsServiceProvider).computeDaily(days: days);
+});
+
 /// Stream des arrets pour une tournee donnee.
 final stopsByTourneeProvider =
     StreamProvider.family<List<Stop>, int>((ref, tourneeId) {

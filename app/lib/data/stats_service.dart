@@ -62,6 +62,79 @@ class StatsService {
       durationSeconds: dureeS,
     );
   }
+
+  /// Calcule l'activite jour par jour sur les `days` derniers jours
+  /// (aujourd'hui inclus). Retourne une liste de longueur `days` triee
+  /// chronologiquement (le plus ancien en premier). Sert au mini bar
+  /// chart de la page Statistiques.
+  Future<List<DailyStat>> computeDaily({required int days}) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final since = today.subtract(Duration(days: days - 1));
+
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since)))
+        .get();
+    if (tournees.isEmpty) {
+      return [
+        for (var i = 0; i < days; i++)
+          DailyStat(
+            day: since.add(Duration(days: i)),
+            colis: 0,
+            echecs: 0,
+          ),
+      ];
+    }
+
+    final tourneeIds = tournees.map((t) => t.id).toList();
+    final stops = await (_db.select(_db.stops)
+          ..where((s) => s.tourneeId.isIn(tourneeIds)))
+        .get();
+
+    // Map tournee.id -> date du jour (sans heure) pour bucketer les
+    // stops par journee de tournee.
+    final dateByTournee = <int, DateTime>{
+      for (final t in tournees)
+        t.id: DateTime(t.date.year, t.date.month, t.date.day),
+    };
+
+    final colisByDay = <DateTime, int>{};
+    final echecsByDay = <DateTime, int>{};
+    for (final s in stops) {
+      final day = dateByTournee[s.tourneeId];
+      if (day == null) continue;
+      if (s.statutLivraison == 'livre') {
+        colisByDay[day] = (colisByDay[day] ?? 0) + s.nbColis;
+      } else if (s.statutLivraison == 'echec') {
+        echecsByDay[day] = (echecsByDay[day] ?? 0) + 1;
+      }
+    }
+
+    return [
+      for (var i = 0; i < days; i++)
+        () {
+          final day = since.add(Duration(days: i));
+          return DailyStat(
+            day: day,
+            colis: colisByDay[day] ?? 0,
+            echecs: echecsByDay[day] ?? 0,
+          );
+        }(),
+    ];
+  }
+}
+
+/// Activite d'une journee (utile au bar chart "14 derniers jours").
+class DailyStat {
+  const DailyStat({
+    required this.day,
+    required this.colis,
+    required this.echecs,
+  });
+
+  final DateTime day;
+  final int colis;
+  final int echecs;
 }
 
 /// Aggregation immuable retournee par [StatsService.compute].
