@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -454,6 +456,22 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       return;
     }
 
+    // Detection doublon : si on est en train de creer (pas edit) ET
+    // on a des coords, on regarde s'il existe deja un arret dans la
+    // tournee tres proche (< 30 m haversine) ou avec la meme adresse
+    // brute (case-insensitive). Avertit avant de creer.
+    if (!_isEdit && _address != null) {
+      final doublon = await _findPossibleDoublon(
+        lat: _address!.lat,
+        lng: _address!.lon,
+        adresse: _address!.adressePostale,
+      );
+      if (doublon != null && mounted) {
+        final keepGoing = await _askConfirmDoublon(doublon);
+        if (!keepGoing) return;
+      }
+    }
+
     setState(() => _saving = true);
 
     final repo = ref.read(stopsRepositoryProvider);
@@ -569,6 +587,103 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   }
 
   String? _orNull(String s) => s.trim().isEmpty ? null : s.trim();
+
+  /// Retourne le Stop deja present dans la tournee qui ressemble a
+  /// l'adresse passee, soit par coords (< 30 m haversine), soit par
+  /// adresse brute identique (case-insensitive). Null si pas de
+  /// doublon detecte.
+  Future<Stop?> _findPossibleDoublon({
+    required double lat,
+    required double lng,
+    required String adresse,
+  }) async {
+    final repo = ref.read(stopsRepositoryProvider);
+    final stops = await repo.getByTournee(widget.tourneeId);
+    final adresseLower = adresse.toLowerCase().trim();
+    for (final s in stops) {
+      if (s.adresseBrute.toLowerCase().trim() == adresseLower) return s;
+      if (s.lat != null && s.lng != null) {
+        final d = _haversineMeters(lat, lng, s.lat!, s.lng!);
+        if (d < 30) return s;
+      }
+    }
+    return null;
+  }
+
+  /// Dialog "Doublon possible" : affiche les details du Stop ressemblant
+  /// et demande confirmation. Retourne true si l'utilisateur veut
+  /// quand meme creer le nouvel arret.
+  Future<bool> _askConfirmDoublon(Stop doublon) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Doublon possible ?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Un arret tres proche existe deja dans cette tournee :',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.x10),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppRadius.r10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (doublon.nomClient != null &&
+                      doublon.nomClient!.isNotEmpty)
+                    Text(
+                      doublon.nomClient!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  Text(
+                    doublon.adresseBrute,
+                    style: const TextStyle(color: AppColors.ink),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Ajouter quand meme'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  /// Distance haversine en metres entre 2 coords. Approximation rapide
+  /// suffisante pour comparer 2 arrets a courte distance (< 1 km).
+  static double _haversineMeters(
+      double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371000.0;
+    final dLat = (lat2 - lat1) * 3.141592653589793 / 180.0;
+    final dLon = (lon2 - lon1) * 3.141592653589793 / 180.0;
+    final lat1Rad = lat1 * 3.141592653589793 / 180.0;
+    final lat2Rad = lat2 * 3.141592653589793 / 180.0;
+    final a = (math.sin(dLat / 2)) * (math.sin(dLat / 2)) +
+        math.cos(lat1Rad) * math.cos(lat2Rad) *
+            math.sin(dLon / 2) * math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return r * c;
+  }
 
   /// Dialog "Saisie hors-ligne" : un seul champ texte que l'utilisateur
   /// remplit a la main quand l'autocomplete echoue (zone rurale sans

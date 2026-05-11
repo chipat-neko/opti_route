@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/carnet_export_service.dart';
 import '../data/carnet_import_service.dart';
+import '../data/carnet_vcard_export_service.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
@@ -38,10 +39,39 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
             tooltip: 'Importer un CSV',
             onPressed: _onImportPressed,
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share),
-            tooltip: 'Exporter en CSV',
-            onPressed: _onExportPressed,
+            tooltip: 'Exporter',
+            onSelected: (value) {
+              if (value == 'csv') _onExportPressed();
+              if (value == 'vcard') _onExportVcardPressed();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'csv',
+                child: ListTile(
+                  leading: Icon(Icons.description_outlined),
+                  title: Text('Exporter en CSV'),
+                  subtitle: Text(
+                    'Sauvegarde tableur',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'vcard',
+                child: ListTile(
+                  leading: Icon(Icons.contact_phone_outlined),
+                  title: Text('Exporter en vCard'),
+                  subtitle: Text(
+                    'Import direct dans Contacts',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -177,6 +207,31 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'export : $e')),
+      );
+    }
+  }
+
+  Future<void> _onExportVcardPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final service = CarnetVcardExportService(
+        ref.read(savedDestinationsRepositoryProvider),
+      );
+      final count = await service.exportAndShare();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(count > 0
+              ? '$count fiche(s) vCard generee(s)'
+              : 'Carnet vide, rien a exporter'),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'export vCard : $e')),
       );
     }
   }
