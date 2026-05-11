@@ -43,6 +43,25 @@ class StopsRepository {
     return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(entry);
   }
 
+  /// Met a jour uniquement les coords + l'adresse normalisee d'un arret.
+  /// Utilise par le re-geocodage des arrets sauves en mode hors-ligne
+  /// (sans coords) : on ne touche pas au reste (nbColis, notes, etc.).
+  Future<int> updateCoords({
+    required int stopId,
+    required double lat,
+    required double lng,
+    String? adresseNormalisee,
+  }) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(
+      lat: Value(lat),
+      lng: Value(lng),
+      adresseNormalisee: adresseNormalisee == null
+          ? const Value.absent()
+          : Value(adresseNormalisee),
+    ));
+  }
+
   Future<int> delete(int id) {
     return (_db.delete(_db.stops)..where((s) => s.id.equals(id))).go();
   }

@@ -62,8 +62,69 @@ class NotificationsService {
 
   Future<void> cancelTest() => _plugin.cancel(_testId);
 
+  /// Programme un rappel de tournee pour [when] (DateTime local).
+  /// L'id est derive de l'id Drift de la tournee pour eviter les
+  /// conflits entre tournees et permettre l'annulation.
+  ///
+  /// Si [when] est dans le passe, on annule la notif precedente
+  /// (s'il y en a une) et on ne reprogramme rien. C'est ce que veut
+  /// le user quand il "efface" le rappel.
+  Future<void> scheduleTourneeRappel({
+    required int tourneeId,
+    required String nomTournee,
+    required DateTime when,
+  }) async {
+    await init();
+    final notifId = _tourneeNotifId(tourneeId);
+    await _plugin.cancel(notifId);
+    final tzWhen = tz.TZDateTime.from(when, tz.local);
+    final now = tz.TZDateTime.now(tz.local);
+    if (!tzWhen.isAfter(now)) {
+      // Date passee : on n'avait que la cancellation a faire.
+      return;
+    }
+    await _plugin.zonedSchedule(
+      notifId,
+      'Tournee a preparer : $nomTournee',
+      'C\'est l\'heure de demarrer ta tournee dans opti_route.',
+      tzWhen,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  /// Annule le rappel programme pour une tournee. Safe a appeler meme
+  /// si aucun rappel n'etait planifie.
+  Future<void> cancelTourneeRappel(int tourneeId) async {
+    await init();
+    await _plugin.cancel(_tourneeNotifId(tourneeId));
+  }
+
+  /// Cancel global : utile a la desinstallation simulee depuis
+  /// Parametres si on ajoute un bouton "purger tous les rappels".
+  Future<void> cancelAll() async {
+    await init();
+    await _plugin.cancelAll();
+  }
+
   static const _testId = 9999;
   static const _channelId = 'opti_route_reminders';
+
+  /// Id de notif derive de l'id tournee Drift. On garde le testId
+  /// (9999) reserve et on prefere les ids < 9999 pour les rappels
+  /// reels. Les ids Drift commencent a 1 et sont monotones, donc
+  /// on est tranquille jusqu'a ~10 000 tournees creees.
+  static int _tourneeNotifId(int tourneeId) => tourneeId;
 
   static String _format(tz.TZDateTime dt) {
     final hh = dt.hour.toString().padLeft(2, '0');

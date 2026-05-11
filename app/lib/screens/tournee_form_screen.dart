@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
+import '../data/notifications_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
@@ -27,6 +28,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
   bool _saving = false;
   late String _profilOrs;
   late bool _eviterPeages;
+  DateTime? _rappelLe;
 
   bool get _isEdit => widget.initial != null;
 
@@ -40,6 +42,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
     _date = t?.date ?? DateTime.now();
     _profilOrs = t?.profilOrs ?? 'driving-car';
     _eviterPeages = t?.eviterPeages ?? false;
+    _rappelLe = t?.rappelLe;
     if (t != null) {
       _depart = AddressSuggestion(
         displayName: t.pointDepartLabel,
@@ -161,6 +164,24 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
               value: _eviterPeages,
               onChanged: (v) => setState(() => _eviterPeages = v),
             ),
+            const SizedBox(height: AppSpacing.x18),
+            Text(
+              'Rappel (optionnel)',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.x6),
+            Text(
+              'Notification locale au moment choisi. Aucun serveur, '
+              'aucune CB. Le rappel est annule si tu supprimes la '
+              'tournee.',
+              style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            _RappelPickerTile(
+              value: _rappelLe,
+              defaultDate: _date,
+              onChanged: (v) => setState(() => _rappelLe = v),
+            ),
             const SizedBox(height: AppSpacing.x28),
             FilledButton.icon(
               onPressed: _saving ? null : _save,
@@ -226,6 +247,8 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
 
     setState(() => _saving = true);
     try {
+      await NotificationsService.instance
+          .cancelTourneeRappel(widget.initial!.id);
       await ref.read(tourneesRepositoryProvider).delete(widget.initial!.id);
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -284,9 +307,11 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
           Value(int.tryParse(_capaciteCtrl.text.trim()) ?? 0),
       profilOrs: Value(_profilOrs),
       eviterPeages: Value(_eviterPeages),
+      rappelLe: Value(_rappelLe),
     );
 
     try {
+      int idForNotif;
       if (_isEdit) {
         // Le depart, le profil ou l'evitement de peages ont-ils bouge ?
         // Tout ca change la geometrie de l'itineraire optimal -> on
@@ -301,9 +326,24 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
         if (geometryChanged) {
           await repo.invalidateOptimization(initial.id);
         }
+        idForNotif = initial.id;
       } else {
-        await repo.create(companion);
+        idForNotif = await repo.create(companion);
       }
+
+      // (Re-)programme ou annule le rappel local.
+      final nom = _nomCtrl.text.trim();
+      if (_rappelLe != null) {
+        await NotificationsService.instance.scheduleTourneeRappel(
+          tourneeId: idForNotif,
+          nomTournee: nom,
+          when: _rappelLe!,
+        );
+      } else {
+        await NotificationsService.instance
+            .cancelTourneeRappel(idForNotif);
+      }
+
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
@@ -313,6 +353,101 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
         SnackBar(content: Text('Erreur lors de l\'enregistrement : $e')),
       );
     }
+  }
+}
+
+/// ListTile cliquable qui ouvre 2 selecteurs (date + heure) pour
+/// programmer une notification locale de rappel sur la tournee. Si
+/// [value] est null, affiche "Aucun" ; sinon affiche le jour + heure
+/// avec un X pour effacer.
+class _RappelPickerTile extends StatelessWidget {
+  const _RappelPickerTile({
+    required this.value,
+    required this.defaultDate,
+    required this.onChanged,
+  });
+
+  final DateTime? value;
+  /// Date de la tournee : sert de valeur par defaut pour le selecteur
+  /// si l'utilisateur n'a pas encore choisi de date de rappel.
+  final DateTime defaultDate;
+  final ValueChanged<DateTime?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final v = value;
+    return Material(
+      color: p.creamSoft,
+      borderRadius: BorderRadius.circular(AppRadius.r12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        onTap: () => _pick(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x14,
+            vertical: AppSpacing.x12,
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.alarm_outlined, color: p.ink),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Text(
+                  v == null
+                      ? 'Programmer un rappel'
+                      : _formatDateTime(v),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: p.ink,
+                  ),
+                ),
+              ),
+              if (v != null)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  tooltip: 'Effacer le rappel',
+                  color: p.textMute,
+                  onPressed: () => onChanged(null),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pick(BuildContext context) async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: value ?? defaultDate,
+      firstDate: now.subtract(const Duration(minutes: 1)),
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (pickedDate == null || !context.mounted) return;
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: value != null
+          ? TimeOfDay(hour: value!.hour, minute: value!.minute)
+          : const TimeOfDay(hour: 7, minute: 0),
+    );
+    if (pickedTime == null) return;
+    onChanged(DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    ));
+  }
+
+  static String _formatDateTime(DateTime dt) {
+    final date = DateFormat('EEE d MMM', 'fr').format(dt);
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return '$date a $hh:$mm';
   }
 }
 

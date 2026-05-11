@@ -52,5 +52,11 @@ class Tournees extends Table {
   BoolColumn get eviterPeages =>
       boolean().withDefault(const Constant(false))();
 
+  /// Date / heure a laquelle une notification locale de rappel doit
+  /// se declencher (ex: 6h45 le matin de la tournee pour reveiller
+  /// Noah). Null = pas de rappel programme. Stocke en local time, on
+  /// le re-zone via flutter_local_notifications a la programmation.
+  DateTimeColumn get rappelLe => dateTime().nullable()();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

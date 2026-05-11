@@ -194,6 +194,17 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _rappelLeMeta = const VerificationMeta(
+    'rappelLe',
+  );
+  @override
+  late final GeneratedColumn<DateTime> rappelLe = GeneratedColumn<DateTime>(
+    'rappel_le',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -222,6 +233,7 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     isTemplate,
     profilOrs,
     eviterPeages,
+    rappelLe,
     creeLe,
   ];
   @override
@@ -366,6 +378,12 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         ),
       );
     }
+    if (data.containsKey('rappel_le')) {
+      context.handle(
+        _rappelLeMeta,
+        rappelLe.isAcceptableOrUnknown(data['rappel_le']!, _rappelLeMeta),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -445,6 +463,10 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.bool,
         data['${effectivePrefix}eviter_peages'],
       )!,
+      rappelLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}rappel_le'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -505,6 +527,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// Defaut false : pour un livreur urbain les peages sont rares et
   /// l'evitement allonge enormement le trajet.
   final bool eviterPeages;
+
+  /// Date / heure a laquelle une notification locale de rappel doit
+  /// se declencher (ex: 6h45 le matin de la tournee pour reveiller
+  /// Noah). Null = pas de rappel programme. Stocke en local time, on
+  /// le re-zone via flutter_local_notifications a la programmation.
+  final DateTime? rappelLe;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -523,6 +551,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     required this.isTemplate,
     required this.profilOrs,
     required this.eviterPeages,
+    this.rappelLe,
     required this.creeLe,
   });
   @override
@@ -554,6 +583,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     map['is_template'] = Variable<bool>(isTemplate);
     map['profil_ors'] = Variable<String>(profilOrs);
     map['eviter_peages'] = Variable<bool>(eviterPeages);
+    if (!nullToAbsent || rappelLe != null) {
+      map['rappel_le'] = Variable<DateTime>(rappelLe);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -586,6 +618,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       isTemplate: Value(isTemplate),
       profilOrs: Value(profilOrs),
       eviterPeages: Value(eviterPeages),
+      rappelLe: rappelLe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rappelLe),
       creeLe: Value(creeLe),
     );
   }
@@ -614,6 +649,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       isTemplate: serializer.fromJson<bool>(json['isTemplate']),
       profilOrs: serializer.fromJson<String>(json['profilOrs']),
       eviterPeages: serializer.fromJson<bool>(json['eviterPeages']),
+      rappelLe: serializer.fromJson<DateTime?>(json['rappelLe']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -637,6 +673,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'isTemplate': serializer.toJson<bool>(isTemplate),
       'profilOrs': serializer.toJson<String>(profilOrs),
       'eviterPeages': serializer.toJson<bool>(eviterPeages),
+      'rappelLe': serializer.toJson<DateTime?>(rappelLe),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -658,6 +695,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     bool? isTemplate,
     String? profilOrs,
     bool? eviterPeages,
+    Value<DateTime?> rappelLe = const Value.absent(),
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -678,6 +716,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     isTemplate: isTemplate ?? this.isTemplate,
     profilOrs: profilOrs ?? this.profilOrs,
     eviterPeages: eviterPeages ?? this.eviterPeages,
+    rappelLe: rappelLe.present ? rappelLe.value : this.rappelLe,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -718,6 +757,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       eviterPeages: data.eviterPeages.present
           ? data.eviterPeages.value
           : this.eviterPeages,
+      rappelLe: data.rappelLe.present ? data.rappelLe.value : this.rappelLe,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -741,6 +781,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('isTemplate: $isTemplate, ')
           ..write('profilOrs: $profilOrs, ')
           ..write('eviterPeages: $eviterPeages, ')
+          ..write('rappelLe: $rappelLe, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -764,6 +805,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     isTemplate,
     profilOrs,
     eviterPeages,
+    rappelLe,
     creeLe,
   );
   @override
@@ -786,6 +828,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.isTemplate == this.isTemplate &&
           other.profilOrs == this.profilOrs &&
           other.eviterPeages == this.eviterPeages &&
+          other.rappelLe == this.rappelLe &&
           other.creeLe == this.creeLe);
 }
 
@@ -806,6 +849,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<bool> isTemplate;
   final Value<String> profilOrs;
   final Value<bool> eviterPeages;
+  final Value<DateTime?> rappelLe;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -824,6 +868,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.isTemplate = const Value.absent(),
     this.profilOrs = const Value.absent(),
     this.eviterPeages = const Value.absent(),
+    this.rappelLe = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -843,6 +888,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.isTemplate = const Value.absent(),
     this.profilOrs = const Value.absent(),
     this.eviterPeages = const Value.absent(),
+    this.rappelLe = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -866,6 +912,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<bool>? isTemplate,
     Expression<String>? profilOrs,
     Expression<bool>? eviterPeages,
+    Expression<DateTime>? rappelLe,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -886,6 +933,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (isTemplate != null) 'is_template': isTemplate,
       if (profilOrs != null) 'profil_ors': profilOrs,
       if (eviterPeages != null) 'eviter_peages': eviterPeages,
+      if (rappelLe != null) 'rappel_le': rappelLe,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -907,6 +955,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<bool>? isTemplate,
     Value<String>? profilOrs,
     Value<bool>? eviterPeages,
+    Value<DateTime?>? rappelLe,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -927,6 +976,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       isTemplate: isTemplate ?? this.isTemplate,
       profilOrs: profilOrs ?? this.profilOrs,
       eviterPeages: eviterPeages ?? this.eviterPeages,
+      rappelLe: rappelLe ?? this.rappelLe,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -984,6 +1034,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (eviterPeages.present) {
       map['eviter_peages'] = Variable<bool>(eviterPeages.value);
     }
+    if (rappelLe.present) {
+      map['rappel_le'] = Variable<DateTime>(rappelLe.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -1009,6 +1062,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('isTemplate: $isTemplate, ')
           ..write('profilOrs: $profilOrs, ')
           ..write('eviterPeages: $eviterPeages, ')
+          ..write('rappelLe: $rappelLe, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -4622,6 +4676,7 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<bool> isTemplate,
       Value<String> profilOrs,
       Value<bool> eviterPeages,
+      Value<DateTime?> rappelLe,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -4642,6 +4697,7 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<bool> isTemplate,
       Value<String> profilOrs,
       Value<bool> eviterPeages,
+      Value<DateTime?> rappelLe,
       Value<DateTime> creeLe,
     });
 
@@ -4755,6 +4811,11 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<bool> get eviterPeages => $composableBuilder(
     column: $table.eviterPeages,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get rappelLe => $composableBuilder(
+    column: $table.rappelLe,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4878,6 +4939,11 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get rappelLe => $composableBuilder(
+    column: $table.rappelLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -4961,6 +5027,9 @@ class $$TourneesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<DateTime> get rappelLe =>
+      $composableBuilder(column: $table.rappelLe, builder: (column) => column);
+
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
 
@@ -5034,6 +5103,7 @@ class $$TourneesTableTableManager
                 Value<bool> isTemplate = const Value.absent(),
                 Value<String> profilOrs = const Value.absent(),
                 Value<bool> eviterPeages = const Value.absent(),
+                Value<DateTime?> rappelLe = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -5052,6 +5122,7 @@ class $$TourneesTableTableManager
                 isTemplate: isTemplate,
                 profilOrs: profilOrs,
                 eviterPeages: eviterPeages,
+                rappelLe: rappelLe,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -5072,6 +5143,7 @@ class $$TourneesTableTableManager
                 Value<bool> isTemplate = const Value.absent(),
                 Value<String> profilOrs = const Value.absent(),
                 Value<bool> eviterPeages = const Value.absent(),
+                Value<DateTime?> rappelLe = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -5090,6 +5162,7 @@ class $$TourneesTableTableManager
                 isTemplate: isTemplate,
                 profilOrs: profilOrs,
                 eviterPeages: eviterPeages,
+                rappelLe: rappelLe,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0

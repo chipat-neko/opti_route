@@ -12,6 +12,7 @@ import '../data/navigation_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournee_pdf_service.dart';
 import '../data/tournee_text_share_service.dart';
+import '../providers/geocoding_providers.dart';
 import '../data/tournees_repository.dart';
 import '../providers/database_providers.dart';
 import '../providers/location_providers.dart';
@@ -99,6 +100,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               if (value == 'export_pdf') _onExportPdfPressed();
               if (value == 'share_text') _onShareTextPressed();
               if (value == 'batch_livre') _onBatchLivrePressed();
+              if (value == 'retry_geocode') _onRetryGeocodePressed();
             },
             itemBuilder: (_) => const [
               PopupMenuItem(
@@ -106,6 +108,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                 child: ListTile(
                   leading: Icon(Icons.done_all, color: AppColors.emerald),
                   title: Text('Tout marquer livre'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'retry_geocode',
+                child: ListTile(
+                  leading: Icon(Icons.gps_fixed),
+                  title: Text('Geolocaliser hors-ligne'),
+                  subtitle: Text(
+                    'Re-tente le GPS pour les arrets sans coords',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -293,6 +307,70 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'export PDF : $e')),
+      );
+    }
+  }
+
+  /// Lance le re-geocodage des arrets sans coords (mode hors-ligne).
+  /// Affiche un dialog de progression simple, puis un bilan en snackbar.
+  Future<void> _onRetryGeocodePressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    // Dialog "loading" non dismissible
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: AppSpacing.x14),
+            Expanded(child: Text('Geolocalisation en cours...')),
+          ],
+        ),
+      ),
+    );
+    try {
+      final svc = ref.read(stopsGeocodeRetryServiceProvider);
+      final res = await svc.retryFor(widget.tournee.id);
+      navigator.pop(); // ferme le loader
+      if (!mounted) return;
+      if (res.totalCandidats == 0) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Aucun arret sans GPS a geolocaliser.'),
+          ),
+        );
+        return;
+      }
+      // Si on a resolu au moins 1 stop, l'optim est invalidee : le
+      // bouton "Optimiser" redevient cliquable.
+      if (res.resolved.isNotEmpty) {
+        await ref
+            .read(tourneesRepositoryProvider)
+            .invalidateOptimization(widget.tournee.id);
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            res.unresolved.isEmpty
+                ? '${res.resolved.length} arret(s) geolocalise(s)'
+                : '${res.resolved.length} resolu(s), '
+                    '${res.unresolved.length} echec(s) - '
+                    'verifie l\'adresse manuellement',
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      navigator.pop();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
       );
     }
   }

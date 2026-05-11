@@ -6,6 +6,7 @@ import '../data/geocode_cache_repository.dart';
 import '../data/geocoding_service.dart';
 import '../data/photon_service.dart';
 import '../data/recherche_entreprises_service.dart';
+import '../data/stops_geocode_retry_service.dart';
 import 'database_providers.dart';
 
 final geocodeCacheRepositoryProvider = Provider<GeocodeCacheRepository>((ref) {
@@ -39,4 +40,15 @@ final geocodingServiceProvider = Provider<GeocodingService>((ref) {
 
   ref.onDispose(service.close);
   return service;
+});
+
+/// Service de re-geocodage en batch des arrets sauves en mode
+/// hors-ligne (lat/lng null). Utilise par le bouton "Geolocaliser les
+/// arrets hors ligne" dans la tournee du jour.
+final stopsGeocodeRetryServiceProvider =
+    Provider<StopsGeocodeRetryService>((ref) {
+  return StopsGeocodeRetryService(
+    repo: ref.watch(stopsRepositoryProvider),
+    geocoder: ref.watch(geocodingServiceProvider),
+  );
 });
