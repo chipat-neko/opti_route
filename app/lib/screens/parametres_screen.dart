@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/notifications_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../providers/optimization_providers.dart';
@@ -307,6 +308,37 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Notifications'),
+          const SizedBox(height: AppSpacing.x10),
+          const Text(
+            'Les notifications locales (rappels de tournee) sont gerees '
+            'par le telephone, pas par un serveur. Aucune CB requise.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _testNotification,
+            icon: const Icon(Icons.notifications_active_outlined),
+            label: const Text('Test : notif dans 2 min'),
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          const Text(
+            'Programme une notification de test 120 secondes apres le '
+            'tap. Ferme l\'app ou eteins l\'ecran pour verifier que la '
+            'notif arrive bien.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Apparence'),
           const SizedBox(height: AppSpacing.x10),
           const Text(
@@ -510,6 +542,30 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
       );
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _testNotification() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await NotificationsService.instance.scheduleTest(seconds: 120);
+      if (!mounted) return;
+      final when = DateTime.now().add(const Duration(seconds: 120));
+      final hh = when.hour.toString().padLeft(2, '0');
+      final mm = when.minute.toString().padLeft(2, '0');
+      final ss = when.second.toString().padLeft(2, '0');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Notification programmee pour $hh:$mm:$ss'),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
     }
   }
 
