@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
 
@@ -53,6 +55,8 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x18),
         children: [
+          _ClientStatsBlock(savedDestinationId: widget.entry.id),
+          const SizedBox(height: AppSpacing.x18),
           TextField(
             controller: _nomCtrl,
             decoration: const InputDecoration(
@@ -165,5 +169,140 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
         .delete(widget.entry.id);
     if (!mounted) return;
     Navigator.of(context).pop();
+  }
+}
+
+/// Mini-dashboard "historique des livraisons chez ce client" affiche
+/// en haut de l'ecran d'edition. Recupere les stats via le provider
+/// (qui fait le matching nom + coords) et affiche : nb livraisons,
+/// nb echecs, derniere visite, top 3 raisons d'echec.
+class _ClientStatsBlock extends ConsumerWidget {
+  const _ClientStatsBlock({required this.savedDestinationId});
+
+  final int savedDestinationId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(clientStatsProvider(savedDestinationId));
+    return statsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (stats) {
+        if (stats.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final tauxPct = (stats.tauxReussite * 100).toStringAsFixed(0);
+        final dernier = stats.derniereLivraison == null
+            ? '—'
+            : DateFormat('dd/MM/yyyy', 'fr')
+                .format(stats.derniereLivraison!);
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.x14),
+          decoration: BoxDecoration(
+            color: AppColors.creamSoft,
+            borderRadius: BorderRadius.circular(AppRadius.r14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'HISTORIQUE CHEZ CE CLIENT',
+                style: appMonoStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textMute,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _Metric(
+                      label: 'Livraisons',
+                      value: '${stats.nbLivraisons}',
+                      color: AppColors.emerald,
+                    ),
+                  ),
+                  Expanded(
+                    child: _Metric(
+                      label: 'Echecs',
+                      value: '${stats.nbEchecs}',
+                      color: stats.nbEchecs > 0
+                          ? AppColors.red
+                          : AppColors.textMute,
+                    ),
+                  ),
+                  Expanded(
+                    child: _Metric(
+                      label: 'Reussite',
+                      value: '$tauxPct%',
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              Text(
+                'Derniere visite : $dernier',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMute,
+                ),
+              ),
+              if (stats.raisonsEchecCourantes.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.x6),
+                Text(
+                  'Echecs frequents : ${stats.raisonsEchecCourantes.map((r) => "${r.raison} (${r.n})").join(", ")}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.red,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: appMonoStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textMute,
+            letterSpacing: 0.4,
+          ),
+        ),
+        Text(
+          value,
+          style: appMonoStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: color,
+            letterSpacing: -0.3,
+          ),
+        ),
+      ],
+    );
   }
 }
