@@ -53,6 +53,13 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   bool _saving = false;
   int _addressFieldVersion = 0;
 
+  /// Mode hors-ligne : Noah a entre une adresse brute non geocodee
+  /// (pas de coords lat/lng). On garde le texte ici pour le sauver
+  /// dans `adresseBrute`. L'arret sera flagge "GPS manquant" dans la
+  /// liste de la tournee et l'utilisateur pourra le re-geocoder plus
+  /// tard (en l'editant) une fois revenu en zone couverte.
+  String? _offlineAddressText;
+
   bool get _isEdit => widget.initial != null;
 
   @override
@@ -142,6 +149,8 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               onSuggestionSelected: (s) {
                 setState(() {
                   _address = s;
+                  // Une vraie suggestion ecrase la saisie hors-ligne.
+                  if (s != null) _offlineAddressText = null;
                   // Si c'est une selection du carnet local, on pre-remplit
                   // aussi le champ "Nom du client" (sauf si l'utilisateur
                   // a deja saisi quelque chose).
@@ -155,14 +164,40 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                 });
               },
             ),
-            const SizedBox(height: AppSpacing.x10),
-            OutlinedButton.icon(
-              onPressed: _saving ? null : _scanBordereau,
-              icon: const Icon(Icons.document_scanner_outlined),
-              label: const Text('Scanner un bordereau'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
+            if (_offlineAddressText != null) ...[
+              const SizedBox(height: AppSpacing.x6),
+              _OfflineAddressBanner(
+                text: _offlineAddressText!,
+                onClear: () =>
+                    setState(() => _offlineAddressText = null),
               ),
+            ],
+            const SizedBox(height: AppSpacing.x10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _saving ? null : _scanBordereau,
+                    icon: const Icon(Icons.document_scanner_outlined),
+                    label: const Text('Scanner'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _saving ? null : _enterOfflineAddress,
+                    icon: const Icon(Icons.signal_cellular_off_outlined),
+                    label: const Text('Hors ligne'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.x22),
             const _SectionTitle('Client / Enseigne (optionnel)'),
@@ -412,7 +447,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
 
   Future<void> _save({required bool addAnother}) async {
     if (!_formKey.currentState!.validate()) return;
-    if (_address == null) {
+    if (_address == null && _offlineAddressText == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Choisis une adresse')),
       );
@@ -424,13 +459,21 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     final repo = ref.read(stopsRepositoryProvider);
     final carnet = ref.read(savedDestinationsRepositoryProvider);
 
+    // En mode hors-ligne : adresseBrute = texte tape, lat/lng = null.
+    // Sinon : on prend l'AddressSuggestion complete.
+    final isOffline = _address == null && _offlineAddressText != null;
+    final adresseBrute =
+        isOffline ? _offlineAddressText! : _address!.adressePostale;
+    final lat = isOffline ? null : _address!.lat;
+    final lng = isOffline ? null : _address!.lon;
+
     try {
       if (_isEdit) {
         final companion = StopsCompanion(
-          adresseBrute: Value(_address!.adressePostale),
-          adresseNormalisee: Value(_address!.adressePostale),
-          lat: Value(_address!.lat),
-          lng: Value(_address!.lon),
+          adresseBrute: Value(adresseBrute),
+          adresseNormalisee: Value(adresseBrute),
+          lat: Value(lat),
+          lng: Value(lng),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
           priorite: Value(_priorite),
           fenetreDebut: Value(_formatTime(_fenetreDebut)),
@@ -446,10 +489,10 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       } else {
         final companion = StopsCompanion.insert(
           tourneeId: widget.tourneeId,
-          adresseBrute: _address!.adressePostale,
-          adresseNormalisee: Value(_address!.adressePostale),
-          lat: Value(_address!.lat),
-          lng: Value(_address!.lon),
+          adresseBrute: adresseBrute,
+          adresseNormalisee: Value(adresseBrute),
+          lat: Value(lat),
+          lng: Value(lng),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
           priorite: Value(_priorite),
           fenetreDebut: Value(_formatTime(_fenetreDebut)),
@@ -464,25 +507,29 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
             .invalidateOptimization(widget.tourneeId);
       }
 
-      // Carnet d'adresses : on enregistre (ou rafraichit) silencieusement.
+      // Carnet d'adresses : seulement si on a des coords (sinon
+      // l'entree carnet est inutile, on ne peut pas la geolocaliser
+      // ni la reproposer en autocomplete avec une distance).
       // Ne doit jamais bloquer l'enregistrement de l'arret.
-      try {
-        await carnet.upsertFromValidatedStop(
-          nomClient: _orNull(_nomClientCtrl.text),
-          adresseDisplay: _address!.adressePostale,
-          lat: _address!.lat,
-          lng: _address!.lon,
-          rue: _address!.road == null
-              ? null
-              : (_address!.houseNumber != null &&
-                      _address!.houseNumber!.isNotEmpty
-                  ? '${_address!.houseNumber} ${_address!.road}'
-                  : _address!.road),
-          codePostal: _address!.postcode,
-          ville: _address!.city,
-        );
-      } catch (_) {
-        // Silencieux : le carnet est un bonus, pas un bloquant.
+      if (!isOffline) {
+        try {
+          await carnet.upsertFromValidatedStop(
+            nomClient: _orNull(_nomClientCtrl.text),
+            adresseDisplay: _address!.adressePostale,
+            lat: _address!.lat,
+            lng: _address!.lon,
+            rue: _address!.road == null
+                ? null
+                : (_address!.houseNumber != null &&
+                        _address!.houseNumber!.isNotEmpty
+                    ? '${_address!.houseNumber} ${_address!.road}'
+                    : _address!.road),
+            codePostal: _address!.postcode,
+            ville: _address!.city,
+          );
+        } catch (_) {
+          // Silencieux : le carnet est un bonus, pas un bloquant.
+        }
       }
 
       if (!mounted) return;
@@ -522,6 +569,122 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   }
 
   String? _orNull(String s) => s.trim().isEmpty ? null : s.trim();
+
+  /// Dialog "Saisie hors-ligne" : un seul champ texte que l'utilisateur
+  /// remplit a la main quand l'autocomplete echoue (zone rurale sans
+  /// 4G typiquement). Le texte sauvegarde dans `_offlineAddressText`
+  /// devient `adresseBrute` du Stop, sans lat/lng. L'arret apparait
+  /// avec un badge "GPS manquant" dans la tournee et peut etre
+  /// re-edite plus tard pour declencher le geocodage.
+  Future<void> _enterOfflineAddress() async {
+    final ctrl = TextEditingController(text: _offlineAddressText ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Saisie hors ligne'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tape l\'adresse complete a la main. Le GPS sera '
+                'manquant tant que tu n\'auras pas re-edite cet arret '
+                'avec une connexion (re-selection depuis l\'autocomplete).',
+                style: TextStyle(fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Adresse',
+                  hintText: '12 rue des Lilas, 28100 Dreux',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(ctrl.text.trim()),
+              child: const Text('Valider'),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted) return;
+    if (result == null) return;
+    final trimmed = result.trim();
+    if (trimmed.isEmpty) {
+      setState(() => _offlineAddressText = null);
+      return;
+    }
+    setState(() {
+      _offlineAddressText = trimmed;
+      _address = null;
+    });
+  }
+}
+
+/// Bandeau orange/amber affiche sous le champ Adresse quand
+/// `_offlineAddressText` est rempli. Indique clairement que cet arret
+/// n'a pas de coordonnees GPS et offre un bouton pour effacer la saisie
+/// hors-ligne et revenir a l'autocomplete normal.
+class _OfflineAddressBanner extends StatelessWidget {
+  const _OfflineAddressBanner({required this.text, required this.onClear});
+
+  final String text;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x12,
+        AppSpacing.x10,
+        AppSpacing.x6,
+        AppSpacing.x10,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.20),
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+        border: Border.all(color: AppColors.amber, width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.signal_cellular_off_outlined,
+            size: 18,
+            color: AppColors.ink,
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Text(
+              'Hors ligne · GPS manquant\n$text',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.ink,
+                height: 1.3,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            color: AppColors.ink,
+            onPressed: onClear,
+            tooltip: 'Effacer la saisie hors ligne',
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {

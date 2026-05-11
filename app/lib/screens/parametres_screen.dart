@@ -27,10 +27,15 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
   bool _defaultsInitialized = false;
   String? _navAppDefault;
 
+  // Stats cache (chargees au build et apres chaque purge)
+  int? _tilesCacheBytes;
+  int? _geocodeCacheCount;
+
   @override
   void initState() {
     super.initState();
     _loadDefaults();
+    _loadCacheStats();
   }
 
   Future<void> _loadDefaults() async {
@@ -45,6 +50,40 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
       _navAppDefault = nav;
       _defaultsInitialized = true;
     });
+  }
+
+  /// Charge les stats de cache (taille tuiles + nb entrees geocodage)
+  /// pour affichage dans la section Cache. Best-effort : si une lecture
+  /// echoue on garde null et l'UI affiche "..." plutot qu'une erreur.
+  Future<void> _loadCacheStats() async {
+    int? bytes;
+    int? count;
+    try {
+      bytes = await ref.read(cachedTileProviderInstance).cacheSizeBytes();
+    } catch (_) {}
+    try {
+      count = await ref.read(geocodeCacheRepositoryProvider).count();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _tilesCacheBytes = bytes;
+      _geocodeCacheCount = count;
+    });
+  }
+
+  /// Formatage humain d'une taille en octets : "4.2 Mo", "523 Ko", etc.
+  /// Seuils en base 1000 (decimal) plus parlants pour le grand public
+  /// qu'un base 1024 (binaire).
+  static String _formatBytes(int? bytes) {
+    if (bytes == null) return '...';
+    if (bytes < 1000) return '$bytes o';
+    if (bytes < 1000 * 1000) {
+      return '${(bytes / 1000).toStringAsFixed(0)} Ko';
+    }
+    if (bytes < 1000 * 1000 * 1000) {
+      return '${(bytes / (1000 * 1000)).toStringAsFixed(1)} Mo';
+    }
+    return '${(bytes / (1000 * 1000 * 1000)).toStringAsFixed(2)} Go';
   }
 
   @override
@@ -255,6 +294,59 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Cache'),
           const SizedBox(height: AppSpacing.x10),
+          // Mini-stats : aide Noah a decider s'il faut purger ou pas.
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x12,
+              vertical: AppSpacing.x10,
+            ),
+            decoration: BoxDecoration(
+              color: p.creamSoft,
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tuiles cartes en cache',
+                      style: TextStyle(fontSize: 12.5, color: p.textMute),
+                    ),
+                    Text(
+                      _formatBytes(_tilesCacheBytes),
+                      style: appMonoStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: p.ink,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.x6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recherches geocodees memorisees',
+                      style: TextStyle(fontSize: 12.5, color: p.textMute),
+                    ),
+                    Text(
+                      _geocodeCacheCount == null
+                          ? '...'
+                          : '$_geocodeCacheCount',
+                      style: appMonoStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: p.ink,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
           OutlinedButton.icon(
             onPressed: _saving ? null : _purgeCache,
             icon: const Icon(Icons.cleaning_services_outlined),
@@ -580,6 +672,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           content: Text('Cache des cartes vide'),
         ),
       );
+      await _loadCacheStats();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -605,6 +698,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           ),
         ),
       );
+      await _loadCacheStats();
     } finally {
       if (mounted) setState(() => _saving = false);
     }

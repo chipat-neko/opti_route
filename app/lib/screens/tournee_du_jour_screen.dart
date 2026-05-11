@@ -11,6 +11,7 @@ import '../data/location_service.dart';
 import '../data/navigation_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournee_pdf_service.dart';
+import '../data/tournee_text_share_service.dart';
 import '../data/tournees_repository.dart';
 import '../providers/database_providers.dart';
 import '../providers/location_providers.dart';
@@ -96,6 +97,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             onSelected: (value) {
               if (value == 'delete') _confirmDeleteTournee();
               if (value == 'export_pdf') _onExportPdfPressed();
+              if (value == 'share_text') _onShareTextPressed();
               if (value == 'batch_livre') _onBatchLivrePressed();
             },
             itemBuilder: (_) => const [
@@ -104,6 +106,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                 child: ListTile(
                   leading: Icon(Icons.done_all, color: AppColors.emerald),
                   title: Text('Tout marquer livre'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'share_text',
+                child: ListTile(
+                  leading: Icon(Icons.share_outlined),
+                  title: Text('Partager en texte'),
+                  subtitle: Text(
+                    'WhatsApp, SMS, mail...',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -279,6 +293,28 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'export PDF : $e')),
+      );
+    }
+  }
+
+  /// Partage la tournee sous forme de texte court via le selecteur natif
+  /// Android (WhatsApp, SMS, mail, etc.). Utilise les arrets dans leur
+  /// ordre actuel (optimise si l'optim a tourne, sinon ordre de saisie).
+  Future<void> _onShareTextPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final stops = await ref
+          .read(stopsRepositoryProvider)
+          .getByTournee(widget.tournee.id);
+      final service = TourneeTextShareService();
+      await service.shareAsText(
+        tournee: widget.tournee,
+        stops: stops,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur au partage : $e')),
       );
     }
   }
@@ -2264,6 +2300,16 @@ class _StopRow extends ConsumerWidget {
     final out = <Widget>[];
     final priority = _priorityTag(s.priorite);
     if (priority != null) out.add(priority);
+    // Stop sans coordonnees (mode hors-ligne, geocodage echoue) : tag
+    // amber bien visible "GPS manquant" pour rappeler que cet arret ne
+    // sera pas pris en compte dans l'optimisation.
+    if (s.lat == null || s.lng == null) {
+      out.add(const _Tag(
+        label: 'GPS manquant',
+        bg: AppColors.amber,
+        fg: AppColors.ink,
+      ));
+    }
     if (s.nbColis > 1) {
       out.add(_Tag(
         label: '${s.nbColis} colis',
