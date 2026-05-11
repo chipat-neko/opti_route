@@ -6,6 +6,72 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
+### Session autonome 2026-05-11 (Vague 8 quality + features livraison)
+
+**Refactor mode sombre** (17 fichiers, 314 occurrences `AppColors.X` → `p.X`
+via `AppPalette`). 8 smoke tests UI clair + sombre.
+
+**Optimisation VROOM enrichie** (migration v15) : choix profil
+Voiture/VUL ou Camion >3.5t (driving-hgv), capacité véhicule respectée par
+le solveur, évitement des péages (avoid_features tollways). Couvert par
++4 tests.
+
+**Mode hors-ligne** : saisie d'arrêt en zone sans 4G via dialog texte
+pur, badge "GPS manquant" dans la liste, batch re-géocodage via menu
+Plus. Service `StopsGeocodeRetryService` + 4 tests.
+
+**Rappels locaux par tournée** (migration v16) : champ `rappelLe`
+configurable dans le form (date + heure picker), notif
+`exactAllowWhileIdle` programmée via `NotificationsService.scheduleTourneeRappel`.
+Auto-cancel quand la tournée passe en `terminee` ou est supprimée.
+
+**Carnet enrichi** (migration v17) :
+- Notes pré-définies par client (`notesCarnet`), re-proposées à la
+  prochaine création d'arrêt pour ce client
+- Filtre par couleur / favoris (row de chips scrollable)
+- Dernier passage affiché sur chaque tile
+- Export vCard (.vcf, RFC 2426) compatible import Contacts Android
+- Couleur custom propagée sur les disques rang du Top 5
+
+**Tournée du jour enrichie** :
+- Édition rapide des fenêtres horaires inline (bottom sheet)
+- Détection de doublons à la création (haversine 30 m)
+- Undo dernier statut (via stop_history)
+- Refaire dans 7 jours (duplicate avec targetDate)
+- Coût carburant estimé (params EUR/L + L/100km), affiché en bandeau et
+  cumulé dans Stats
+- Partage texte court (WhatsApp/SMS) avec coût intégré
+
+**Stats** :
+- Carte "Colis par jour de la semaine" (barchart 7 jours)
+- Carte "Top 5 clients" (avec couleur custom du carnet)
+- Cumul coût carburant par fenêtre temporelle
+- Pull-to-refresh
+
+**Carte** : bouton "Centrer sur ma position GPS".
+
+**Paramètres** : stats cache (tuiles MB + nb géocodages), bouton
+"Annuler tous les rappels", section Carburant.
+
+**Drawer** : compteur dynamique "X tournées aujourd'hui".
+
+**Helpers extraits** : `GeoUtils.haversineMeters` + areClose dans
+`lib/data/geo_utils.dart` (testable sans Flutter).
+
+**Tests** : 85 → 167 (+82). Nouveaux fichiers : geo_utils,
+geocode_cache_repository, bordereau_extraction, parametres_repository,
+stops_geocode_retry, tournee_text_share, carnet_vcard_export. Extensions
+sur stats_service, stops_repository, tournees_repository,
+openroute_optimization_service. `flutter analyze` : 0 erreur.
+
+**Documentation** :
+- `docs/user-guide.md` : guide utilisateur exhaustif
+- `docs/play_store/listing.md` : fiche Play Store enrichie
+- `docs/session-2026-05-11-autonome.md` : recap session
+- `README.md` mis à jour avec les nouvelles capacités
+
+---
+
 ### Ajouté
 - Plan détaillé Phase 1 version gratuite (`docs/plan_free.md`).
 - Plan détaillé version CB avec Google Maps Platform (`docs/plan_cb.md`).
