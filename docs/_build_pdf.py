@@ -165,9 +165,15 @@ class _Renderer(FPDF):
 
     # ─── Page de garde mode pitch ───────────────────────────────────
     def render_cover(self):
-        """Page de garde plein cadre, fond cream et titre emerald."""
+        """Page de garde plein cadre, fond cream et titre emerald.
+
+        On desactive l'auto_page_break pendant le rendu pour que le
+        footer cover (date + auteur) ne declenche pas une page 2 vide
+        en cassant accidentellement le bottom margin.
+        """
         if self._cover_done:
             return
+        self.set_auto_page_break(False)
         self.add_page()
         # Fond cream qui couvre toute la page.
         self.set_fill_color(*COLOR_BG)
@@ -220,6 +226,9 @@ class _Renderer(FPDF):
         self.cell(0, 5, _strip_accents("Auteur : CALOTE Noah"),
                   new_x="LMARGIN", new_y="NEXT")
 
+        # Reactive l'auto_page_break pour les pages suivantes (margin
+        # bottom 22 mm pour reserver l'espace footer pagine).
+        self.set_auto_page_break(True, margin=22)
         self._cover_done = True
 
     def set_section(self, section: str):
