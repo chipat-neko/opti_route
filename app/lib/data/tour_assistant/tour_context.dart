@@ -29,6 +29,10 @@ class TourAssistantParams {
     this.proximityEnabled = true,
     this.proximityThresholdM = 300,
     this.cooldownMinutes = 5,
+    this.useDirectionFilter = true,
+    this.directionToleranceDeg = 90,
+    this.minSpeedForHeadingMs = 1.5,
+    this.fenetreEarlyMinutes = 30,
   });
 
   /// Master switch : si false, aucune suggestion n'est produite.
@@ -45,4 +49,27 @@ class TourAssistantParams {
   /// n'affichera plus cette suggestion pendant N minutes pour eviter
   /// le harcelement.
   final int cooldownMinutes;
+
+  /// Si vrai, on n'affiche la suggestion proximity QUE si le stop est
+  /// dans la direction de notre deplacement (cf cap GPS). Eviter les
+  /// suggestions pour des arrets situes derriere nous, ce qui obligerait
+  /// un demi-tour. Necessite une vitesse minimale (heading peu fiable
+  /// a l'arret).
+  final bool useDirectionFilter;
+
+  /// Tolerance angulaire en degres : si |cap GPS - bearing(stop)| est
+  /// inferieur, le stop est "dans la direction". Default 90 deg (cone
+  /// de 180 deg devant nous), valeurs typiques 60-120 deg.
+  final int directionToleranceDeg;
+
+  /// Vitesse minimale en m/s (1.5 m/s = ~5.4 km/h) en dessous de
+  /// laquelle on considere `heading` non fiable et on desactive le
+  /// filtre direction. Evite les faux positifs a l'arret.
+  final double minSpeedForHeadingMs;
+
+  /// Si un stop a une fenetre horaire `fenetreDebut`, on ne le suggere
+  /// pas avant `fenetreDebut - fenetreEarlyMinutes`. Default 30 min :
+  /// au-dela on considere qu'on est trop tot et qu'on peut faire
+  /// d'autres arrets en attendant.
+  final int fenetreEarlyMinutes;
 }
