@@ -433,7 +433,9 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       final stops = await ref
           .read(stopsRepositoryProvider)
           .getByTournee(widget.tournee.id);
-      final service = TourneeTextShareService();
+      final service = TourneeTextShareService(
+        parametres: ref.read(parametresRepositoryProvider),
+      );
       await service.shareAsText(
         tournee: widget.tournee,
         stops: stops,
@@ -705,6 +707,11 @@ class _Body extends StatelessWidget {
           distanceMeters: tournee.distanceTotaleM,
           durationSeconds: tournee.dureeTotaleS,
         ),
+        if (tournee.distanceTotaleM != null &&
+            tournee.distanceTotaleM! > 0) ...[
+          const SizedBox(height: AppSpacing.x8),
+          _CoutCarburantBanner(distanceMeters: tournee.distanceTotaleM!),
+        ],
         if (tournee.statut == 'optimisee') ...[
           const SizedBox(height: AppSpacing.x12),
           _OptimisedBanner(tournee: tournee),
@@ -1303,6 +1310,61 @@ class _StatDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Container(width: 1, height: 28, color: context.palette.divider);
+}
+
+/// Petit bandeau qui affiche une estimation du cout carburant pour la
+/// tournee, base sur le param `coutCarburantLitre` x `consoLitresPar100Km`
+/// x la distance totale calculee par ORS. Discret : juste une ligne
+/// avec une icone pompe a essence et le montant en EUR.
+class _CoutCarburantBanner extends ConsumerWidget {
+  const _CoutCarburantBanner({required this.distanceMeters});
+
+  final int distanceMeters;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final async = ref.watch(coutCarburantProvider(distanceMeters));
+    final value = async.asData?.value;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x12,
+        vertical: AppSpacing.x8,
+      ),
+      decoration: BoxDecoration(
+        color: p.creamSoft,
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.local_gas_station_outlined, size: 16, color: p.textMute),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Text(
+              'Cout carburant estime',
+              style: TextStyle(fontSize: 12.5, color: p.textMute),
+            ),
+          ),
+          Text(
+            value == null ? '...' : _formatEur(value),
+            style: appMonoStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatEur(double eur) {
+    // Format FR : virgule decimale, symbole EUR a droite, 2 decimales.
+    final cents = (eur * 100).round();
+    final entier = cents ~/ 100;
+    final dec = (cents % 100).toString().padLeft(2, '0');
+    return '$entier,$dec EUR';
+  }
 }
 
 class _StatTile extends StatelessWidget {

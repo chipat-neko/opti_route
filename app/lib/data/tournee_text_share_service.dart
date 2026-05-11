@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'database.dart';
+import 'parametres_repository.dart';
 
 /// Service de partage rapide d'une tournee sous forme **texte court**,
 /// destine a etre envoye par WhatsApp / SMS / mail. Plus rapide a
@@ -23,13 +24,20 @@ import 'database.dart';
 /// ...
 /// ```
 class TourneeTextShareService {
+  TourneeTextShareService({this.parametres});
+
+  /// Repository pour recuperer les params carburant (optionnel : si
+  /// null, on n'ajoute pas la ligne cout au header). En prod il est
+  /// branche par le screen ; en test on peut passer null.
+  final ParametresRepository? parametres;
+
   /// Format texte pur de la tournee. Si [orderedStops] est fourni, on
   /// l'utilise tel quel (ordre optimise). Sinon on retombe sur l'ordre
   /// naturel de la liste.
-  String formatPlainText({
+  Future<String> formatPlainText({
     required Tournee tournee,
     required List<Stop> stops,
-  }) {
+  }) async {
     final dateLabel = DateFormat('EEEE d MMMM y', 'fr').format(tournee.date);
     final buf = StringBuffer();
 
@@ -42,6 +50,16 @@ class TourneeTextShareService {
     if (tournee.distanceTotaleM != null && tournee.dureeTotaleS != null) {
       final km = (tournee.distanceTotaleM! / 1000).toStringAsFixed(1);
       buf.write(' - $km km / ${_formatDuration(tournee.dureeTotaleS!)}');
+    }
+    // Cout estime (uniquement si la tournee a une distance et qu'on a
+    // les params carburant).
+    if (parametres != null &&
+        tournee.distanceTotaleM != null &&
+        tournee.distanceTotaleM! > 0) {
+      final cout = await parametres!.estimerCoutCarburant(
+        distanceMeters: tournee.distanceTotaleM!,
+      );
+      buf.write(' - ~${cout.toStringAsFixed(2).replaceAll('.', ',')} EUR');
     }
     buf.writeln();
     buf.writeln();
@@ -87,7 +105,7 @@ class TourneeTextShareService {
     required Tournee tournee,
     required List<Stop> stops,
   }) async {
-    final text = formatPlainText(tournee: tournee, stops: stops);
+    final text = await formatPlainText(tournee: tournee, stops: stops);
     await SharePlus.instance.share(
       ShareParams(
         text: text,

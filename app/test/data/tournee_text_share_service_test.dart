@@ -64,7 +64,7 @@ void main() {
 
     test('header contient nom + date + nb arrets + colis + distance', () async {
       final (t, stops) = await seedSimpleTournee();
-      final out = svc.formatPlainText(tournee: t, stops: stops);
+      final out = await svc.formatPlainText(tournee: t, stops: stops);
       expect(out, contains('Tournee "Tournee test"'));
       expect(out, contains('mardi 12 mai 2026'));
       expect(out, contains('2 arrets'));
@@ -75,7 +75,7 @@ void main() {
 
     test('format arret : numero, titre, adresse, colis, fenetre', () async {
       final (t, stops) = await seedSimpleTournee();
-      final out = svc.formatPlainText(tournee: t, stops: stops);
+      final out = await svc.formatPlainText(tournee: t, stops: stops);
       expect(out, contains('1. CALOTE Noah'));
       expect(out, contains('12 rue des Lilas, 28100 Dreux'));
       expect(out, contains('3 colis - avant 12:00'));
@@ -106,7 +106,8 @@ void main() {
             ..where((s) => s.tourneeId.equals(id)))
           .get();
 
-      final out = svc.formatPlainText(tournee: tournee, stops: stops);
+      final out =
+          await svc.formatPlainText(tournee: tournee, stops: stops);
       // L'adresse apparait 1 seule fois en titre, pas en ligne adresse
       expect('1 rue du Test, 28100 Dreux'.allMatches(out).length, 1);
     });
@@ -150,7 +151,8 @@ void main() {
             ..orderBy([(s) => OrderingTerm.asc(s.id)]))
           .get();
 
-      final out = svc.formatPlainText(tournee: tournee, stops: stops);
+      final out =
+          await svc.formatPlainText(tournee: tournee, stops: stops);
       expect(out, contains('EN 1ER'));
       expect(out, contains('EN DERNIER'));
       expect(out, contains('A EVITER'));

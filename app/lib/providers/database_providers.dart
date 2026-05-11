@@ -85,6 +85,16 @@ final orsUsedTodayProvider = StreamProvider<int>((ref) {
   return ref.watch(parametresRepositoryProvider).watchOrsUsedToday();
 });
 
+/// Cout carburant estime (en EUR) pour une distance donnee (en metres).
+/// Recalcule a chaque changement du parametre `coutCarburantLitre` ou
+/// `consoLitresPar100Km` (via watchAll des parametres).
+final coutCarburantProvider =
+    FutureProvider.family<double, int>((ref, distanceMeters) async {
+  return ref
+      .read(parametresRepositoryProvider)
+      .estimerCoutCarburant(distanceMeters: distanceMeters);
+});
+
 /// Stats cumulatives depuis [days] jours (typiquement 7, 30, 365).
 /// Recalcule a chaque modif d'une tournee ou d'un stop (le stream
 /// `tourneesStreamProvider` pousse, on relance le compute).

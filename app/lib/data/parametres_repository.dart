@@ -18,6 +18,8 @@ class ParametresRepository {
   static const _kOrsUsedCount = 'ors_used_count';
   static const _kOrsUsedDate = 'ors_used_date';
   static const _kThemeMode = 'theme_mode';
+  static const _kCoutCarburantLitre = 'cout_carburant_litre_eur';
+  static const _kConsoLitresPar100Km = 'conso_l_per_100km';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -133,6 +135,42 @@ class ParametresRepository {
   Future<void> setThemeMode(String mode) {
     assert(mode == 'system' || mode == 'light' || mode == 'dark');
     return _write(_kThemeMode, mode);
+  }
+
+  /// Cout du carburant en EUR/litre. Defaut commun France (gasoil
+  /// hors stations autoroute) : 1.85 EUR/L au 2026-05-11. Sert au
+  /// calcul du cout estime de la tournee.
+  static const double defaultCoutCarburantLitre = 1.85;
+
+  /// Consommation moyenne du vehicule en L/100km. Defaut : 7 L/100km
+  /// (VUL diesel typique). Modifiable selon le vehicule de Noah.
+  static const double defaultConsoLitresPar100Km = 7.0;
+
+  Future<double> getCoutCarburantLitre() async {
+    final v = await _readKey(_kCoutCarburantLitre);
+    return double.tryParse(v ?? '') ?? defaultCoutCarburantLitre;
+  }
+
+  Future<void> setCoutCarburantLitre(double value) {
+    return _write(_kCoutCarburantLitre, value.toStringAsFixed(3));
+  }
+
+  Future<double> getConsoLitresPar100Km() async {
+    final v = await _readKey(_kConsoLitresPar100Km);
+    return double.tryParse(v ?? '') ?? defaultConsoLitresPar100Km;
+  }
+
+  Future<void> setConsoLitresPar100Km(double value) {
+    return _write(_kConsoLitresPar100Km, value.toStringAsFixed(2));
+  }
+
+  /// Estime le cout carburant d'une distance (en metres) selon les
+  /// parametres courants. Retourne en EUR (double, arrondi a 0.01).
+  Future<double> estimerCoutCarburant({required int distanceMeters}) async {
+    final coutLitre = await getCoutCarburantLitre();
+    final conso = await getConsoLitresPar100Km();
+    final litres = (distanceMeters / 1000) * (conso / 100);
+    return litres * coutLitre;
   }
 
   static String _todayIso() {

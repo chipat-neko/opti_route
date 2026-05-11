@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/notifications_service.dart';
+import '../data/parametres_repository.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../providers/optimization_providers.dart';
@@ -21,6 +22,8 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
   final _orsKeyCtrl = TextEditingController();
   final _capaciteCtrl = TextEditingController();
   final _dureeArretCtrl = TextEditingController();
+  final _coutLitreCtrl = TextEditingController();
+  final _consoCtrl = TextEditingController();
   bool _obscureOrs = true;
   bool _saving = false;
   bool _orsInitialized = false;
@@ -43,11 +46,15 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     final cap = await repo.getCapaciteDefault();
     final duree = await repo.getDureeArretDefault();
     final nav = await repo.getNavAppDefault();
+    final coutLitre = await repo.getCoutCarburantLitre();
+    final conso = await repo.getConsoLitresPar100Km();
     if (!mounted) return;
     setState(() {
       _capaciteCtrl.text = cap?.toString() ?? '';
       _dureeArretCtrl.text = duree?.toString() ?? '';
       _navAppDefault = nav;
+      _coutLitreCtrl.text = coutLitre.toStringAsFixed(2);
+      _consoCtrl.text = conso.toStringAsFixed(1);
       _defaultsInitialized = true;
     });
   }
@@ -91,6 +98,8 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     _orsKeyCtrl.dispose();
     _capaciteCtrl.dispose();
     _dureeArretCtrl.dispose();
+    _coutLitreCtrl.dispose();
+    _consoCtrl.dispose();
     super.dispose();
   }
 
@@ -288,6 +297,56 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             onPressed: _saving || !_defaultsInitialized ? null : _saveDefaults,
             icon: const Icon(Icons.check),
             label: const Text('Enregistrer les valeurs par defaut'),
+          ),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Carburant'),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Sert au calcul du cout estime affiche sur chaque tournee '
+            'optimisee. Sans impact sur les calculs ORS / VROOM.',
+            style: TextStyle(fontSize: 12.5, color: p.textMute, height: 1.4),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _coutLitreCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Prix EUR / litre',
+                    helperText: '1.85 EUR par defaut',
+                    helperMaxLines: 2,
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  enabled: _defaultsInitialized,
+                  onSubmitted: (_) => _saveCarburant(),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: TextField(
+                  controller: _consoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Conso L / 100km',
+                    helperText: '7 L/100km par defaut',
+                    helperMaxLines: 2,
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  enabled: _defaultsInitialized,
+                  onSubmitted: (_) => _saveCarburant(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          FilledButton.icon(
+            onPressed: _saving || !_defaultsInitialized ? null : _saveCarburant,
+            icon: const Icon(Icons.check),
+            label: const Text('Enregistrer les couts carburant'),
           ),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
@@ -644,6 +703,32 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           content: Text('$deleted tournee(s) supprimee(s)'),
           backgroundColor: AppColors.emerald,
         ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _saveCarburant() async {
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(parametresRepositoryProvider);
+      final cout = double.tryParse(
+              _coutLitreCtrl.text.trim().replaceAll(',', '.')) ??
+          ParametresRepository.defaultCoutCarburantLitre;
+      final conso = double.tryParse(
+              _consoCtrl.text.trim().replaceAll(',', '.')) ??
+          ParametresRepository.defaultConsoLitresPar100Km;
+      await repo.setCoutCarburantLitre(cout);
+      await repo.setConsoLitresPar100Km(conso);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cout carburant enregistre')),
       );
     } catch (e) {
       if (!mounted) return;
