@@ -117,4 +117,33 @@ void main() {
       expect(s.raisonsEchecCourantes.length, 2);
     });
   });
+
+  group('ClientStats - tauxReussite + isEmpty', () {
+    test('aucune tentative : tauxReussite = 0 / isEmpty = true', () {
+      const s = ClientStats.empty;
+      expect(s.tauxReussite, 0);
+      expect(s.isEmpty, isTrue);
+    });
+
+    test('3 livre / 1 echec : taux 0.75', () {
+      const s = ClientStats(
+        nbLivraisons: 3,
+        nbEchecs: 1,
+        derniereLivraison: null,
+        raisonsEchecCourantes: [],
+      );
+      expect(s.tauxReussite, closeTo(0.75, 0.001));
+      expect(s.isEmpty, isFalse);
+    });
+
+    test('100 % livres : 1.0', () {
+      const s = ClientStats(
+        nbLivraisons: 5,
+        nbEchecs: 0,
+        derniereLivraison: null,
+        raisonsEchecCourantes: [],
+      );
+      expect(s.tauxReussite, 1.0);
+    });
+  });
 }
