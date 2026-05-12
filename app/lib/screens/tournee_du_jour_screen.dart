@@ -10,6 +10,7 @@ import '../data/database.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
 import '../data/notifications_service.dart';
+import '../data/preuve_photo_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournee_pdf_service.dart';
 import '../data/tournee_text_share_service.dart';
@@ -2453,7 +2454,12 @@ class _StopRow extends ConsumerWidget {
           SnackBar(
             content: Text('${_primaryLine(stop)} marque livre'),
             backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Photo preuve',
+              textColor: AppColors.ink,
+              onPressed: () => _capturerPreuve(ref, stop.id),
+            ),
           ),
         );
       case MarkEchecAction(raison: final r):
@@ -2465,7 +2471,12 @@ class _StopRow extends ConsumerWidget {
             content: Text(
                 '${_primaryLine(stop)} en echec : ${_humanRaison(r)}'),
             backgroundColor: AppColors.red,
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Photo preuve',
+              textColor: AppColors.paper,
+              onPressed: () => _capturerPreuve(ref, stop.id),
+            ),
           ),
         );
       case MarkAaLivrerAction():
@@ -2545,6 +2556,15 @@ class _StopRow extends ConsumerWidget {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Lance la camera pour capturer une photo preuve, puis attache le
+  /// chemin au stop. Best-effort : si l'utilisateur annule ou que la
+  /// permission camera est refusee, on ne fait rien.
+  Future<void> _capturerPreuve(WidgetRef ref, int stopId) async {
+    final path = await PreuvePhotoService().capturer(stopId: stopId);
+    if (path == null) return;
+    await ref.read(stopsRepositoryProvider).setPreuvePhoto(stopId, path);
   }
 
   String _primaryLine(Stop s) {
