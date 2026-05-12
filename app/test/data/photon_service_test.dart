@@ -81,5 +81,112 @@ void main() {
       }));
       expect(svc.providerKey, 'photon');
     });
+
+    test('status non 200 : throw GeocodingException', () async {
+      final mock = MockClient((req) async => http.Response('err', 500));
+      final svc = PhotonService(client: mock);
+      expect(
+        svc.search('test rue'),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('features absent : retourne liste vide', () async {
+      final body = jsonEncode({'type': 'FeatureCollection'});
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = PhotonService(client: mock);
+      final r = await svc.search('rue X');
+      expect(r, isEmpty);
+    });
+
+    test('coords manquantes : feature filtre', () async {
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {'type': 'Point'}, // pas de coordinates
+            'properties': {'name': 'X'},
+          },
+          {
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [1.0, 48.0],
+            },
+            'properties': {'name': 'Y', 'street': 'rue Y'},
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = PhotonService(client: mock);
+      final r = await svc.search('rue Y');
+      expect(r, hasLength(1));
+      expect(r.first.lat, 48.0);
+    });
+
+    test('city fallback : town/village/locality', () async {
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [1.0, 48.0],
+            },
+            'properties': {
+              'osm_key': 'place',
+              'name': 'X',
+              'street': 'rue X',
+              'town': 'PetiteVille', // fallback de city
+            },
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = PhotonService(client: mock);
+      final r = await svc.search('rue X PetiteVille');
+      expect(r.first.city, 'PetiteVille');
+    });
+
+    test('osmKey amenity : detecte comme POI', () async {
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [1.0, 48.0],
+            },
+            'properties': {
+              'osm_key': 'amenity',
+              'osm_value': 'pharmacy',
+              'name': 'Pharmacie Centrale',
+            },
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = PhotonService(client: mock);
+      final r = await svc.search('pharmacie centrale');
+      expect(r.first.isPoi, isTrue);
+      expect(r.first.poiName, 'Pharmacie Centrale');
+    });
+
+    test('osmKey office : detecte comme POI', () async {
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [1.0, 48.0],
+            },
+            'properties': {
+              'osm_key': 'office',
+              'name': 'Bureau Notaire',
+            },
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = PhotonService(client: mock);
+      final r = await svc.search('bureau notaire');
+      expect(r.first.isPoi, isTrue);
+    });
   });
 }
