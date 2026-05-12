@@ -79,6 +79,15 @@ void main() {
       expect(r, isEmpty);
     });
 
+    test('providerKey vaut "france"', () {
+      final svc = FranceGeocodingService(
+        ban: _StubBan(),
+        entreprises: _StubEntreprises(),
+        photon: _StubPhoton(),
+      );
+      expect(svc.providerKey, 'france');
+    });
+
     test('un seul resultat : retourne tel quel sans dedup', () async {
       final ban = _StubBan(returns: [_precise('12 rue X')]);
       final entr = _StubEntreprises();
