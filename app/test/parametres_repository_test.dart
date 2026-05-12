@@ -110,6 +110,52 @@ void main() {
     });
   });
 
+  group('ParametresRepository - watchers', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('watchThemeMode : emit "system" par defaut', () async {
+      final stream = repo.watchThemeMode();
+      expect(await stream.first, 'system');
+    });
+
+    test('watchThemeMode : emit valeur a chaque update', () async {
+      await repo.setThemeMode('dark');
+      expect(await repo.watchThemeMode().first, 'dark');
+    });
+
+    test('watchOnboardingDone : false par defaut', () async {
+      expect(await repo.watchOnboardingDone().first, isFalse);
+    });
+
+    test('watchOnboardingDone : true apres set', () async {
+      await repo.setOnboardingDone();
+      expect(await repo.watchOnboardingDone().first, isTrue);
+    });
+
+    test('watchOrsApiKey : null par defaut', () async {
+      expect(await repo.watchOrsApiKey().first, isNull);
+    });
+
+    test('watchOrsApiKey : trim les espaces', () async {
+      await repo.setOrsApiKey('  xyz  ');
+      expect(await repo.watchOrsApiKey().first, 'xyz');
+    });
+
+    test('watchNavAppDefault : null par defaut', () async {
+      expect(await repo.watchNavAppDefault().first, isNull);
+    });
+  });
+
   group('ParametresRepository - cle API ORS', () {
     late AppDatabase db;
     late ParametresRepository repo;
