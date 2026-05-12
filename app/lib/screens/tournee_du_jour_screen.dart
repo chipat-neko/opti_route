@@ -70,7 +70,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             tooltip: optimizer == null
                 ? 'Configure ta cle ORS dans les Parametres'
                 : dejaOptimisee
-                    ? 'Tournee deja optimisee â€” modifie un arret pour relancer'
+                    ? 'Tournee deja optimisee  -  modifie un arret pour relancer'
                     : 'Optimiser la tournee',
             onPressed: (_optimizing || dejaOptimisee)
                 ? null
@@ -231,7 +231,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       await ref.read(tourneesRepositoryProvider).delete(widget.tournee.id);
       if (!mounted) return;
       // Le HomeScreen va detecter qu'il n'y a plus de tournee du jour
-      // et basculer sur l'empty state â€” pas besoin de pop manuellement.
+      // et basculer sur l'empty state  -  pas besoin de pop manuellement.
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1363,13 +1363,13 @@ class _StatRow extends StatelessWidget {
             label: 'Distance',
             value: hasDistance
                 ? (distanceMeters! / 1000).toStringAsFixed(1)
-                : 'â€”',
+                : ' - ',
             unit: hasDistance ? 'km' : null,
           ),
           const _StatDivider(),
           _StatTile(
             label: 'Duree',
-            value: hasDuration ? _formatDuration(durationSeconds!) : 'â€”',
+            value: hasDuration ? _formatDuration(durationSeconds!) : ' - ',
           ),
         ],
       ),

@@ -637,7 +637,7 @@ class _ExtractedRow extends StatelessWidget {
 
 /// Section repliable affichant tout le texte OCR ligne par ligne avec
 /// numero, et un bouton pour copier dans le presse-papiers. Utile
-/// pour debugger le parser quand l'extraction auto se trompe â€” Noah
+/// pour debugger le parser quand l'extraction auto se trompe  -  Noah
 /// peut copier le texte et me l'envoyer pour que j'ajuste les
 /// heuristiques aux vraies donnees ML Kit.
 class _DebugRawTextSection extends StatefulWidget {

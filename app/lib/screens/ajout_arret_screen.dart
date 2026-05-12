@@ -883,7 +883,7 @@ class _TimePickerField extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final display = value == null
-        ? 'â€”'
+        ? ' - '
         : '${value!.hour.toString().padLeft(2, '0')}:${value!.minute.toString().padLeft(2, '0')}';
     return InkWell(
       borderRadius: BorderRadius.circular(AppRadius.r14),

@@ -229,7 +229,7 @@ class _ClientStatsBlock extends ConsumerWidget {
         }
         final tauxPct = (stats.tauxReussite * 100).toStringAsFixed(0);
         final dernier = stats.derniereLivraison == null
-            ? 'â€”'
+            ? ' - '
             : DateFormat('dd/MM/yyyy', 'fr')
                 .format(stats.derniereLivraison!);
         return Container(

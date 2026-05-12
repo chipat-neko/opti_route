@@ -228,7 +228,7 @@ class _StatsBody extends StatelessWidget {
   }
 
   static String _formatDuration(int totalSeconds) {
-    if (totalSeconds == 0) return 'â€”';
+    if (totalSeconds == 0) return ' - ';
     final h = totalSeconds ~/ 3600;
     final m = (totalSeconds % 3600) ~/ 60;
     if (h == 0) return '${m}min';

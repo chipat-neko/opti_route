@@ -185,7 +185,7 @@ opti_route est une application d'optimisation de tournees de livraison a usage p
 
 ## Donnees stockees localement
 
-Tout ce que tu saisis ou que l'app calcule reste sur la memoire de ton telephone, dans une base SQLite locale. Aucune donnee n'est envoyee a un serveur opti_route â€” il n'y a d'ailleurs pas de serveur opti_route.
+Tout ce que tu saisis ou que l'app calcule reste sur la memoire de ton telephone, dans une base SQLite locale. Aucune donnee n'est envoyee a un serveur opti_route  -  il n'y a d'ailleurs pas de serveur opti_route.
 
 Concretement, sont stockes sur ton appareil :
 
