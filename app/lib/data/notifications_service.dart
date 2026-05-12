@@ -117,6 +117,120 @@ class NotificationsService {
     await _plugin.cancelAll();
   }
 
+  /// Programme un rappel "prepare tes colis" la veille de la tournee
+  /// a [when] (heure fixe choisie par Noah, ex: 21h00).
+  ///
+  /// Distinct du rappel "matin de tournee" (scheduleTourneeRappel) qui
+  /// reveille Noah. Celui-ci sert a la preparation pre-tournee.
+  Future<void> scheduleVeilleReminder({
+    required int tourneeId,
+    required String nomTournee,
+    required DateTime when,
+  }) async {
+    await init();
+    final notifId = _veilleNotifId(tourneeId);
+    await _plugin.cancel(notifId);
+    final tzWhen = tz.TZDateTime.from(when, tz.local);
+    final now = tz.TZDateTime.now(tz.local);
+    if (!tzWhen.isAfter(now)) return;
+    await _plugin.zonedSchedule(
+      notifId,
+      'Demain : $nomTournee',
+      'Pense a preparer tes colis ce soir.',
+      tzWhen,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  Future<void> cancelVeilleReminder(int tourneeId) async {
+    await init();
+    await _plugin.cancel(_veilleNotifId(tourneeId));
+  }
+
+  /// Notification immediate post-tournee : "X livrees / Y echecs / Z min
+  /// totales". Affichee a la bascule de la tournee en 'terminee'.
+  Future<void> showEndOfRouteSummary({
+    required int tourneeId,
+    required String nomTournee,
+    required int nbLivres,
+    required int nbEchecs,
+    required int dureeTotaleMin,
+  }) async {
+    await init();
+    final notifId = _endOfRouteNotifId(tourneeId);
+    final body = '$nbLivres livraisons, $nbEchecs echecs, '
+        '${_humanDuration(dureeTotaleMin)}';
+    await _plugin.show(
+      notifId,
+      'Tournee terminee : $nomTournee',
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  /// Notification "arrets oubliés" : declenchee si la tournee est mise
+  /// en pause / fermee alors qu'il reste des stops a_livrer.
+  Future<void> showPendingStopsAlert({
+    required int tourneeId,
+    required String nomTournee,
+    required int nbPending,
+  }) async {
+    await init();
+    if (nbPending == 0) return;
+    final notifId = _pendingStopsNotifId(tourneeId);
+    await _plugin.show(
+      notifId,
+      'Arrets oublies : $nomTournee',
+      'Il reste $nbPending arret${nbPending > 1 ? "s" : ""} a livrer.',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  static String _humanDuration(int min) {
+    if (min < 60) return '$min min';
+    final h = min ~/ 60;
+    final m = min % 60;
+    return m == 0 ? '${h}h' : '${h}h${m.toString().padLeft(2, '0')}';
+  }
+
+  /// IDs distincts par type pour pouvoir programmer/annuler independamment.
+  /// Plage reservee :
+  ///   - matin (tourneeId direct) : 1 - 9999
+  ///   - veille : 10000 - 19999
+  ///   - end-of-route : 20000 - 29999
+  ///   - pending-stops : 30000 - 39999
+  ///   - test : 9999 (reserve historique)
+  static int _veilleNotifId(int tourneeId) => 10000 + tourneeId;
+  static int _endOfRouteNotifId(int tourneeId) => 20000 + tourneeId;
+  static int _pendingStopsNotifId(int tourneeId) => 30000 + tourneeId;
+
   static const _testId = 9999;
   static const _channelId = 'opti_route_reminders';
 
