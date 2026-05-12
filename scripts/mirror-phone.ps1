@@ -20,7 +20,8 @@ $scrcpy = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Genymobile.scrcpy_Microso
 
 if (-not (Test-Path $scrcpy)) {
     # Fallback : chercher dans le PATH (apres redemarrage de session)
-    $scrcpy = (Get-Command scrcpy -ErrorAction SilentlyContinue)?.Source
+    $cmd = Get-Command scrcpy -ErrorAction SilentlyContinue
+    if ($cmd) { $scrcpy = $cmd.Source } else { $scrcpy = $null }
 }
 
 if (-not $scrcpy -or -not (Test-Path $scrcpy)) {
