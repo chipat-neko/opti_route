@@ -221,3 +221,4 @@ adb install -r app/build/app/outputs/flutter-apk/app-release.apk
 - **0 issue** `flutter analyze` (après `dart fix --apply`)
 - **204 lignes** de code mort retirées (`NominatimService`)
 - **APK release v1.1.0+2** (~96 MB) prêt à `app/build/app/outputs/flutter-apk/app-release.apk`
+- **CI GitHub Actions VERTE** sur le commit `383a52f` (fix tests bug Drift Timer + GoogleFonts CI + dedup)
