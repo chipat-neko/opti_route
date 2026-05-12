@@ -584,6 +584,116 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Accessibilite & confort'),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Adapte l\'interface pour la conduite ou les conditions '
+            'difficiles (soleil, vibrations).',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          Consumer(
+            builder: (context, ref, _) {
+              final repo = ref.watch(parametresRepositoryProvider);
+              final densite = ref.watch(densiteUiProvider).asData?.value ??
+                  'normal';
+              return SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: densite == 'large',
+                title: const Text('Mode XL (conduite)'),
+                subtitle: const Text(
+                  'Polices +15%, cibles tactiles agrandies',
+                  style: TextStyle(fontSize: 12),
+                ),
+                onChanged: (v) async {
+                  await repo.setDensiteUi(v ? 'large' : 'normal');
+                },
+              );
+            },
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final repo = ref.watch(parametresRepositoryProvider);
+              final contraste = ref
+                      .watch(contrasteEleveProvider)
+                      .asData
+                      ?.value ??
+                  false;
+              return SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: contraste,
+                title: const Text('Contraste eleve'),
+                subtitle: const Text(
+                  'Bordures et textes renforces pour lire en plein soleil',
+                  style: TextStyle(fontSize: 12),
+                ),
+                onChanged: (v) async {
+                  await repo.setContrasteEleve(v);
+                },
+              );
+            },
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final repo = ref.watch(parametresRepositoryProvider);
+              final hhmm = ref
+                  .watch(veilleReminderHHmmProvider)
+                  .asData
+                  ?.value;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.bedtime_outlined),
+                title: const Text('Rappel veille auto'),
+                subtitle: Text(
+                  hhmm == null
+                      ? 'Desactive — programme un rappel la veille de '
+                          'chaque tournee'
+                      : 'Active a $hhmm la veille de chaque tournee',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                trailing: hhmm == null
+                    ? const Icon(Icons.add)
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(hhmm,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              )),
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () =>
+                                repo.clearVeilleReminderHHmm(),
+                          ),
+                        ],
+                      ),
+                onTap: () async {
+                  final initial = hhmm == null
+                      ? const TimeOfDay(hour: 21, minute: 0)
+                      : TimeOfDay(
+                          hour: int.parse(hhmm.split(':')[0]),
+                          minute: int.parse(hhmm.split(':')[1]),
+                        );
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: initial,
+                  );
+                  if (picked != null) {
+                    final h = picked.hour.toString().padLeft(2, '0');
+                    final m = picked.minute.toString().padLeft(2, '0');
+                    await repo.setVeilleReminderHHmm('$h:$m');
+                  }
+                },
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('A propos'),
           const SizedBox(height: AppSpacing.x10),
           ListTile(

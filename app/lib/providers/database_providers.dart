@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../data/eta_calculator.dart';
 import '../data/parametres_repository.dart';
 import '../data/client_stats_service.dart';
 import '../data/saved_destinations_repository.dart';
@@ -86,6 +87,55 @@ final themePresetProvider = StreamProvider<AppThemePreset>((ref) {
       .watch(parametresRepositoryProvider)
       .watchThemePreset()
       .map(AppThemePreset.fromName);
+});
+
+/// Densite UI : 'normal' (defaut) ou 'large' (mode conduite, polices
+/// +15%, cibles tactiles agrandies).
+final densiteUiProvider = StreamProvider<String>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchDensiteUi();
+});
+
+/// Toggle contraste eleve : renforce bordures et textes pour lecture
+/// en plein soleil.
+final contrasteEleveProvider = StreamProvider<bool>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchContrasteEleve();
+});
+
+/// Heure du rappel veille auto au format "HH:mm", ou null si desactive.
+final veilleReminderHHmmProvider = StreamProvider<String?>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchVeilleReminderHHmm();
+});
+
+/// Compteurs motivants (cumul annuel + streak sans echec). Recalcule
+/// a chaque changement des tournees pour rester en sync.
+final motivationStatsProvider = FutureProvider<MotivationStats>((ref) async {
+  ref.watch(tourneesStreamProvider);
+  return ref.read(statsServiceProvider).compteursMotivants();
+});
+
+/// ETA estimee pour chaque stop d'une tournee donnee. Map stopId ->
+/// DateTime (heure d'arrivee estimee). Recalcule en watch des stops
+/// (changement d'ordre / statut) et du `tourneesStreamProvider`.
+///
+/// Pour eviter les recalculs a chaque frame (ETA depend de "now"), on
+/// ne recompute qu'a chaque modif du flux. L'heure de depart est fixe
+/// au moment du compute : si la tournee est `en_cours`, on prend now,
+/// sinon `demareeLe` ou now si jamais demarre.
+final etasParStopProvider =
+    FutureProvider.family<Map<int, DateTime>, int>((ref, tourneeId) async {
+  final tournees = ref.watch(tourneesStreamProvider).asData?.value ?? const [];
+  final tournee = tournees.where((t) => t.id == tourneeId).firstOrNull;
+  if (tournee == null) return const {};
+  final stops =
+      await ref.read(stopsRepositoryProvider).getByTournee(tourneeId);
+  final startAt = tournee.statut == 'en_cours'
+      ? (tournee.demareeLe ?? DateTime.now())
+      : DateTime.now();
+  return EtaCalculator.computeEtas(
+    startAt: startAt,
+    orderedStops: stops,
+    dureeTotaleS: tournee.dureeTotaleS,
+  );
 });
 
 /// Compteur d'optimisations OpenRouteService consommees aujourd'hui.

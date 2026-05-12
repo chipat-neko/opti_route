@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
+import '../data/saved_destinations_repository.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -23,6 +24,9 @@ class CarnetEditScreen extends ConsumerStatefulWidget {
 class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
   late final TextEditingController _nomCtrl;
   late final TextEditingController _notesCarnetCtrl;
+  late final TextEditingController _codeAccesCtrl;
+  late final TextEditingController _etageCtrl;
+  late final TextEditingController _tagsCtrl;
   AddressSuggestion? _address;
   bool _saving = false;
 
@@ -32,6 +36,10 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
     final e = widget.entry;
     _nomCtrl = TextEditingController(text: e.nomClient ?? '');
     _notesCarnetCtrl = TextEditingController(text: e.notesCarnet ?? '');
+    _codeAccesCtrl = TextEditingController(text: e.codeAcces ?? '');
+    _etageCtrl = TextEditingController(text: e.etageBatiment ?? '');
+    final initialTags = SavedDestinationsRepository.parseTags(e.tagsJson);
+    _tagsCtrl = TextEditingController(text: initialTags.join(', '));
     _address = AddressSuggestion(
       displayName: e.adresseDisplay,
       lat: e.lat,
@@ -46,6 +54,9 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
   void dispose() {
     _nomCtrl.dispose();
     _notesCarnetCtrl.dispose();
+    _codeAccesCtrl.dispose();
+    _etageCtrl.dispose();
+    _tagsCtrl.dispose();
     super.dispose();
   }
 
@@ -76,6 +87,42 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
             initialDisplayText: widget.entry.adresseDisplay,
             initialSuggestion: _address,
             onSuggestionSelected: (s) => setState(() => _address = s),
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          // Code d'acces (interphone, portail) - mis en gros dans la
+          // fiche pour etre rapidement lisible en livraison.
+          TextField(
+            controller: _codeAccesCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Code d\'acces (interphone / portail)',
+              hintText: 'Ex: 1234B',
+              prefixIcon: Icon(Icons.lock_outlined),
+            ),
+            autocorrect: false,
+            enableSuggestions: false,
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          // Etage / batiment / appartement
+          TextField(
+            controller: _etageCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Batiment / etage (optionnel)',
+              hintText: 'Ex: Bat C, 3e etage, app. 12',
+              prefixIcon: Icon(Icons.apartment_outlined),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          // Tags libres, separes par virgules dans l'UI, stockes en JSON.
+          TextField(
+            controller: _tagsCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Tags (optionnel)',
+              hintText: 'Ex: pro, fragile, prioritaire',
+              helperText: 'Separe les tags par des virgules. '
+                  'Sert a filtrer la liste du carnet.',
+              helperMaxLines: 2,
+              prefixIcon: Icon(Icons.local_offer_outlined),
+            ),
           ),
           const SizedBox(height: AppSpacing.x18),
           TextField(
@@ -150,17 +197,35 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
     }
     setState(() => _saving = true);
     try {
-      await ref.read(savedDestinationsRepositoryProvider).update(
-            widget.entry.id,
-            nomClient: _nomCtrl.text.trim(),
-            adresseDisplay: _address!.adressePostale,
-            lat: _address!.lat,
-            lng: _address!.lon,
-            rue: _address!.road ?? '',
-            codePostal: _address!.postcode ?? '',
-            ville: _address!.city ?? '',
-            notesCarnet: _notesCarnetCtrl.text.trim(),
-          );
+      final repo = ref.read(savedDestinationsRepositoryProvider);
+      await repo.update(
+        widget.entry.id,
+        nomClient: _nomCtrl.text.trim(),
+        adresseDisplay: _address!.adressePostale,
+        lat: _address!.lat,
+        lng: _address!.lon,
+        rue: _address!.road ?? '',
+        codePostal: _address!.postcode ?? '',
+        ville: _address!.city ?? '',
+        notesCarnet: _notesCarnetCtrl.text.trim(),
+        codeAcces: _codeAccesCtrl.text.trim(),
+        etageBatiment: _etageCtrl.text.trim(),
+      );
+      // Tags : on parse la saisie "tag1, tag2, tag3" en liste, on filtre
+      // les vides + duplicats (case-insensitive), puis on persiste.
+      final rawTags = _tagsCtrl.text
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
+      final seen = <String>{};
+      final tags = <String>[];
+      for (final t in rawTags) {
+        final k = t.toLowerCase();
+        if (seen.add(k)) tags.add(t);
+      }
+      await repo.setTags(widget.entry.id, tags);
+
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {

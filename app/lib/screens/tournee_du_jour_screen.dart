@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart' show Value;
@@ -7,6 +8,7 @@ import 'package:geolocator/geolocator.dart' show Position;
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../data/eta_calculator.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
 import '../data/notifications_service.dart';
@@ -587,6 +589,22 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           widget.tournee.id,
           const TourneesCompanion(statut: Value('optimisee')),
         );
+    // Alerte "arrets oublies" : si la tournee est mise en pause avec
+    // des stops a_livrer restants, on push une notif rappel.
+    final stops = await ref
+        .read(stopsRepositoryProvider)
+        .getByTournee(widget.tournee.id);
+    final pending =
+        stops.where((s) => s.statutLivraison == 'a_livrer').length;
+    if (pending > 0) {
+      unawaited(
+        NotificationsService.instance.showPendingStopsAlert(
+          tourneeId: widget.tournee.id,
+          nomTournee: widget.tournee.nom,
+          nbPending: pending,
+        ),
+      );
+    }
   }
 
   Future<void> _onOptimizePressed() async {
@@ -2414,6 +2432,9 @@ class _StopRow extends ConsumerWidget {
                   ],
                 ),
               ),
+              // ETA estimee (uniquement pour les stops a_livrer).
+              if (!isLivre && !isEchec)
+                _EtaBadge(tourneeId: stop.tourneeId, stopId: stop.id),
               if (showDragHandle)
                 ReorderableDragStartListener(
                   index: dragIndex,
@@ -2482,6 +2503,8 @@ class _StopRow extends ConsumerWidget {
       case MarkAaLivrerAction():
         await repo.markAaLivrer(stop.id);
         statutChange = true;
+      case TakePreuvePhotoAction():
+        await _capturerPreuve(ref, stop.id);
       case OpenDetailsAction():
         await navigator.push<void>(
           MaterialPageRoute(
@@ -2519,6 +2542,22 @@ class _StopRow extends ConsumerWidget {
         tourneeId,
         const TourneesCompanion(statut: Value('terminee')),
       );
+      // Notif post-tournee : recap livres / echecs / duree.
+      final nbLivres = stops.where((s) => s.statutLivraison == 'livre').length;
+      final nbEchecs = stops.where((s) => s.statutLivraison == 'echec').length;
+      final dureeMin = (tournee.dureeTotaleS ?? 0) ~/ 60;
+      unawaited(
+        NotificationsService.instance.showEndOfRouteSummary(
+          tourneeId: tourneeId,
+          nomTournee: tournee.nom,
+          nbLivres: nbLivres,
+          nbEchecs: nbEchecs,
+          dureeTotaleMin: dureeMin,
+        ),
+      );
+      // Si un rappel matin etait programme et toujours pendant, on
+      // l'annule (la tournee est faite).
+      unawaited(NotificationsService.instance.cancelTourneeRappel(tourneeId));
     } else if (!tousValides && wasTerminee) {
       // L'utilisateur a annule un statut deja pose. On retire la
       // marque "terminee" pour qu'il finisse la tournee.
@@ -2734,6 +2773,45 @@ class _Tag extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         style: style,
+      ),
+    );
+  }
+}
+
+/// Badge "ETA HH:MM" affiche en regard du nom du client. Watche le
+/// provider `etasParStopProvider` et n'affiche rien tant que le calcul
+/// n'a pas emis ou si l'ETA n'est pas disponible pour ce stop.
+class _EtaBadge extends ConsumerWidget {
+  const _EtaBadge({required this.tourneeId, required this.stopId});
+
+  final int tourneeId;
+  final int stopId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final etas = ref.watch(etasParStopProvider(tourneeId)).asData?.value;
+    final eta = etas?[stopId];
+    if (eta == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.x6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x6,
+          vertical: 3,
+        ),
+        decoration: BoxDecoration(
+          color: p.inkLine.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(AppRadius.r8),
+        ),
+        child: Text(
+          EtaCalculator.formatEtaHHmm(eta),
+          style: appMonoStyle(
+            fontSize: 10,
+            color: p.textMute,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

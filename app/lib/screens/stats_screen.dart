@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../data/database.dart';
 import '../data/stats_service.dart';
@@ -35,6 +39,8 @@ class StatsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.x18),
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
+            _MotivationCard(),
+            SizedBox(height: AppSpacing.x14),
             _StatsCard(label: '7 DERNIERS JOURS', days: 7),
             SizedBox(height: AppSpacing.x14),
             _StatsCard(label: '30 DERNIERS JOURS', days: 30),
@@ -44,6 +50,8 @@ class StatsScreen extends ConsumerWidget {
             _JoursSemaineCard(),
             SizedBox(height: AppSpacing.x14),
             _TopClientsCard(),
+            SizedBox(height: AppSpacing.x14),
+            _ExportCsvCard(),
           ],
         ),
       ),
@@ -657,5 +665,177 @@ class _BarRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Carte de motivation : compteurs cumulatifs annee + streak de tournees
+/// terminees consecutives sans aucun echec. Donne un coup de boost
+/// quand Noah scroll les stats.
+class _MotivationCard extends ConsumerWidget {
+  const _MotivationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(motivationStatsProvider);
+    final stats = async.asData?.value ?? MotivationStats.empty;
+    final hasData = stats.tourneesAnnee > 0;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.lime,
+            AppColors.lime.withValues(alpha: 0.75),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_fire_department,
+                  color: AppColors.ink, size: 20),
+              const SizedBox(width: AppSpacing.x8),
+              Text(
+                hasData ? 'CETTE ANNEE' : 'EN ATTENTE DE TA 1RE TOURNEE',
+                style: appMonoStyle(
+                  fontSize: 11,
+                  color: AppColors.ink,
+                  letterSpacing: 0.6,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          if (hasData) ...[
+            Text(
+              '${stats.colisLivresAnnee} colis livres',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${stats.tourneesAnnee} tournees, '
+              '${stats.kmAnnee.toStringAsFixed(0)} km parcourus',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.ink,
+              ),
+            ),
+            if (stats.streakSansEchec > 0) ...[
+              const SizedBox(height: AppSpacing.x10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x10,
+                  vertical: AppSpacing.x6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.ink,
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                ),
+                child: Text(
+                  '${stats.streakSansEchec} tournee${stats.streakSansEchec > 1 ? "s" : ""} sans incident',
+                  style: appMonoStyle(
+                    fontSize: 12,
+                    color: AppColors.lime,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ] else
+            Text(
+              'Cree ta premiere tournee pour voir tes stats motivantes !',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.ink.withValues(alpha: 0.75),
+                height: 1.4,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Carte "Exporter en CSV" : genere un fichier des tournees + share
+/// natif (mail, Drive, etc.).
+class _ExportCsvCard extends ConsumerWidget {
+  const _ExportCsvCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: p.paper,
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+        border: Border.all(color: p.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'EXPORTER LES STATS',
+            style: appMonoStyle(
+              fontSize: 11,
+              color: p.textMute,
+              letterSpacing: 0.6,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          Text(
+            'CSV des 365 derniers jours (compatible Excel / Google Sheets).',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          FilledButton.icon(
+            onPressed: () => _exportAndShare(context, ref),
+            icon: const Icon(Icons.file_download_outlined),
+            label: const Text('Exporter en CSV'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportAndShare(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final since = DateTime.now().subtract(const Duration(days: 365));
+      final csv =
+          await ref.read(statsServiceProvider).exportCsvTournees(since: since);
+      final dir = await getTemporaryDirectory();
+      final ts = DateTime.now().toIso8601String().split('.').first
+          .replaceAll(':', '-');
+      final file = File('${dir.path}/stats-opti-route-$ts.csv');
+      await file.writeAsString(csv);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Stats opti_route',
+          text: 'Export des tournees opti_route (365 derniers jours).',
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur export : $e')),
+      );
+    }
   }
 }

@@ -344,6 +344,37 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
             .cancelTourneeRappel(idForNotif);
       }
 
+      // Rappel veille auto : si l'utilisateur a configure une heure
+      // dans Parametres, on programme une notif a J-1 a cette heure.
+      // Best-effort : ne bloque pas la sauvegarde si echec.
+      try {
+        final paramsRepo = ref.read(parametresRepositoryProvider);
+        final hhmm = await paramsRepo.getVeilleReminderHHmm();
+        if (hhmm != null) {
+          final parts = hhmm.split(':');
+          final hour = int.tryParse(parts[0]) ?? 21;
+          final minute = parts.length > 1
+              ? (int.tryParse(parts[1]) ?? 0)
+              : 0;
+          final veille = DateTime(
+            _date.year,
+            _date.month,
+            _date.day,
+          ).subtract(const Duration(days: 1)).copyWith(
+                hour: hour,
+                minute: minute,
+              );
+          await NotificationsService.instance.scheduleVeilleReminder(
+            tourneeId: idForNotif,
+            nomTournee: nom,
+            when: veille,
+          );
+        } else {
+          await NotificationsService.instance
+              .cancelVeilleReminder(idForNotif);
+        }
+      } catch (_) {/* best-effort */}
+
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {

@@ -33,6 +33,11 @@ class OptiRouteApp extends ConsumerWidget {
     // que le stream n'a pas emis.
     final preset = ref.watch(themePresetProvider).asData?.value ??
         AppThemePreset.lime;
+    // Densite UI : 'large' multiplie le textScaleFactor par 1.15
+    // (mode conduite / Mode XL).
+    final densite =
+        ref.watch(densiteUiProvider).asData?.value ?? 'normal';
+    final textScaleBoost = densite == 'large' ? 1.15 : 1.0;
 
     return MaterialApp(
       title: 'opti_route',
@@ -48,6 +53,20 @@ class OptiRouteApp extends ConsumerWidget {
       supportedLocales: const [Locale('fr', 'FR')],
       locale: const Locale('fr', 'FR'),
       home: const HomeScreen(),
+      builder: (context, child) {
+        if (textScaleBoost == 1.0) return child!;
+        final mq = MediaQuery.of(context);
+        // Multiplie le scale systeme Android par notre boost. Ex :
+        // user Android x1.3 + mode XL x1.15 = x1.495.
+        final systemScale = mq.textScaler.scale(1.0);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler:
+                TextScaler.linear(systemScale * textScaleBoost),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

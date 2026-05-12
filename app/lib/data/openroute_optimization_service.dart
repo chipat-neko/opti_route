@@ -126,15 +126,21 @@ class OpenRouteOptimizationService implements OptimizationService {
       ],
     };
 
-    final response = await _client.post(
-      _endpoint,
-      headers: {
-        'Authorization': apiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode(payload),
-    );
+    final response = await _client
+        .post(
+          _endpoint,
+          headers: {
+            'Authorization': apiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode(payload),
+        )
+        .timeout(
+          const Duration(seconds: 30),
+          onTimeout: () =>
+              throw const OptimizationException('ORS VROOM timeout (>30s)'),
+        );
 
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw const OptimizationException(
@@ -243,15 +249,17 @@ class OpenRouteOptimizationService implements OptimizationService {
     }
 
     try {
-      final response = await _client.post(
-        _directionsEndpointFor(tournee.profilOrs),
-        headers: {
-          'Authorization': apiKey,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
+      final response = await _client
+          .post(
+            _directionsEndpointFor(tournee.profilOrs),
+            headers: {
+              'Authorization': apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) {
         return _haversineFallback(coords);
       }

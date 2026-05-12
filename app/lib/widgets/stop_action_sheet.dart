@@ -34,6 +34,13 @@ class OpenDetailsAction extends StopAction {
   const OpenDetailsAction();
 }
 
+/// Capture une photo preuve avant ou apres validation (depend du
+/// statut courant du stop). Le caller appelle PreuvePhotoService.capturer
+/// et setPreuvePhoto sur le repo.
+class TakePreuvePhotoAction extends StopAction {
+  const TakePreuvePhotoAction();
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -391,6 +398,26 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 ),
               ],
               const Divider(height: AppSpacing.x28),
+              // Photo preuve : accessible avant ou apres validation.
+              // Si une photo existe deja, on l'indique discretement.
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: p.ink,
+                ),
+                onPressed: () => Navigator.of(context)
+                    .pop(const TakePreuvePhotoAction()),
+                icon: Icon(
+                  widget.stop.preuvePhotoPath != null
+                      ? Icons.photo_camera
+                      : Icons.photo_camera_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  widget.stop.preuvePhotoPath != null
+                      ? 'Refaire la photo preuve'
+                      : 'Prendre une photo preuve',
+                ),
+              ),
               TextButton.icon(
                 style: TextButton.styleFrom(
                   foregroundColor: p.ink,
