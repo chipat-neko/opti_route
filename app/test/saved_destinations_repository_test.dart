@@ -189,6 +189,104 @@ void main() {
       expect(await repo.count(), 2);
     });
 
+    test('upsert sans nomClient : detection doublon par coords (~11m)',
+        () async {
+      // 2 upserts avec coords quasi-identiques (delta < 0.0001), sans nom.
+      // -> doit etre detecte comme doublon et refresher useCount.
+      await repo.upsertFromValidatedStop(
+        nomClient: null,
+        adresseDisplay: '14 rue X, 28000 Chartres',
+        lat: 48.4307,
+        lng: 1.4892,
+      );
+      await repo.upsertFromValidatedStop(
+        nomClient: null,
+        adresseDisplay: '14 rue X, 28000 Chartres',
+        lat: 48.43071, // < 0.0001 delta
+        lng: 1.48921,
+      );
+      expect(await repo.count(), 1);
+    });
+
+    test('upsert : coords > 11m -> nouvelle entree', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: null,
+        adresseDisplay: 'A',
+        lat: 48.4307,
+        lng: 1.4892,
+      );
+      await repo.upsertFromValidatedStop(
+        nomClient: null,
+        adresseDisplay: 'B',
+        lat: 48.4400, // ~1 km plus loin
+        lng: 1.4892,
+      );
+      expect(await repo.count(), 2);
+    });
+
+    test('delete : retire une entree', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'A',
+        lat: 1,
+        lng: 1,
+      );
+      final id = (await repo.watchAll().first).first.id;
+      await repo.delete(id);
+      expect(await repo.count(), 0);
+    });
+
+    test('watchAll : favori en haut peu importe useCount', () async {
+      // A : tres utilise mais pas favori. B : 1x use mais favori.
+      await repo.upsertFromValidatedStop(
+        nomClient: 'A',
+        adresseDisplay: 'A',
+        lat: 1,
+        lng: 1,
+      );
+      await repo.upsertFromValidatedStop(
+        nomClient: 'A',
+        adresseDisplay: 'A',
+        lat: 1,
+        lng: 1,
+      );
+      await repo.upsertFromValidatedStop(
+        nomClient: 'A',
+        adresseDisplay: 'A',
+        lat: 1,
+        lng: 1,
+      );
+      await repo.upsertFromValidatedStop(
+        nomClient: 'B',
+        adresseDisplay: 'B',
+        lat: 2,
+        lng: 2,
+      );
+      final entries = await repo.watchAll().first;
+      final bId = entries.firstWhere((d) => d.nomClient == 'B').id;
+      await repo.toggleFavori(bId);
+
+      final ordered = await repo.watchAll().first;
+      expect(ordered.first.nomClient, 'B'); // favori en haut
+    });
+
+    test('search : accents (Luce == Lucé), insensible diacritiques',
+        () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'Carrefour Lucé',
+        adresseDisplay: 'ZAC, 28110 Lucé',
+        lat: 48.44,
+        lng: 1.46,
+        ville: 'Lucé',
+      );
+      // Sans accent
+      expect((await repo.search('luce')).map((d) => d.nomClient),
+          contains('Carrefour Lucé'));
+      // Avec accent
+      expect((await repo.search('Lucé')).map((d) => d.nomClient),
+          contains('Carrefour Lucé'));
+    });
+
     test('update : modifie notesCarnet', () async {
       await repo.upsertFromValidatedStop(
         nomClient: 'X',
