@@ -287,6 +287,86 @@ void main() {
           contains('Carrefour Lucé'));
     });
 
+    test('setTags : encode/decode round-trip', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'addr',
+        lat: 0,
+        lng: 0,
+      );
+      final id = (await repo.watchAll().first).first.id;
+
+      await repo.setTags(id, ['pro', 'fragile', 'codé']);
+      final entry = await repo.getById(id);
+      final tags = SavedDestinationsRepository.parseTags(entry!.tagsJson);
+      expect(tags, ['pro', 'fragile', 'codé']);
+    });
+
+    test('setTags null : retire les tags', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'addr',
+        lat: 0,
+        lng: 0,
+      );
+      final id = (await repo.watchAll().first).first.id;
+      await repo.setTags(id, ['pro']);
+      await repo.setTags(id, null);
+      final entry = await repo.getById(id);
+      expect(entry!.tagsJson, isNull);
+    });
+
+    test('setTags liste vide : stocke null', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'addr',
+        lat: 0,
+        lng: 0,
+      );
+      final id = (await repo.watchAll().first).first.id;
+      await repo.setTags(id, []);
+      final entry = await repo.getById(id);
+      expect(entry!.tagsJson, isNull);
+    });
+
+    test('parseTags : null / vide / malforme -> []', () {
+      expect(SavedDestinationsRepository.parseTags(null), isEmpty);
+      expect(SavedDestinationsRepository.parseTags(''), isEmpty);
+      expect(SavedDestinationsRepository.parseTags('garbage'), isEmpty);
+      expect(SavedDestinationsRepository.parseTags('[]'), isEmpty);
+    });
+
+    test('setPhotoPath + getById : round-trip', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'addr',
+        lat: 0,
+        lng: 0,
+      );
+      final id = (await repo.watchAll().first).first.id;
+      await repo.setPhotoPath(id, '/data/photos/12.jpg');
+      final entry = await repo.getById(id);
+      expect(entry!.photoPath, '/data/photos/12.jpg');
+    });
+
+    test('update : codeAcces + etageBatiment', () async {
+      await repo.upsertFromValidatedStop(
+        nomClient: 'X',
+        adresseDisplay: 'addr',
+        lat: 0,
+        lng: 0,
+      );
+      final id = (await repo.watchAll().first).first.id;
+      await repo.update(
+        id,
+        codeAcces: '1234B',
+        etageBatiment: 'Bat C, 3e etage',
+      );
+      final entry = await repo.getById(id);
+      expect(entry!.codeAcces, '1234B');
+      expect(entry.etageBatiment, 'Bat C, 3e etage');
+    });
+
     test('update : modifie notesCarnet', () async {
       await repo.upsertFromValidatedStop(
         nomClient: 'X',

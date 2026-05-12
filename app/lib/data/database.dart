@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -105,6 +105,13 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(stops, stops.preuvePhotoPath);
             await m.addColumn(tournees, tournees.pauseeLe);
             await m.addColumn(tournees, tournees.pauseeSeconds);
+          }
+          if (from < 19) {
+            await m.addColumn(savedDestinations, savedDestinations.tagsJson);
+            await m.addColumn(savedDestinations, savedDestinations.photoPath);
+            await m.addColumn(savedDestinations, savedDestinations.codeAcces);
+            await m.addColumn(
+                savedDestinations, savedDestinations.etageBatiment);
           }
         },
         beforeOpen: (details) async {

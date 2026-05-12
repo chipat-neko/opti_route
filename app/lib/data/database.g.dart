@@ -3720,6 +3720,50 @@ class $SavedDestinationsTable extends SavedDestinations
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tagsJsonMeta = const VerificationMeta(
+    'tagsJson',
+  );
+  @override
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+    'tags_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _photoPathMeta = const VerificationMeta(
+    'photoPath',
+  );
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+    'photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _codeAccesMeta = const VerificationMeta(
+    'codeAcces',
+  );
+  @override
+  late final GeneratedColumn<String> codeAcces = GeneratedColumn<String>(
+    'code_acces',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _etageBatimentMeta = const VerificationMeta(
+    'etageBatiment',
+  );
+  @override
+  late final GeneratedColumn<String> etageBatiment = GeneratedColumn<String>(
+    'etage_batiment',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3736,6 +3780,10 @@ class $SavedDestinationsTable extends SavedDestinations
     isFavori,
     colorTag,
     notesCarnet,
+    tagsJson,
+    photoPath,
+    codeAcces,
+    etageBatiment,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3845,6 +3893,33 @@ class $SavedDestinationsTable extends SavedDestinations
         ),
       );
     }
+    if (data.containsKey('tags_json')) {
+      context.handle(
+        _tagsJsonMeta,
+        tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta),
+      );
+    }
+    if (data.containsKey('photo_path')) {
+      context.handle(
+        _photoPathMeta,
+        photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta),
+      );
+    }
+    if (data.containsKey('code_acces')) {
+      context.handle(
+        _codeAccesMeta,
+        codeAcces.isAcceptableOrUnknown(data['code_acces']!, _codeAccesMeta),
+      );
+    }
+    if (data.containsKey('etage_batiment')) {
+      context.handle(
+        _etageBatimentMeta,
+        etageBatiment.isAcceptableOrUnknown(
+          data['etage_batiment']!,
+          _etageBatimentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3910,6 +3985,22 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.string,
         data['${effectivePrefix}notes_carnet'],
       ),
+      tagsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags_json'],
+      ),
+      photoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_path'],
+      ),
+      codeAcces: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code_acces'],
+      ),
+      etageBatiment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etage_batiment'],
+      ),
     );
   }
 
@@ -3958,6 +4049,23 @@ class SavedDestination extends DataClass
   /// champ Notes de `AjoutArretScreen`). L'utilisateur peut les
   /// surcharger pour cet arret precis sans modifier le carnet.
   final String? notesCarnet;
+
+  /// Liste de tags libres sous forme JSON (ex: '["pro","fragile"]').
+  /// Null = aucun tag. L'UI filtre par tag dans la liste du carnet.
+  final String? tagsJson;
+
+  /// Chemin local d'une photo de la facade / interphone (aide visuelle
+  /// a la livraison). Null si pas de photo. Stockee en
+  /// `app_documents/carnet/<id>_<ts>.jpg`.
+  final String? photoPath;
+
+  /// Code d'acces (interphone, portail) — courant et explicite.
+  /// Affiche en gros dans la fiche client. Optionnel.
+  final String? codeAcces;
+
+  /// Etage / batiment / appartement, separe du code pour pouvoir
+  /// l'afficher en gros lui aussi. Ex: "Bat C, 3e etage, app. 12".
+  final String? etageBatiment;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -3973,6 +4081,10 @@ class SavedDestination extends DataClass
     required this.isFavori,
     this.colorTag,
     this.notesCarnet,
+    this.tagsJson,
+    this.photoPath,
+    this.codeAcces,
+    this.etageBatiment,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4003,6 +4115,18 @@ class SavedDestination extends DataClass
     if (!nullToAbsent || notesCarnet != null) {
       map['notes_carnet'] = Variable<String>(notesCarnet);
     }
+    if (!nullToAbsent || tagsJson != null) {
+      map['tags_json'] = Variable<String>(tagsJson);
+    }
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
+    if (!nullToAbsent || codeAcces != null) {
+      map['code_acces'] = Variable<String>(codeAcces);
+    }
+    if (!nullToAbsent || etageBatiment != null) {
+      map['etage_batiment'] = Variable<String>(etageBatiment);
+    }
     return map;
   }
 
@@ -4032,6 +4156,18 @@ class SavedDestination extends DataClass
       notesCarnet: notesCarnet == null && nullToAbsent
           ? const Value.absent()
           : Value(notesCarnet),
+      tagsJson: tagsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tagsJson),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
+      codeAcces: codeAcces == null && nullToAbsent
+          ? const Value.absent()
+          : Value(codeAcces),
+      etageBatiment: etageBatiment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(etageBatiment),
     );
   }
 
@@ -4055,6 +4191,10 @@ class SavedDestination extends DataClass
       isFavori: serializer.fromJson<bool>(json['isFavori']),
       colorTag: serializer.fromJson<String?>(json['colorTag']),
       notesCarnet: serializer.fromJson<String?>(json['notesCarnet']),
+      tagsJson: serializer.fromJson<String?>(json['tagsJson']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
+      codeAcces: serializer.fromJson<String?>(json['codeAcces']),
+      etageBatiment: serializer.fromJson<String?>(json['etageBatiment']),
     );
   }
   @override
@@ -4075,6 +4215,10 @@ class SavedDestination extends DataClass
       'isFavori': serializer.toJson<bool>(isFavori),
       'colorTag': serializer.toJson<String?>(colorTag),
       'notesCarnet': serializer.toJson<String?>(notesCarnet),
+      'tagsJson': serializer.toJson<String?>(tagsJson),
+      'photoPath': serializer.toJson<String?>(photoPath),
+      'codeAcces': serializer.toJson<String?>(codeAcces),
+      'etageBatiment': serializer.toJson<String?>(etageBatiment),
     };
   }
 
@@ -4093,6 +4237,10 @@ class SavedDestination extends DataClass
     bool? isFavori,
     Value<String?> colorTag = const Value.absent(),
     Value<String?> notesCarnet = const Value.absent(),
+    Value<String?> tagsJson = const Value.absent(),
+    Value<String?> photoPath = const Value.absent(),
+    Value<String?> codeAcces = const Value.absent(),
+    Value<String?> etageBatiment = const Value.absent(),
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -4108,6 +4256,12 @@ class SavedDestination extends DataClass
     isFavori: isFavori ?? this.isFavori,
     colorTag: colorTag.present ? colorTag.value : this.colorTag,
     notesCarnet: notesCarnet.present ? notesCarnet.value : this.notesCarnet,
+    tagsJson: tagsJson.present ? tagsJson.value : this.tagsJson,
+    photoPath: photoPath.present ? photoPath.value : this.photoPath,
+    codeAcces: codeAcces.present ? codeAcces.value : this.codeAcces,
+    etageBatiment: etageBatiment.present
+        ? etageBatiment.value
+        : this.etageBatiment,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -4133,6 +4287,12 @@ class SavedDestination extends DataClass
       notesCarnet: data.notesCarnet.present
           ? data.notesCarnet.value
           : this.notesCarnet,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
+      codeAcces: data.codeAcces.present ? data.codeAcces.value : this.codeAcces,
+      etageBatiment: data.etageBatiment.present
+          ? data.etageBatiment.value
+          : this.etageBatiment,
     );
   }
 
@@ -4152,7 +4312,11 @@ class SavedDestination extends DataClass
           ..write('creeLe: $creeLe, ')
           ..write('isFavori: $isFavori, ')
           ..write('colorTag: $colorTag, ')
-          ..write('notesCarnet: $notesCarnet')
+          ..write('notesCarnet: $notesCarnet, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('codeAcces: $codeAcces, ')
+          ..write('etageBatiment: $etageBatiment')
           ..write(')'))
         .toString();
   }
@@ -4173,6 +4337,10 @@ class SavedDestination extends DataClass
     isFavori,
     colorTag,
     notesCarnet,
+    tagsJson,
+    photoPath,
+    codeAcces,
+    etageBatiment,
   );
   @override
   bool operator ==(Object other) =>
@@ -4191,7 +4359,11 @@ class SavedDestination extends DataClass
           other.creeLe == this.creeLe &&
           other.isFavori == this.isFavori &&
           other.colorTag == this.colorTag &&
-          other.notesCarnet == this.notesCarnet);
+          other.notesCarnet == this.notesCarnet &&
+          other.tagsJson == this.tagsJson &&
+          other.photoPath == this.photoPath &&
+          other.codeAcces == this.codeAcces &&
+          other.etageBatiment == this.etageBatiment);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -4209,6 +4381,10 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<bool> isFavori;
   final Value<String?> colorTag;
   final Value<String?> notesCarnet;
+  final Value<String?> tagsJson;
+  final Value<String?> photoPath;
+  final Value<String?> codeAcces;
+  final Value<String?> etageBatiment;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -4224,6 +4400,10 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.isFavori = const Value.absent(),
     this.colorTag = const Value.absent(),
     this.notesCarnet = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.codeAcces = const Value.absent(),
+    this.etageBatiment = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -4240,6 +4420,10 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.isFavori = const Value.absent(),
     this.colorTag = const Value.absent(),
     this.notesCarnet = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.codeAcces = const Value.absent(),
+    this.etageBatiment = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -4258,6 +4442,10 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<bool>? isFavori,
     Expression<String>? colorTag,
     Expression<String>? notesCarnet,
+    Expression<String>? tagsJson,
+    Expression<String>? photoPath,
+    Expression<String>? codeAcces,
+    Expression<String>? etageBatiment,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4274,6 +4462,10 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (isFavori != null) 'is_favori': isFavori,
       if (colorTag != null) 'color_tag': colorTag,
       if (notesCarnet != null) 'notes_carnet': notesCarnet,
+      if (tagsJson != null) 'tags_json': tagsJson,
+      if (photoPath != null) 'photo_path': photoPath,
+      if (codeAcces != null) 'code_acces': codeAcces,
+      if (etageBatiment != null) 'etage_batiment': etageBatiment,
     });
   }
 
@@ -4292,6 +4484,10 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<bool>? isFavori,
     Value<String?>? colorTag,
     Value<String?>? notesCarnet,
+    Value<String?>? tagsJson,
+    Value<String?>? photoPath,
+    Value<String?>? codeAcces,
+    Value<String?>? etageBatiment,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -4308,6 +4504,10 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       isFavori: isFavori ?? this.isFavori,
       colorTag: colorTag ?? this.colorTag,
       notesCarnet: notesCarnet ?? this.notesCarnet,
+      tagsJson: tagsJson ?? this.tagsJson,
+      photoPath: photoPath ?? this.photoPath,
+      codeAcces: codeAcces ?? this.codeAcces,
+      etageBatiment: etageBatiment ?? this.etageBatiment,
     );
   }
 
@@ -4356,6 +4556,18 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (notesCarnet.present) {
       map['notes_carnet'] = Variable<String>(notesCarnet.value);
     }
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
+    }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
+    if (codeAcces.present) {
+      map['code_acces'] = Variable<String>(codeAcces.value);
+    }
+    if (etageBatiment.present) {
+      map['etage_batiment'] = Variable<String>(etageBatiment.value);
+    }
     return map;
   }
 
@@ -4375,7 +4587,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('creeLe: $creeLe, ')
           ..write('isFavori: $isFavori, ')
           ..write('colorTag: $colorTag, ')
-          ..write('notesCarnet: $notesCarnet')
+          ..write('notesCarnet: $notesCarnet, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('codeAcces: $codeAcces, ')
+          ..write('etageBatiment: $etageBatiment')
           ..write(')'))
         .toString();
   }
@@ -7064,6 +7280,10 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<bool> isFavori,
       Value<String?> colorTag,
       Value<String?> notesCarnet,
+      Value<String?> tagsJson,
+      Value<String?> photoPath,
+      Value<String?> codeAcces,
+      Value<String?> etageBatiment,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -7081,6 +7301,10 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<bool> isFavori,
       Value<String?> colorTag,
       Value<String?> notesCarnet,
+      Value<String?> tagsJson,
+      Value<String?> photoPath,
+      Value<String?> codeAcces,
+      Value<String?> etageBatiment,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -7159,6 +7383,26 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<String> get notesCarnet => $composableBuilder(
     column: $table.notesCarnet,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+    column: $table.tagsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get codeAcces => $composableBuilder(
+    column: $table.codeAcces,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etageBatiment => $composableBuilder(
+    column: $table.etageBatiment,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7241,6 +7485,26 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.notesCarnet,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+    column: $table.tagsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get codeAcces => $composableBuilder(
+    column: $table.codeAcces,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etageBatiment => $composableBuilder(
+    column: $table.etageBatiment,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -7301,6 +7565,20 @@ class $$SavedDestinationsTableAnnotationComposer
     column: $table.notesCarnet,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
+
+  GeneratedColumn<String> get codeAcces =>
+      $composableBuilder(column: $table.codeAcces, builder: (column) => column);
+
+  GeneratedColumn<String> get etageBatiment => $composableBuilder(
+    column: $table.etageBatiment,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -7357,6 +7635,10 @@ class $$SavedDestinationsTableTableManager
                 Value<bool> isFavori = const Value.absent(),
                 Value<String?> colorTag = const Value.absent(),
                 Value<String?> notesCarnet = const Value.absent(),
+                Value<String?> tagsJson = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<String?> codeAcces = const Value.absent(),
+                Value<String?> etageBatiment = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -7372,6 +7654,10 @@ class $$SavedDestinationsTableTableManager
                 isFavori: isFavori,
                 colorTag: colorTag,
                 notesCarnet: notesCarnet,
+                tagsJson: tagsJson,
+                photoPath: photoPath,
+                codeAcces: codeAcces,
+                etageBatiment: etageBatiment,
               ),
           createCompanionCallback:
               ({
@@ -7389,6 +7675,10 @@ class $$SavedDestinationsTableTableManager
                 Value<bool> isFavori = const Value.absent(),
                 Value<String?> colorTag = const Value.absent(),
                 Value<String?> notesCarnet = const Value.absent(),
+                Value<String?> tagsJson = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<String?> codeAcces = const Value.absent(),
+                Value<String?> etageBatiment = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -7404,6 +7694,10 @@ class $$SavedDestinationsTableTableManager
                 isFavori: isFavori,
                 colorTag: colorTag,
                 notesCarnet: notesCarnet,
+                tagsJson: tagsJson,
+                photoPath: photoPath,
+                codeAcces: codeAcces,
+                etageBatiment: etageBatiment,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
