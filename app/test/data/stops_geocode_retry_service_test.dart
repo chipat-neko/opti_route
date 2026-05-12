@@ -115,6 +115,22 @@ void main() {
       expect(r.unresolved, isEmpty);
     });
 
+    test('mixed : resolved + unresolved dans le meme batch', () async {
+      final id = await seedTourneeWithStops([
+        (adr: 'OK adresse Dreux', hasCoords: false),
+        (adr: 'XX inexistant', hasCoords: false),
+      ]);
+      // Stub qui ne resoud que si la query contient "OK"
+      final svc = StopsGeocodeRetryService(
+        repo: repo,
+        geocoder: _StubFiltered(matcher: (q) => q.contains('OK')),
+      );
+      final r = await svc.retryFor(id);
+      expect(r.totalCandidats, 2);
+      expect(r.resolved, hasLength(1));
+      expect(r.unresolved, hasLength(1));
+    });
+
     test('geocoder throw : unresolved, ne casse pas la boucle', () async {
       final id = await seedTourneeWithStops([
         (adr: 'A offline', hasCoords: false),
@@ -130,6 +146,35 @@ void main() {
       expect(res.unresolved, hasLength(2));
     });
   });
+}
+
+/// Stub qui resoud uniquement les queries qui matchent un predicat.
+class _StubFiltered implements GeocodingService {
+  _StubFiltered({required this.matcher});
+
+  final bool Function(String query) matcher;
+
+  @override
+  String get providerKey => 'stub_filtered';
+
+  @override
+  Future<List<AddressSuggestion>> search(
+    String query, {
+    int limit = 10,
+    String acceptLanguage = 'fr-FR',
+  }) async {
+    if (!matcher(query)) return const [];
+    return [
+      const AddressSuggestion(
+        displayName: 'resolved',
+        lat: 48.7,
+        lon: 1.3,
+      ),
+    ];
+  }
+
+  @override
+  void close() {}
 }
 
 class _StubGeocoder implements GeocodingService {
