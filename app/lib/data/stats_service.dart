@@ -104,6 +104,97 @@ class StatsService {
     }
     return out;
   }
+
+  /// Heures travaillees par jour de la semaine (1=lundi -> 7=dimanche)
+  /// sur la fenetre `[since, now]`. Calcule a partir de `dureeTotaleS`
+  /// des tournees moins le cumul des pauses.
+  Future<Map<int, double>> heuresParJourDeSemaine({
+    required DateTime since,
+  }) async {
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since)))
+        .get();
+    if (tournees.isEmpty) return const {};
+
+    final out = <int, double>{};
+    for (final t in tournees) {
+      final wd = t.date.weekday;
+      final totalS = t.dureeTotaleS ?? 0;
+      final actuelS = (totalS - t.pauseeSeconds).clamp(0, 24 * 3600);
+      out[wd] = (out[wd] ?? 0) + actuelS / 3600.0;
+    }
+    return out;
+  }
+
+  /// Ratio (current / previous) entre la fenetre [now-days, now] et
+  /// [now-2*days, now-days]. Retourne un double :
+  /// - 1.0 = identique, 1.2 = +20%, 0.8 = -20%
+  /// - 0 si la periode precedente etait vide (eviter division par 0)
+  ///
+  /// [metric] : 'tournees' / 'colis_livres' / 'distance_m' / 'duree_s'.
+  Future<double> comparatifMoisPrecedent({
+    required int days,
+    String metric = 'colis_livres',
+  }) async {
+    final now = DateTime.now();
+    final currentStart = now.subtract(Duration(days: days));
+    final previousStart = now.subtract(Duration(days: 2 * days));
+
+    final current = await compute(since: currentStart);
+    final previousAll = await compute(since: previousStart);
+
+    // previousAll inclut current; on soustrait.
+    final currentVal = _metric(current, metric);
+    final previousVal = _metric(previousAll, metric) - currentVal;
+
+    if (previousVal <= 0) return 0;
+    return currentVal / previousVal;
+  }
+
+  static num _metric(TourneeStats s, String m) {
+    switch (m) {
+      case 'tournees':
+        return s.nbTournees;
+      case 'colis_livres':
+        return s.nbColisLivres;
+      case 'distance_m':
+        return s.distanceMeters;
+      case 'duree_s':
+        return s.durationSeconds;
+      default:
+        throw ArgumentError('Metric inconnue : $m');
+    }
+  }
+
+  /// Genere un CSV des tournees dans la fenetre `[since, now]`. Une
+  /// ligne par tournee. Sert au bouton "Exporter en Excel" dans Stats.
+  Future<String> exportCsvTournees({required DateTime since}) async {
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since))
+          ..orderBy([(t) => OrderingTerm.asc(t.date)]))
+        .get();
+    final buf = StringBuffer();
+    buf.writeln(
+      'date,nom,statut,arrets,colis_livres,distance_km,duree_min,pause_min',
+    );
+    for (final t in tournees) {
+      final stops = await (_db.select(_db.stops)
+            ..where((s) => s.tourneeId.equals(t.id)))
+          .get();
+      final colisLivres = stops
+          .where((s) => s.statutLivraison == 'livre')
+          .fold<int>(0, (acc, s) => acc + s.nbColis);
+      final km = ((t.distanceTotaleM ?? 0) / 1000).toStringAsFixed(1);
+      final dureeMin = ((t.dureeTotaleS ?? 0) / 60).round();
+      final pauseMin = (t.pauseeSeconds / 60).round();
+      final dateIso = t.date.toIso8601String().split('T').first;
+      buf.writeln(
+        '$dateIso,"${t.nom.replaceAll('"', '""')}",${t.statut},'
+        '${stops.length},$colisLivres,$km,$dureeMin,$pauseMin',
+      );
+    }
+    return buf.toString();
+  }
 }
 
 /// Aggregation immuable retournee par [StatsService.compute].

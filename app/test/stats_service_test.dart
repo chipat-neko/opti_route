@@ -287,6 +287,121 @@ void main() {
     });
   });
 
+  group('StatsService.heuresParJourDeSemaine', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('aucune tournee : map vide', () async {
+      final h = await stats.heuresParJourDeSemaine(
+        since: DateTime(2026, 1, 1),
+      );
+      expect(h, isEmpty);
+    });
+
+    test('1 tournee 2h mardi : map {2: 2.0}', () async {
+      // 2 mai 2026 = samedi (verifions)
+      final mardi = DateTime(2026, 5, 12); // C'est un mardi
+      expect(mardi.weekday, 2);
+      await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: mardi,
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+              dureeTotaleS: const Value(7200), // 2h
+            ),
+          );
+      final h = await stats.heuresParJourDeSemaine(
+        since: DateTime(2026, 1, 1),
+      );
+      expect(h[2], 2.0);
+    });
+
+    test('pauseeSeconds soustrait du total', () async {
+      // 1h totale, 30 min de pause -> 30 min effectif = 0.5h
+      await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+              dureeTotaleS: const Value(3600),
+              pauseeSeconds: const Value(1800),
+            ),
+          );
+      final h = await stats.heuresParJourDeSemaine(
+        since: DateTime(2026, 1, 1),
+      );
+      expect(h[2], closeTo(0.5, 0.01));
+    });
+  });
+
+  group('StatsService.exportCsvTournees', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('vide : juste le header', () async {
+      final csv = await stats.exportCsvTournees(since: DateTime(2026, 1, 1));
+      final lines = csv.split('\n').where((l) => l.isNotEmpty).toList();
+      expect(lines.length, 1);
+      expect(lines.first, startsWith('date,nom,statut,'));
+    });
+
+    test('1 tournee : header + 1 ligne', () async {
+      await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'Mardi matin',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+              distanceTotaleM: const Value(45000),
+              dureeTotaleS: const Value(5400),
+            ),
+          );
+      final csv = await stats.exportCsvTournees(since: DateTime(2026, 1, 1));
+      final lines = csv.split('\n').where((l) => l.isNotEmpty).toList();
+      expect(lines.length, 2);
+      expect(lines[1], contains('Mardi matin'));
+      expect(lines[1], contains('45.0')); // km
+      expect(lines[1], contains('90')); // 5400s / 60 = 90 min
+    });
+
+    test('echappement des virgules dans le nom', () async {
+      await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T, special',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      final csv = await stats.exportCsvTournees(since: DateTime(2026, 1, 1));
+      expect(csv, contains('"T, special"'));
+    });
+  });
+
   group('TourneeStats - constante empty', () {
     test('TourneeStats.empty : tout a zero', () {
       const s = TourneeStats.empty;
