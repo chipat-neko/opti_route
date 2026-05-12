@@ -44,9 +44,12 @@ void main() {
 
     test('source 1 sans resultat precis : tente la 2eme + 3eme + dedupe',
         () async {
-      // BAN renvoie une rue sans numero (non precise)
-      final ban = _StubBan(returns: [_imprecise('rue X')]);
-      final photon = _StubPhoton(returns: [_poi('Magasin Y')]);
+      // BAN renvoie une rue sans numero (non precise) — coords A
+      final ban = _StubBan(returns: [_imprecise('rue X', lat: 48.0, lon: 1.0)]);
+      // Photon renvoie un POI a des coords differentes — coords B
+      final photon = _StubPhoton(
+        returns: [_poi('Magasin Y', lat: 48.5, lon: 1.5)],
+      );
       final entr = _StubEntreprises();
       final svc = FranceGeocodingService(
         ban: ban,
@@ -59,7 +62,7 @@ void main() {
       expect(photon.called, isTrue);
       // POI precis sur Photon -> arret avant SIRENE
       expect(entr.called, isFalse);
-      // Resultat agrege
+      // 2 resultats distincts agreges (coords differentes -> pas dedup)
       expect(r.length, 2);
     });
 
@@ -77,9 +80,11 @@ void main() {
     });
 
     test('dedupe par lat/lon arrondis a 5 decimales', () async {
+      // 48.123451 et 48.123452 arrondissent toutes les 2 a "48.12345"
+      // a 5 decimales (toStringAsFixed(5)).
       final ban = _StubBan(returns: [
-        _imprecise('A', lat: 48.12345, lon: 1.0),
-        _imprecise('B', lat: 48.123456789, lon: 1.0), // duplique
+        _imprecise('A', lat: 48.123451, lon: 1.0),
+        _imprecise('B', lat: 48.123452, lon: 1.0), // duplique apres arrondi
       ]);
       final photon = _StubPhoton();
       final entr = _StubEntreprises();
@@ -91,7 +96,7 @@ void main() {
       // Query adresse mais BAN ne renvoie pas de hit precis -> on devrait
       // continuer + dedupe.
       final r = await svc.search('14 quelconque');
-      // 2 dans BAN -> 1 apres dedup (meme lat 48.12345)
+      // 2 dans BAN -> 1 apres dedup
       expect(r.length, 1);
     });
   });
@@ -108,10 +113,11 @@ AddressSuggestion _precise(String label) => AddressSuggestion(
 AddressSuggestion _imprecise(String label, {double lat = 48.0, double lon = 1.0}) =>
     AddressSuggestion(displayName: label, lat: lat, lon: lon, road: label);
 
-AddressSuggestion _poi(String name) => AddressSuggestion(
+AddressSuggestion _poi(String name, {double lat = 48.0, double lon = 1.0}) =>
+    AddressSuggestion(
       displayName: name,
-      lat: 48.0,
-      lon: 1.0,
+      lat: lat,
+      lon: lon,
       poiName: name,
     );
 
