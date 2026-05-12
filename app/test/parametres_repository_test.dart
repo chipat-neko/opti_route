@@ -108,6 +108,24 @@ void main() {
       await repo.incrementOrsUsed();
       expect(await repo.getOrsUsedToday(), 3);
     });
+
+    test('reset auto si la date stockee != date du jour', () async {
+      // On force la date stockee a hier en ecrivant directement.
+      await db.into(db.parametres).insertOnConflictUpdate(
+            ParametresCompanion.insert(
+              cle: 'ors_used_count',
+              valeur: '7',
+            ),
+          );
+      await db.into(db.parametres).insertOnConflictUpdate(
+            ParametresCompanion.insert(
+              cle: 'ors_used_date',
+              valeur: '2020-01-01', // tres ancien
+            ),
+          );
+      // getOrsUsedToday voit que la date != today -> retourne 0.
+      expect(await repo.getOrsUsedToday(), 0);
+    });
   });
 
   group('ParametresRepository - watchers', () {
