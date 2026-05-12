@@ -273,6 +273,50 @@ void main() {
       expect(t!.date, target);
     });
 
+    test('pauseTournee : pose le timestamp pauseeLe', () async {
+      final id = await seedTournee();
+      final before = DateTime.now();
+      await repo.pauseTournee(id);
+      final t = await repo.getById(id);
+      expect(t!.pauseeLe, isNotNull);
+      expect(t.pauseeLe!.isAfter(before.subtract(const Duration(seconds: 1))),
+          isTrue);
+    });
+
+    test('reprendreTournee : ajoute la duree pausee a pauseeSeconds',
+        () async {
+      final id = await seedTournee();
+      // Pose pauseeLe a il y a 5 secondes
+      await db.into(db.tournees).insertOnConflictUpdate(
+            TourneesCompanion(
+              id: Value(id),
+              nom: const Value('T'),
+              date: Value(DateTime(2026, 5, 12)),
+              pointDepartLat: const Value(48.0),
+              pointDepartLng: const Value(1.0),
+              pointDepartLabel: const Value('D'),
+              pauseeLe: Value(DateTime.now()
+                  .subtract(const Duration(seconds: 5))),
+              pauseeSeconds: const Value(120), // deja 2 min de pause cumulee
+            ),
+          );
+      await repo.reprendreTournee(id);
+      final t = await repo.getById(id);
+      expect(t!.pauseeLe, isNull);
+      // pauseeSeconds = 120 + ~5 = ~125
+      expect(t.pauseeSeconds, greaterThanOrEqualTo(125));
+      expect(t.pauseeSeconds, lessThan(130));
+    });
+
+    test('reprendreTournee sur tournee pas en pause : no-op', () async {
+      final id = await seedTournee();
+      final n = await repo.reprendreTournee(id);
+      expect(n, 0);
+      final t = await repo.getById(id);
+      expect(t!.pauseeLe, isNull);
+      expect(t.pauseeSeconds, 0);
+    });
+
     test('duplicate ne copie PAS rappelLe (chaque clone reprogramme '
         'son propre rappel)', () async {
       final id = await seedTournee();

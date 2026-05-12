@@ -43,6 +43,15 @@ class StopsRepository {
     return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(entry);
   }
 
+  /// Attache (ou retire avec null) une photo preuve a un arret deja
+  /// valide. Sert au flow "Marquer livre -> Snackbar 'Photo ?' -> tap
+  /// micro -> photo". Ne touche pas au statut, ni a la position GPS,
+  /// ni a livreLe.
+  Future<int> setPreuvePhoto(int stopId, String? path) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(preuvePhotoPath: Value(path)));
+  }
+
   /// Met a jour uniquement les coords + l'adresse normalisee d'un arret.
   /// Utilise par le re-geocodage des arrets sauves en mode hors-ligne
   /// (sans coords) : on ne touche pas au reste (nbColis, notes, etc.).
@@ -68,10 +77,14 @@ class StopsRepository {
 
   /// Marque un arret comme livre + ecrit une ligne dans StopHistory
   /// pour tracer la transition (en cas de litige client).
+  ///
+  /// [preuvePhotoPath] (optionnel) : chemin local d'une photo preuve
+  /// prise par le livreur (cf `PreuvePhotoService.capturer`).
   Future<int> markLivre(
     int id, {
     ({double lat, double lng})? position,
     DateTime? livreLe,
+    String? preuvePhotoPath,
   }) async {
     final previous = await getById(id);
     final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
@@ -84,6 +97,9 @@ class StopsRepository {
         livreLng:
             position == null ? const Value(null) : Value(position.lng),
         livreLe: Value(livreLe ?? DateTime.now()),
+        preuvePhotoPath: preuvePhotoPath == null
+            ? const Value.absent()
+            : Value(preuvePhotoPath),
       ),
     );
     if (previous != null) {
@@ -98,11 +114,15 @@ class StopsRepository {
   }
 
   /// Marque un arret en echec + log dans StopHistory avec la raison.
+  ///
+  /// [preuvePhotoPath] (optionnel) : photo preuve d'un echec (ex: porte
+  /// fermee, boite aux lettres pleine).
   Future<int> markEchec(
     int id,
     String raison, {
     ({double lat, double lng})? position,
     DateTime? livreLe,
+    String? preuvePhotoPath,
   }) async {
     final previous = await getById(id);
     final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
@@ -115,6 +135,9 @@ class StopsRepository {
         livreLng:
             position == null ? const Value(null) : Value(position.lng),
         livreLe: Value(livreLe ?? DateTime.now()),
+        preuvePhotoPath: preuvePhotoPath == null
+            ? const Value.absent()
+            : Value(preuvePhotoPath),
       ),
     );
     if (previous != null) {
@@ -140,6 +163,7 @@ class StopsRepository {
         livreLat: Value(null),
         livreLng: Value(null),
         livreLe: Value(null),
+        preuvePhotoPath: Value(null),
       ),
     );
     if (previous != null) {

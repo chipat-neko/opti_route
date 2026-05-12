@@ -205,6 +205,29 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pauseeLeMeta = const VerificationMeta(
+    'pauseeLe',
+  );
+  @override
+  late final GeneratedColumn<DateTime> pauseeLe = GeneratedColumn<DateTime>(
+    'pausee_le',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pauseeSecondsMeta = const VerificationMeta(
+    'pauseeSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> pauseeSeconds = GeneratedColumn<int>(
+    'pausee_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -234,6 +257,8 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     profilOrs,
     eviterPeages,
     rappelLe,
+    pauseeLe,
+    pauseeSeconds,
     creeLe,
   ];
   @override
@@ -384,6 +409,21 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         rappelLe.isAcceptableOrUnknown(data['rappel_le']!, _rappelLeMeta),
       );
     }
+    if (data.containsKey('pausee_le')) {
+      context.handle(
+        _pauseeLeMeta,
+        pauseeLe.isAcceptableOrUnknown(data['pausee_le']!, _pauseeLeMeta),
+      );
+    }
+    if (data.containsKey('pausee_seconds')) {
+      context.handle(
+        _pauseeSecondsMeta,
+        pauseeSeconds.isAcceptableOrUnknown(
+          data['pausee_seconds']!,
+          _pauseeSecondsMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -467,6 +507,14 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}rappel_le'],
       ),
+      pauseeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}pausee_le'],
+      ),
+      pauseeSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pausee_seconds'],
+      )!,
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -533,6 +581,15 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// Noah). Null = pas de rappel programme. Stocke en local time, on
   /// le re-zone via flutter_local_notifications a la programmation.
   final DateTime? rappelLe;
+
+  /// Timestamp du dernier tap "Mettre en pause". Null si jamais paused
+  /// ou si actuellement en cours. Sert au calcul du temps reellement
+  /// travaille (exclut les pauses).
+  final DateTime? pauseeLe;
+
+  /// Cumul des secondes de pause sur cette tournee. Mis a jour au
+  /// "Reprendre" : pauseeSeconds += now - pauseeLe.
+  final int pauseeSeconds;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -552,6 +609,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     required this.profilOrs,
     required this.eviterPeages,
     this.rappelLe,
+    this.pauseeLe,
+    required this.pauseeSeconds,
     required this.creeLe,
   });
   @override
@@ -586,6 +645,10 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     if (!nullToAbsent || rappelLe != null) {
       map['rappel_le'] = Variable<DateTime>(rappelLe);
     }
+    if (!nullToAbsent || pauseeLe != null) {
+      map['pausee_le'] = Variable<DateTime>(pauseeLe);
+    }
+    map['pausee_seconds'] = Variable<int>(pauseeSeconds);
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -621,6 +684,10 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       rappelLe: rappelLe == null && nullToAbsent
           ? const Value.absent()
           : Value(rappelLe),
+      pauseeLe: pauseeLe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pauseeLe),
+      pauseeSeconds: Value(pauseeSeconds),
       creeLe: Value(creeLe),
     );
   }
@@ -650,6 +717,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       profilOrs: serializer.fromJson<String>(json['profilOrs']),
       eviterPeages: serializer.fromJson<bool>(json['eviterPeages']),
       rappelLe: serializer.fromJson<DateTime?>(json['rappelLe']),
+      pauseeLe: serializer.fromJson<DateTime?>(json['pauseeLe']),
+      pauseeSeconds: serializer.fromJson<int>(json['pauseeSeconds']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -674,6 +743,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'profilOrs': serializer.toJson<String>(profilOrs),
       'eviterPeages': serializer.toJson<bool>(eviterPeages),
       'rappelLe': serializer.toJson<DateTime?>(rappelLe),
+      'pauseeLe': serializer.toJson<DateTime?>(pauseeLe),
+      'pauseeSeconds': serializer.toJson<int>(pauseeSeconds),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -696,6 +767,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     String? profilOrs,
     bool? eviterPeages,
     Value<DateTime?> rappelLe = const Value.absent(),
+    Value<DateTime?> pauseeLe = const Value.absent(),
+    int? pauseeSeconds,
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -717,6 +790,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     profilOrs: profilOrs ?? this.profilOrs,
     eviterPeages: eviterPeages ?? this.eviterPeages,
     rappelLe: rappelLe.present ? rappelLe.value : this.rappelLe,
+    pauseeLe: pauseeLe.present ? pauseeLe.value : this.pauseeLe,
+    pauseeSeconds: pauseeSeconds ?? this.pauseeSeconds,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -758,6 +833,10 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ? data.eviterPeages.value
           : this.eviterPeages,
       rappelLe: data.rappelLe.present ? data.rappelLe.value : this.rappelLe,
+      pauseeLe: data.pauseeLe.present ? data.pauseeLe.value : this.pauseeLe,
+      pauseeSeconds: data.pauseeSeconds.present
+          ? data.pauseeSeconds.value
+          : this.pauseeSeconds,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -782,6 +861,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('profilOrs: $profilOrs, ')
           ..write('eviterPeages: $eviterPeages, ')
           ..write('rappelLe: $rappelLe, ')
+          ..write('pauseeLe: $pauseeLe, ')
+          ..write('pauseeSeconds: $pauseeSeconds, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -806,6 +887,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     profilOrs,
     eviterPeages,
     rappelLe,
+    pauseeLe,
+    pauseeSeconds,
     creeLe,
   );
   @override
@@ -829,6 +912,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.profilOrs == this.profilOrs &&
           other.eviterPeages == this.eviterPeages &&
           other.rappelLe == this.rappelLe &&
+          other.pauseeLe == this.pauseeLe &&
+          other.pauseeSeconds == this.pauseeSeconds &&
           other.creeLe == this.creeLe);
 }
 
@@ -850,6 +935,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<String> profilOrs;
   final Value<bool> eviterPeages;
   final Value<DateTime?> rappelLe;
+  final Value<DateTime?> pauseeLe;
+  final Value<int> pauseeSeconds;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -869,6 +956,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.profilOrs = const Value.absent(),
     this.eviterPeages = const Value.absent(),
     this.rappelLe = const Value.absent(),
+    this.pauseeLe = const Value.absent(),
+    this.pauseeSeconds = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -889,6 +978,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.profilOrs = const Value.absent(),
     this.eviterPeages = const Value.absent(),
     this.rappelLe = const Value.absent(),
+    this.pauseeLe = const Value.absent(),
+    this.pauseeSeconds = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -913,6 +1004,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<String>? profilOrs,
     Expression<bool>? eviterPeages,
     Expression<DateTime>? rappelLe,
+    Expression<DateTime>? pauseeLe,
+    Expression<int>? pauseeSeconds,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -934,6 +1027,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (profilOrs != null) 'profil_ors': profilOrs,
       if (eviterPeages != null) 'eviter_peages': eviterPeages,
       if (rappelLe != null) 'rappel_le': rappelLe,
+      if (pauseeLe != null) 'pausee_le': pauseeLe,
+      if (pauseeSeconds != null) 'pausee_seconds': pauseeSeconds,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -956,6 +1051,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<String>? profilOrs,
     Value<bool>? eviterPeages,
     Value<DateTime?>? rappelLe,
+    Value<DateTime?>? pauseeLe,
+    Value<int>? pauseeSeconds,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -977,6 +1074,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       profilOrs: profilOrs ?? this.profilOrs,
       eviterPeages: eviterPeages ?? this.eviterPeages,
       rappelLe: rappelLe ?? this.rappelLe,
+      pauseeLe: pauseeLe ?? this.pauseeLe,
+      pauseeSeconds: pauseeSeconds ?? this.pauseeSeconds,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -1037,6 +1136,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (rappelLe.present) {
       map['rappel_le'] = Variable<DateTime>(rappelLe.value);
     }
+    if (pauseeLe.present) {
+      map['pausee_le'] = Variable<DateTime>(pauseeLe.value);
+    }
+    if (pauseeSeconds.present) {
+      map['pausee_seconds'] = Variable<int>(pauseeSeconds.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -1063,6 +1168,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('profilOrs: $profilOrs, ')
           ..write('eviterPeages: $eviterPeages, ')
           ..write('rappelLe: $rappelLe, ')
+          ..write('pauseeLe: $pauseeLe, ')
+          ..write('pauseeSeconds: $pauseeSeconds, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -1298,6 +1405,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _preuvePhotoPathMeta = const VerificationMeta(
+    'preuvePhotoPath',
+  );
+  @override
+  late final GeneratedColumn<String> preuvePhotoPath = GeneratedColumn<String>(
+    'preuve_photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -1330,6 +1448,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     livreLe,
     ordreOptimise,
     ordrePriorite,
+    preuvePhotoPath,
     creeLe,
   ];
   @override
@@ -1489,6 +1608,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('preuve_photo_path')) {
+      context.handle(
+        _preuvePhotoPathMeta,
+        preuvePhotoPath.isAcceptableOrUnknown(
+          data['preuve_photo_path']!,
+          _preuvePhotoPathMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -1584,6 +1712,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.int,
         data['${effectivePrefix}ordre_priorite'],
       ),
+      preuvePhotoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preuve_photo_path'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -1633,6 +1765,11 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// 1 = livre en premier de son groupe, 2 = en deuxieme, etc.
   /// Null = pas applicable (priorite flexible / eviter).
   final int? ordrePriorite;
+
+  /// Chemin local (filesystem app) de la photo preuve de livraison.
+  /// Null si pas de photo prise. Stockage privé dans
+  /// `app_documents/preuves/<stopId>_<timestamp>.jpg`.
+  final String? preuvePhotoPath;
   final DateTime creeLe;
   const Stop({
     required this.id,
@@ -1655,6 +1792,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.livreLe,
     this.ordreOptimise,
     this.ordrePriorite,
+    this.preuvePhotoPath,
     required this.creeLe,
   });
   @override
@@ -1706,6 +1844,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || ordrePriorite != null) {
       map['ordre_priorite'] = Variable<int>(ordrePriorite);
     }
+    if (!nullToAbsent || preuvePhotoPath != null) {
+      map['preuve_photo_path'] = Variable<String>(preuvePhotoPath);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -1754,6 +1895,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordrePriorite: ordrePriorite == null && nullToAbsent
           ? const Value.absent()
           : Value(ordrePriorite),
+      preuvePhotoPath: preuvePhotoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preuvePhotoPath),
       creeLe: Value(creeLe),
     );
   }
@@ -1786,6 +1930,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       livreLe: serializer.fromJson<DateTime?>(json['livreLe']),
       ordreOptimise: serializer.fromJson<int?>(json['ordreOptimise']),
       ordrePriorite: serializer.fromJson<int?>(json['ordrePriorite']),
+      preuvePhotoPath: serializer.fromJson<String?>(json['preuvePhotoPath']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -1813,6 +1958,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'livreLe': serializer.toJson<DateTime?>(livreLe),
       'ordreOptimise': serializer.toJson<int?>(ordreOptimise),
       'ordrePriorite': serializer.toJson<int?>(ordrePriorite),
+      'preuvePhotoPath': serializer.toJson<String?>(preuvePhotoPath),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -1838,6 +1984,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<DateTime?> livreLe = const Value.absent(),
     Value<int?> ordreOptimise = const Value.absent(),
     Value<int?> ordrePriorite = const Value.absent(),
+    Value<String?> preuvePhotoPath = const Value.absent(),
     DateTime? creeLe,
   }) => Stop(
     id: id ?? this.id,
@@ -1866,6 +2013,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     ordrePriorite: ordrePriorite.present
         ? ordrePriorite.value
         : this.ordrePriorite,
+    preuvePhotoPath: preuvePhotoPath.present
+        ? preuvePhotoPath.value
+        : this.preuvePhotoPath,
     creeLe: creeLe ?? this.creeLe,
   );
   Stop copyWithCompanion(StopsCompanion data) {
@@ -1908,6 +2058,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordrePriorite: data.ordrePriorite.present
           ? data.ordrePriorite.value
           : this.ordrePriorite,
+      preuvePhotoPath: data.preuvePhotoPath.present
+          ? data.preuvePhotoPath.value
+          : this.preuvePhotoPath,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -1935,6 +2088,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
+          ..write('preuvePhotoPath: $preuvePhotoPath, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -1962,6 +2116,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     livreLe,
     ordreOptimise,
     ordrePriorite,
+    preuvePhotoPath,
     creeLe,
   ]);
   @override
@@ -1988,6 +2143,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.livreLe == this.livreLe &&
           other.ordreOptimise == this.ordreOptimise &&
           other.ordrePriorite == this.ordrePriorite &&
+          other.preuvePhotoPath == this.preuvePhotoPath &&
           other.creeLe == this.creeLe);
 }
 
@@ -2012,6 +2168,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<DateTime?> livreLe;
   final Value<int?> ordreOptimise;
   final Value<int?> ordrePriorite;
+  final Value<String?> preuvePhotoPath;
   final Value<DateTime> creeLe;
   const StopsCompanion({
     this.id = const Value.absent(),
@@ -2034,6 +2191,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
+    this.preuvePhotoPath = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   StopsCompanion.insert({
@@ -2057,6 +2215,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
+    this.preuvePhotoPath = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
@@ -2081,6 +2240,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<DateTime>? livreLe,
     Expression<int>? ordreOptimise,
     Expression<int>? ordrePriorite,
+    Expression<String>? preuvePhotoPath,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -2104,6 +2264,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (livreLe != null) 'livre_le': livreLe,
       if (ordreOptimise != null) 'ordre_optimise': ordreOptimise,
       if (ordrePriorite != null) 'ordre_priorite': ordrePriorite,
+      if (preuvePhotoPath != null) 'preuve_photo_path': preuvePhotoPath,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -2129,6 +2290,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<DateTime?>? livreLe,
     Value<int?>? ordreOptimise,
     Value<int?>? ordrePriorite,
+    Value<String?>? preuvePhotoPath,
     Value<DateTime>? creeLe,
   }) {
     return StopsCompanion(
@@ -2152,6 +2314,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       livreLe: livreLe ?? this.livreLe,
       ordreOptimise: ordreOptimise ?? this.ordreOptimise,
       ordrePriorite: ordrePriorite ?? this.ordrePriorite,
+      preuvePhotoPath: preuvePhotoPath ?? this.preuvePhotoPath,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -2219,6 +2382,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (ordrePriorite.present) {
       map['ordre_priorite'] = Variable<int>(ordrePriorite.value);
     }
+    if (preuvePhotoPath.present) {
+      map['preuve_photo_path'] = Variable<String>(preuvePhotoPath.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -2248,6 +2414,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
+          ..write('preuvePhotoPath: $preuvePhotoPath, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -4737,6 +4904,8 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<String> profilOrs,
       Value<bool> eviterPeages,
       Value<DateTime?> rappelLe,
+      Value<DateTime?> pauseeLe,
+      Value<int> pauseeSeconds,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -4758,6 +4927,8 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<String> profilOrs,
       Value<bool> eviterPeages,
       Value<DateTime?> rappelLe,
+      Value<DateTime?> pauseeLe,
+      Value<int> pauseeSeconds,
       Value<DateTime> creeLe,
     });
 
@@ -4876,6 +5047,16 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<DateTime> get rappelLe => $composableBuilder(
     column: $table.rappelLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get pauseeLe => $composableBuilder(
+    column: $table.pauseeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pauseeSeconds => $composableBuilder(
+    column: $table.pauseeSeconds,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5004,6 +5185,16 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get pauseeLe => $composableBuilder(
+    column: $table.pauseeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pauseeSeconds => $composableBuilder(
+    column: $table.pauseeSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -5090,6 +5281,14 @@ class $$TourneesTableAnnotationComposer
   GeneratedColumn<DateTime> get rappelLe =>
       $composableBuilder(column: $table.rappelLe, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get pauseeLe =>
+      $composableBuilder(column: $table.pauseeLe, builder: (column) => column);
+
+  GeneratedColumn<int> get pauseeSeconds => $composableBuilder(
+    column: $table.pauseeSeconds,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
 
@@ -5164,6 +5363,8 @@ class $$TourneesTableTableManager
                 Value<String> profilOrs = const Value.absent(),
                 Value<bool> eviterPeages = const Value.absent(),
                 Value<DateTime?> rappelLe = const Value.absent(),
+                Value<DateTime?> pauseeLe = const Value.absent(),
+                Value<int> pauseeSeconds = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -5183,6 +5384,8 @@ class $$TourneesTableTableManager
                 profilOrs: profilOrs,
                 eviterPeages: eviterPeages,
                 rappelLe: rappelLe,
+                pauseeLe: pauseeLe,
+                pauseeSeconds: pauseeSeconds,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -5204,6 +5407,8 @@ class $$TourneesTableTableManager
                 Value<String> profilOrs = const Value.absent(),
                 Value<bool> eviterPeages = const Value.absent(),
                 Value<DateTime?> rappelLe = const Value.absent(),
+                Value<DateTime?> pauseeLe = const Value.absent(),
+                Value<int> pauseeSeconds = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -5223,6 +5428,8 @@ class $$TourneesTableTableManager
                 profilOrs: profilOrs,
                 eviterPeages: eviterPeages,
                 rappelLe: rappelLe,
+                pauseeLe: pauseeLe,
+                pauseeSeconds: pauseeSeconds,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0
@@ -5295,6 +5502,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
+      Value<String?> preuvePhotoPath,
       Value<DateTime> creeLe,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
@@ -5319,6 +5527,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
+      Value<String?> preuvePhotoPath,
       Value<DateTime> creeLe,
     });
 
@@ -5481,6 +5690,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<int> get ordrePriorite => $composableBuilder(
     column: $table.ordrePriorite,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preuvePhotoPath => $composableBuilder(
+    column: $table.preuvePhotoPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5667,6 +5881,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get preuvePhotoPath => $composableBuilder(
+    column: $table.preuvePhotoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -5777,6 +5996,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<int> get ordrePriorite => $composableBuilder(
     column: $table.ordrePriorite,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get preuvePhotoPath => $composableBuilder(
+    column: $table.preuvePhotoPath,
     builder: (column) => column,
   );
 
@@ -5909,6 +6133,7 @@ class $$StopsTableTableManager
                 Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
+                Value<String?> preuvePhotoPath = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
@@ -5931,6 +6156,7 @@ class $$StopsTableTableManager
                 livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
+                preuvePhotoPath: preuvePhotoPath,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -5955,6 +6181,7 @@ class $$StopsTableTableManager
                 Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
+                Value<String?> preuvePhotoPath = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
@@ -5977,6 +6204,7 @@ class $$StopsTableTableManager
                 livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
+                preuvePhotoPath: preuvePhotoPath,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0

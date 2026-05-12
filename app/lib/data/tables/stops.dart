@@ -42,5 +42,10 @@ class Stops extends Table {
   /// Null = pas applicable (priorite flexible / eviter).
   IntColumn get ordrePriorite => integer().nullable()();
 
+  /// Chemin local (filesystem app) de la photo preuve de livraison.
+  /// Null si pas de photo prise. Stockage privé dans
+  /// `app_documents/preuves/<stopId>_<timestamp>.jpg`.
+  TextColumn get preuvePhotoPath => text().nullable()();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

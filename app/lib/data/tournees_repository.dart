@@ -138,6 +138,28 @@ class TourneesRepository {
     return '$base (copie ${n + 1})';
   }
 
+  /// Met une tournee `en_cours` en pause : pose le timestamp `pauseeLe`
+  /// = now. Le reset auto au "Reprendre" ajoute la duree pausee au
+  /// cumul `pauseeSeconds`.
+  Future<int> pauseTournee(int id) {
+    return (_db.update(_db.tournees)..where((t) => t.id.equals(id))).write(
+      TourneesCompanion(pauseeLe: Value(DateTime.now())),
+    );
+  }
+
+  /// Reprend une tournee en pause : ajoute la duree pausee au cumul
+  /// `pauseeSeconds` et reset `pauseeLe` a null.
+  Future<int> reprendreTournee(int id) async {
+    final t = await getById(id);
+    if (t == null || t.pauseeLe == null) return 0;
+    final pausedSeconds = DateTime.now().difference(t.pauseeLe!).inSeconds;
+    return (_db.update(_db.tournees)..where((row) => row.id.equals(id)))
+        .write(TourneesCompanion(
+      pauseeLe: const Value(null),
+      pauseeSeconds: Value(t.pauseeSeconds + pausedSeconds),
+    ));
+  }
+
   /// Efface les metadonnees d'optimisation d'une tournee : `optimiseeLe`,
   /// `distanceTotaleM`, `dureeTotaleS`, `traceGeojson`. A appeler des
   /// qu'une modification structurelle (ajout/suppr/edit d'arret, point

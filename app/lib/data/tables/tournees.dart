@@ -58,5 +58,15 @@ class Tournees extends Table {
   /// le re-zone via flutter_local_notifications a la programmation.
   DateTimeColumn get rappelLe => dateTime().nullable()();
 
+  /// Timestamp du dernier tap "Mettre en pause". Null si jamais paused
+  /// ou si actuellement en cours. Sert au calcul du temps reellement
+  /// travaille (exclut les pauses).
+  DateTimeColumn get pauseeLe => dateTime().nullable()();
+
+  /// Cumul des secondes de pause sur cette tournee. Mis a jour au
+  /// "Reprendre" : pauseeSeconds += now - pauseeLe.
+  IntColumn get pauseeSeconds =>
+      integer().withDefault(const Constant(0))();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

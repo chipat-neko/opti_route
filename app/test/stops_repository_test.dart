@@ -256,6 +256,54 @@ void main() {
       expect(await repo.countByTournee(tId), 2);
     });
 
+    test('markLivre avec preuvePhotoPath : persiste le chemin', () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markLivre(
+        sId,
+        preuvePhotoPath: '/data/app/preuves/12_1234.jpg',
+      );
+      final s = await repo.getById(sId);
+      expect(s!.preuvePhotoPath, '/data/app/preuves/12_1234.jpg');
+    });
+
+    test('markEchec avec preuvePhotoPath : persiste le chemin', () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markEchec(
+        sId,
+        'absent',
+        preuvePhotoPath: '/data/app/preuves/echec.jpg',
+      );
+      final s = await repo.getById(sId);
+      expect(s!.preuvePhotoPath, '/data/app/preuves/echec.jpg');
+    });
+
+    test('setPreuvePhoto : ajoute apres coup, sans toucher au statut',
+        () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markLivre(sId);
+      await repo.setPreuvePhoto(sId, '/p/photo.jpg');
+      final s = await repo.getById(sId);
+      expect(s!.preuvePhotoPath, '/p/photo.jpg');
+      // Le statut n'est pas modifie
+      expect(s.statutLivraison, 'livre');
+    });
+
+    test('setPreuvePhoto null : retire la photo', () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markLivre(sId, preuvePhotoPath: '/old.jpg');
+      await repo.setPreuvePhoto(sId, null);
+      final s = await repo.getById(sId);
+      expect(s!.preuvePhotoPath, isNull);
+    });
+
+    test('markAaLivrer : efface aussi la preuvePhotoPath', () async {
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markLivre(sId, preuvePhotoPath: '/p.jpg');
+      await repo.markAaLivrer(sId);
+      final s = await repo.getById(sId);
+      expect(s!.preuvePhotoPath, isNull);
+    });
+
     test('updateCoords : met a jour lat/lng + adresseNormalisee uniquement',
         () async {
       final (_, sId) = await seedTourneeWithStop();
