@@ -41,7 +41,7 @@ class DrawerBadgeIcon extends ConsumerWidget {
               ),
           ],
         ),
-        tooltip: hasEnCours ? 'Menu â€” tournee en cours' : 'Menu',
+        tooltip: hasEnCours ? 'Menu - tournee en cours' : 'Menu',
         onPressed: () => Scaffold.of(context).openDrawer(),
       ),
     );
