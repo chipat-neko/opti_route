@@ -360,7 +360,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                     _InfoChip(
                       icon: Icons.access_time,
                       label:
-                          '${stop.fenetreDebut ?? ' - '} â†’ ${stop.fenetreFin ?? ' - '}',
+                          '${stop.fenetreDebut ?? ' - '} -> ${stop.fenetreFin ?? ' - '}',
                       mono: true,
                     ),
                 ],

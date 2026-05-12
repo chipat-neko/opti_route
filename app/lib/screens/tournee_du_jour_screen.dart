@@ -2587,7 +2587,7 @@ class _StopRow extends ConsumerWidget {
       final start = s.fenetreDebut ?? '--:--';
       final end = s.fenetreFin ?? '--:--';
       out.add(_Tag(
-        label: '$start â†’ $end',
+        label: '$start -> $end',
         bg: const Color(0x33F2A341),
         fg: const Color(0xFF7A4F0E),
         mono: true,

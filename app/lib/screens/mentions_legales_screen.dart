@@ -120,7 +120,7 @@ class _MarkdownPage extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('â€¢  '),
+                const Text('-  '),
                 Expanded(
                   child: Text(
                     _stripInlineFormatting(item),
@@ -174,7 +174,7 @@ class _MarkdownPage extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Contenus â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Contenus ------------------------------------------------------
 
 const _privacyText = '''
 # Politique de confidentialite
