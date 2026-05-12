@@ -143,6 +143,89 @@ void main() {
       expect(s.city, 'Dreux');
     });
 
+    test('secondaryLabel : "cp city"', () {
+      const s = AddressSuggestion(
+        displayName: 'X',
+        lat: 48,
+        lon: 1,
+        postcode: '75011',
+        city: 'Paris',
+      );
+      expect(s.secondaryLabel, '75011 Paris');
+    });
+
+    test('secondaryLabel : juste cp si pas de city', () {
+      const s = AddressSuggestion(
+        displayName: 'X',
+        lat: 48,
+        lon: 1,
+        postcode: '75011',
+      );
+      expect(s.secondaryLabel, '75011');
+    });
+
+    test('secondaryLabel : vide si rien', () {
+      const s = AddressSuggestion(displayName: 'X', lat: 48, lon: 1);
+      expect(s.secondaryLabel, '');
+    });
+
+    test('toString : "primary · secondary"', () {
+      const s = AddressSuggestion(
+        displayName: 'X',
+        lat: 48,
+        lon: 1,
+        road: 'rue X',
+        houseNumber: '12',
+        postcode: '75011',
+        city: 'Paris',
+      );
+      // toString contient au moins primaryLabel
+      expect(s.toString(), contains('12 rue X'));
+      expect(s.toString(), contains('75011 Paris'));
+    });
+
+    test('fromJson : fallback cycleway pour road', () {
+      final s = AddressSuggestion.fromJson({
+        'display_name': 'Piste',
+        'lat': '48.0',
+        'lon': '1.0',
+        'address': {'cycleway': 'Piste cyclable X'},
+      });
+      expect(s.road, 'Piste cyclable X');
+    });
+
+    test('fromJson : fallback village/municipality pour city', () {
+      // village
+      final s1 = AddressSuggestion.fromJson({
+        'display_name': 'X',
+        'lat': '48.0',
+        'lon': '1.0',
+        'address': {'village': 'Petit Village'},
+      });
+      expect(s1.city, 'Petit Village');
+
+      // municipality
+      final s2 = AddressSuggestion.fromJson({
+        'display_name': 'X',
+        'lat': '48.0',
+        'lon': '1.0',
+        'address': {'municipality': 'Commune X'},
+      });
+      expect(s2.city, 'Commune X');
+    });
+
+    test('fromJson : adresse minimale (juste lat/lon)', () {
+      final s = AddressSuggestion.fromJson({
+        'display_name': 'Quelque part',
+        'lat': '48.0',
+        'lon': '1.0',
+      });
+      expect(s.displayName, 'Quelque part');
+      expect(s.lat, 48.0);
+      expect(s.road, isNull);
+      expect(s.city, isNull);
+    });
+
     test('primaryLabel : retourne poiName si POI, sinon rue', () {
       const poi = AddressSuggestion(
         displayName: 'BCI CHARTRES, IMPASSE X, 28000',
