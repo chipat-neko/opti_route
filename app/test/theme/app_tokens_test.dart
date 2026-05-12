@@ -115,4 +115,149 @@ void main() {
       expect(AppRadius.r6 < AppRadius.r28, isTrue);
     });
   });
+
+  group('colorFromTag - tags secondaires', () {
+    test('"red" : AppColors.red', () {
+      final c = colorFromTag('red', defaultColor: AppColors.cream);
+      expect(c, AppColors.red);
+    });
+
+    test('"amber" : AppColors.amber', () {
+      final c = colorFromTag('amber', defaultColor: AppColors.cream);
+      expect(c, AppColors.amber);
+    });
+
+    test('"cream" : AppColors.creamSoft', () {
+      // Note : "cream" tag mappe a creamSoft (pas cream pur) pour
+      // garder un peu de contraste avec le fond.
+      final c = colorFromTag('cream', defaultColor: AppColors.lime);
+      expect(c, AppColors.creamSoft);
+    });
+
+    test('"ink" : AppColors.ink', () {
+      final c = colorFromTag('ink', defaultColor: AppColors.lime);
+      expect(c, AppColors.ink);
+    });
+
+    test('case sensitive : "LIME" majuscules : fallback', () {
+      // colorFromTag est strict lowercase. Si quelqu'un envoie
+      // "LIME", on retombe sur defaultColor.
+      final c = colorFromTag('LIME', defaultColor: AppColors.cream);
+      expect(c, AppColors.cream);
+    });
+
+    test('chaine vide : fallback', () {
+      final c = colorFromTag('', defaultColor: AppColors.amber);
+      expect(c, AppColors.amber);
+    });
+  });
+
+  group('colorTagOptions', () {
+    test('liste non vide', () {
+      expect(colorTagOptions, isNotEmpty);
+    });
+
+    test('contient au moins 4 entrees (lime/emerald/amber/red)', () {
+      expect(colorTagOptions.length, greaterThanOrEqualTo(4));
+    });
+
+    test('contient lime', () {
+      final tags = colorTagOptions.map((e) => e.$1).toList();
+      expect(tags, contains('lime'));
+    });
+  });
+
+  group('AppPalette.lerp - mix intermediaire', () {
+    test('lerp(t=0.5) : valeur intermediaire entre les 2 palettes', () {
+      final mid = AppPalette.light.lerp(AppPalette.dark, 0.5);
+      // Le cream lerp(0.5) doit etre entre cream (0xFFF5F3EE) et
+      // ink (0xFF0E1410) : un gris moyen.
+      // On verifie juste que ce n'est ni l'un ni l'autre.
+      expect(mid.cream, isNot(AppPalette.light.cream));
+      expect(mid.cream, isNot(AppPalette.dark.cream));
+    });
+
+    test('lerp(other non-AppPalette) : retourne this', () {
+      // ThemeExtension d'un autre type -> on retourne soi-meme.
+      // Ici on passe null force via cast, mais l'impl protege via
+      // `if (other is! AppPalette) return this;`
+      final p = AppPalette.light;
+      // ignore: avoid_dynamic_calls
+      final result = p.lerp(null, 0.5);
+      expect(result, p);
+    });
+  });
+
+  group('AppShadows - structure', () {
+    test('card : 1 ombre', () {
+      expect(AppShadows.card.length, 1);
+    });
+
+    test('fab : 1 ombre', () {
+      expect(AppShadows.fab.length, 1);
+    });
+
+    test('sheet : offset Y negatif (ombre vers le haut)', () {
+      expect(AppShadows.sheet.first.offset.dy, lessThan(0));
+    });
+  });
+
+  group('AppPaletteContext extension', () {
+    testWidgets('context.palette : retourne AppPalette.light par defaut',
+        (tester) async {
+      AppPalette? captured;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: const [AppPalette.light],
+          ),
+          home: Builder(
+            builder: (ctx) {
+              captured = ctx.palette;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(captured, isNotNull);
+      expect(captured!.cream, AppColors.cream);
+    });
+
+    testWidgets('context.palette : retourne AppPalette.dark dans theme dark',
+        (tester) async {
+      AppPalette? captured;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: const [AppPalette.dark],
+          ),
+          home: Builder(
+            builder: (ctx) {
+              captured = ctx.palette;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(captured, isNotNull);
+      expect(captured!.cream, AppColors.ink);
+    });
+
+    testWidgets('context.palette : fallback sur light si extension absente',
+        (tester) async {
+      AppPalette? captured;
+      await tester.pumpWidget(
+        MaterialApp(
+          // pas d'extensions
+          home: Builder(
+            builder: (ctx) {
+              captured = ctx.palette;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(captured!.cream, AppColors.cream);
+    });
+  });
 }
