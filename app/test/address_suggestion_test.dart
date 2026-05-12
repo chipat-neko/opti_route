@@ -104,6 +104,45 @@ void main() {
       expect(s.isPoi, isTrue);
     });
 
+    test('fromJson : parse une reponse Nominatim typique', () {
+      final s = AddressSuggestion.fromJson({
+        'display_name': '14 Rue X, 75011 Paris, France',
+        'lat': '48.85',
+        'lon': '2.37',
+        'address': {
+          'road': 'Rue X',
+          'house_number': '14',
+          'postcode': '75011',
+          'city': 'Paris',
+          'country': 'France',
+        },
+      });
+      expect(s.displayName, '14 Rue X, 75011 Paris, France');
+      expect(s.lat, 48.85);
+      expect(s.lon, 2.37);
+      expect(s.road, 'Rue X');
+      expect(s.houseNumber, '14');
+      expect(s.postcode, '75011');
+      expect(s.city, 'Paris');
+      expect(s.country, 'France');
+    });
+
+    test('fromJson : fallback pour les types alternatifs de rue + ville', () {
+      // OSM expose parfois "pedestrian" au lieu de "road", "town" au
+      // lieu de "city". Le parser doit gerer ces fallbacks.
+      final s = AddressSuggestion.fromJson({
+        'display_name': 'Quelque part',
+        'lat': '48.0',
+        'lon': '1.0',
+        'address': {
+          'pedestrian': 'Allee X',
+          'town': 'Dreux',
+        },
+      });
+      expect(s.road, 'Allee X');
+      expect(s.city, 'Dreux');
+    });
+
     test('primaryLabel : retourne poiName si POI, sinon rue', () {
       const poi = AddressSuggestion(
         displayName: 'BCI CHARTRES, IMPASSE X, 28000',
