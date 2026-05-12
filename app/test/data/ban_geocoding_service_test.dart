@@ -125,5 +125,30 @@ void main() {
       }));
       expect(svc.providerKey, 'ban');
     });
+
+    test('coordonnees inversees : lat=Y lon=X dans le GeoJSON', () async {
+      // BAN renvoie coordinates = [lon, lat] dans le GeoJSON (norme).
+      // Le service doit bien rebrandir : [0]=lon, [1]=lat.
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'type': 'Point',
+              // Paris : lon 2.3522, lat 48.8566
+              'coordinates': [2.3522, 48.8566],
+            },
+            'properties': {
+              'label': 'Paris',
+              'street': 'P',
+            },
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = BanGeocodingService(client: mock);
+      final r = await svc.search('paris');
+      expect(r.first.lat, 48.8566);
+      expect(r.first.lon, 2.3522);
+    });
   });
 }
