@@ -97,4 +97,23 @@ void main() {
       expect(a, isA<StopAction>());
     });
   });
+
+  group('Sealed types - exhaustivite StopAction', () {
+    /// Ce switch verifie qu'on couvre bien les 4 sous-types. Si on ajoute
+    /// un 5e sous-type a StopAction, Dart fait echouer la compilation
+    /// jusqu'a ce qu'on l'ajoute ici aussi (sealed -> switch exhaustif).
+    test('switch exhaustif sur les 4 actions', () {
+      String label(StopAction a) => switch (a) {
+            MarkLivreAction() => 'livre',
+            MarkEchecAction() => 'echec',
+            MarkAaLivrerAction() => 'a_livrer',
+            OpenDetailsAction() => 'details',
+          };
+
+      expect(label(const MarkLivreAction()), 'livre');
+      expect(label(const MarkEchecAction('absent')), 'echec');
+      expect(label(const MarkAaLivrerAction()), 'a_livrer');
+      expect(label(const OpenDetailsAction()), 'details');
+    });
+  });
 }
