@@ -27,6 +27,25 @@ void main() {
       const e = BordereauExtraction(telephone: '0600000000');
       expect(e.hasUsefulData, isFalse);
     });
+
+    test('seulement nbColis : false (info ne suffit pas)', () {
+      const e = BordereauExtraction(nbColis: 5);
+      expect(e.hasUsefulData, isFalse);
+    });
+
+    test('ville seule : true (suffit pour pre-filtrer)', () {
+      const e = BordereauExtraction(ville: 'Dreux');
+      expect(e.hasUsefulData, isTrue);
+    });
+
+    test('combinaison : nbColis + telephone (sans adresse) : false',
+        () {
+      const e = BordereauExtraction(
+        nbColis: 3,
+        telephone: '0123456789',
+      );
+      expect(e.hasUsefulData, isFalse);
+    });
   });
 
   group('BordereauExtraction.adressePostale', () {
