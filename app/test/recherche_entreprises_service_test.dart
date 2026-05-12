@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:opti_route/data/geocoding_service.dart';
 import 'package:opti_route/data/recherche_entreprises_service.dart';
 
 void main() {
@@ -131,6 +132,47 @@ void main() {
         expect(results.first.city, 'CHARTRES');
       },
     );
+
+    test('providerKey vaut "recherche_entreprises"', () {
+      final svc = RechercheEntreprisesService(
+        client: MockClient(
+          (req) async => http.Response('{}', 200),
+        ),
+      );
+      expect(svc.providerKey, 'recherche_entreprises');
+    });
+
+    test('query < 3 chars : retourne liste vide sans appel', () async {
+      var called = false;
+      final mock = MockClient((req) async {
+        called = true;
+        return http.Response('{}', 200);
+      });
+      final svc = RechercheEntreprisesService(client: mock);
+      final r = await svc.search('AB');
+      expect(r, isEmpty);
+      expect(called, isFalse);
+    });
+
+    test('status non 200 : throw GeocodingException', () async {
+      final mock = MockClient(
+        (req) async => http.Response('err', 500),
+      );
+      final svc = RechercheEntreprisesService(client: mock);
+      expect(
+        svc.search('Test SAS'),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
+
+    test('results absent du JSON : retourne liste vide', () async {
+      final mock = MockClient(
+        (req) async => http.Response(jsonEncode({}), 200),
+      );
+      final svc = RechercheEntreprisesService(client: mock);
+      final r = await svc.search('Test SAS');
+      expect(r, isEmpty);
+    });
 
     test(
       'siege ferme + aucun etablissement actif : skippe',
