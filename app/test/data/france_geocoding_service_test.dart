@@ -102,6 +102,38 @@ void main() {
       expect(r.first.houseNumber, '12');
     });
 
+    test('close() ferme toutes les sources', () {
+      final ban = _StubBan();
+      final entr = _StubEntreprises();
+      final photon = _StubPhoton();
+      // Les stubs ont des close() no-op, on verifie juste qu'aucune
+      // exception ne remonte de la cascade.
+      final svc = FranceGeocodingService(
+        ban: ban,
+        entreprises: entr,
+        photon: photon,
+      );
+      expect(() => svc.close(), returnsNormally);
+    });
+
+    test('source 1 vide + source 2 echec : tente la 3eme', () async {
+      // BAN vide, Photon throw, SIRENE retourne quelque chose.
+      final ban = _StubBan(returns: const []);
+      final photon = _StubPhoton(throwsError: true);
+      final entr = _StubEntreprises(returns: [_poi('Final POI')]);
+      final svc = FranceGeocodingService(
+        ban: ban,
+        entreprises: entr,
+        photon: photon,
+      );
+      final r = await svc.search('12 rue X');
+      expect(ban.called, isTrue);
+      expect(photon.called, isTrue);
+      expect(entr.called, isTrue);
+      expect(r, hasLength(1));
+      expect(r.first.poiName, 'Final POI');
+    });
+
     test('dedupe par lat/lon arrondis a 5 decimales', () async {
       // 48.123451 et 48.123452 arrondissent toutes les 2 a "48.12345"
       // a 5 decimales (toStringAsFixed(5)).
