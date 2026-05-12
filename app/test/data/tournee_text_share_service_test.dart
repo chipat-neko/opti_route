@@ -180,6 +180,118 @@ void main() {
       expect(out, isNot(contains('\n1. ')));
     });
 
+    test('fenetreDebut + fenetreFin : "08:00 - 12:00"', () async {
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: id,
+              adresseBrute: 'A',
+              fenetreDebut: const Value('08:00'),
+              fenetreFin: const Value('12:00'),
+            ),
+          );
+      final tournee =
+          await (db.select(db.tournees)..where((t) => t.id.equals(id)))
+              .getSingle();
+      final stops = await (db.select(db.stops)
+            ..where((s) => s.tourneeId.equals(id)))
+          .get();
+      final out = await svc.formatPlainText(tournee: tournee, stops: stops);
+      expect(out, contains('08:00 - 12:00'));
+    });
+
+    test('fenetreDebut seule : "apres 08:00"', () async {
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: id,
+              adresseBrute: 'A',
+              fenetreDebut: const Value('08:00'),
+              // pas de fenetreFin
+            ),
+          );
+      final tournee =
+          await (db.select(db.tournees)..where((t) => t.id.equals(id)))
+              .getSingle();
+      final stops = await (db.select(db.stops)
+            ..where((s) => s.tourneeId.equals(id)))
+          .get();
+      final out = await svc.formatPlainText(tournee: tournee, stops: stops);
+      expect(out, contains('apres 08:00'));
+    });
+
+    test('notes inclus dans le texte', () async {
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: id,
+              adresseBrute: 'A',
+              notes: const Value('Code 1234B, sonner 2 fois'),
+            ),
+          );
+      final tournee =
+          await (db.select(db.tournees)..where((t) => t.id.equals(id)))
+              .getSingle();
+      final stops = await (db.select(db.stops)
+            ..where((s) => s.tourneeId.equals(id)))
+          .get();
+      final out = await svc.formatPlainText(tournee: tournee, stops: stops);
+      expect(out, contains('Note: Code 1234B, sonner 2 fois'));
+    });
+
+    test('adresseNormalisee preferee a adresseBrute', () async {
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: id,
+              adresseBrute: 'raw input typo',
+              adresseNormalisee:
+                  const Value('14 rue des Lilas, 28100 Dreux'),
+            ),
+          );
+      final tournee =
+          await (db.select(db.tournees)..where((t) => t.id.equals(id)))
+              .getSingle();
+      final stops = await (db.select(db.stops)
+            ..where((s) => s.tourneeId.equals(id)))
+          .get();
+      final out = await svc.formatPlainText(tournee: tournee, stops: stops);
+      expect(out, contains('14 rue des Lilas, 28100 Dreux'));
+      expect(out, isNot(contains('raw input typo')));
+    });
+
     test('priorites speciales : EN 1ER / EN DERNIER / A EVITER', () async {
       final id = await db.into(db.tournees).insert(
             TourneesCompanion.insert(
