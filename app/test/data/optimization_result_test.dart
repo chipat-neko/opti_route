@@ -36,5 +36,17 @@ void main() {
       expect(e.toString(), 'OptimizationException: test msg');
       expect(e.message, 'test msg');
     });
+
+    test('implements Exception', () {
+      const e = OptimizationException('msg');
+      expect(e, isA<Exception>());
+    });
+
+    test('const constructor (peut servir dans const widgets)', () {
+      const e = OptimizationException('msg');
+      const e2 = OptimizationException('msg');
+      // Memes message + meme const -> egalite reference
+      expect(identical(e, e2), isTrue);
+    });
   });
 }
