@@ -74,6 +74,35 @@ de code mort) — remplacé par FranceGeocodingService depuis longtemps.
 **Bilan session** : 39+ commits, 0 issue `flutter analyze`, APK
 release **v1.1.0+2** (~96 MB) prêt à `app/build/app/outputs/flutter-apk/app-release.apk`.
 
+### Session 2026-05-12 (fixes terrain + extension tests)
+
+**Fix critique R8/Proguard** : `flutter_local_notifications` crashait
+`PlatformException(Missing type parameter)` à la sauvegarde d'une
+tournée parce que R8 mangeait les `TypeToken` génériques de Gson en
+build release. Ajout des règles Proguard officielles
+(`-keep class com.dexterous.** { *; }` + `Signature`/`Annotation`).
+
+**Mojibakes UI** : 11 occurrences de `'â€"'` (em-dash double-encodé),
+bullets `'â€¢'`, et flèches `'â†'` (right arrow) corrigées dans 9 écrans
+visibles utilisateur (drawer tooltip, mentions légales, carte, tournée
+du jour, ajout arrêt, etc.) — remplacement par caractères ASCII propres
+(`-`, `*`, `->`).
+
+**Tests étendus** : 285 → 356 (+71). Nouveaux fichiers `sheets_repository_test`,
+extensions sur `app_tokens` (+19 tests context.palette + lerp + tags),
+`parametres_repository` (+21 tests watchers + ORS key + onboarding),
+`address_suggestion` (+7 tests fromJson + secondaryLabel),
+`saved_destinations` (+5 tests proximité + favori + accents),
+`tournee_text_share` (+4 tests fenêtres + notes), `photon_service` (+6),
+`ban_geocoding_service` (+5 reverse), `recherche_entreprises` (+4).
+
+**Script `scripts/mirror-phone.ps1` compatible PS5.1** : l'opérateur
+`?.` (PS7+) plantait sur Windows PowerShell 5.1 — remplacé par un
+`if` simple.
+
+**Bilan extension** : +14 commits, +71 tests, fix UI critique livré.
+APK v1.1.0+2 rebuild avec les fixes.
+
 **Documentation** :
 - `docs/user-guide.md` : guide utilisateur exhaustif
 - `docs/play_store/listing.md` : fiche Play Store enrichie
