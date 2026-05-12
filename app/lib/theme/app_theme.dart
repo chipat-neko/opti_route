@@ -17,10 +17,11 @@ ThemeData buildAppTheme() => _buildTheme(brightness: Brightness.light);
 /// conservant les couleurs de marque (lime / emerald / red / amber)
 /// qui restent lisibles sur fond sombre.
 ///
-/// **Limite connue** : certains widgets custom utilisent encore les
-/// constantes `AppColors.*` en dur (cream/paper/ink) et ne basculent
-/// pas. Ils gardent leur apparence claire. Refactor complet à faire
-/// dans une PR future si ce n'est pas assez sombre la nuit.
+/// Couvert par Vague 8 : 17 fichiers refactorés (314 occurrences
+/// `AppColors.X` → `context.palette.X` via `AppPalette`). Les couleurs
+/// d'accent fixes (lime/emerald/amber/red) restent volontairement
+/// hardcodées avec un foreground `AppColors.ink` fixe pour préserver
+/// le contraste.
 ThemeData buildAppThemeDark() => _buildTheme(brightness: Brightness.dark);
 
 ThemeData _buildTheme({required Brightness brightness}) {
