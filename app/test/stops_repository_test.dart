@@ -204,6 +204,58 @@ void main() {
       expect(actions, containsAll(['mark_livre', 'mark_echec', 'revert']));
     });
 
+    test('applyOptimizedOrder : ecrit ordre_optimise 1-based dans l\'ordre',
+        () async {
+      final tId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 10),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+      // 3 stops sans ordre.
+      final ids = <int>[];
+      for (var i = 0; i < 3; i++) {
+        ids.add(await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'stop-$i',
+              ),
+            ));
+      }
+      // On applique un ordre inverse : [id2, id1, id0]
+      await repo.applyOptimizedOrder([ids[2], ids[1], ids[0]]);
+
+      final s0 = await repo.getById(ids[0]);
+      final s1 = await repo.getById(ids[1]);
+      final s2 = await repo.getById(ids[2]);
+      expect(s2!.ordreOptimise, 1); // 1ere position
+      expect(s1!.ordreOptimise, 2);
+      expect(s0!.ordreOptimise, 3);
+    });
+
+    test('countByTournee : 0 si vide, n apres seed', () async {
+      final tId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 10),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+      expect(await repo.countByTournee(tId), 0);
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(tourneeId: tId, adresseBrute: 'A'),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(tourneeId: tId, adresseBrute: 'B'),
+          );
+      expect(await repo.countByTournee(tId), 2);
+    });
+
     test('updateCoords : met a jour lat/lng + adresseNormalisee uniquement',
         () async {
       final (_, sId) = await seedTourneeWithStop();
