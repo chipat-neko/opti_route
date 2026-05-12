@@ -126,6 +126,58 @@ void main() {
       expect(svc.providerKey, 'ban');
     });
 
+    test('reverseGeocode : retourne le 1er feature decode', () async {
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [1.366, 48.737],
+            },
+            'properties': {
+              'type': 'housenumber',
+              'label': '12 rue X 28100 Dreux',
+              'housenumber': '12',
+              'street': 'rue X',
+              'postcode': '28100',
+              'city': 'Dreux',
+            },
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = BanGeocodingService(client: mock);
+      final r = await svc.reverseGeocode(lat: 48.737, lng: 1.366);
+      expect(r, isNotNull);
+      expect(r!.displayName, '12 rue X 28100 Dreux');
+      expect(r.houseNumber, '12');
+    });
+
+    test('reverseGeocode : null si features vide', () async {
+      final body = jsonEncode({'features': []});
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = BanGeocodingService(client: mock);
+      final r = await svc.reverseGeocode(lat: 48.0, lng: 1.0);
+      expect(r, isNull);
+    });
+
+    test('reverseGeocode : throw GeocodingException sur 500', () async {
+      final mock = MockClient((req) async => http.Response('err', 500));
+      final svc = BanGeocodingService(client: mock);
+      expect(
+        svc.reverseGeocode(lat: 48.0, lng: 1.0),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
+
+    test('features absent du JSON : retourne liste vide', () async {
+      final body = jsonEncode({'type': 'FeatureCollection'});
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final svc = BanGeocodingService(client: mock);
+      final r = await svc.search('test rue');
+      expect(r, isEmpty);
+    });
+
     test('coordonnees inversees : lat=Y lon=X dans le GeoJSON', () async {
       // BAN renvoie coordinates = [lon, lat] dans le GeoJSON (norme).
       // Le service doit bien rebrandir : [0]=lon, [1]=lat.
