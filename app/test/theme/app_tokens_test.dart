@@ -202,6 +202,67 @@ void main() {
     });
   });
 
+  group('AppThemePreset - catalogue', () {
+    test('all : contient 4 presets', () {
+      expect(AppThemePreset.all.length, 4);
+    });
+
+    test('all : noms distincts', () {
+      final names = AppThemePreset.all.map((p) => p.name).toSet();
+      expect(names.length, 4);
+      expect(names, containsAll(['lime', 'ocean', 'terracotta', 'mono']));
+    });
+
+    test('fromName : retourne le bon preset', () {
+      expect(AppThemePreset.fromName('lime').name, 'lime');
+      expect(AppThemePreset.fromName('ocean').name, 'ocean');
+      expect(AppThemePreset.fromName('terracotta').name, 'terracotta');
+      expect(AppThemePreset.fromName('mono').name, 'mono');
+    });
+
+    test('fromName : fallback sur lime si nom inconnu', () {
+      expect(AppThemePreset.fromName('inexistant').name, 'lime');
+      expect(AppThemePreset.fromName(null).name, 'lime');
+      expect(AppThemePreset.fromName('').name, 'lime');
+    });
+
+    test('lime : pointe sur AppPalette.light/dark (alias historique)',
+        () {
+      expect(AppThemePreset.lime.light, AppPalette.light);
+      expect(AppThemePreset.lime.dark, AppPalette.dark);
+    });
+
+    test('chaque preset : light != dark (vraie inversion)', () {
+      for (final p in AppThemePreset.all) {
+        expect(p.light.cream, isNot(p.dark.cream),
+            reason: '${p.name} : light.cream doit differ de dark.cream');
+        expect(p.light.ink, isNot(p.dark.ink),
+            reason: '${p.name} : light.ink doit differ de dark.ink');
+      }
+    });
+
+    test('chaque preset : previewColor non null', () {
+      for (final p in AppThemePreset.all) {
+        expect(p.previewColor, isNotNull, reason: p.name);
+      }
+    });
+
+    test('ocean : surfaces bleutees (cream avec une teinte bleue)', () {
+      // L'octet "bleu" du cream doit etre >= aux autres (B >= R, G)
+      final cream = AppPalette.oceanLight.cream;
+      expect(cream.b.round(), greaterThanOrEqualTo(cream.r.round() - 5));
+    });
+
+    test('mono light : background blanc (#FAFAFA)', () {
+      expect(AppPalette.monoLight.cream, const Color(0xFFFAFAFA));
+      expect(AppPalette.monoLight.paper, const Color(0xFFFFFFFF));
+    });
+
+    test('mono dark : noir pur (#0A0A0A)', () {
+      expect(AppPalette.monoDark.cream, const Color(0xFF0A0A0A));
+    });
+  });
+
   group('AppPaletteContext extension', () {
     testWidgets('context.palette : retourne AppPalette.light par defaut',
         (tester) async {

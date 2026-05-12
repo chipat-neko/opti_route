@@ -327,6 +327,36 @@ void main() {
     });
   });
 
+  group('ParametresRepository - theme preset (palette)', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('defaut : "lime"', () async {
+      expect(await repo.getThemePreset(), 'lime');
+    });
+
+    test('set ocean / terracotta / mono : round-trip + watch', () async {
+      await repo.setThemePreset('ocean');
+      expect(await repo.getThemePreset(), 'ocean');
+      expect(await repo.watchThemePreset().first, 'ocean');
+
+      await repo.setThemePreset('terracotta');
+      expect(await repo.getThemePreset(), 'terracotta');
+
+      await repo.setThemePreset('mono');
+      expect(await repo.getThemePreset(), 'mono');
+    });
+  });
+
   group('ParametresRepository - rappel veille auto', () {
     late AppDatabase db;
     late ParametresRepository repo;

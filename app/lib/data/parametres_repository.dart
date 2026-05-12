@@ -23,6 +23,7 @@ class ParametresRepository {
   static const _kDensiteUi = 'densite_ui';
   static const _kContrasteEleve = 'contraste_eleve';
   static const _kVeilleReminderHHmm = 'veille_reminder_hhmm';
+  static const _kThemePreset = 'theme_preset';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -203,6 +204,19 @@ class ParametresRepository {
       _write(_kVeilleReminderHHmm, hhmm);
 
   Future<int> clearVeilleReminderHHmm() => _delete(_kVeilleReminderHHmm);
+
+  /// Nom du preset de theme choisi par l'utilisateur
+  /// ('lime' / 'ocean' / 'terracotta' / 'mono'). Defaut : 'lime'.
+  Future<String> getThemePreset() async =>
+      (await _readKey(_kThemePreset)) ?? 'lime';
+
+  Stream<String> watchThemePreset() =>
+      _watchKey(_kThemePreset).map((v) => v ?? 'lime');
+
+  Future<void> setThemePreset(String preset) {
+    assert(['lime', 'ocean', 'terracotta', 'mono'].contains(preset));
+    return _write(_kThemePreset, preset);
+  }
 
   /// Estime le cout carburant d'une distance (en metres) selon les
   /// parametres courants. Retourne en EUR (double, arrondi a 0.01).

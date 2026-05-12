@@ -9,6 +9,7 @@ import '../data/sheets_repository.dart';
 import '../data/stats_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournees_repository.dart';
+import '../theme/app_tokens.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -75,6 +76,16 @@ final themeModeProvider = StreamProvider<ThemeMode>((ref) {
             'dark' => ThemeMode.dark,
             _ => ThemeMode.system,
           });
+});
+
+/// Preset de palette de couleurs choisi (lime / ocean / terracotta /
+/// mono). MyApp watch ce provider et reconstruit le ThemeData a chaque
+/// changement.
+final themePresetProvider = StreamProvider<AppThemePreset>((ref) {
+  return ref
+      .watch(parametresRepositoryProvider)
+      .watchThemePreset()
+      .map(AppThemePreset.fromName);
 });
 
 /// Compteur d'optimisations OpenRouteService consommees aujourd'hui.

@@ -546,6 +546,41 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               );
             },
           ),
+          const SizedBox(height: AppSpacing.x18),
+          Text(
+            'Palette de couleurs',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x4),
+          Text(
+            'Change l\'ambiance des surfaces. Les couleurs metier '
+            '(vert = livre, rouge = echec) restent identiques.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Consumer(
+            builder: (context, ref, _) {
+              final preset = ref.watch(themePresetProvider).asData?.value ??
+                  AppThemePreset.lime;
+              return Column(
+                children: [
+                  for (final p in AppThemePreset.all)
+                    _PaletteTile(
+                      preset: p,
+                      selected: p.name == preset.name,
+                    ),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
@@ -880,6 +915,117 @@ class _ThemeChip extends ConsumerWidget {
       labelStyle: TextStyle(
         color: p.ink,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+      ),
+    );
+  }
+}
+
+class _PaletteTile extends ConsumerWidget {
+  const _PaletteTile({required this.preset, required this.selected});
+
+  final AppThemePreset preset;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        onTap: () async {
+          await ref
+              .read(parametresRepositoryProvider)
+              .setThemePreset(preset.name);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x12,
+            vertical: AppSpacing.x10,
+          ),
+          decoration: BoxDecoration(
+            color: selected ? preset.previewColor.withValues(alpha: 0.10) : p.paper,
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            border: Border.all(
+              color: selected ? preset.previewColor : p.inkLine,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              // Mini swatch double (light + dark) pour previewer
+              _SwatchPreview(preset: preset),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      preset.displayName,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: p.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      preset.description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: p.textMute,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                Icon(Icons.check_circle, color: preset.previewColor, size: 22),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SwatchPreview extends StatelessWidget {
+  const _SwatchPreview({required this.preset});
+
+  final AppThemePreset preset;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        children: [
+          // Carre light en haut-gauche
+          Positioned(
+            left: 0,
+            top: 0,
+            child: _swatch(preset.light.cream, preset.light.ink),
+          ),
+          // Carre dark en bas-droite
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: _swatch(preset.dark.cream, preset.dark.ink),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _swatch(Color bg, Color border) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border.withValues(alpha: 0.4), width: 1),
       ),
     );
   }
