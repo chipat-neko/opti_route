@@ -50,6 +50,29 @@ void main() {
     });
   });
 
+  group('AppPalette - inversion dark', () {
+    test('paper devient inkSoft (surface secondaire)', () {
+      expect(AppPalette.dark.paper, AppColors.inkSoft);
+    });
+
+    test('inkSoft devient creamSoft', () {
+      expect(AppPalette.dark.inkSoft, AppColors.creamSoft);
+    });
+
+    test('inkLine garde un contraste suffisant en sombre', () {
+      // En sombre, inkLine = cream avec alpha 20% = (alpha 0x33)
+      // Verifie que la couleur a bien un alpha < 255.
+      final c = AppPalette.dark.inkLine;
+      expect(c.a, lessThan(1.0));
+    });
+
+    test('divider en sombre : cream alpha 10%', () {
+      final c = AppPalette.dark.divider;
+      // alpha encode 0x1A / 255 ~= 0.10
+      expect(c.a, closeTo(0.10, 0.02));
+    });
+  });
+
   group('AppPalette - copyWith + lerp', () {
     test('copyWith sans override : meme palette', () {
       final p = AppPalette.light.copyWith();
