@@ -402,6 +402,84 @@ void main() {
     });
   });
 
+  group('StatsService.compteursMotivants', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('aucune tournee : MotivationStats.empty', () async {
+      final m = await stats.compteursMotivants();
+      expect(m.colisLivresAnnee, 0);
+      expect(m.kmAnnee, 0);
+      expect(m.streakSansEchec, 0);
+    });
+
+    test('1 tournee terminee 100% : streak = 1', () async {
+      final now = DateTime.now();
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(now.year, now.month, now.day),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+              statut: const Value('terminee'),
+              distanceTotaleM: const Value(25000),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: id,
+              adresseBrute: 'A',
+              statutLivraison: const Value('livre'),
+              nbColis: const Value(3),
+            ),
+          );
+      final m = await stats.compteursMotivants();
+      expect(m.streakSansEchec, 1);
+      expect(m.colisLivresAnnee, 3);
+      expect(m.kmAnnee, 25.0);
+      expect(m.tourneesAnnee, 1);
+    });
+
+    test('tournee avec un echec : streak = 0', () async {
+      final now = DateTime.now();
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(now.year, now.month, now.day),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+              statut: const Value('terminee'),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: id,
+              adresseBrute: 'A',
+              statutLivraison: const Value('echec'),
+            ),
+          );
+      final m = await stats.compteursMotivants();
+      expect(m.streakSansEchec, 0);
+    });
+
+    test('MotivationStats.empty est const', () {
+      const m = MotivationStats.empty;
+      expect(m.colisLivresAnnee, 0);
+      expect(m.streakSansEchec, 0);
+    });
+  });
+
   group('TourneeStats - constante empty', () {
     test('TourneeStats.empty : tout a zero', () {
       const s = TourneeStats.empty;

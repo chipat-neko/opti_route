@@ -166,6 +166,52 @@ class StatsService {
     }
   }
 
+  /// Statistiques motivantes : compteurs cumules depuis le 1er
+  /// janvier de l'annee courante, et streak en cours de tournees
+  /// terminees a 100% (aucun echec). Sert au tile "Tu as parcouru X km
+  /// cette annee" dans l'ecran Stats.
+  Future<MotivationStats> compteursMotivants() async {
+    final now = DateTime.now();
+    final yearStart = DateTime(now.year, 1, 1);
+
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(yearStart)))
+        .get();
+    if (tournees.isEmpty) return MotivationStats.empty;
+
+    final stops = await (_db.select(_db.stops)
+          ..where((s) =>
+              s.tourneeId.isIn(tournees.map((t) => t.id).toList())))
+        .get();
+
+    final colisLivresAnnee = stops
+        .where((s) => s.statutLivraison == 'livre')
+        .fold<int>(0, (acc, s) => acc + s.nbColis);
+    final kmAnnee =
+        tournees.fold<int>(0, (acc, t) => acc + (t.distanceTotaleM ?? 0)) /
+            1000;
+
+    // Streak : tournees terminees consecutives a 100% (aucun echec).
+    // Trie les tournees par date desc et compte jusqu'au 1er echec.
+    final sorted = [...tournees]
+      ..sort((a, b) => b.date.compareTo(a.date));
+    var streak = 0;
+    for (final t in sorted) {
+      if (t.statut != 'terminee') break;
+      final tStops = stops.where((s) => s.tourneeId == t.id).toList();
+      final hasEchec = tStops.any((s) => s.statutLivraison == 'echec');
+      if (hasEchec) break;
+      streak++;
+    }
+
+    return MotivationStats(
+      colisLivresAnnee: colisLivresAnnee,
+      kmAnnee: kmAnnee,
+      tourneesAnnee: tournees.length,
+      streakSansEchec: streak,
+    );
+  }
+
   /// Genere un CSV des tournees dans la fenetre `[since, now]`. Une
   /// ligne par tournee. Sert au bouton "Exporter en Excel" dans Stats.
   Future<String> exportCsvTournees({required DateTime since}) async {
@@ -241,4 +287,29 @@ class TourneeStats {
     if (total == 0) return 0;
     return nbLivres / total;
   }
+}
+
+/// Compteurs motivants pour le tile "Tu as deja fait X cette annee".
+class MotivationStats {
+  const MotivationStats({
+    required this.colisLivresAnnee,
+    required this.kmAnnee,
+    required this.tourneesAnnee,
+    required this.streakSansEchec,
+  });
+
+  static const empty = MotivationStats(
+    colisLivresAnnee: 0,
+    kmAnnee: 0,
+    tourneesAnnee: 0,
+    streakSansEchec: 0,
+  );
+
+  final int colisLivresAnnee;
+  final double kmAnnee;
+  final int tourneesAnnee;
+
+  /// Nombre de tournees terminees consecutives sans aucun echec
+  /// (depuis la derniere tournee). 0 si la derniere a un echec.
+  final int streakSansEchec;
 }
