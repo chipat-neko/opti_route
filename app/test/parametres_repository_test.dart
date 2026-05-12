@@ -293,6 +293,65 @@ void main() {
     });
   });
 
+  group('ParametresRepository - confort UI (densite + contraste)', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('densiteUi : normal par defaut', () async {
+      expect(await repo.getDensiteUi(), 'normal');
+    });
+
+    test('densiteUi : set large + watch', () async {
+      await repo.setDensiteUi('large');
+      expect(await repo.getDensiteUi(), 'large');
+      expect(await repo.watchDensiteUi().first, 'large');
+    });
+
+    test('contrasteEleve : false par defaut', () async {
+      expect(await repo.getContrasteEleve(), isFalse);
+    });
+
+    test('contrasteEleve : set true + watch', () async {
+      await repo.setContrasteEleve(true);
+      expect(await repo.getContrasteEleve(), isTrue);
+      expect(await repo.watchContrasteEleve().first, isTrue);
+    });
+  });
+
+  group('ParametresRepository - rappel veille auto', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('null par defaut', () async {
+      expect(await repo.getVeilleReminderHHmm(), isNull);
+    });
+
+    test('set "21:00" + clear', () async {
+      await repo.setVeilleReminderHHmm('21:00');
+      expect(await repo.getVeilleReminderHHmm(), '21:00');
+      await repo.clearVeilleReminderHHmm();
+      expect(await repo.getVeilleReminderHHmm(), isNull);
+    });
+  });
+
   group('ParametresRepository - capacite + duree defaults', () {
     late AppDatabase db;
     late ParametresRepository repo;

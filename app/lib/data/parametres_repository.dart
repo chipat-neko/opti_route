@@ -20,6 +20,9 @@ class ParametresRepository {
   static const _kThemeMode = 'theme_mode';
   static const _kCoutCarburantLitre = 'cout_carburant_litre_eur';
   static const _kConsoLitresPar100Km = 'conso_l_per_100km';
+  static const _kDensiteUi = 'densite_ui';
+  static const _kContrasteEleve = 'contraste_eleve';
+  static const _kVeilleReminderHHmm = 'veille_reminder_hhmm';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -163,6 +166,43 @@ class ParametresRepository {
   Future<void> setConsoLitresPar100Km(double value) {
     return _write(_kConsoLitresPar100Km, value.toStringAsFixed(2));
   }
+
+  /// Densite de l'interface : 'normal' (defaut) ou 'large' (cibles
+  /// tactiles agrandies + polices doublees, utile en mode conduite).
+  Future<String> getDensiteUi() async =>
+      (await _readKey(_kDensiteUi)) ?? 'normal';
+
+  Stream<String> watchDensiteUi() =>
+      _watchKey(_kDensiteUi).map((v) => v ?? 'normal');
+
+  Future<void> setDensiteUi(String v) {
+    assert(v == 'normal' || v == 'large');
+    return _write(_kDensiteUi, v);
+  }
+
+  /// Mode contraste eleve : booleen. Renforce les bordures et les
+  /// textes pour les conditions de lecture difficiles (soleil direct).
+  Future<bool> getContrasteEleve() async =>
+      (await _readKey(_kContrasteEleve)) == '1';
+
+  Stream<bool> watchContrasteEleve() =>
+      _watchKey(_kContrasteEleve).map((v) => v == '1');
+
+  Future<void> setContrasteEleve(bool v) =>
+      _write(_kContrasteEleve, v ? '1' : '0');
+
+  /// Heure (format "HH:mm") du rappel veille a programmer
+  /// automatiquement la veille de chaque tournee. Null = pas de
+  /// rappel veille auto. Ex: "21:00" pour rappel a 21h le soir avant.
+  Future<String?> getVeilleReminderHHmm() => _readKey(_kVeilleReminderHHmm);
+
+  Stream<String?> watchVeilleReminderHHmm() =>
+      _watchKey(_kVeilleReminderHHmm);
+
+  Future<void> setVeilleReminderHHmm(String hhmm) =>
+      _write(_kVeilleReminderHHmm, hhmm);
+
+  Future<int> clearVeilleReminderHHmm() => _delete(_kVeilleReminderHHmm);
 
   /// Estime le cout carburant d'une distance (en metres) selon les
   /// parametres courants. Retourne en EUR (double, arrondi a 0.01).
