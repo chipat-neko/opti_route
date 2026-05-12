@@ -218,7 +218,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               controller: _nomClientCtrl,
               decoration: const InputDecoration(
                 labelText: 'Nom du client ou de l\'enseigne',
-                hintText: 'Mme Aubry Â· Unikalo Â· Carrefour Â· Pharmacie...',
+                hintText: 'Mme Aubry · Unikalo · Carrefour · Pharmacie...',
                 helperText:
                     'Astuce : si le commerce n\'apparait pas dans l\'autocomplete '
                     'd\'adresse, mets son nom ici et tape l\'adresse postale du '
@@ -232,7 +232,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               controller: _notesCtrl,
               decoration: const InputDecoration(
                 labelText: 'Notes',
-                hintText: 'Code 1234B Â· porte garage Â· 3e etage',
+                hintText: 'Code 1234B · porte garage · 3e etage',
               ),
               maxLines: 3,
               textInputAction: TextInputAction.newline,

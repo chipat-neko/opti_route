@@ -82,7 +82,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
             controller: _notesCarnetCtrl,
             decoration: const InputDecoration(
               labelText: 'Notes pre-definies (optionnel)',
-              hintText: 'Code 1234B Â· sonner 2 fois Â· porte garage',
+              hintText: 'Code 1234B · sonner 2 fois · porte garage',
               helperText:
                   'Pre-remplies dans le champ Notes a chaque nouvel '
                   'arret cree pour ce client. Modifiables au cas par cas.',

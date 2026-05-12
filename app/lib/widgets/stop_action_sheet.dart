@@ -269,7 +269,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 style: const TextStyle(fontSize: 13),
                 decoration: const InputDecoration(
                   labelText: 'Notes',
-                  hintText: 'Code Â· porte Â· etage...',
+                  hintText: 'Code · porte · etage...',
                   isDense: true,
                 ),
               ),

@@ -708,7 +708,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       final dur = _formatDuration(result.totalDurationSeconds);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tournee optimisee : $km km Â· $dur'),
+          content: Text('Tournee optimisee : $km km · $dur'),
           backgroundColor: AppColors.emerald,
         ),
       );

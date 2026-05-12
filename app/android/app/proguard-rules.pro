@@ -5,6 +5,10 @@
 -dontwarn com.google.mlkit.vision.text.japanese.**
 -dontwarn com.google.mlkit.vision.text.korean.**
 -dontwarn com.google.mlkit.vision.text.devanagari.**
+# Keep latin (le SEUL script charge au runtime via TextRecognitionScript.latin)
+# pour eviter une obfuscation R8 qui ferait crasher l'OCR en release.
+-keep class com.google.mlkit.vision.text.latin.** { *; }
+-keep class com.google.mlkit.vision.text.** { *; }
 
 # flutter_local_notifications : utilise Gson + TypeToken pour serialiser
 # les notifs planifiees. R8 mange les generiques par defaut -> crash

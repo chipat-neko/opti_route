@@ -20,30 +20,42 @@ class PreuvePhotoService {
 
   /// Capture une photo via la camera native et la copie dans le
   /// repertoire prive de l'app. Retourne le chemin absolu, ou null si
-  /// l'utilisateur a annule.
+  /// l'utilisateur a annule, OU si la permission est refusee / le
+  /// disque plein / un autre I/O echoue. Best-effort : on ne laisse
+  /// jamais une exception remonter a l'UI (deja un fallback SnackBar
+  /// en amont).
   Future<String?> capturer({required int stopId}) async {
-    final xfile = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 70,
-      maxWidth: 1600,
-      maxHeight: 1600,
-    );
-    if (xfile == null) return null;
+    try {
+      final xfile = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (xfile == null) return null;
 
-    final dir = await _preuvesDir();
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final destPath = '${dir.path}/${stopId}_$ts.jpg';
-    final destFile = File(destPath);
-    await File(xfile.path).copy(destFile.path);
-    return destPath;
+      final dir = await _preuvesDir();
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final destPath = '${dir.path}/${stopId}_$ts.jpg';
+      await File(xfile.path).copy(destPath);
+      return destPath;
+    } catch (_) {
+      // Permission refusee / source supprimee entre pick et copy /
+      // disque plein. On retourne null silencieusement.
+      return null;
+    }
   }
 
   /// Supprime un fichier preuve s'il existe. Safe : ne plante pas si
-  /// le fichier a deja ete supprime.
+  /// le fichier a deja ete supprime ou si l'I/O echoue.
   Future<void> supprimer(String path) async {
-    final file = File(path);
-    if (await file.exists()) {
-      await file.delete();
+    try {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {
+      // best-effort
     }
   }
 

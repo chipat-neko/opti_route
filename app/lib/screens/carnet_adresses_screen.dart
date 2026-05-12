@@ -209,7 +209,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         if (result.created > 0) '${result.created} ajoutee(s)',
         if (result.merged > 0) '${result.merged} fusionnee(s)',
         if (result.rejected > 0) '${result.rejected} rejetee(s)',
-      ].join(' Â· ');
+      ].join(' · ');
       messenger.showSnackBar(
         SnackBar(
           content: Text(summary.isEmpty ? 'Aucune entree' : summary),

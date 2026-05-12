@@ -190,7 +190,7 @@ class _StatsBody extends StatelessWidget {
                 label: 'Arrets',
                 value: '${stats.nbArrets}',
                 hint:
-                    '${stats.nbLivres} livres Â· ${stats.nbEchecs} echecs',
+                    '${stats.nbLivres} livres · ${stats.nbEchecs} echecs',
               ),
             ),
           ],

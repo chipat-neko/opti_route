@@ -461,7 +461,7 @@ class _SuggestionTile extends StatelessWidget {
     ];
     if (localityBits.isNotEmpty) parts.add(localityBits.join(' '));
     if (parts.isEmpty) return s.displayName;
-    return parts.join(' Â· ');
+    return parts.join(' · ');
   }
 }
 

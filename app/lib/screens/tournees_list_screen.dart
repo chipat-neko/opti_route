@@ -322,7 +322,7 @@ class _TourneeRow extends ConsumerWidget {
                         if (hasStats) ...[
                           const SizedBox(height: AppSpacing.x6),
                           Text(
-                            '${(tournee.distanceTotaleM! / 1000).toStringAsFixed(1)} km Â· ${_formatDuration(tournee.dureeTotaleS!)}',
+                            '${(tournee.distanceTotaleM! / 1000).toStringAsFixed(1)} km · ${_formatDuration(tournee.dureeTotaleS!)}',
                             style: appMonoStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,

@@ -197,8 +197,8 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                 children: [
                   Text(
                     hasAutoExtraction
-                        ? 'OU SELECTION MANUELLE Â· ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}'
-                        : 'TEXTE DETECTE Â· ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}',
+                        ? 'OU SELECTION MANUELLE · ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}'
+                        : 'TEXTE DETECTE · ${lines.length} LIGNE${lines.length > 1 ? "S" : ""}',
                     style: appMonoStyle(
                       fontSize: 11,
                       color: p.textMute,

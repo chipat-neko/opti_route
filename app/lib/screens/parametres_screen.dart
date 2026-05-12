@@ -132,8 +132,8 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             icon: Icons.verified_outlined,
             title: 'Geocodage 3 sources',
             subtitle:
-                'BAN (cadastre officiel) Â· Recherche-Entreprises '
-                '(SIRENE/INSEE) Â· Photon/OSM (enseignes & marques). '
+                'BAN (cadastre officiel) · Recherche-Entreprises '
+                '(SIRENE/INSEE) · Photon/OSM (enseignes & marques). '
                 'Aucune cle, aucune limite stricte.',
           ),
           const SizedBox(height: AppSpacing.x28),
