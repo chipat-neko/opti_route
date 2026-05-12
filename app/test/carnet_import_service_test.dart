@@ -40,6 +40,21 @@ void main() {
       expect(r.errors.first, contains('adresse_display'));
     });
 
+    test('CarnetImportResult immutable', () {
+      const r = CarnetImportResult(
+        lineCount: 5,
+        created: 3,
+        merged: 1,
+        rejected: 1,
+        errors: ['err 1'],
+      );
+      expect(r.lineCount, 5);
+      expect(r.created, 3);
+      expect(r.merged, 1);
+      expect(r.rejected, 1);
+      expect(r.errors, ['err 1']);
+    });
+
     test('CSV export classique -> creation', () async {
       final r = await importer.importFromText(csvExport);
       expect(r.created, 2);
