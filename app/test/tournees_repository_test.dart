@@ -210,6 +210,69 @@ void main() {
       expect(t.statut, 'en_cours');
     });
 
+    test('duplicate : (copie 2) -> (copie 3) -> (copie 4)', () async {
+      // Couvre la regex de comptage : on doit incrementer correctement
+      // meme apres plusieurs cycles.
+      final id = await seedTournee(nom: 'T (copie 2)');
+      final n1 = await repo.duplicate(id);
+      expect((await repo.getById(n1))!.nom, 'T (copie 3)');
+
+      final id4 = await seedTournee(nom: 'T (copie 9)');
+      final n2 = await repo.duplicate(id4);
+      expect((await repo.getById(n2))!.nom, 'T (copie 10)');
+    });
+
+    test('countOlderThan + deleteOlderThan : nettoyage historique', () async {
+      // 3 tournees : 2 vieilles (avant cutoff), 1 recente (apres).
+      await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'Vieille 1',
+              date: DateTime(2025, 1, 1),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'Vieille 2',
+              date: DateTime(2025, 6, 1),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+      await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'Recente',
+              date: DateTime(2026, 5, 10),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+
+      final cutoff = DateTime(2026, 1, 1);
+      expect(await repo.countOlderThan(cutoff), 2);
+
+      final deleted = await repo.deleteOlderThan(cutoff);
+      expect(deleted, 2);
+
+      // Seule la recente survit.
+      expect(await repo.countOlderThan(cutoff), 0);
+      final all = await repo.watchAll().first;
+      expect(all, hasLength(1));
+      expect(all.first.nom, 'Recente');
+    });
+
+    test('duplicate avec targetDate explicite', () async {
+      final id = await seedTournee();
+      final target = DateTime(2030, 12, 25);
+      final newId = await repo.duplicate(id, targetDate: target);
+      final t = await repo.getById(newId);
+      expect(t!.date, target);
+    });
+
     test('duplicate ne copie PAS rappelLe (chaque clone reprogramme '
         'son propre rappel)', () async {
       final id = await seedTournee();
