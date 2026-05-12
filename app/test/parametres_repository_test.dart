@@ -110,6 +110,125 @@ void main() {
     });
   });
 
+  group('ParametresRepository - cle API ORS', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('null par defaut', () async {
+      expect(await repo.getOrsApiKey(), isNull);
+    });
+
+    test('set + get + clear', () async {
+      await repo.setOrsApiKey('abc123');
+      expect(await repo.getOrsApiKey(), 'abc123');
+      await repo.clearOrsApiKey();
+      expect(await repo.getOrsApiKey(), isNull);
+    });
+
+    test('set trim les espaces', () async {
+      await repo.setOrsApiKey('  abc  ');
+      expect(await repo.getOrsApiKey(), 'abc');
+    });
+  });
+
+  group('ParametresRepository - onboarding', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('false par defaut', () async {
+      expect(await repo.isOnboardingDone(), isFalse);
+    });
+
+    test('setOnboardingDone -> true', () async {
+      await repo.setOnboardingDone();
+      expect(await repo.isOnboardingDone(), isTrue);
+    });
+
+    test('resetOnboarding -> false a nouveau', () async {
+      await repo.setOnboardingDone();
+      await repo.resetOnboarding();
+      expect(await repo.isOnboardingDone(), isFalse);
+    });
+  });
+
+  group('ParametresRepository - navAppDefault', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('null par defaut (= demander a chaque fois)', () async {
+      expect(await repo.getNavAppDefault(), isNull);
+    });
+
+    test('set maps + clear', () async {
+      await repo.setNavAppDefault('maps');
+      expect(await repo.getNavAppDefault(), 'maps');
+      await repo.clearNavAppDefault();
+      expect(await repo.getNavAppDefault(), isNull);
+    });
+
+    test('set waze', () async {
+      await repo.setNavAppDefault('waze');
+      expect(await repo.getNavAppDefault(), 'waze');
+    });
+  });
+
+  group('ParametresRepository - cout carburant overrides', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('setCoutCarburantLitre stocke avec 3 decimales', () async {
+      await repo.setCoutCarburantLitre(1.8523456);
+      // Arrondi a 1.852 (toStringAsFixed(3))
+      expect(await repo.getCoutCarburantLitre(), 1.852);
+    });
+
+    test('setConsoLitresPar100Km stocke avec 2 decimales', () async {
+      await repo.setConsoLitresPar100Km(7.4567);
+      expect(await repo.getConsoLitresPar100Km(), 7.46);
+    });
+
+    test('defaults : 1.85 EUR/L et 7 L/100km', () {
+      expect(ParametresRepository.defaultCoutCarburantLitre, 1.85);
+      expect(ParametresRepository.defaultConsoLitresPar100Km, 7.0);
+    });
+  });
+
   group('ParametresRepository - capacite + duree defaults', () {
     late AppDatabase db;
     late ParametresRepository repo;
