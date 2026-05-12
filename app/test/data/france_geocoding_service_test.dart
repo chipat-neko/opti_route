@@ -79,6 +79,20 @@ void main() {
       expect(r, isEmpty);
     });
 
+    test('un seul resultat : retourne tel quel sans dedup', () async {
+      final ban = _StubBan(returns: [_precise('12 rue X')]);
+      final entr = _StubEntreprises();
+      final photon = _StubPhoton();
+      final svc = FranceGeocodingService(
+        ban: ban,
+        entreprises: entr,
+        photon: photon,
+      );
+      final r = await svc.search('12 rue X');
+      expect(r, hasLength(1));
+      expect(r.first.houseNumber, '12');
+    });
+
     test('dedupe par lat/lon arrondis a 5 decimales', () async {
       // 48.123451 et 48.123452 arrondissent toutes les 2 a "48.12345"
       // a 5 decimales (toStringAsFixed(5)).
