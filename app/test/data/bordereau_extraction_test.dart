@@ -102,5 +102,14 @@ void main() {
       expect(e.confidence, ExtractionConfidence.none);
       expect(e.hasUsefulData, isFalse);
     });
+
+    test('enum ExtractionConfidence : 3 valeurs', () {
+      expect(ExtractionConfidence.values, hasLength(3));
+      expect(ExtractionConfidence.values, containsAll([
+        ExtractionConfidence.high,
+        ExtractionConfidence.low,
+        ExtractionConfidence.none,
+      ]));
+    });
   });
 }
