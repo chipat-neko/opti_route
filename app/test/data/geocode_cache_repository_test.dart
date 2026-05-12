@@ -90,5 +90,30 @@ void main() {
       final r = await repo.read('BAN: 14 rue X');
       expect(r, isNotNull);
     });
+
+    test('write liste vide : stocke quand meme (signal "rien trouve")',
+        () async {
+      await repo.write('ban:adresse fantasque', []);
+      final r = await repo.read('ban:adresse fantasque');
+      expect(r, isNotNull);
+      expect(r, isEmpty);
+    });
+
+    test('re-write meme cle : ecrase l\'ancienne valeur', () async {
+      await repo.write('ban:k', [sampleResult]);
+      const updated = AddressSuggestion(
+        displayName: 'nouvelle adresse',
+        lat: 50,
+        lon: 3,
+      );
+      await repo.write('ban:k', [updated]);
+      final r = await repo.read('ban:k');
+      expect(r, hasLength(1));
+      expect(r!.first.displayName, 'nouvelle adresse');
+    });
+
+    test('TTL par defaut = 30 jours', () {
+      expect(GeocodeCacheRepository.defaultTtl, const Duration(days: 30));
+    });
   });
 }
