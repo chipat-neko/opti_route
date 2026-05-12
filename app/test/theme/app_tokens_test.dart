@@ -50,6 +50,31 @@ void main() {
     });
   });
 
+  group('AppPalette - copyWith + lerp', () {
+    test('copyWith sans override : meme palette', () {
+      final p = AppPalette.light.copyWith();
+      expect(p.cream, AppPalette.light.cream);
+      expect(p.ink, AppPalette.light.ink);
+    });
+
+    test('copyWith override : nouvelle valeur appliquee', () {
+      final p = AppPalette.light.copyWith(cream: const Color(0xFFAABBCC));
+      expect(p.cream, const Color(0xFFAABBCC));
+      // Les autres champs restent inchanges
+      expect(p.ink, AppPalette.light.ink);
+    });
+
+    test('lerp(t=0) : valeur de depart', () {
+      final p = AppPalette.light.lerp(AppPalette.dark, 0);
+      expect(p.cream, AppPalette.light.cream);
+    });
+
+    test('lerp(t=1) : valeur d\'arrivee', () {
+      final p = AppPalette.light.lerp(AppPalette.dark, 1);
+      expect(p.cream, AppPalette.dark.cream);
+    });
+  });
+
   group('AppSpacing / AppRadius constants', () {
     test('AppSpacing : valeurs croissantes', () {
       expect(AppSpacing.x4, 4.0);
