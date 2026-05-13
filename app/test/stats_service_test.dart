@@ -402,6 +402,145 @@ void main() {
     });
   });
 
+  group('StatsService.statsParCoequipier', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<int> seedTournee() async {
+      return db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime.now(),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+    }
+
+    test('aucune tournee : map vide', () async {
+      final r = await stats.statsParCoequipier(
+        since: DateTime(2026, 1, 1),
+      );
+      expect(r, isEmpty);
+    });
+
+    test('stops sans coequipierId : cle null = Moi', () async {
+      final tId = await seedTournee();
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'A',
+              statutLivraison: const Value('livre'),
+              nbColis: const Value(3),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'B',
+              statutLivraison: const Value('echec'),
+            ),
+          );
+      final r = await stats.statsParCoequipier(
+        since: DateTime(2020, 1, 1),
+      );
+      expect(r.keys.toList(), [null]);
+      final moi = r[null]!;
+      expect(moi.nbArrets, 2);
+      expect(moi.nbLivres, 1);
+      expect(moi.nbEchecs, 1);
+      expect(moi.colisLivres, 3);
+      expect(moi.tauxReussite, closeTo(0.5, 0.001));
+    });
+
+    test('breakdown Moi + 2 coequipiers', () async {
+      final tId = await seedTournee();
+      // Moi : 2 livres
+      for (var i = 0; i < 2; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'moi-$i',
+                statutLivraison: const Value('livre'),
+                nbColis: const Value(1),
+              ),
+            );
+      }
+      // Lucas (id 1) : 3 livres + 1 echec
+      for (var i = 0; i < 3; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'lucas-$i',
+                statutLivraison: const Value('livre'),
+                nbColis: const Value(2),
+                coequipierId: const Value(1),
+              ),
+            );
+      }
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'lucas-echec',
+              statutLivraison: const Value('echec'),
+              coequipierId: const Value(1),
+            ),
+          );
+      // Papa (id 2) : 1 livre
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'papa-1',
+              statutLivraison: const Value('livre'),
+              coequipierId: const Value(2),
+            ),
+          );
+
+      final r = await stats.statsParCoequipier(
+        since: DateTime(2020, 1, 1),
+      );
+      expect(r.keys.toSet(), {null, 1, 2});
+      expect(r[null]!.nbLivres, 2);
+      expect(r[1]!.nbLivres, 3);
+      expect(r[1]!.nbEchecs, 1);
+      expect(r[1]!.colisLivres, 6);
+      expect(r[1]!.tauxReussite, closeTo(0.75, 0.001));
+      expect(r[2]!.nbLivres, 1);
+    });
+
+    test('CoequipierStats.tauxReussite : 0 si aucune tentative', () {
+      const s = CoequipierStats(
+        coequipierId: 1,
+        nbArrets: 1,
+        nbLivres: 0,
+        nbEchecs: 0,
+        colisLivres: 0,
+      );
+      expect(s.tauxReussite, 0);
+    });
+
+    test('CoequipierStats.tauxReussite : 100% livres', () {
+      const s = CoequipierStats(
+        coequipierId: null,
+        nbArrets: 5,
+        nbLivres: 5,
+        nbEchecs: 0,
+        colisLivres: 12,
+      );
+      expect(s.tauxReussite, 1.0);
+    });
+  });
+
   group('StatsService.compteursMotivants', () {
     late AppDatabase db;
     late StatsService stats;

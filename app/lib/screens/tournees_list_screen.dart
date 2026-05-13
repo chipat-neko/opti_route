@@ -312,12 +312,22 @@ class _TourneeRow extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          dateFormat.format(tournee.date),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: p.textMute,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              dateFormat.format(tournee.date),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: p.textMute,
+                              ),
+                            ),
+                            // Mini badge "→ Lucas" si la tournee a un
+                            // coequipier par defaut (mode chef).
+                            if (tournee.coequipierDefautId != null)
+                              _DefautCoBadge(
+                                coequipierId: tournee.coequipierDefautId!,
+                              ),
+                          ],
                         ),
                         if (hasStats) ...[
                           const SizedBox(height: AppSpacing.x6),
@@ -573,6 +583,51 @@ class _StatutBadge extends StatelessWidget {
           color: fg,
           fontWeight: FontWeight.w800,
           fontSize: 14,
+        ),
+      ),
+    );
+  }
+}
+
+/// Mini badge "→ Lucas" affiche a cote de la date d'une tournee qui
+/// a un coequipier par defaut. Sert au chef d'equipe a identifier
+/// d'un coup d'oeil quelle tournee est preparee pour qui.
+class _DefautCoBadge extends ConsumerWidget {
+  const _DefautCoBadge({required this.coequipierId});
+
+  final int coequipierId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = ref.watch(coequipiersByIdProvider)[coequipierId];
+    if (c == null) return const SizedBox.shrink();
+    final color = colorFromTag(c.colorTag, defaultColor: AppColors.creamSoft);
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.x6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(AppRadius.r8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.arrow_forward,
+              size: 10,
+              color: AppColors.ink,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              c.nom,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
+              ),
+            ),
+          ],
         ),
       ),
     );

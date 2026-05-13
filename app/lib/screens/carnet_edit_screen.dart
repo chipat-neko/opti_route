@@ -425,7 +425,7 @@ class _ColorPicker extends StatelessWidget {
       spacing: AppSpacing.x8,
       runSpacing: AppSpacing.x8,
       children: [
-        // Bouton "Aucune" : cercle rayÃ© cream
+        // Bouton "Aucune" : cercle rayé cream
         _ColorDot(
           color: p.creamSoft,
           selected: currentTag == null,

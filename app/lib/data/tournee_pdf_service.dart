@@ -23,11 +23,17 @@ class TourneePdfService {
     required Tournee tournee,
     required List<Stop> stops,
     double? coutCarburantEur,
+    String? entrepriseNom,
+    String? entrepriseSiret,
+    String? entrepriseSlogan,
   }) async {
     final pdf = await _buildDocument(
       tournee: tournee,
       stops: stops,
       coutCarburantEur: coutCarburantEur,
+      entrepriseNom: entrepriseNom,
+      entrepriseSiret: entrepriseSiret,
+      entrepriseSlogan: entrepriseSlogan,
     );
     final dir = await getTemporaryDirectory();
     final dateStr = DateFormat('yyyy-MM-dd').format(tournee.date);
@@ -55,10 +61,13 @@ class TourneePdfService {
     required Tournee tournee,
     required List<Stop> stops,
     double? coutCarburantEur,
+    String? entrepriseNom,
+    String? entrepriseSiret,
+    String? entrepriseSlogan,
   }) async {
     final pdf = pw.Document(
       title: 'Tournee ${tournee.nom}',
-      author: 'opti_route',
+      author: entrepriseNom ?? 'opti_route',
     );
     final dateFmt = DateFormat('EEEE d MMMM y', 'fr');
 
@@ -75,6 +84,8 @@ class TourneePdfService {
         ? '—'
         : _formatDuration(tournee.dureeTotaleS!);
 
+    final hasEntreprise = (entrepriseNom != null && entrepriseNom.isNotEmpty);
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4.copyWith(
@@ -83,6 +94,67 @@ class TourneePdfService {
           marginLeft: 16 * PdfPageFormat.mm,
           marginRight: 16 * PdfPageFormat.mm,
         ),
+        // Footer entreprise (visible sur chaque page) : nom +
+        // mentions legales SIRET + slogan. Affichage discret pour ne
+        // pas voler la place au contenu metier.
+        footer: hasEntreprise
+            ? (context) => pw.Container(
+                  margin: const pw.EdgeInsets.only(top: 8),
+                  padding: const pw.EdgeInsets.only(top: 4),
+                  decoration: const pw.BoxDecoration(
+                    border: pw.Border(
+                      top: pw.BorderSide(
+                        color: PdfColors.grey400,
+                        width: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            entrepriseNom,
+                            style: pw.TextStyle(
+                              fontSize: 9,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.grey800,
+                            ),
+                          ),
+                          if (entrepriseSiret != null &&
+                              entrepriseSiret.isNotEmpty)
+                            pw.Text(
+                              'SIRET $entrepriseSiret',
+                              style: const pw.TextStyle(
+                                fontSize: 7,
+                                color: PdfColors.grey600,
+                              ),
+                            ),
+                          if (entrepriseSlogan != null &&
+                              entrepriseSlogan.isNotEmpty)
+                            pw.Text(
+                              entrepriseSlogan,
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: PdfColors.grey600,
+                                fontStyle: pw.FontStyle.italic,
+                              ),
+                            ),
+                        ],
+                      ),
+                      pw.Text(
+                        'Page ${context.pageNumber} / ${context.pagesCount}',
+                        style: const pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+            : null,
         build: (context) => [
           // Header
           pw.Container(

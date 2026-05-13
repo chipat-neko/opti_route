@@ -354,15 +354,15 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   static String _normalize(String s) {
     final lower = s.toLowerCase().trim();
     const map = {
-      'Ã ': 'a', 'Ã¢': 'a', 'Ã¤': 'a', 'Ã¡': 'a', 'Ã£': 'a',
-      'Ã§': 'c',
-      'Ã¨': 'e', 'Ã©': 'e', 'Ãª': 'e', 'Ã«': 'e',
-      'Ã®': 'i', 'Ã¯': 'i', 'Ã­': 'i', 'Ã¬': 'i',
-      'Ã´': 'o', 'Ã¶': 'o', 'Ã³': 'o', 'Ãµ': 'o',
-      'Ã¹': 'u', 'Ã»': 'u', 'Ã¼': 'u', 'Ãº': 'u',
-      'Ã¿': 'y', 'Ã½': 'y',
-      'Ã±': 'n',
-      'Å“': 'oe', 'Ã¦': 'ae',
+      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
+      'ç': 'c',
+      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
+      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
+      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+      'ÿ': 'y', 'ý': 'y',
+      'ñ': 'n',
+      'Å“': 'oe', 'æ': 'ae',
     };
     final buf = StringBuffer();
     for (final ch in lower.split('')) {

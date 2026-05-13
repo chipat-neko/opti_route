@@ -49,11 +49,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   Widget build(BuildContext context) {
     final stopsAsync = ref.watch(stopsByTourneeProvider(widget.tournee.id));
     final optimizer = ref.watch(optimizationServiceProvider);
-    // Bouton grisÃ© tant que `optimiseeLe != null` : la tournÃ©e est dÃ©jÃ 
-    // optimisÃ©e et rien n'a changÃ© depuis. Toute modif structurelle
+    // Bouton grisé tant que `optimiseeLe != null` : la tournée est déjà
+    // optimisée et rien n'a changé depuis. Toute modif structurelle
     // (add/edit/delete arret, point de depart change) appelle
     // `invalidateOptimization` qui remet `optimiseeLe = null` et
-    // rÃ©-active le bouton.
+    // ré-active le bouton.
     final dejaOptimisee = widget.tournee.optimiseeLe != null;
 
     return Scaffold(
@@ -396,10 +396,19 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               distanceMeters: widget.tournee.distanceTotaleM!,
             );
       }
+      // Profil entreprise (optionnel) : ajoute un footer "nom + SIRET +
+      // slogan" en bas de chaque page du PDF.
+      final paramsRepo = ref.read(parametresRepositoryProvider);
+      final entrepriseNom = await paramsRepo.getEntrepriseNom();
+      final entrepriseSiret = await paramsRepo.getEntrepriseSiret();
+      final entrepriseSlogan = await paramsRepo.getEntrepriseSlogan();
       await service.exportAndShare(
         tournee: widget.tournee,
         stops: stops,
         coutCarburantEur: cout,
+        entrepriseNom: entrepriseNom,
+        entrepriseSiret: entrepriseSiret,
+        entrepriseSlogan: entrepriseSlogan,
       );
     } catch (e) {
       if (!mounted) return;
@@ -1197,16 +1206,29 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
   /// l'itineraire ou pour decider du prochain arret le plus proche.
   bool _sortByDistance = false;
 
+  /// Filtre coequipier : null = tous, 0 = Moi (coequipierId null),
+  /// >0 = id d'un coequipier specifique. Visible uniquement si au
+  /// moins un stop a un `coequipierId != null` (mode equipe actif).
+  int? _coequipierFilter;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final hasQuery = _query.trim().isNotEmpty;
     final hasStatutFilter = _statutFilter != 'tout';
+    final hasCoFilter = _coequipierFilter != null;
     var filtered = widget.stops;
     if (hasStatutFilter) {
       filtered = filtered
           .where((s) => s.statutLivraison == _statutFilter)
           .toList();
+    }
+    if (hasCoFilter) {
+      // 0 = Moi (coequipierId null), >0 = id specifique
+      filtered = filtered.where((s) {
+        if (_coequipierFilter == 0) return s.coequipierId == null;
+        return s.coequipierId == _coequipierFilter;
+      }).toList();
     }
     if (hasQuery) {
       filtered = _filter(filtered, _query);
@@ -1222,7 +1244,8 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
           });
       }
     }
-    final isFiltered = hasQuery || hasStatutFilter || _sortByDistance;
+    final isFiltered =
+        hasQuery || hasStatutFilter || hasCoFilter || _sortByDistance;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1306,6 +1329,68 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+        ],
+        // Row de filtres coequipier : visible UNIQUEMENT si au moins
+        // un stop est affecte a un coequipier (mode equipe actif sur
+        // cette tournee). On expose "Moi" + un chip par coequipier
+        // present dans la tournee.
+        if (widget.stops.any((s) => s.coequipierId != null)) ...[
+          Consumer(
+            builder: (context, ref, _) {
+              final byId = ref.watch(coequipiersByIdProvider);
+              // Set des ids presents dans cette tournee (sans null).
+              final usedIds = <int>{};
+              var hasMoi = false;
+              for (final s in widget.stops) {
+                if (s.coequipierId == null) {
+                  hasMoi = true;
+                } else {
+                  usedIds.add(s.coequipierId!);
+                }
+              }
+              return SizedBox(
+                height: 36,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _CoFilterChip(
+                      label: 'Tous',
+                      selected: _coequipierFilter == null,
+                      color: p.ink,
+                      onSelected: () =>
+                          setState(() => _coequipierFilter = null),
+                    ),
+                    const SizedBox(width: AppSpacing.x6),
+                    if (hasMoi)
+                      _CoFilterChip(
+                        label: 'Moi',
+                        selected: _coequipierFilter == 0,
+                        color: AppColors.lime,
+                        onSelected: () =>
+                            setState(() => _coequipierFilter = 0),
+                      ),
+                    if (hasMoi) const SizedBox(width: AppSpacing.x6),
+                    for (final id in usedIds) ...[
+                      _CoFilterChip(
+                        label: byId[id]?.nom ?? '#$id',
+                        selected: _coequipierFilter == id,
+                        color: byId[id] == null
+                            ? p.inkLine
+                            : colorFromTag(
+                                byId[id]!.colorTag,
+                                defaultColor: AppColors.creamSoft,
+                              ),
+                        onSelected: () =>
+                            setState(() => _coequipierFilter = id),
+                      ),
+                      const SizedBox(width: AppSpacing.x6),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.x10),
         ],
@@ -1393,15 +1478,15 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
   static String _normalize(String s) {
     final lower = s.toLowerCase();
     const map = {
-      'Ã ': 'a', 'Ã¢': 'a', 'Ã¤': 'a', 'Ã¡': 'a', 'Ã£': 'a',
-      'Ã§': 'c',
-      'Ã¨': 'e', 'Ã©': 'e', 'Ãª': 'e', 'Ã«': 'e',
-      'Ã®': 'i', 'Ã¯': 'i', 'Ã­': 'i', 'Ã¬': 'i',
-      'Ã´': 'o', 'Ã¶': 'o', 'Ã³': 'o', 'Ãµ': 'o',
-      'Ã¹': 'u', 'Ã»': 'u', 'Ã¼': 'u', 'Ãº': 'u',
-      'Ã¿': 'y', 'Ã½': 'y',
-      'Ã±': 'n',
-      'Å“': 'oe', 'Ã¦': 'ae',
+      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
+      'ç': 'c',
+      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
+      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
+      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+      'ÿ': 'y', 'ý': 'y',
+      'ñ': 'n',
+      'Å“': 'oe', 'æ': 'ae',
     };
     final buf = StringBuffer();
     for (final ch in lower.split('')) {
@@ -3244,6 +3329,54 @@ class _EtaBadge extends ConsumerWidget {
             fontSize: 10,
             color: p.textMute,
             fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Chip de filtre coequipier dans la _StopsSection. Le fond utilise
+/// la couleur d'avatar du coequipier quand selectionne, pour donner
+/// un repere visuel immediat.
+class _CoFilterChip extends StatelessWidget {
+  const _CoFilterChip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r22),
+      onTap: onSelected,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x10,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? color : p.paper,
+          borderRadius: BorderRadius.circular(AppRadius.r22),
+          border: Border.all(
+            color: selected ? Colors.transparent : p.inkLine,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            color: selected ? AppColors.ink : p.ink,
           ),
         ),
       ),
