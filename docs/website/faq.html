@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — opti_route</title>
+<meta name="description" content="Foire aux questions sur l'app opti_route : installation, gestion d'equipe, prix, donnees, Play Store.">
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  /* Accordion details/summary stylé */
+  details.faq {
+    background: var(--paper);
+    border-radius: var(--radius-14);
+    padding: 0;
+    margin-bottom: var(--space-10);
+    border: 1px solid var(--divider);
+    overflow: hidden;
+  }
+  details.faq[open] { border-color: var(--lime); }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+    padding: var(--space-14) var(--space-18);
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-14);
+    transition: background 200ms;
+  }
+  details.faq summary:hover { background: var(--bg-soft); }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary::after {
+    content: '+';
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--emerald);
+    flex-shrink: 0;
+    transition: transform 200ms;
+  }
+  details.faq[open] summary::after { content: '−'; }
+  details.faq .answer {
+    padding: 0 var(--space-18) var(--space-18);
+    color: var(--text-mute);
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+  details.faq .answer p:not(:first-child) { margin-top: var(--space-10); }
+  details.faq code {
+    background: var(--bg-soft);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+  }
+
+  /* Categories */
+  .faq-cat-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin: var(--space-28) 0 var(--space-12);
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="features.html">Features</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="dashboard.html">Dashboard</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-64) 0; max-width: 820px;">
+
+  <span class="eyebrow">Questions frequentes</span>
+  <h1>FAQ.</h1>
+  <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-28);">
+    Tout ce qu'on t'a souvent demande sur opti_route, regroupe.
+    Si ta question n'est pas la,
+    <a href="https://github.com/chipat-neko/opti_route/issues">ouvre une issue GitHub</a>.
+  </p>
+
+  <!-- ===== Categorie : Installation & app ===== -->
+  <div class="faq-cat-title">Installation & app</div>
+
+  <details class="faq">
+    <summary>L'app est-elle disponible sur le Play Store ?</summary>
+    <div class="answer">
+      <p>
+        Pas encore en Phase 1. La publication Play Store coute 25 USD
+        (compte developpeur a vie) et necessite une CB. Tant que je
+        peux installer manuellement l'APK sur mon telephone et celui
+        de quelques beta-testeurs, c'est suffisant.
+      </p>
+      <p>
+        En Phase 2, la publication est <a href="roadmap.html">prevue</a>.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Comment installer l'APK sans Play Store ?</summary>
+    <div class="answer">
+      <p>
+        1. Telecharge le fichier <code>.apk</code> depuis les releases
+        GitHub.
+      </p>
+      <p>
+        2. Sur ton Android, va dans <strong>Parametres &rarr; Securite &rarr; Sources inconnues</strong>
+        (ou autorise ton navigateur a installer des apps).
+      </p>
+      <p>
+        3. Ouvre le fichier APK telecharge et confirme l'installation.
+      </p>
+      <p>
+        Android te previent que l'app vient d'une source inconnue : c'est
+        normal puisque ce n'est pas le Play Store. Le code source est
+        public sur GitHub si tu veux verifier.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Quelles versions d'Android sont supportees ?</summary>
+    <div class="answer">
+      <p>
+        L'app cible <code>targetSdk 36</code> (Android 15) et <code>minSdk 21</code>
+        (Android 5.0, Lollipop). En pratique, tout telephone Android datant de
+        moins de 8-9 ans devrait fonctionner.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Et sur iPhone ?</summary>
+    <div class="answer">
+      <p>
+        Pas en Phase 1. Le projet est ne sur Android (le telephone de
+        Noah). Une fois le code stabilise, ajouter iOS demanderait :
+        un Mac pour la build, 99 USD/an pour l'App Store, et adapter
+        ~5% du code Flutter aux specificites iOS. C'est un objectif
+        Phase 2-3.
+      </p>
+    </div>
+  </details>
+
+  <!-- ===== Categorie : Prix & modele economique ===== -->
+  <div class="faq-cat-title">Prix & modele economique</div>
+
+  <details class="faq">
+    <summary>C'est vraiment gratuit ? Y a-t-il un piege ?</summary>
+    <div class="answer">
+      <p>
+        Oui, vraiment gratuit en Phase 1. Aucun piege, aucun "essai gratuit
+        14 jours". Le projet est open-source, developpe en parallele d'un
+        emploi de chauffeur-livreur. Aucun cout serveur en Phase 1
+        (tout est local).
+      </p>
+      <p>
+        Les seuls couts sont :
+      </p>
+      <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
+        <li>OpenRouteService : <strong>500 optimisations/jour gratuites</strong> (largement suffisant pour un livreur solo ou une petite equipe).</li>
+        <li>Tres rarement, si l'usage explose, il faudra passer en plan ORS payant (~25 USD/mois).</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Comment va se monetiser l'app en Phase 2 ?</summary>
+    <div class="answer">
+      <p>
+        Phase 2 ajoute la sync multi-appareils (chef + coequipiers
+        chacun sur son phone). Ca demande un backend Firebase ou Supabase
+        (~25-50 USD/mois). Si tu veux cette feature, l'app aura une
+        option payante.
+      </p>
+      <p>
+        La Phase 1 actuelle restera <strong>gratuite a perpetuite</strong>.
+        Pas de "downgrade force" qui rend l'app payante apres coup.
+      </p>
+    </div>
+  </details>
+
+  <!-- ===== Categorie : Gestion d'equipe ===== -->
+  <div class="faq-cat-title">Gestion d'equipe</div>
+
+  <details class="faq">
+    <summary>Comment fonctionne le mode chef d'equipe en Phase 1 ?</summary>
+    <div class="answer">
+      <p>
+        Tout est <strong>local au telephone du chef</strong>. Le chef cree
+        une tournee, ajoute des arrets, affecte chaque arret a un
+        coequipier (depuis la bottom sheet). Puis il partage les fiches :
+      </p>
+      <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
+        <li><strong>WhatsApp/SMS cible</strong> : "Partager a Lucas" pre-rempli avec ses arrets + son numero</li>
+        <li><strong>PDF individuel</strong> : "Exporter PDF par coequipier" genere un fichier par personne</li>
+        <li><strong>Tableau de bord agrege</strong> sur le telephone du chef (vue globale)</li>
+      </ul>
+      <p>
+        Le coequipier execute la tournee comme il veut (papier, son
+        telephone perso, etc.). Le chef met a jour les statuts sur SON
+        phone (ou par retour SMS).
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Quand est-ce que les coequipiers auront leur propre app ?</summary>
+    <div class="answer">
+      <p>
+        Phase 2 (<a href="roadmap.html">voir roadmap</a>). Chaque
+        coequipier aura un compte (email/password), recevra ses tournees
+        en temps reel, et le chef verra l'avancement en direct sans
+        que personne n'ait a partager manuellement.
+      </p>
+      <p>
+        Aucune date precise : la Phase 2 demande un budget ~25-50 USD/mois.
+      </p>
+    </div>
+  </details>
+
+  <!-- ===== Categorie : Donnees & confidentialite ===== -->
+  <div class="faq-cat-title">Donnees & confidentialite</div>
+
+  <details class="faq">
+    <summary>Mes donnees clients sont-elles uploadees quelque part ?</summary>
+    <div class="answer">
+      <p>
+        <strong>Non.</strong> Toutes les donnees clients (nom, adresse,
+        telephone, codes interphones, notes) restent dans une base SQLite
+        sur ton telephone. Aucun serveur opti_route n'existe en Phase 1.
+      </p>
+      <p>
+        Seules les <strong>adresses</strong> que tu cherches sont envoyees
+        a des APIs publiques pour le geocodage (BAN, SIRENE, Photon). Pas
+        de nom de client, pas de telephone.
+      </p>
+      <p>
+        Cf. <a href="mentions-legales.html">Mentions legales</a> pour le detail.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Comment sauvegarder mes donnees ?</summary>
+    <div class="answer">
+      <p>
+        Plusieurs exports a faire regulierement :
+      </p>
+      <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
+        <li><strong>Carnet d'adresses</strong> : Carnet &rarr; bouton "Exporter" &rarr; CSV ou vCard. La vCard s'importe directement dans les Contacts Android pour double sauvegarde.</li>
+        <li><strong>Stats annuelles</strong> : Statistiques &rarr; "Exporter en CSV" envoie a Drive/Gmail/Mail.</li>
+        <li><strong>Tournees PDF</strong> : Menu Plus de chaque tournee &rarr; "Exporter en PDF".</li>
+      </ul>
+      <p>
+        Conseil : sauvegarde le CSV carnet sur Google Drive 1x/mois. En
+        cas de perte du phone, tu peux le reimporter sur un nouveau.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Si je desinstalle l'app, je perds tout ?</summary>
+    <div class="answer">
+      <p>
+        Oui, Android efface les donnees privees de l'app a la
+        desinstallation. Fais des exports avant de desinstaller. C'est
+        une limite de la <strong>Phase 1 sans backend</strong>. En Phase 2,
+        un backup cloud automatique reglerait ca.
+      </p>
+    </div>
+  </details>
+
+  <!-- ===== Categorie : Tableau de bord web ===== -->
+  <div class="faq-cat-title">Tableau de bord web</div>
+
+  <details class="faq">
+    <summary>Le dashboard web suit-il mes tournees en temps reel ?</summary>
+    <div class="answer">
+      <p>
+        Non, c'est un <strong>viewer statique</strong> en Phase 1. Tu
+        exportes un CSV depuis l'app, tu le glisses-deposes sur le
+        dashboard, il affiche les graphes et stats <em>de ce CSV</em>.
+      </p>
+      <p>
+        La vraie sync temps reel (le dashboard se met a jour tout seul
+        sans CSV) demande un backend &rarr; Phase 2.
+      </p>
+      <p>
+        Voir <a href="guide-csv.html">le guide d'export CSV</a>.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Mes donnees sont-elles uploadees quand j'utilise le dashboard ?</summary>
+    <div class="answer">
+      <p>
+        <strong>Non.</strong> Le dashboard parse ton CSV dans le navigateur,
+        en memoire. Quand tu fermes l'onglet, les donnees disparaissent.
+        Aucun upload, aucun serveur tiers.
+      </p>
+    </div>
+  </details>
+
+  <!-- ===== Categorie : Optimisation & geocodage ===== -->
+  <div class="faq-cat-title">Optimisation & geocodage</div>
+
+  <details class="faq">
+    <summary>Pourquoi j'ai besoin d'une cle OpenRouteService ?</summary>
+    <div class="answer">
+      <p>
+        Pour optimiser l'ordre des arrets, l'app envoie la liste des
+        coordonnees a l'algorithme VROOM via OpenRouteService. Sans cle,
+        impossible d'optimiser : tu peux quand meme ajouter des arrets
+        manuellement et naviguer via Google Maps / Waze, mais l'app ne
+        proposera pas d'ordre optimal.
+      </p>
+      <p>
+        La cle est <strong>gratuite (500 optimisations/jour)</strong> sur
+        <a href="https://openrouteservice.org/dev">openrouteservice.org/dev</a>.
+        Pas de CB requise.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>L'app fonctionne-t-elle sans connexion internet ?</summary>
+    <div class="answer">
+      <p>
+        Partiellement. Sans internet :
+      </p>
+      <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
+        <li><strong>OK</strong> : creer une tournee, ajouter des arrets manuellement (sans geocoder), marquer livre/echec, photo preuve, exporter</li>
+        <li><strong>KO</strong> : autocompletion adresse, optimisation ORS, scan bordereau (l'OCR fonctionne, mais le geocodage du resultat non)</li>
+      </ul>
+      <p>
+        Quand tu retrouves la connexion, un bouton "Geolocaliser hors-ligne"
+        dans le menu Plus rejoint l'adresse aux arrets cree offline.
+      </p>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Quels formats de bordereaux sont reconnus ?</summary>
+    <div class="answer">
+      <p>
+        En Phase 1, l'OCR + parser supporte :
+      </p>
+      <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
+        <li><strong>MESEXP</strong> (format generique francais)</li>
+        <li><strong>Colissimo / La Poste</strong> (tracking 6A/6L/8L/9N)</li>
+        <li><strong>Chronopost</strong> (tracking XR/XE...FR)</li>
+      </ul>
+      <p>
+        D'autres transporteurs (UPS, DHL, FedEx) sont prevus. Si tu as un
+        type de bordereau qui n'est pas reconnu, ouvre une issue GitHub
+        avec une photo (visage / numero de tracking floutes si besoin).
+      </p>
+    </div>
+  </details>
+
+  <div class="cta">
+    <h2>Une question pas dans la liste ?</h2>
+    <p>Ouvre une issue sur le repo GitHub. Reponse rapide.</p>
+    <a href="https://github.com/chipat-neko/opti_route/issues" class="btn btn-secondary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      Ouvrir une issue GitHub
+    </a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route</a> · Phase 1 gratuit ·
+      <a href="mentions-legales.html">Mentions legales</a> ·
+      <span class="mono">© CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
