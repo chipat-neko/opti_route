@@ -35,7 +35,7 @@ def main():
     total = 0
     files_touched = 0
     exts = ('.dart', '.html', '.js', '.css', '.md')
-    for base in ['app/lib', 'docs/website', 'docs']:
+    for base in ['app/lib', 'site_doc', 'docs']:
         if not os.path.isdir(base):
             continue
         for root, _, files in os.walk(base):
