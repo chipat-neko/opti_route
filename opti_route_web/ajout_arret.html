@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajouter un arret — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .form-card {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-14);
+    padding: var(--space-18);
+    margin-bottom: var(--space-14);
+  }
+  .form-card label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-mute);
+    letter-spacing: 0.05em;
+    margin-top: var(--space-14);
+    margin-bottom: 6px;
+  }
+  .form-card label:first-child { margin-top: 0; }
+  .form-card input, .form-card select, .form-card textarea {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-10);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .form-card input:focus { border-color: var(--lime); }
+
+  .suggestions {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-10);
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .suggestion {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--divider);
+    cursor: pointer;
+    transition: background 150ms;
+  }
+  .suggestion:last-child { border-bottom: none; }
+  .suggestion:hover { background: var(--bg-soft); }
+  .suggestion .main { font-weight: 600; color: var(--ink); font-size: 0.92rem; }
+  .suggestion .src {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    font-weight: 800;
+    color: var(--emerald);
+    margin-left: 6px;
+  }
+  .suggestion .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    color: var(--text-mute);
+    margin-top: 2px;
+  }
+
+  .priority-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pchip {
+    padding: 8px 14px; border-radius: var(--radius-10);
+    border: 1px solid var(--divider); background: var(--paper);
+    cursor: pointer; font-weight: 600; font-size: 0.88rem;
+    color: var(--ink); user-select: none;
+  }
+  .pchip.selected { background: var(--lime); border-color: var(--lime); font-weight: 700; }
+  .pchip.amber.selected { background: var(--amber); }
+  .pchip.red.selected { background: var(--red); color: white; }
+
+  .colis-stepper {
+    display: flex; align-items: center; gap: var(--space-10);
+  }
+  .colis-stepper button {
+    width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--ink);
+    background: var(--paper); color: var(--ink); font-size: 1.2rem; font-weight: 700;
+    cursor: pointer;
+  }
+  .colis-stepper .val {
+    font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 800;
+    min-width: 28px; text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html" class="active">Tournees</a>
+      <a href="carnet.html">Carnet</a>
+      <a href="stats.html">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-22) 0; max-width: 700px;">
+
+  <a href="tournee.html" style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-mute); font-size: 0.88rem; text-decoration: none; margin-bottom: var(--space-14);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+    Retour mode terrain
+  </a>
+
+  <h1>Ajouter un arret.</h1>
+
+  <div class="form-card">
+    <label>ADRESSE</label>
+    <input type="text" value="12 rue Sainte-Catherine" id="adresse" oninput="showSuggestions(this.value)">
+    <p class="form-help" style="margin-bottom: 0;">
+      Tapez 3 caracteres min. Suggestions remontees depuis le carnet d'abord, puis BAN / SIRENE / Photon.
+    </p>
+
+    <div class="suggestions" id="suggestionList">
+      <div class="suggestion" onclick="pickSuggestion(0)">
+        <div class="main">Boulangerie Martin <span class="src">CARNET 28x</span></div>
+        <div class="meta">12 RUE SAINTE-CATHERINE, 33000 BORDEAUX</div>
+      </div>
+      <div class="suggestion" onclick="pickSuggestion(1)">
+        <div class="main">12 Rue Sainte-Catherine <span class="src">BAN</span></div>
+        <div class="meta">33000 BORDEAUX</div>
+      </div>
+      <div class="suggestion" onclick="pickSuggestion(2)">
+        <div class="main">12 Rue Sainte-Catherine <span class="src">PHOTON</span></div>
+        <div class="meta">33800 BORDEAUX (Caudéran)</div>
+      </div>
+    </div>
+
+    <label>NOM CLIENT (OPTIONNEL)</label>
+    <input type="text" value="Boulangerie Martin" placeholder="Ex: M. Dupont">
+    <p class="form-help">Pre-rempli depuis le carnet si l'adresse est connue.</p>
+
+    <label>NB COLIS</label>
+    <div class="colis-stepper">
+      <button onclick="bumpColis(-1)">−</button>
+      <span class="val" id="colisVal">3</span>
+      <button onclick="bumpColis(1)">+</button>
+      <span style="color: var(--text-mute); font-size: 0.88rem; margin-left: 12px;">Par defaut : 1</span>
+    </div>
+
+    <label>PRIORITE</label>
+    <div class="priority-chips">
+      <span class="pchip selected" onclick="selectPchip(this)">Flexible</span>
+      <span class="pchip" onclick="selectPchip(this)">En 1er</span>
+      <span class="pchip" onclick="selectPchip(this)">En dernier</span>
+      <span class="pchip amber" onclick="selectPchip(this)">Eviter si possible</span>
+    </div>
+
+    <label>FENETRE HORAIRE (OPTIONNEL)</label>
+    <div style="display: flex; gap: var(--space-10); align-items: center;">
+      <div style="flex: 1;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-mute); margin-bottom: 4px;">PAS AVANT</div>
+        <input type="time" value="09:00">
+      </div>
+      <div style="flex: 1;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-mute); margin-bottom: 4px;">PAS APRES</div>
+        <input type="time" value="12:00">
+      </div>
+    </div>
+    <p class="form-help">L'optimisation VROOM respecte ces fenetres ou signale un conflit.</p>
+
+    <label>DUREE D'ARRET (MIN)</label>
+    <input type="number" value="3" min="0">
+
+    <label>NOTES (CODES INTERPHONES, INSTRUCTIONS...)</label>
+    <textarea rows="3" placeholder="Ex: Code 1234B, sonner Martin, batiment du fond."></textarea>
+  </div>
+
+  <div style="display: flex; gap: var(--space-10); justify-content: flex-end;">
+    <a href="tournee.html" class="btn btn-secondary">Annuler</a>
+    <button class="btn btn-secondary" onclick="alert('Demo : enregistre l\'arret et reset le formulaire pour le suivant.');">Enregistrer et ajouter le suivant</button>
+    <button class="btn btn-primary" onclick="alert('Demo : enregistre puis retour a la tournee.');">Enregistrer</button>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+  function showSuggestions(q) {
+    document.getElementById('suggestionList').style.display = q.length >= 3 ? '' : 'none';
+  }
+  function pickSuggestion(i) {
+    document.getElementById('suggestionList').style.display = 'none';
+  }
+  function selectPchip(el) {
+    el.parentElement.querySelectorAll('.pchip').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  let colis = 3;
+  function bumpColis(d) {
+    colis = Math.max(1, colis + d);
+    document.getElementById('colisVal').textContent = colis;
+  }
+</script>
+</body>
+</html>

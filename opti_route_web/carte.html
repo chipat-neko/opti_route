@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .map-wrap {
+    position: relative;
+    height: 540px;
+    border-radius: var(--radius-18);
+    overflow: hidden;
+    border: 1px solid var(--divider);
+    margin-bottom: var(--space-18);
+    background: #EAE6DD;
+  }
+  .map-wrap svg { width: 100%; height: 100%; display: block; }
+  .map-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    padding: var(--space-14);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .map-overlay > * { pointer-events: auto; }
+  .map-top-bar {
+    background: var(--paper);
+    border-radius: var(--radius-12);
+    padding: var(--space-10) var(--space-12);
+    display: flex;
+    align-items: center;
+    gap: var(--space-10);
+    box-shadow: 0 4px 12px rgba(11, 18, 14, 0.10);
+  }
+  .map-stat-pill {
+    background: var(--ink);
+    color: white;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .map-stat-pill.lime { background: var(--lime); color: var(--ink); }
+  .map-bottom-card {
+    background: var(--paper);
+    border-radius: var(--radius-14);
+    padding: var(--space-14);
+    box-shadow: 0 6px 18px rgba(11, 18, 14, 0.12);
+  }
+  .map-bottom-card .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    color: var(--text-mute);
+    letter-spacing: 0.05em;
+    font-weight: 800;
+  }
+  .map-bottom-card .nom {
+    font-size: 1.02rem;
+    font-weight: 800;
+    margin: 2px 0 4px;
+    color: var(--ink);
+  }
+  .map-bottom-card .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-mute);
+  }
+  .map-bottom-card .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: var(--space-10);
+  }
+  .map-bottom-card .actions button {
+    flex: 1;
+    padding: 8px;
+    border-radius: var(--radius-10);
+    border: 1px solid var(--divider);
+    background: var(--paper);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .map-bottom-card .actions button.primary {
+    background: var(--emerald);
+    color: white;
+    border: none;
+  }
+  .legend {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-14);
+    padding: var(--space-14);
+  }
+  .legend h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: var(--text-mute);
+    margin: 0 0 var(--space-10);
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-10);
+    padding: 4px 0;
+    font-size: 0.88rem;
+  }
+  .legend-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html">Tournees</a>
+      <a href="carnet.html">Carnet</a>
+      <a href="stats.html">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-22) 0; max-width: 900px;">
+
+  <a href="tournee.html" style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-mute); font-size: 0.88rem; text-decoration: none; margin-bottom: var(--space-14);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+    Retour mode terrain
+  </a>
+
+  <h1>Carte de la tournee.</h1>
+  <p style="color: var(--text-mute); max-width: 600px;">
+    Visualisation des 12 arrets de la tournee "Centre-ville mardi"
+    avec polyline ORS optimisee. Couleurs : vert = livre, rouge =
+    echec, lime = prochain arret, gris = a livrer.
+  </p>
+
+  <div class="map-wrap">
+    <svg viewBox="0 0 800 540" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <!-- Fond -->
+      <rect x="0" y="0" width="800" height="540" fill="#EAE6DD"/>
+      <!-- Espaces verts -->
+      <ellipse cx="180" cy="200" rx="80" ry="50" fill="#D6E2C7"/>
+      <ellipse cx="650" cy="350" rx="100" ry="60" fill="#D6E2C7"/>
+      <!-- Eau (Garonne) -->
+      <path d="M 0 480 Q 200 460 400 470 T 800 460 L 800 540 L 0 540 Z" fill="#C4D8E5"/>
+      <!-- Rues principales -->
+      <path d="M 0 270 L 800 270" stroke="white" stroke-width="14" stroke-linecap="round"/>
+      <path d="M 0 270 L 800 270" stroke="#D4CCB8" stroke-width="14" stroke-linecap="round" stroke-dasharray="2,4"/>
+      <path d="M 400 0 L 400 540" stroke="white" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 150 0 L 220 540" stroke="white" stroke-width="8" stroke-linecap="round"/>
+      <path d="M 600 0 L 580 540" stroke="white" stroke-width="8" stroke-linecap="round"/>
+      <path d="M 0 130 Q 400 110 800 150" stroke="white" stroke-width="9" stroke-linecap="round" fill="none"/>
+      <path d="M 0 400 Q 400 410 800 380" stroke="white" stroke-width="9" stroke-linecap="round" fill="none"/>
+
+      <!-- Polyline trajet (lime) -->
+      <path d="M 100 250 L 200 230 L 280 250 L 350 290 L 410 270 L 480 245 L 530 270 L 580 295 L 620 340 L 540 380 L 460 350 L 380 410" stroke="#B8F24A" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <!-- Pin depot (depart) -->
+      <g transform="translate(80, 240)">
+        <path d="M 0 -22 C -12 -22 -22 -12 -22 0 C -22 12 0 30 0 30 C 0 30 22 12 22 0 C 22 -12 12 -22 0 -22 Z" fill="#0E1410"/>
+        <circle cx="0" cy="-2" r="9" fill="#B8F24A"/>
+        <text x="0" y="2" text-anchor="middle" font-family="monospace" font-size="10" font-weight="800" fill="#0E1410">D</text>
+      </g>
+
+      <!-- Pins arrets : 1-5 livres (vert) -->
+      <g transform="translate(200, 230)">
+        <circle r="14" fill="#15803D"/>
+        <path d="M -5 0 L -1 5 L 6 -4" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g transform="translate(280, 250)">
+        <circle r="14" fill="#15803D"/>
+        <path d="M -5 0 L -1 5 L 6 -4" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g transform="translate(350, 290)">
+        <circle r="14" fill="#15803D"/>
+        <path d="M -5 0 L -1 5 L 6 -4" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <!-- Echec (4) en rouge -->
+      <g transform="translate(410, 270)">
+        <circle r="14" fill="#D9483B"/>
+        <path d="M -5 -5 L 5 5 M -5 5 L 5 -5" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(480, 245)">
+        <circle r="14" fill="#15803D"/>
+        <path d="M -5 0 L -1 5 L 6 -4" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <!-- Prochain arret (6) en lime avec contour -->
+      <g transform="translate(530, 270)">
+        <circle r="16" fill="#B8F24A" stroke="#0E1410" stroke-width="2.5"/>
+        <text y="4" text-anchor="middle" font-family="monospace" font-size="11" font-weight="800" fill="#0E1410">6</text>
+      </g>
+      <!-- 7..12 a livrer (gris) -->
+      <g transform="translate(580, 295)"><circle r="13" fill="#5C6660"/><text y="4" text-anchor="middle" font-family="monospace" font-size="10" font-weight="800" fill="white">7</text></g>
+      <g transform="translate(620, 340)"><circle r="13" fill="#5C6660"/><text y="4" text-anchor="middle" font-family="monospace" font-size="10" font-weight="800" fill="white">8</text></g>
+      <g transform="translate(540, 380)"><circle r="13" fill="#5C6660"/><text y="4" text-anchor="middle" font-family="monospace" font-size="10" font-weight="800" fill="white">9</text></g>
+      <g transform="translate(460, 350)"><circle r="13" fill="#5C6660"/><text y="4" text-anchor="middle" font-family="monospace" font-size="9" font-weight="800" fill="white">10</text></g>
+      <g transform="translate(380, 410)"><circle r="13" fill="#5C6660"/><text y="4" text-anchor="middle" font-family="monospace" font-size="9" font-weight="800" fill="white">11</text></g>
+      <g transform="translate(380, 415)" opacity="0"></g>
+      <g transform="translate(330, 470)"><circle r="13" fill="#5C6660"/><text y="4" text-anchor="middle" font-family="monospace" font-size="9" font-weight="800" fill="white">12</text></g>
+
+      <!-- Position courante chauffeur (cercle bleu pulse) -->
+      <circle cx="500" cy="265" r="20" fill="#3b82f6" opacity="0.18"/>
+      <circle cx="500" cy="265" r="9" fill="#3b82f6" stroke="white" stroke-width="3"/>
+
+      <!-- Mention OSM en bas -->
+      <text x="790" y="525" text-anchor="end" font-family="sans-serif" font-size="9" fill="#7E8C82">© OpenStreetMap contributors</text>
+    </svg>
+
+    <div class="map-overlay">
+      <div class="map-top-bar">
+        <span class="map-stat-pill lime">5 / 12</span>
+        <span class="map-stat-pill">18.4 km</span>
+        <span class="map-stat-pill">2h35</span>
+        <span style="margin-left: auto; color: var(--text-mute); font-size: 0.8rem;">Tap sur un pin →</span>
+      </div>
+
+      <div class="map-bottom-card">
+        <div class="lbl">PROCHAIN ARRET (PIN N°6)</div>
+        <div class="nom">Boulangerie Martin</div>
+        <div class="meta">12 RUE SAINTE-CATHERINE &middot; 350 m a vol d'oiseau</div>
+        <div class="actions">
+          <button>Maps</button>
+          <button>Waze</button>
+          <button class="primary">Marquer livre</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-14);">
+    <div class="legend">
+      <h3>LEGENDE</h3>
+      <div class="legend-row"><div class="legend-pin" style="background: #0E1410;">D</div> Depot / point de depart</div>
+      <div class="legend-row"><div class="legend-pin" style="background: #15803D;"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div> Arret livre</div>
+      <div class="legend-row"><div class="legend-pin" style="background: #D9483B;"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></div> Arret en echec</div>
+      <div class="legend-row"><div class="legend-pin" style="background: #B8F24A; color: var(--ink); border: 2px solid var(--ink);">6</div> Prochain arret a livrer</div>
+      <div class="legend-row"><div class="legend-pin" style="background: #5C6660;">N</div> A livrer (numerote)</div>
+      <div class="legend-row"><div class="legend-pin" style="background: #3b82f6;"></div> Ta position GPS actuelle</div>
+    </div>
+    <div class="legend">
+      <h3>INFOS</h3>
+      <p style="font-size: 0.88rem; line-height: 1.5; color: var(--text-mute); margin: 0 0 var(--space-10);">
+        La carte utilise <strong>OpenStreetMap</strong> (gratuit, libre)
+        via le plugin <code>flutter_map</code>. La polyline lime est la
+        trace ORS optimisee (algorithme VROOM).
+      </p>
+      <p style="font-size: 0.88rem; line-height: 1.5; color: var(--text-mute); margin: 0;">
+        Tap sur un pin → ouvre la bottom sheet d'actions (livrer / echec
+        / details / photo preuve). Long-press → reordonne manuellement.
+      </p>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiche client — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .form-card { background: var(--paper); border: 1px solid var(--divider); border-radius: var(--radius-14); padding: var(--space-18); margin-bottom: var(--space-14); }
+  .form-card label { display: block; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 800; color: var(--text-mute); letter-spacing: 0.05em; margin-top: var(--space-14); margin-bottom: 6px; }
+  .form-card label:first-child { margin-top: 0; }
+  .form-card input, .form-card textarea { width: 100%; padding: 11px 13px; border: 1px solid var(--divider); border-radius: var(--radius-10); background: var(--paper); color: var(--ink); font-family: inherit; font-size: 0.95rem; outline: none; box-sizing: border-box; }
+  .form-card input:focus, .form-card textarea:focus { border-color: var(--lime); }
+
+  .color-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .color-tag {
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; border: 2px solid transparent;
+    transition: border 150ms, transform 150ms;
+  }
+  .color-tag:hover { transform: scale(1.08); }
+  .color-tag.selected { border-color: var(--ink); }
+
+  .client-stats {
+    background: var(--lime);
+    border-radius: var(--radius-14);
+    padding: var(--space-14);
+    margin-bottom: var(--space-14);
+  }
+  .client-stats .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+    font-weight: 800;
+  }
+  .client-stats .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-10);
+    margin-top: 8px;
+  }
+  .client-stats .grid .v {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .client-stats .grid .l {
+    font-size: 0.78rem;
+    color: var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html">Tournees</a>
+      <a href="carnet.html" class="active">Carnet</a>
+      <a href="stats.html">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-22) 0; max-width: 700px;">
+
+  <a href="carnet.html" style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-mute); font-size: 0.88rem; text-decoration: none; margin-bottom: var(--space-14);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+    Carnet d'adresses
+  </a>
+
+  <h1>Boulangerie Martin.</h1>
+
+  <div class="client-stats">
+    <div class="lbl">STATS DE CE CLIENT</div>
+    <div class="grid">
+      <div><div class="v">28</div><div class="l">livraisons</div></div>
+      <div><div class="v">96%</div><div class="l">reussite</div></div>
+      <div><div class="v">14/05</div><div class="l">derniere</div></div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <label>NOM</label>
+    <input type="text" value="Boulangerie Martin">
+
+    <label>ADRESSE</label>
+    <input type="text" value="12 rue Sainte-Catherine, 33000 Bordeaux">
+    <p style="font-size: 0.78rem; color: var(--text-mute); margin: 4px 0 0;">
+      Geolocalisee : 44.8420, -0.5750 (precision haute, source BAN)
+    </p>
+
+    <label>TELEPHONE (OPTIONNEL)</label>
+    <input type="tel" value="+33 5 56 12 34 56">
+
+    <label>COULEUR TAG (POUR L'AVATAR)</label>
+    <div class="color-tags">
+      <div class="color-tag selected" style="background: #B8F24A;" onclick="selectColor(this)"></div>
+      <div class="color-tag" style="background: #15803D;" onclick="selectColor(this)"></div>
+      <div class="color-tag" style="background: #F2A14A;" onclick="selectColor(this)"></div>
+      <div class="color-tag" style="background: #A05D8E;" onclick="selectColor(this)"></div>
+      <div class="color-tag" style="background: #D9483B;" onclick="selectColor(this)"></div>
+      <div class="color-tag" style="background: #5C6660;" onclick="selectColor(this)"></div>
+      <div class="color-tag" style="background: #E3DED1;" onclick="selectColor(this)"></div>
+    </div>
+
+    <label>CODE INTERPHONE</label>
+    <input type="text" value="1234B" placeholder="Ex: 1234A">
+
+    <label>NOTES</label>
+    <textarea rows="4">Sonner pour livraison. Batiment du fond, escalier B, RDC droite. Ne pas livrer entre 12h-14h (fermeture).</textarea>
+
+    <label>INSTRUCTIONS SPECIALES</label>
+    <textarea rows="2" placeholder="Ex: laisser dans la boite a colis, donner cle a la voisine du 3eme...">Laisser dans le sas si absent (porte verte derriere la grille).</textarea>
+  </div>
+
+  <div style="display: flex; gap: var(--space-10); justify-content: space-between; flex-wrap: wrap;">
+    <button class="btn btn-secondary" style="color: var(--red); border-color: var(--red);" onclick="if (confirm('Supprimer Boulangerie Martin du carnet ?')) alert('Demo : supprime.');">
+      Supprimer
+    </button>
+    <div style="display: flex; gap: var(--space-10);">
+      <a href="carnet.html" class="btn btn-secondary">Annuler</a>
+      <button class="btn btn-primary" onclick="alert('Demo : enregistre.');">Enregistrer</button>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+  function selectColor(el) {
+    el.parentElement.querySelectorAll('.color-tag').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+</script>
+</body>
+</html>
