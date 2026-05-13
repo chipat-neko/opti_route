@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verrouillage — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .phone-frame {
+    max-width: 360px;
+    margin: 0 auto;
+    aspect-ratio: 9/19;
+    background: var(--cream-soft);
+    border-radius: 36px;
+    border: 8px solid #0E1410;
+    padding: 28px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 14px; left: 50%;
+    transform: translateX(-50%);
+    width: 60px; height: 4px;
+    background: #0E1410;
+    border-radius: 999px;
+  }
+
+  .lock-icon {
+    width: 72px; height: 72px;
+    background: var(--lime);
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 40px;
+  }
+  .lock-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    color: var(--text-mute);
+    margin-top: 18px;
+    font-weight: 800;
+  }
+  .lock-subtitle {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-top: 6px;
+    color: var(--ink);
+  }
+
+  .pin-dots {
+    display: flex;
+    gap: 18px;
+    margin-top: 22px;
+  }
+  .pin-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid var(--text-mute);
+    transition: all 150ms;
+  }
+  .pin-dot.filled {
+    background: var(--lime);
+    border-color: var(--lime);
+  }
+
+  .keypad {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 240px;
+  }
+  .key {
+    background: var(--paper);
+    border: none;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    color: var(--ink);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 100ms;
+  }
+  .key:active, .key:hover { background: var(--bg-soft); }
+  .key.icon { color: var(--emerald); }
+  .key.empty { background: transparent; cursor: default; }
+
+  .desc-panel {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-14);
+    padding: var(--space-18);
+    margin-top: var(--space-22);
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html">Tournees</a>
+      <a href="carnet.html">Carnet</a>
+      <a href="stats.html">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-22) 0; max-width: 720px;">
+
+  <a href="parametres.html" style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-mute); font-size: 0.88rem; text-decoration: none; margin-bottom: var(--space-14);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+    Parametres
+  </a>
+
+  <span class="eyebrow">Securite</span>
+  <h1>Ecran de verrouillage.</h1>
+  <p style="color: var(--text-mute); max-width: 600px;">
+    Affiche au demarrage de l'app si le verrou est active. Tape sur les
+    chiffres pour saisir le PIN (1234 dans la demo). L'icone empreinte
+    en bas declenche la biometrie systeme.
+  </p>
+
+  <div class="phone-frame">
+    <div class="lock-icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0E1410" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <div class="lock-title">OPTI_ROUTE</div>
+    <div class="lock-subtitle" id="lockTitle">Saisis ton code</div>
+
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+
+    <div class="keypad" id="keypad">
+      <button class="key" onclick="addDigit(1)">1</button>
+      <button class="key" onclick="addDigit(2)">2</button>
+      <button class="key" onclick="addDigit(3)">3</button>
+      <button class="key" onclick="addDigit(4)">4</button>
+      <button class="key" onclick="addDigit(5)">5</button>
+      <button class="key" onclick="addDigit(6)">6</button>
+      <button class="key" onclick="addDigit(7)">7</button>
+      <button class="key" onclick="addDigit(8)">8</button>
+      <button class="key" onclick="addDigit(9)">9</button>
+      <button class="key icon" onclick="alert('Demo : declenche la biometrie systeme (empreinte ou face).');" title="Empreinte / visage">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 11v3a3 3 0 0 0 6 0M9 11v4M15 11v1M6 11v3a6 6 0 0 0 12 0v-3a6 6 0 0 0-12 0z"/>
+        </svg>
+      </button>
+      <button class="key" onclick="addDigit(0)">0</button>
+      <button class="key" onclick="removeDigit()" title="Effacer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="desc-panel">
+    <h2 style="margin: 0 0 var(--space-10); font-size: 1rem;">Comment ca marche</h2>
+    <ul style="color: var(--text-mute); line-height: 1.6; font-size: 0.92rem; padding-left: var(--space-22); margin: 0;">
+      <li><strong>PIN 4 chiffres</strong> stocke en SHA-256 dans la table parametres. Le PIN en clair n'est <em>jamais</em> persiste.</li>
+      <li><strong>Biometrie</strong> via le package <code>local_auth</code> Flutter qui delegue au TEE Android (Keystore + StrongBox / TrustZone). Aucune empreinte ne transite par l'app.</li>
+      <li><strong>Auto-lock</strong> apres N minutes (5 par defaut) en arriere-plan. Configurable dans Parametres -> Securite.</li>
+      <li><strong>Au cold start</strong> : LockScreen s'affiche systematiquement si verrou actif. Pas de skip possible.</li>
+    </ul>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+  let pin = '';
+  const correct = '1234';
+  function refresh() {
+    const dots = document.querySelectorAll('#pinDots .pin-dot');
+    dots.forEach((d, i) => d.classList.toggle('filled', i < pin.length));
+    document.getElementById('lockTitle').textContent = 'Saisis ton code';
+    document.getElementById('lockTitle').style.color = 'var(--ink)';
+  }
+  function addDigit(d) {
+    if (pin.length >= 4) return;
+    pin += d;
+    refresh();
+    if (pin.length === 4) {
+      setTimeout(() => {
+        if (pin === correct) {
+          document.getElementById('lockTitle').textContent = 'Deverrouille ✓';
+          document.getElementById('lockTitle').style.color = 'var(--emerald)';
+          setTimeout(() => { window.location.href = 'tournees.html'; }, 600);
+        } else {
+          document.getElementById('lockTitle').textContent = 'Code incorrect';
+          document.getElementById('lockTitle').style.color = 'var(--red)';
+          pin = '';
+          setTimeout(refresh, 1000);
+        }
+      }, 200);
+    }
+  }
+  function removeDigit() {
+    pin = pin.slice(0, -1);
+    refresh();
+  }
+</script>
+</body>
+</html>

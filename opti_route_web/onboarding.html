@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .ob-frame {
+    max-width: 400px;
+    margin: 0 auto;
+    background: var(--cream);
+    border-radius: 28px;
+    border: 8px solid #0E1410;
+    overflow: hidden;
+    aspect-ratio: 9/16;
+    display: flex;
+    flex-direction: column;
+  }
+  .ob-page {
+    flex: 1;
+    padding: 32px 22px;
+    display: none;
+    flex-direction: column;
+  }
+  .ob-page.active { display: flex; }
+
+  .ob-hero-icon {
+    width: 80px; height: 80px;
+    background: var(--lime);
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink);
+    margin-bottom: var(--space-22);
+  }
+  .ob-hero-icon.emerald { background: var(--emerald); color: white; }
+  .ob-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.15;
+    margin: 0 0 var(--space-12);
+  }
+  .ob-text {
+    font-size: 0.92rem;
+    color: var(--text-mute);
+    line-height: 1.5;
+  }
+  .ob-feature {
+    display: flex; gap: var(--space-10); align-items: flex-start;
+    margin-bottom: var(--space-10);
+  }
+  .ob-feature .icon-bg {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(34, 197, 94, 0.18);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: var(--emerald);
+  }
+  .ob-feature p { font-size: 0.88rem; color: var(--ink); line-height: 1.4; margin: 0; }
+
+  .ob-step {
+    display: flex; gap: var(--space-10); align-items: flex-start;
+    margin-bottom: var(--space-14);
+  }
+  .ob-step .num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--lime);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .ob-step h3 { margin: 0 0 2px; font-size: 0.95rem; font-weight: 800; }
+  .ob-step p { margin: 0; font-size: 0.82rem; color: var(--text-mute); line-height: 1.4; }
+
+  .ob-indicators {
+    display: flex; gap: 6px; justify-content: center;
+    padding: 14px 0;
+  }
+  .ob-dot {
+    width: 8px; height: 8px;
+    border-radius: 4px;
+    background: var(--bg-soft);
+    transition: all 250ms;
+  }
+  .ob-dot.active { width: 24px; background: var(--ink); }
+
+  .ob-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 22px 22px;
+  }
+  .ob-btn-text {
+    background: none; border: none;
+    color: var(--text-mute);
+    font-weight: 600;
+    cursor: pointer; padding: 8px 12px;
+    font-family: inherit;
+  }
+  .ob-btn-primary {
+    background: var(--emerald);
+    color: white;
+    border: none;
+    padding: 10px 22px;
+    border-radius: var(--radius-12);
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    font-family: inherit;
+  }
+  .ob-format {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .ob-format .tag {
+    background: rgba(34, 197, 94, 0.18);
+    color: var(--emerald);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+  .ob-format span:last-child { font-size: 0.82rem; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html">Tournees</a>
+      <a href="carnet.html">Carnet</a>
+      <a href="stats.html">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-22) 0; max-width: 720px;">
+
+  <span class="eyebrow">Premier lancement</span>
+  <h1>Onboarding.</h1>
+  <p style="color: var(--text-mute); max-width: 600px;">
+    Walkthrough en 5 ecrans presente au premier demarrage. Utilise les
+    fleches en bas du phone pour naviguer.
+  </p>
+
+  <div class="ob-frame">
+    <div class="ob-page active" data-i="0">
+      <div class="ob-hero-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h12l4 4v6H3z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+      </div>
+      <h2 class="ob-title">Bienvenue dans<br>opti_route</h2>
+      <p class="ob-text" style="margin-bottom: var(--space-18);">Optimisation de tournees de livraison, gratuit et sans carte de credit.</p>
+
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z"/></svg></div><p>Optimise l'ordre de tes arrets pour livrer en moins de temps.</p></div>
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/></svg></div><p>Mode terrain GPS live + boutons rapides Maps / Waze.</p></div>
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16l7-3z"/></svg></div><p>Carnet d'adresses local : tes clients remontent automatiquement.</p></div>
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5z"/></svg></div><p>Tout reste sur ton telephone. Aucune CB, aucun compte.</p></div>
+    </div>
+
+    <div class="ob-page" data-i="1">
+      <h2 class="ob-title">Comment ca marche</h2>
+      <div class="ob-step"><div class="num">1</div><div><h3>Cree une tournee</h3><p>Donne-lui un nom, une date, le point de depart.</p></div></div>
+      <div class="ob-step"><div class="num">2</div><div><h3>Ajoute tes arrets</h3><p>Tape l'adresse, scan un bordereau, ou pointe sur la carte.</p></div></div>
+      <div class="ob-step"><div class="num">3</div><div><h3>Optimise</h3><p>L'app calcule l'ordre le plus rapide en respectant priorites et fenetres.</p></div></div>
+      <div class="ob-step"><div class="num">4</div><div><h3>Demarre la tournee</h3><p>GPS live + Maps/Waze sur chaque arret. Marque livre / echec au fil.</p></div></div>
+    </div>
+
+    <div class="ob-page" data-i="2">
+      <div class="ob-hero-icon">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v2H9zM12 6c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8m0 2c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6"/></svg>
+      </div>
+      <h2 class="ob-title">Scan bordereau</h2>
+      <p class="ob-text" style="margin-bottom: var(--space-14);">Pointe ton phone sur un bordereau : l'OCR reconnait les noms + adresses et les ajoute a la tournee. Trois formats reconnus :</p>
+      <div class="ob-format"><span class="tag">MESEXP</span><span>Format generique francais.</span></div>
+      <div class="ob-format"><span class="tag">COLISSIMO</span><span>Etiquettes La Poste 6A/6L/8L/9N.</span></div>
+      <div class="ob-format"><span class="tag">CHRONOPOST</span><span>Tracking XR/XE...FR.</span></div>
+      <p style="font-style: italic; font-size: 0.8rem; color: var(--text-mute); margin-top: var(--space-14);">Accessible depuis le menu Plus &rarr; "Scanner un bordereau".</p>
+    </div>
+
+    <div class="ob-page" data-i="3">
+      <div class="ob-hero-icon emerald">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3m-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3m0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5m8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5"/></svg>
+      </div>
+      <h2 class="ob-title">Mode equipe &amp; facturation</h2>
+      <p class="ob-text" style="margin-bottom: var(--space-14);">Tu es chef d'equipe ou tu factures sous une raison sociale ?</p>
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4"/></svg></div><p><strong>Affectation des arrets</strong> &middot; distribue chaque livraison a un coequipier.</p></div>
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg></div><p><strong>Partage cible</strong> &middot; WhatsApp/SMS direct au coequipier.</p></div>
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div><p><strong>PDF par coequipier</strong> &middot; genere un fichier separe pour chacun.</p></div>
+      <div class="ob-feature"><div class="icon-bg"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div><p><strong>Recap facturation</strong> &middot; tarifs / km / colis / arret + marge.</p></div>
+    </div>
+
+    <div class="ob-page" data-i="4">
+      <div class="ob-hero-icon">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2L1 8l6 6h4v6h6l6-6V8L17 2zm5 2h4l4 4v4l-4 4h-4l-4-4V8zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/></svg>
+      </div>
+      <h2 class="ob-title">Cle OpenRouteService</h2>
+      <p class="ob-text" style="margin-bottom: var(--space-14);">Pour activer l'optimisation de tournees, il faut une cle gratuite OpenRouteService. <strong>500 optimisations par jour, aucune carte de credit demandee.</strong></p>
+      <button class="btn btn-secondary" style="margin-bottom: var(--space-14);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg>
+        Creer un compte gratuit
+      </button>
+      <input type="password" placeholder="Cle API ORS (~40 caracteres)" style="width: 100%; padding: 10px 12px; border: 1px solid var(--divider); border-radius: var(--radius-10); font-family: inherit; font-size: 0.88rem; box-sizing: border-box;">
+      <p style="font-size: 0.78rem; color: var(--text-mute); margin-top: 6px;">Tu peux la coller plus tard depuis Parametres.</p>
+    </div>
+
+    <div class="ob-indicators">
+      <div class="ob-dot active"></div>
+      <div class="ob-dot"></div>
+      <div class="ob-dot"></div>
+      <div class="ob-dot"></div>
+      <div class="ob-dot"></div>
+    </div>
+
+    <div class="ob-nav">
+      <button class="ob-btn-text" id="btnPrev" onclick="prevPage()">Passer</button>
+      <button class="ob-btn-primary" id="btnNext" onclick="nextPage()">
+        <span id="btnNextLabel">Suivant</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="btnNextIcon"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+  let i = 0;
+  const total = 5;
+  function refresh() {
+    document.querySelectorAll('.ob-page').forEach((p, idx) => p.classList.toggle('active', idx === i));
+    document.querySelectorAll('.ob-dot').forEach((d, idx) => d.classList.toggle('active', idx === i));
+    document.getElementById('btnPrev').textContent = i === 0 ? 'Passer' : 'Precedent';
+    document.getElementById('btnNextLabel').textContent = i === total - 1 ? 'Commencer' : 'Suivant';
+    const icon = document.getElementById('btnNextIcon');
+    icon.innerHTML = i === total - 1
+      ? '<polyline points="20 6 9 17 4 12"/>'
+      : '<path d="M5 12h14M12 5l7 7-7 7"/>';
+  }
+  function nextPage() {
+    if (i < total - 1) { i++; refresh(); }
+    else { alert('Demo : onboarding fini, redirection vers la liste des tournees.'); window.location.href = 'tournees.html'; }
+  }
+  function prevPage() {
+    if (i === 0) { window.location.href = 'tournees.html'; return; }
+    i--; refresh();
+  }
+</script>
+</body>
+</html>
