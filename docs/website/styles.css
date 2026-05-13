@@ -646,3 +646,59 @@ table.dashboard-table {
 }
 
 .hidden { display: none; }
+
+/* ===== RESPONSIVE FIXES ===== */
+
+@media (max-width: 540px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.4rem; }
+
+  .container { padding: 0 var(--space-14); }
+  section { padding: var(--space-40) 0; }
+  .hero { padding: var(--space-40) 0; }
+
+  /* Feature/step/phase cards : padding plus serré */
+  .feature-card, .step, .phase {
+    padding: var(--space-14);
+  }
+
+  /* CTA section : moins de padding vertical */
+  .cta { padding: var(--space-40) var(--space-22); }
+
+  /* Hero CTAs : full-width sur mobile pour cibles tactiles 100% */
+  .hero-ctas .btn { width: 100%; justify-content: center; }
+
+  /* Hero meta : valeurs plus compactes */
+  .hero-meta { gap: var(--space-14); }
+  .hero-meta-value { font-size: 1.2rem; }
+
+  /* Hero mock card : padding reduit */
+  .hero-mock { padding: var(--space-14); }
+  .hero-mock-stat-name { font-size: 0.75rem; }
+  .hero-mock-stat-meta { font-size: 0.65rem; }
+
+  /* Dashboard table : police plus petite + scroll horizontal natif */
+  .dashboard-table { font-size: 0.75rem; }
+  .dashboard-table th, .dashboard-table td {
+    padding: var(--space-8) var(--space-10);
+  }
+
+  /* Upload zone : moins de padding vertical */
+  .upload-zone { padding: var(--space-40) var(--space-14); }
+  .upload-zone svg { width: 40px; height: 40px; }
+  .upload-zone h3 { font-size: 1rem; }
+}
+
+/* Print : optimise pour PDF dashboard */
+@media print {
+  .site-header, .site-footer, .upload-zone, .muted-banner,
+  .theme-toggle { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .container { max-width: 100% !important; padding: 0 !important; }
+  .stat-card, .chart-wrap, .dashboard-table-wrap {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  h1, h2, h3 { color: black !important; }
+}

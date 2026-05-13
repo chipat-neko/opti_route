@@ -41,3 +41,64 @@
     });
   }
 })();
+
+// ---------- FADE-IN AU SCROLL ----------
+(function () {
+  // Respecte la préférence accessibilité "réduire animations".
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  // Cible : élements visuels qui méritent un fade-in léger au scroll.
+  // Pas de bling-bling, juste une respiration pro.
+  const animatableSelector =
+    '.feature-card, .step, .phase, .stat-card, .hero-mock, ' +
+    '.muted-banner, .cta, .chart-wrap';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const els = document.querySelectorAll(animatableSelector);
+    if (els.length === 0) return;
+
+    // État initial : invisible + décalé bas. Transition douce.
+    els.forEach((el) => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(16px)';
+      el.style.transition =
+        'opacity 500ms cubic-bezier(0.22, 1, 0.36, 1), ' +
+        'transform 500ms cubic-bezier(0.22, 1, 0.36, 1)';
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+            observer.unobserve(el);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -50px 0px', threshold: 0.1 }
+    );
+
+    els.forEach((el) => observer.observe(el));
+  });
+})();
+
+// ---------- SCROLL-TO-TOP DOUX ----------
+(function () {
+  // Ancres internes (#section) -> scroll smooth via CSS scroll-behavior
+  // déjà actif sur <html>. Ici on ajoute juste un focus pour
+  // accessibilité après scroll.
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="#"]');
+    if (!link) return;
+    const id = link.getAttribute('href').slice(1);
+    if (!id) return;
+    const target = document.getElementById(id);
+    if (!target) return;
+    setTimeout(() => {
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+    }, 500);
+  });
+})();
