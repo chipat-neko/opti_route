@@ -26,6 +26,9 @@ class TourneePdfService {
     String? entrepriseNom,
     String? entrepriseSiret,
     String? entrepriseSlogan,
+    /// Si fourni, le PDF aura un sous-titre `Fiche de <nom>` pour
+    /// distinguer visuellement les fiches d'un PDF d'equipe.
+    String? coequipierNom,
   }) async {
     final pdf = await _buildDocument(
       tournee: tournee,
@@ -34,6 +37,7 @@ class TourneePdfService {
       entrepriseNom: entrepriseNom,
       entrepriseSiret: entrepriseSiret,
       entrepriseSlogan: entrepriseSlogan,
+      coequipierNom: coequipierNom,
     );
     final dir = await getTemporaryDirectory();
     final dateStr = DateFormat('yyyy-MM-dd').format(tournee.date);
@@ -57,6 +61,62 @@ class TourneePdfService {
     return file.path;
   }
 
+  /// Genere un PDF cible pour UN coequipier (filtre uniquement ses
+  /// stops affectes) + share natif. Sert au chef d'equipe qui veut
+  /// distribuer une fiche papier individuelle.
+  ///
+  /// [coequipierIdOrNull] : null = filtre les stops sans affectation
+  /// (= ceux de Noah lui-meme).
+  Future<String> exportForCoequipier({
+    required Tournee tournee,
+    required List<Stop> allStops,
+    required int? coequipierIdOrNull,
+    required String coequipierNom,
+    double? coutCarburantEur,
+    String? entrepriseNom,
+    String? entrepriseSiret,
+    String? entrepriseSlogan,
+  }) async {
+    final filtered = allStops
+        .where((s) => s.coequipierId == coequipierIdOrNull)
+        .toList(growable: false);
+    final pdf = await _buildDocument(
+      tournee: tournee,
+      stops: filtered,
+      coutCarburantEur: coutCarburantEur,
+      entrepriseNom: entrepriseNom,
+      entrepriseSiret: entrepriseSiret,
+      entrepriseSlogan: entrepriseSlogan,
+      coequipierNom: coequipierNom,
+    );
+    final dir = await getTemporaryDirectory();
+    final dateStr = DateFormat('yyyy-MM-dd').format(tournee.date);
+    final safeNom = tournee.nom
+        .replaceAll(RegExp(r'[^a-zA-Z0-9 _-]'), '')
+        .trim();
+    final safeCo = coequipierNom
+        .replaceAll(RegExp(r'[^a-zA-Z0-9 _-]'), '')
+        .trim()
+        .replaceAll(' ', '_');
+    final file = File(
+      '${dir.path}/tournee-$dateStr-${safeNom.replaceAll(" ", "_")}'
+      '-$safeCo.pdf',
+    );
+    await file.writeAsBytes(await pdf.save());
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        subject: 'Fiche ${tournee.nom} - $coequipierNom',
+        text:
+            'Fiche de $coequipierNom pour la tournee "${tournee.nom}" '
+            'du ${DateFormat('dd/MM/yyyy', 'fr').format(tournee.date)}.',
+      ),
+    );
+
+    return file.path;
+  }
+
   Future<pw.Document> _buildDocument({
     required Tournee tournee,
     required List<Stop> stops,
@@ -64,6 +124,7 @@ class TourneePdfService {
     String? entrepriseNom,
     String? entrepriseSiret,
     String? entrepriseSlogan,
+    String? coequipierNom,
   }) async {
     final pdf = pw.Document(
       title: 'Tournee ${tournee.nom}',
@@ -189,6 +250,29 @@ class TourneePdfService {
                   'Depart : ${tournee.pointDepartLabel}',
                   style: const pw.TextStyle(fontSize: 10),
                 ),
+                if (coequipierNom != null && coequipierNom.isNotEmpty) ...[
+                  pw.SizedBox(height: 6),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.lime300,
+                      borderRadius: const pw.BorderRadius.all(
+                        pw.Radius.circular(4),
+                      ),
+                    ),
+                    child: pw.Text(
+                      'FICHE DE $coequipierNom',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

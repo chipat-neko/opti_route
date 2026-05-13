@@ -102,6 +102,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             onSelected: (value) {
               if (value == 'delete') _confirmDeleteTournee();
               if (value == 'export_pdf') _onExportPdfPressed();
+              if (value == 'export_pdf_co') _onExportPdfPerCoequipierPressed();
               if (value == 'share_text') _onShareTextPressed();
               if (value == 'share_to_coequipier') {
                 _onShareToCoequipierPressed();
@@ -216,7 +217,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'export_pdf',
                 child: ListTile(
                   leading: Icon(Icons.picture_as_pdf_outlined),
@@ -224,7 +225,19 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
+                value: 'export_pdf_co',
+                child: ListTile(
+                  leading: Icon(Icons.picture_as_pdf),
+                  title: Text('Exporter PDF par coequipier'),
+                  subtitle: Text(
+                    'Fiche individuelle (un PDF par personne)',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'delete',
                 child: ListTile(
                   leading: Icon(Icons.delete_outline, color: AppColors.red),
@@ -414,6 +427,85 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'export PDF : $e')),
+      );
+    }
+  }
+
+  /// Export un PDF par coequipier present dans la tournee (Moi + chaque
+  /// affecte). Genere N fichiers et lance N partages successifs. Le
+  /// chef peut ainsi envoyer une fiche dediee a chaque livreur.
+  Future<void> _onExportPdfPerCoequipierPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final stops =
+          await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
+      // Set des cles : null + ids presents
+      final keys = <int?>{};
+      for (final s in stops) {
+        keys.add(s.coequipierId);
+      }
+      if (keys.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Aucun arret a exporter.')),
+        );
+        return;
+      }
+      if (keys.length == 1) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Tous les arrets ont la meme affectation. Utilise '
+              '"Exporter en PDF" classique.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Resolution noms coequipiers
+      final coRepo = ref.read(coequipiersRepositoryProvider);
+      final coequipiers = await coRepo.getAllActifs();
+      final byId = {for (final c in coequipiers) c.id: c};
+
+      final paramsRepo = ref.read(parametresRepositoryProvider);
+      final entrepriseNom = await paramsRepo.getEntrepriseNom();
+      final entrepriseSiret = await paramsRepo.getEntrepriseSiret();
+      final entrepriseSlogan = await paramsRepo.getEntrepriseSlogan();
+      double? cout;
+      if (widget.tournee.distanceTotaleM != null &&
+          widget.tournee.distanceTotaleM! > 0) {
+        cout = await paramsRepo.estimerCoutCarburant(
+          distanceMeters: widget.tournee.distanceTotaleM!,
+        );
+      }
+
+      final service = TourneePdfService();
+      for (final key in keys) {
+        final nom = key == null ? 'Moi' : (byId[key]?.nom ?? 'Coequipier #$key');
+        await service.exportForCoequipier(
+          tournee: widget.tournee,
+          allStops: stops,
+          coequipierIdOrNull: key,
+          coequipierNom: nom,
+          coutCarburantEur: cout,
+          entrepriseNom: entrepriseNom,
+          entrepriseSiret: entrepriseSiret,
+          entrepriseSlogan: entrepriseSlogan,
+        );
+      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '${keys.length} PDF generes (1 par coequipier).',
+          ),
+          backgroundColor: AppColors.emerald,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'export PDF equipe : $e')),
       );
     }
   }

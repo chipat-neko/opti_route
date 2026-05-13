@@ -50,11 +50,15 @@ final coequipiersAllProvider = StreamProvider<List<Coequipier>>((ref) {
   return ref.watch(coequipiersRepositoryProvider).watchAll();
 });
 
-/// Map id->nom des coequipiers actifs, pour resolution rapide depuis
-/// `stop.coequipierId` dans la liste d'arrets (sans relancer une requete
-/// par row).
+/// Map id->Coequipier de TOUS les coequipiers (actifs + archives) pour
+/// resolution rapide depuis `stop.coequipierId` dans la liste d'arrets
+/// (sans relancer une requete par row).
+///
+/// Important : on inclut les archives car les stops historiques peuvent
+/// pointer sur un coequipier archive. Sans ca, les badges _StopRow
+/// afficheraient "?" alors qu'on a l'info en base.
 final coequipiersByIdProvider = Provider<Map<int, Coequipier>>((ref) {
-  final list = ref.watch(coequipiersActifsProvider).asData?.value ?? const [];
+  final list = ref.watch(coequipiersAllProvider).asData?.value ?? const [];
   return {for (final c in list) c.id: c};
 });
 
