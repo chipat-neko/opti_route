@@ -382,6 +382,11 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       await ref
           .read(tourneesRepositoryProvider)
           .invalidateOptimization(widget.tourneeId);
+      // Auto-reorder local (nearest-neighbor, sans appel ORS) :
+      // maintient l'ordre des arrets pre-trie a chaque modif.
+      await ref
+          .read(localReorderServiceProvider)
+          .reorder(widget.tourneeId);
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {

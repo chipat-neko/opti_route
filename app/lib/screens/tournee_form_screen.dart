@@ -347,6 +347,11 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
         await repo.update(initial.id, companion);
         if (geometryChanged) {
           await repo.invalidateOptimization(initial.id);
+          // Le point de depart a bouge -> l'ordre nearest-neighbor
+          // doit etre recalcule.
+          await ref
+              .read(localReorderServiceProvider)
+              .reorder(initial.id);
         }
         idForNotif = initial.id;
       } else {

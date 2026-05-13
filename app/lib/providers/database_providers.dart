@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
 import '../data/eta_calculator.dart';
+import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
@@ -30,6 +31,17 @@ final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
   return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Service de re-ordonnancement LOCAL (nearest-neighbor, haversine).
+/// Appele apres chaque ajout/edition/suppression d'arret pour
+/// maintenir la liste pre-triee sans consommer le quota ORS. La vraie
+/// optimisation VROOM reste declenchee par le bouton "Optimiser".
+final localReorderServiceProvider = Provider<LocalReorderService>((ref) {
+  return LocalReorderService(
+    ref.watch(stopsRepositoryProvider),
+    ref.watch(tourneesRepositoryProvider),
+  );
 });
 
 final savedDestinationsRepositoryProvider =

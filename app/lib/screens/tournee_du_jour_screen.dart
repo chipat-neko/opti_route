@@ -630,6 +630,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         await ref
             .read(tourneesRepositoryProvider)
             .invalidateOptimization(widget.tournee.id);
+        // Auto-reorder local : maintenant que les stops ont des coords,
+        // ils peuvent participer au nearest-neighbor.
+        await ref
+            .read(localReorderServiceProvider)
+            .reorder(widget.tournee.id);
       }
       messenger.showSnackBar(
         SnackBar(
@@ -2869,6 +2874,10 @@ class _StopsListState extends ConsumerState<_StopsList> {
       await ref
           .read(tourneesRepositoryProvider)
           .invalidateOptimization(stop.tourneeId);
+      // Auto-reorder local apres suppression d'un stop.
+      await ref
+          .read(localReorderServiceProvider)
+          .reorder(stop.tourneeId);
     }
   }
 }
