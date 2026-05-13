@@ -733,27 +733,59 @@ class _MotivationCard extends ConsumerWidget {
                 color: AppColors.ink,
               ),
             ),
-            if (stats.streakSansEchec > 0) ...[
-              const SizedBox(height: AppSpacing.x10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.x10,
-                  vertical: AppSpacing.x6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.ink,
-                  borderRadius: BorderRadius.circular(AppRadius.r12),
-                ),
-                child: Text(
-                  '${stats.streakSansEchec} tournee${stats.streakSansEchec > 1 ? "s" : ""} sans incident',
-                  style: appMonoStyle(
-                    fontSize: 12,
-                    color: AppColors.lime,
-                    fontWeight: FontWeight.w800,
+            const SizedBox(height: AppSpacing.x10),
+            Wrap(
+              spacing: AppSpacing.x6,
+              runSpacing: AppSpacing.x6,
+              children: [
+                // Badge taux de reussite annuel. Seuils :
+                // >= 95% -> emerald, >= 85% -> ink/lime, < 85% -> amber
+                if (stats.nbLivresAnnee + stats.nbEchecsAnnee > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.x10,
+                      vertical: AppSpacing.x6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: stats.tauxReussiteAnnee >= 0.95
+                          ? AppColors.emerald
+                          : stats.tauxReussiteAnnee >= 0.85
+                              ? AppColors.ink
+                              : AppColors.amber,
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                    ),
+                    child: Text(
+                      '${(stats.tauxReussiteAnnee * 100).toStringAsFixed(0)}% reussite annuelle',
+                      style: appMonoStyle(
+                        fontSize: 12,
+                        color: stats.tauxReussiteAnnee >= 0.85
+                            ? AppColors.lime
+                            : AppColors.ink,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ],
+                if (stats.streakSansEchec > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.x10,
+                      vertical: AppSpacing.x6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.ink,
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                    ),
+                    child: Text(
+                      '${stats.streakSansEchec} tournee${stats.streakSansEchec > 1 ? "s" : ""} sans incident',
+                      style: appMonoStyle(
+                        fontSize: 12,
+                        color: AppColors.lime,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ] else
             Text(
               'Cree ta premiere tournee pour voir tes stats motivantes !',

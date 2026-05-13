@@ -616,6 +616,72 @@ void main() {
       const m = MotivationStats.empty;
       expect(m.colisLivresAnnee, 0);
       expect(m.streakSansEchec, 0);
+      expect(m.nbLivresAnnee, 0);
+      expect(m.nbEchecsAnnee, 0);
+      expect(m.tauxReussiteAnnee, 0);
+    });
+
+    test('MotivationStats.tauxReussiteAnnee : 95% emerald threshold', () {
+      const m = MotivationStats(
+        colisLivresAnnee: 100,
+        kmAnnee: 1000,
+        tourneesAnnee: 20,
+        streakSansEchec: 3,
+        nbLivresAnnee: 95,
+        nbEchecsAnnee: 5,
+      );
+      expect(m.tauxReussiteAnnee, closeTo(0.95, 0.001));
+    });
+
+    test('MotivationStats.tauxReussiteAnnee : 0 si aucune tentative',
+        () {
+      const m = MotivationStats(
+        colisLivresAnnee: 0,
+        kmAnnee: 0,
+        tourneesAnnee: 5,
+        streakSansEchec: 0,
+        nbLivresAnnee: 0,
+        nbEchecsAnnee: 0,
+      );
+      expect(m.tauxReussiteAnnee, 0);
+    });
+
+    test('compteursMotivants populate nbLivresAnnee + nbEchecsAnnee',
+        () async {
+      final now = DateTime.now();
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(now.year, now.month, now.day),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+              statut: const Value('terminee'),
+            ),
+          );
+      // 4 livres + 1 echec -> 80% taux
+      for (var i = 0; i < 4; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: id,
+                adresseBrute: 'livre-$i',
+                statutLivraison: const Value('livre'),
+                nbColis: const Value(2),
+              ),
+            );
+      }
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: id,
+              adresseBrute: 'echec-1',
+              statutLivraison: const Value('echec'),
+            ),
+          );
+      final m = await stats.compteursMotivants();
+      expect(m.nbLivresAnnee, 4);
+      expect(m.nbEchecsAnnee, 1);
+      expect(m.colisLivresAnnee, 8); // 4 * 2 colis
+      expect(m.tauxReussiteAnnee, closeTo(0.80, 0.001));
     });
   });
 

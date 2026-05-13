@@ -230,9 +230,14 @@ class StatsService {
               s.tourneeId.isIn(tournees.map((t) => t.id).toList())))
         .get();
 
-    final colisLivresAnnee = stops
-        .where((s) => s.statutLivraison == 'livre')
-        .fold<int>(0, (acc, s) => acc + s.nbColis);
+    final livresStops =
+        stops.where((s) => s.statutLivraison == 'livre').toList();
+    final echecsStops =
+        stops.where((s) => s.statutLivraison == 'echec').toList();
+    final colisLivresAnnee =
+        livresStops.fold<int>(0, (acc, s) => acc + s.nbColis);
+    final nbLivresAnnee = livresStops.length;
+    final nbEchecsAnnee = echecsStops.length;
     final kmAnnee =
         tournees.fold<int>(0, (acc, t) => acc + (t.distanceTotaleM ?? 0)) /
             1000;
@@ -252,6 +257,8 @@ class StatsService {
 
     return MotivationStats(
       colisLivresAnnee: colisLivresAnnee,
+      nbLivresAnnee: nbLivresAnnee,
+      nbEchecsAnnee: nbEchecsAnnee,
       kmAnnee: kmAnnee,
       tourneesAnnee: tournees.length,
       streakSansEchec: streak,
@@ -342,6 +349,8 @@ class MotivationStats {
     required this.kmAnnee,
     required this.tourneesAnnee,
     required this.streakSansEchec,
+    this.nbLivresAnnee = 0,
+    this.nbEchecsAnnee = 0,
   });
 
   static const empty = MotivationStats(
@@ -355,9 +364,25 @@ class MotivationStats {
   final double kmAnnee;
   final int tourneesAnnee;
 
+  /// Nombre de stops valides "livre" sur l'annee. Distinct de
+  /// colisLivresAnnee qui somme nbColis (1 stop peut avoir N colis).
+  final int nbLivresAnnee;
+
+  /// Nombre de stops valides "echec" sur l'annee.
+  final int nbEchecsAnnee;
+
   /// Nombre de tournees terminees consecutives sans aucun echec
   /// (depuis la derniere tournee). 0 si la derniere a un echec.
   final int streakSansEchec;
+
+  /// Taux de reussite annuel (livres / (livres + echecs)). 0 si rien
+  /// valide. Sert au badge dans MotivationCard pour celebrer la qualite
+  /// du livreur, pas juste la quantite.
+  double get tauxReussiteAnnee {
+    final total = nbLivresAnnee + nbEchecsAnnee;
+    if (total == 0) return 0;
+    return nbLivresAnnee / total;
+  }
 }
 
 /// Accumulateur interne pour le compute `statsParCoequipier` (mutable
