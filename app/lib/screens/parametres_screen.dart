@@ -10,7 +10,9 @@ import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import 'coequipiers_screen.dart';
+import 'lock_screen.dart';
 import 'mentions_legales_screen.dart';
+import 'pin_setup_screen.dart';
 
 class ParametresScreen extends ConsumerStatefulWidget {
   const ParametresScreen({super.key});
@@ -762,6 +764,24 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Securite'),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Verrouille l\'app avec un code a 4 chiffres (et la biometrie '
+            'si ton phone le supporte). Protege le carnet clients, les '
+            'codes interphones et les photos preuves si tu perds ton '
+            'telephone.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          const _SecuriteSection(),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('A propos'),
           const SizedBox(height: AppSpacing.x10),
           ListTile(
@@ -1406,6 +1426,240 @@ class _EntrepriseFormState extends ConsumerState<_EntrepriseForm> {
           onEditingComplete: _persistAll,
         ),
       ],
+    );
+  }
+}
+
+/// Section "Securite" : toggle verrou + bouton changer PIN + toggle
+/// biometrie + slider auto-lock. Compacte, posee dans Parametres.
+class _SecuriteSection extends ConsumerStatefulWidget {
+  const _SecuriteSection();
+
+  @override
+  ConsumerState<_SecuriteSection> createState() => _SecuriteSectionState();
+}
+
+class _SecuriteSectionState extends ConsumerState<_SecuriteSection> {
+  bool _biometricSupported = false;
+  bool _biometricActive = false;
+  int _autoLockMinutes = ParametresRepository.defaultAutoLockMinutes;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final params = ref.read(parametresRepositoryProvider);
+    final svc = ref.read(securityServiceProvider);
+    final supported = await svc.canUseBiometrics();
+    final bio = await params.getBiometrieActive();
+    final mins = await params.getAutoLockMinutes();
+    if (!mounted) return;
+    setState(() {
+      _biometricSupported = supported;
+      _biometricActive = bio;
+      _autoLockMinutes = mins;
+      _loading = false;
+    });
+  }
+
+  Future<void> _toggleVerrou(bool wantOn) async {
+    if (wantOn) {
+      final ok = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+      );
+      if (ok != true) return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Verrouillage active')),
+      );
+    } else {
+      // Demande verification PIN avant de desactiver.
+      final ok = await _askPinConfirm(
+        title: 'Desactiver le verrou',
+        message: 'Saisis ton code pour confirmer',
+      );
+      if (ok != true) return;
+      await ref.read(securityServiceProvider).disableLock();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Verrouillage desactive')),
+      );
+      _refresh();
+    }
+  }
+
+  Future<bool?> _askPinConfirm({
+    required String title,
+    required String message,
+  }) async {
+    // Reutilise LockScreen modulo : un peu lourd, mais coherent.
+    bool unlocked = false;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => LockScreen(
+          allowBiometric: false,
+          onUnlocked: () {
+            unlocked = true;
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
+    return unlocked;
+  }
+
+  Future<void> _changePin() async {
+    final ok = await _askPinConfirm(
+      title: 'Changer le code',
+      message: 'Saisis ton code actuel',
+    );
+    if (ok != true) return;
+    if (!mounted) return;
+    final picked = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+    );
+    if (picked == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Code mis a jour')),
+      );
+    }
+  }
+
+  Future<void> _toggleBiometrie(bool v) async {
+    final params = ref.read(parametresRepositoryProvider);
+    await params.setBiometrieActive(v);
+    if (!mounted) return;
+    setState(() => _biometricActive = v);
+  }
+
+  Future<void> _setAutoLock(int minutes) async {
+    final params = ref.read(parametresRepositoryProvider);
+    await params.setAutoLockMinutes(minutes);
+    if (!mounted) return;
+    setState(() => _autoLockMinutes = minutes);
+  }
+
+  String _formatAutoLock(int m) {
+    if (m == 0) return 'Jamais (uniquement au demarrage)';
+    if (m == 1) return 'Apres 1 minute';
+    return 'Apres $m minutes';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.x14),
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    final lockEnabled = ref
+            .watch(lockEnabledStreamProvider)
+            .asData
+            ?.value ??
+        false;
+
+    return Column(
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: lockEnabled,
+          title: const Text('Verrouiller l\'app'),
+          subtitle: Text(
+            lockEnabled
+                ? 'Code a 4 chiffres demande au demarrage'
+                : 'Ouvre l\'app sans confirmation (defaut)',
+            style: const TextStyle(fontSize: 12),
+          ),
+          onChanged: _toggleVerrou,
+        ),
+        if (lockEnabled) ...[
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.pin_outlined),
+            title: const Text('Changer le code'),
+            subtitle: const Text(
+              'Renouvelle ton PIN apres saisie de l\'actuel',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _changePin,
+          ),
+          if (_biometricSupported)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _biometricActive,
+              title: const Text('Empreinte / visage'),
+              subtitle: const Text(
+                'Deverrouille sans saisir le code',
+                style: TextStyle(fontSize: 12),
+              ),
+              secondary: const Icon(Icons.fingerprint),
+              onChanged: _toggleBiometrie,
+            ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.timer_outlined),
+            title: const Text('Verrouillage auto'),
+            subtitle: Text(
+              _formatAutoLock(_autoLockMinutes),
+              style: const TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              final picked = await showModalBottomSheet<int>(
+                context: context,
+                builder: (_) => _AutoLockPicker(current: _autoLockMinutes),
+              );
+              if (picked != null) await _setAutoLock(picked);
+            },
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AutoLockPicker extends StatelessWidget {
+  const _AutoLockPicker({required this.current});
+  final int current;
+
+  static const _options = [
+    (0, 'Jamais'),
+    (1, 'Apres 1 minute'),
+    (5, 'Apres 5 minutes'),
+    (15, 'Apres 15 minutes'),
+    (30, 'Apres 30 minutes'),
+    (60, 'Apres 1 heure'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _options.map((o) {
+          final selected = o.$1 == current;
+          return ListTile(
+            title: Text(o.$2),
+            trailing: selected
+                ? const Icon(Icons.check, color: AppColors.emerald)
+                : null,
+            onTap: () => Navigator.of(context).pop(o.$1),
+          );
+        }).toList(),
+      ),
     );
   }
 }

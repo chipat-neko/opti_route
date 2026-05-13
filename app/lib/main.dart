@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'data/notifications_service.dart';
 import 'providers/database_providers.dart';
+import 'screens/app_lock_gate.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_tokens.dart';
@@ -54,7 +55,8 @@ class OptiRouteApp extends ConsumerWidget {
       locale: const Locale('fr', 'FR'),
       home: const HomeScreen(),
       builder: (context, child) {
-        if (textScaleBoost == 1.0) return child!;
+        Widget wrapped = AppLockGate(child: child!);
+        if (textScaleBoost == 1.0) return wrapped;
         final mq = MediaQuery.of(context);
         // Multiplie le scale systeme Android par notre boost. Ex :
         // user Android x1.3 + mode XL x1.15 = x1.495.
@@ -64,7 +66,7 @@ class OptiRouteApp extends ConsumerWidget {
             textScaler:
                 TextScaler.linear(systemScale * textScaleBoost),
           ),
-          child: child!,
+          child: wrapped,
         );
       },
     );

@@ -6,10 +6,12 @@ import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
-/// Walkthrough du premier lancement. Trois pages :
+/// Walkthrough du premier lancement. Cinq pages :
 ///   1. Bienvenue (presentation rapide)
 ///   2. Concept tournee + carnet
-///   3. Saisie de la cle OpenRouteService (avec lien externe pour la
+///   3. Scan bordereau (MESEXP / Colissimo / Chronopost)
+///   4. Mode chef d'equipe + facturation (vagues recentes)
+///   5. Saisie de la cle OpenRouteService (avec lien externe pour la
 ///      creer gratuitement)
 ///
 /// La cle ORS n'est pas obligatoire : l'app fonctionne sans, mais le
@@ -49,11 +51,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 children: [
                   _PageBienvenue(),
                   _PageConcept(),
+                  const _PageScan(),
+                  const _PageChefEquipe(),
                   _PageOrsKey(controller: _orsKeyCtrl),
                 ],
               ),
             ),
-            _Indicators(currentPage: _currentPage, total: 3),
+            _Indicators(currentPage: _currentPage, total: 5),
             const SizedBox(height: AppSpacing.x18),
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -80,7 +84,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   FilledButton.icon(
                     onPressed: _saving
                         ? null
-                        : (_currentPage < 2
+                        : (_currentPage < 4
                             ? () => _pageController.nextPage(
                                   duration:
                                       const Duration(milliseconds: 250),
@@ -97,12 +101,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             ),
                           )
                         : Icon(
-                            _currentPage < 2
+                            _currentPage < 4
                                 ? Icons.arrow_forward
                                 : Icons.check,
                           ),
                     label: Text(
-                      _currentPage < 2 ? 'Suivant' : 'Commencer',
+                      _currentPage < 4 ? 'Suivant' : 'Commencer',
                     ),
                   ),
                 ],
@@ -336,6 +340,249 @@ class _PageConcept extends StatelessWidget {
     (
       'Demarre la tournee',
       'GPS live + Maps/Waze sur chaque arret. Marque livre / echec au fur et a mesure.',
+    ),
+  ];
+}
+
+class _PageScan extends StatelessWidget {
+  const _PageScan();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x22,
+        vertical: AppSpacing.x28,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.lime,
+              borderRadius: BorderRadius.circular(AppRadius.r22),
+            ),
+            child: Icon(
+              Icons.document_scanner_outlined,
+              size: 38,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x22),
+          Text(
+            'Scan bordereau',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          Text(
+            'Pointe ton phone sur un bordereau de livraison : l\'OCR '
+            'reconnait les noms + adresses et les ajoute a la tournee. '
+            'Trois formats reconnus :',
+            style: TextStyle(
+              fontSize: 14,
+              color: p.textMute,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          ..._formats.map(
+            (f) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.emeraldSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.r6),
+                    ),
+                    child: Text(
+                      f.$1,
+                      style: appMonoStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.emerald,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x10),
+                  Expanded(
+                    child: Text(
+                      f.$2,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: p.ink,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Accessible depuis le menu Plus -> "Scanner un bordereau" '
+            'pendant la creation d\'une tournee.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const _formats = <(String, String)>[
+    ('MESEXP', 'Format generique francais (tableau Destinataire / Lieu / Total colis).'),
+    ('COLISSIMO', 'Etiquettes La Poste avec tracking 6A/6L/8L/9N.'),
+    ('CHRONOPOST', 'Etiquettes Chronopost avec tracking XR/XE...FR.'),
+  ];
+}
+
+class _PageChefEquipe extends StatelessWidget {
+  const _PageChefEquipe();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x22,
+        vertical: AppSpacing.x28,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.emerald,
+              borderRadius: BorderRadius.circular(AppRadius.r22),
+            ),
+            child: const Icon(
+              Icons.groups_outlined,
+              size: 38,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x22),
+          Text(
+            'Mode equipe & facturation',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          Text(
+            'Tu es chef d\'equipe ou tu factures sous une raison '
+            'sociale ? L\'app inclut tout ce qu\'il faut :',
+            style: TextStyle(
+              fontSize: 14,
+              color: p.textMute,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          ..._features.map(
+            (f) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: AppColors.emeraldSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(f.$1, size: 16, color: AppColors.emerald),
+                  ),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          f.$2,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: p.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          f.$3,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: p.textMute,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Activable plus tard dans Parametres -> Mode chef d\'equipe.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const _features = <(IconData, String, String)>[
+    (
+      Icons.assignment_ind_outlined,
+      'Affectation des arrets',
+      'Distribue chaque livraison a un coequipier depuis la bottom sheet.',
+    ),
+    (
+      Icons.share_outlined,
+      'Partage cible',
+      'WhatsApp/SMS direct au bon coequipier avec son lot d\'arrets.',
+    ),
+    (
+      Icons.picture_as_pdf_outlined,
+      'PDF par coequipier',
+      'Genere un PDF separe pour chaque membre de l\'equipe.',
+    ),
+    (
+      Icons.euro_outlined,
+      'Recap de facturation',
+      'Tarif au km / au colis / a l\'arret + cout carburant = marge brute.',
     ),
   ];
 }

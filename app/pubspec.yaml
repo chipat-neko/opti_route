@@ -55,6 +55,9 @@ dependencies:
   file_picker: ^8.1.7
   flutter_local_notifications: ^18.0.1
   timezone: ^0.10.0
+  local_auth: ^2.3.0
+  local_auth_android: ^1.0.46
+  crypto: ^3.0.5
 
 dev_dependencies:
   flutter_test:

@@ -6,6 +6,7 @@ import '../data/database.dart';
 import '../data/eta_calculator.dart';
 import '../data/parametres_repository.dart';
 import '../data/client_stats_service.dart';
+import '../data/security_service.dart';
 import '../data/saved_destinations_repository.dart';
 import '../data/sheets_repository.dart';
 import '../data/stats_service.dart';
@@ -64,6 +65,30 @@ final coequipiersByIdProvider = Provider<Map<int, Coequipier>>((ref) {
 
 final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
   return ParametresRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Service de verrouillage local (PIN + biometrie). Hash SHA-256 +
+/// delegation `local_auth` au TEE Android pour la biometrie.
+final securityServiceProvider = Provider<SecurityService>((ref) {
+  return SecurityService(ref.watch(parametresRepositoryProvider));
+});
+
+/// Stream "verrou actif ET PIN defini". Combine `verrou_actif` + presence
+/// de `pin_hash`. Sert au routeur d'app pour decider d'afficher
+/// LockScreen au demarrage.
+final lockEnabledStreamProvider = StreamProvider<bool>((ref) {
+  // On reconstruit a chaque toggle du flag verrou_actif. La presence
+  // du hash est verifiee a chaque emission (lecture async).
+  return ref
+      .watch(parametresRepositoryProvider)
+      .watchVerrouActif()
+      .asyncMap((flag) async {
+    if (!flag) return false;
+    final hash = await ref
+        .read(parametresRepositoryProvider)
+        .getPinHash();
+    return hash != null && hash.isNotEmpty;
+  });
 });
 
 final statsServiceProvider = Provider<StatsService>((ref) {

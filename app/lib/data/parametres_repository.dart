@@ -28,6 +28,10 @@ class ParametresRepository {
   static const _kEntrepriseSiret = 'entreprise_siret';
   static const _kEntrepriseSlogan = 'entreprise_slogan';
   static const _kModeChef = 'mode_chef_equipe';
+  static const _kVerrouActif = 'verrou_actif';
+  static const _kPinHash = 'pin_hash';
+  static const _kBiometrieActive = 'biometrie_active';
+  static const _kAutoLockMinutes = 'auto_lock_minutes';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -254,6 +258,51 @@ class ParametresRepository {
 
   Future<void> setModeChef(bool v) =>
       _write(_kModeChef, v ? '1' : '0');
+
+  /// Verrouillage de l'app : si activ, un ecran PIN/biometrie s'affiche
+  /// a l'ouverture (cold start) + au retour foreground apres N minutes
+  /// (cf. [getAutoLockMinutes]). Default false : pas de verrou. Pour
+  /// proteger les donnees clients (codes interphones, telephones,
+  /// photos de preuve) si le phone est vole ou perdu.
+  Future<bool> getVerrouActif() async =>
+      (await _readKey(_kVerrouActif)) == '1';
+
+  Stream<bool> watchVerrouActif() =>
+      _watchKey(_kVerrouActif).map((v) => v == '1');
+
+  Future<void> setVerrouActif(bool v) =>
+      _write(_kVerrouActif, v ? '1' : '0');
+
+  /// Hash SHA-256 du PIN choisi par l'utilisateur (4 a 6 chiffres). Le
+  /// PIN en clair n'est jamais stocke. Null si verrou desactiv ou PIN
+  /// pas encore defini.
+  Future<String?> getPinHash() => _readKey(_kPinHash);
+
+  Future<void> setPinHash(String hash) => _write(_kPinHash, hash);
+
+  Future<int> clearPinHash() => _delete(_kPinHash);
+
+  /// Biometrie (empreinte / face) activee en alternative au PIN. Demande
+  /// quand meme un PIN comme fallback. Default false.
+  Future<bool> getBiometrieActive() async =>
+      (await _readKey(_kBiometrieActive)) == '1';
+
+  Future<void> setBiometrieActive(bool v) =>
+      _write(_kBiometrieActive, v ? '1' : '0');
+
+  /// Duree (en minutes) avant auto-lock apres mise en background. 0 =
+  /// jamais (verrouille seulement au cold start). Default 5 minutes.
+  static const int defaultAutoLockMinutes = 5;
+
+  Future<int> getAutoLockMinutes() async {
+    final v = await _readKey(_kAutoLockMinutes);
+    return int.tryParse(v ?? '') ?? defaultAutoLockMinutes;
+  }
+
+  Future<void> setAutoLockMinutes(int minutes) {
+    assert(minutes >= 0 && minutes <= 60);
+    return _write(_kAutoLockMinutes, minutes.toString());
+  }
 
   /// Estime le cout carburant d'une distance (en metres) selon les
   /// parametres courants. Retourne en EUR (double, arrondi a 0.01).
