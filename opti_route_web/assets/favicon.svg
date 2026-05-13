@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0E1410"/>
+  <!-- Trace de route lime -->
+  <path d="M 10 50 Q 22 38 32 42 T 54 26"
+        stroke="#B8F24A"
+        stroke-width="4"
+        stroke-linecap="round"
+        fill="none"
+        stroke-dasharray="3 3"/>
+  <!-- Pin -->
+  <circle cx="32" cy="28" r="8" fill="#B8F24A"/>
+  <circle cx="32" cy="28" r="3" fill="#0E1410"/>
+</svg>

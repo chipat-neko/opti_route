@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tournees — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html" class="active">Tournees</a>
+      <a href="carnet.html">Carnet</a>
+      <a href="stats.html">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-32) 0;">
+
+  <span class="eyebrow">Aujourd'hui</span>
+  <h1>Mes tournees.</h1>
+  <p style="color: var(--text-mute); max-width: 600px;">
+    Vue d'ensemble des tournees programmees. Tape sur une card en cours
+    pour ouvrir le <a href="tournee.html">mode terrain</a>.
+  </p>
+
+  <div style="display: flex; gap: var(--space-10); margin: var(--space-22) 0; flex-wrap: wrap;">
+    <button class="btn btn-primary">+ Nouvelle tournee</button>
+    <button class="btn btn-secondary">Scan bordereau</button>
+    <button class="btn btn-secondary">Importer CSV</button>
+  </div>
+
+  <h2 style="margin-top: var(--space-32); font-size: 1.2rem;">EN COURS</h2>
+  <div class="tournee-list" style="margin-top: var(--space-12);">
+
+    <a href="tournee.html" class="tournee-card live active">
+      <div class="tournee-head">
+        <div>
+          <h3 class="tournee-name">Centre-ville mardi</h3>
+          <div class="tournee-date">14 MAI 2026</div>
+        </div>
+        <span class="tournee-status live">EN COURS</span>
+      </div>
+      <div class="tournee-meta">
+        <span class="item">12 arrets</span>
+        <span class="item">28 colis</span>
+        <span class="item">18.4 km</span>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width: 42%;"></div></div>
+      <p style="font-size: 0.8rem; color: var(--text-mute); margin: 8px 0 0; font-family: 'JetBrains Mono', monospace;">
+        5/12 LIVRES &middot; DEMARREE IL Y A 1H32
+      </p>
+    </a>
+
+  </div>
+
+  <h2 style="margin-top: var(--space-32); font-size: 1.2rem;">PLANIFIEES</h2>
+  <div class="tournee-list" style="margin-top: var(--space-12);">
+
+    <a href="tournee.html" class="tournee-card">
+      <div class="tournee-head">
+        <div>
+          <h3 class="tournee-name">Bordeaux ouest</h3>
+          <div class="tournee-date">15 MAI 2026</div>
+        </div>
+        <span class="tournee-status optim">OPTIMISEE</span>
+      </div>
+      <div class="tournee-meta">
+        <span class="item">18 arrets</span>
+        <span class="item">42 colis</span>
+        <span class="item">31.7 km</span>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width: 0%;"></div></div>
+    </a>
+
+    <a href="tournee.html" class="tournee-card">
+      <div class="tournee-head">
+        <div>
+          <h3 class="tournee-name">Tournee Lucas - secteur sud</h3>
+          <div class="tournee-date">15 MAI 2026</div>
+        </div>
+        <span class="tournee-status draft">BROUILLON</span>
+      </div>
+      <div class="tournee-meta">
+        <span class="item">8 arrets</span>
+        <span class="item">15 colis</span>
+        <span class="item">- km</span>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width: 0%;"></div></div>
+    </a>
+
+    <a href="tournee.html" class="tournee-card">
+      <div class="tournee-head">
+        <div>
+          <h3 class="tournee-name">Periph nord</h3>
+          <div class="tournee-date">16 MAI 2026</div>
+        </div>
+        <span class="tournee-status optim">OPTIMISEE</span>
+      </div>
+      <div class="tournee-meta">
+        <span class="item">22 arrets</span>
+        <span class="item">51 colis</span>
+        <span class="item">45.2 km</span>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width: 0%;"></div></div>
+    </a>
+
+  </div>
+
+  <h2 style="margin-top: var(--space-32); font-size: 1.2rem;">TERMINEES (3 dernieres)</h2>
+  <div class="tournee-list" style="margin-top: var(--space-12);">
+
+    <a href="tournee.html" class="tournee-card">
+      <div class="tournee-head">
+        <div>
+          <h3 class="tournee-name">Centre-ville lundi</h3>
+          <div class="tournee-date">13 MAI 2026</div>
+        </div>
+        <span class="tournee-status done">TERMINEE</span>
+      </div>
+      <div class="tournee-meta">
+        <span class="item">14/14 livres</span>
+        <span class="item">32 colis</span>
+        <span class="item">22.1 km</span>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width: 100%;"></div></div>
+    </a>
+
+    <a href="tournee.html" class="tournee-card">
+      <div class="tournee-head">
+        <div>
+          <h3 class="tournee-name">Secteur Pessac</h3>
+          <div class="tournee-date">12 MAI 2026</div>
+        </div>
+        <span class="tournee-status done">TERMINEE</span>
+      </div>
+      <div class="tournee-meta">
+        <span class="item">9/10 livres</span>
+        <span class="item">23 colis</span>
+        <span class="item">19.8 km</span>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width: 100%;"></div></div>
+    </a>
+
+    <a href="tournee.html" class="tournee-card">
+      <div class="tournee-head">
+        <div>
+          <h3 class="tournee-name">Talence + Begles</h3>
+          <div class="tournee-date">11 MAI 2026</div>
+        </div>
+        <span class="tournee-status done">TERMINEE</span>
+      </div>
+      <div class="tournee-meta">
+        <span class="item">16/16 livres</span>
+        <span class="item">38 colis</span>
+        <span class="item">27.5 km</span>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width: 100%;"></div></div>
+    </a>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

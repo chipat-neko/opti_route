@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistiques — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .stats-card-mock {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-18);
+    padding: var(--space-16);
+    margin-bottom: var(--space-14);
+  }
+  .stats-card-mock .label-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-mute);
+    letter-spacing: 0.05em;
+    margin: 0 0 var(--space-12);
+  }
+  .big-num {
+    background: var(--lime);
+    border-radius: var(--radius-12);
+    padding: var(--space-12) var(--space-14);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-10);
+    margin-bottom: var(--space-12);
+  }
+  .big-num .v {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -0.04em;
+  }
+  .big-num .lbl { font-size: 0.92rem; font-weight: 700; color: var(--ink); }
+  .small-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-10);
+    text-align: left;
+  }
+  .small-stats .stat-mono {
+    padding: 0 var(--space-8);
+    border-left: 1px solid var(--divider);
+  }
+  .small-stats .stat-mono:first-child { border-left: none; padding-left: 0; }
+  .small-stats .stat-mono .l {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    font-weight: 700;
+    color: var(--text-mute);
+    letter-spacing: 0.04em;
+  }
+  .small-stats .stat-mono .v {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin-top: 2px;
+  }
+  .small-stats .stat-mono .h {
+    font-size: 0.7rem;
+    color: var(--text-mute);
+    margin-top: 2px;
+  }
+
+  /* Carte motivation */
+  .moti-card {
+    background: linear-gradient(135deg, var(--lime), rgba(184, 242, 74, 0.75));
+    border-radius: var(--radius-18);
+    padding: var(--space-16);
+    margin-bottom: var(--space-14);
+  }
+  .moti-card .head {
+    display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-10);
+  }
+  .moti-card .head .lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 800;
+    color: var(--ink); letter-spacing: 0.06em;
+  }
+  .moti-card .main {
+    font-size: 1.6rem; font-weight: 800; color: var(--ink); margin: 0;
+  }
+  .moti-card .sub {
+    font-size: 0.88rem; color: var(--ink); margin: 2px 0 var(--space-10);
+  }
+  .moti-card .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .moti-card .badge {
+    background: var(--emerald); color: white; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem; font-weight: 800; padding: 6px 10px; border-radius: var(--radius-12);
+  }
+  .moti-card .badge.ink { background: var(--ink); color: var(--lime); }
+
+  /* Bar chart */
+  .bar-row { display: flex; align-items: center; gap: var(--space-10); margin-bottom: 6px; }
+  .bar-row .lbl { width: 72px; font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+  .bar-row .bar {
+    flex: 1; height: 16px; background: var(--bg-soft); border-radius: var(--radius-6); overflow: hidden;
+  }
+  .bar-row .bar .fill { height: 100%; background: var(--lime); border-radius: var(--radius-6); }
+  .bar-row .val {
+    width: 28px; text-align: right; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem; font-weight: 700; color: var(--ink);
+  }
+
+  .top-client-row {
+    display: flex; align-items: center; gap: var(--space-10);
+    padding: var(--space-6) 0;
+  }
+  .top-client-row .rank {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 800;
+  }
+  .top-client-row .nom { flex: 1; font-size: 0.88rem; font-weight: 600; }
+  .top-client-row .count {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+    font-weight: 700; color: var(--emerald);
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html">Tournees</a>
+      <a href="carnet.html">Carnet</a>
+      <a href="stats.html" class="active">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-32) 0; max-width: 760px;">
+
+  <span class="eyebrow">Pilotage</span>
+  <h1>Statistiques.</h1>
+  <p style="color: var(--text-mute);">
+    Compteurs cumulatifs, repartition par jour de semaine, top clients,
+    raisons d'echec. Toutes les valeurs ici sont fictives (demo).
+  </p>
+
+  <!-- MotivationCard -->
+  <div class="moti-card" style="margin-top: var(--space-22);">
+    <div class="head">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 .67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67M11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
+      <span class="lbl">CETTE ANNEE</span>
+    </div>
+    <h2 class="main">847 colis livres</h2>
+    <p class="sub">128 tournees, 2 314 km parcourus</p>
+    <div class="badges">
+      <span class="badge">96% reussite annuelle</span>
+      <span class="badge ink">12 tournees sans incident</span>
+    </div>
+  </div>
+
+  <!-- StatsCard 7j / 30j / 365j -->
+  <div class="stats-card-mock">
+    <p class="label-mono">7 DERNIERS JOURS</p>
+    <div class="big-num">
+      <span class="v">42</span>
+      <span class="lbl">colis livres</span>
+    </div>
+    <div class="small-stats">
+      <div class="stat-mono">
+        <div class="l">TOURNEES</div>
+        <div class="v">6/6</div>
+        <div class="h">toutes terminees</div>
+      </div>
+      <div class="stat-mono">
+        <div class="l">ARRETS</div>
+        <div class="v">38</div>
+        <div class="h">36 livres &middot; 2 echecs</div>
+      </div>
+      <div class="stat-mono">
+        <div class="l">REUSSITE</div>
+        <div class="v">94%</div>
+        <div class="h">36 sur 38</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-card-mock">
+    <p class="label-mono">30 DERNIERS JOURS</p>
+    <div class="big-num">
+      <span class="v">187</span>
+      <span class="lbl">colis livres</span>
+    </div>
+    <div class="small-stats">
+      <div class="stat-mono">
+        <div class="l">TOURNEES</div>
+        <div class="v">24/26</div>
+        <div class="h">2 en brouillon</div>
+      </div>
+      <div class="stat-mono">
+        <div class="l">ARRETS</div>
+        <div class="v">168</div>
+        <div class="h">156 livres &middot; 12 echecs</div>
+      </div>
+      <div class="stat-mono">
+        <div class="l">REUSSITE</div>
+        <div class="v">92%</div>
+        <div class="h">156 sur 168</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-card-mock">
+    <p class="label-mono">DEPUIS 1 AN</p>
+    <div class="big-num">
+      <span class="v">847</span>
+      <span class="lbl">colis livres</span>
+    </div>
+    <div class="small-stats">
+      <div class="stat-mono">
+        <div class="l">TOURNEES</div>
+        <div class="v">128/128</div>
+        <div class="h">toutes terminees</div>
+      </div>
+      <div class="stat-mono">
+        <div class="l">ARRETS</div>
+        <div class="v">763</div>
+        <div class="h">735 livres &middot; 28 echecs</div>
+      </div>
+      <div class="stat-mono">
+        <div class="l">REUSSITE</div>
+        <div class="v">96%</div>
+        <div class="h">735 sur 763</div>
+      </div>
+    </div>
+    <div style="margin-top: var(--space-10); display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 6px; color: var(--text-mute); font-size: 0.82rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v4M10 4v4M6 4v4M6 8h12l-2 12H8z"/></svg>
+        Cout carburant estime
+      </div>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; font-weight: 800;">298,76 EUR</span>
+    </div>
+  </div>
+
+  <!-- JoursSemaineCard -->
+  <div class="stats-card-mock">
+    <p class="label-mono">COLIS PAR JOUR (30 J)</p>
+    <div class="bar-row"><span class="lbl">Lundi</span><div class="bar"><div class="fill" style="width: 75%;"></div></div><span class="val">28</span></div>
+    <div class="bar-row"><span class="lbl">Mardi</span><div class="bar"><div class="fill" style="width: 95%;"></div></div><span class="val">36</span></div>
+    <div class="bar-row"><span class="lbl">Mercredi</span><div class="bar"><div class="fill" style="width: 100%;"></div></div><span class="val">38</span></div>
+    <div class="bar-row"><span class="lbl">Jeudi</span><div class="bar"><div class="fill" style="width: 65%;"></div></div><span class="val">25</span></div>
+    <div class="bar-row"><span class="lbl">Vendredi</span><div class="bar"><div class="fill" style="width: 85%;"></div></div><span class="val">32</span></div>
+    <div class="bar-row"><span class="lbl">Samedi</span><div class="bar"><div class="fill" style="width: 50%;"></div></div><span class="val">19</span></div>
+    <div class="bar-row"><span class="lbl">Dimanche</span><div class="bar"><div class="fill" style="width: 25%;"></div></div><span class="val">9</span></div>
+  </div>
+
+  <!-- TopClientsCard -->
+  <div class="stats-card-mock">
+    <p class="label-mono">TOP 5 CLIENTS</p>
+    <div class="top-client-row">
+      <div class="rank" style="background: var(--lime); color: var(--ink);">1</div>
+      <span class="nom">Boulangerie Martin</span>
+      <span class="count">28x</span>
+    </div>
+    <div class="top-client-row">
+      <div class="rank" style="background: var(--bg-soft); color: var(--ink);">2</div>
+      <span class="nom">Pharmacie Lafayette</span>
+      <span class="count">22x</span>
+    </div>
+    <div class="top-client-row">
+      <div class="rank" style="background: var(--bg-soft); color: var(--ink);">3</div>
+      <span class="nom">Cabinet Dubreuil</span>
+      <span class="count">17x</span>
+    </div>
+    <div class="top-client-row">
+      <div class="rank" style="background: var(--bg-soft); color: var(--ink);">4</div>
+      <span class="nom">Hotel des Quinconces</span>
+      <span class="count">14x</span>
+    </div>
+    <div class="top-client-row">
+      <div class="rank" style="background: var(--bg-soft); color: var(--ink);">5</div>
+      <span class="nom">Marie Dupont</span>
+      <span class="count">12x</span>
+    </div>
+  </div>
+
+  <!-- TopRaisonsEchecCard -->
+  <div class="stats-card-mock">
+    <p class="label-mono" style="display: flex; align-items: center; gap: 6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--red)"><path d="M12 2L1 21h22M12 16h.01M11 10h2v5h-2"/></svg>
+      POURQUOI TES ECHECS - 30 DERNIERS JOURS
+    </p>
+    <div class="bar-row"><span class="lbl">Absent</span><div class="bar"><div class="fill" style="width: 100%; background: var(--red);"></div></div><span class="val" style="color: var(--red);">7</span></div>
+    <div class="bar-row"><span class="lbl">Adresse fausse</span><div class="bar"><div class="fill" style="width: 42%; background: var(--red);"></div></div><span class="val" style="color: var(--red);">3</span></div>
+    <div class="bar-row"><span class="lbl">Refuse</span><div class="bar"><div class="fill" style="width: 28%; background: var(--red);"></div></div><span class="val" style="color: var(--red);">2</span></div>
+    <p style="font-size: 0.78rem; color: var(--text-mute); font-style: italic; margin-top: var(--space-10); line-height: 1.5;">
+      Tu peux limiter les "absent" en pre-appelant les clients la veille. Pour "adresse fausse", verifie le GPS dans le carnet d'abord.
+    </p>
+  </div>
+
+  <!-- ExportCsvCard -->
+  <div class="stats-card-mock">
+    <p class="label-mono">EXPORTER LES STATS</p>
+    <p style="font-size: 0.88rem; color: var(--text-mute); margin: 0 0 var(--space-12);">
+      CSV des 365 derniers jours (compatible Excel / Google Sheets).
+    </p>
+    <button class="btn btn-primary" onclick="alert('Demo : en vrai, ce bouton genere un CSV et lance le partage natif Android (Drive, mail, etc.).');">
+      Exporter en CSV
+    </button>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
