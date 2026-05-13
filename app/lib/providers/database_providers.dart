@@ -129,6 +129,18 @@ final veilleReminderHHmmProvider = StreamProvider<String?>((ref) {
   return ref.watch(parametresRepositoryProvider).watchVeilleReminderHHmm();
 });
 
+/// Mode "chef d'equipe" : active la vue tableau de bord agregee dans
+/// le drawer + l'affectation en masse depuis la liste d'arrets.
+final modeChefProvider = StreamProvider<bool>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchModeChef();
+});
+
+/// Nom de l'entreprise du chef d'equipe (optionnel, affiche dans les
+/// exports PDF / texte).
+final entrepriseNomProvider = StreamProvider<String?>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchEntrepriseNom();
+});
+
 /// Compteurs motivants (cumul annuel + streak sans echec). Recalcule
 /// a chaque changement des tournees pour rester en sync.
 final motivationStatsProvider = FutureProvider<MotivationStats>((ref) async {

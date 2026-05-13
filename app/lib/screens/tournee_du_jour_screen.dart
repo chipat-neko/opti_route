@@ -106,6 +106,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               if (value == 'share_to_coequipier') {
                 _onShareToCoequipierPressed();
               }
+              if (value == 'assign_rest') _onAssignRestPressed();
               if (value == 'pause_short') _onPauseShortPressed();
               if (value == 'batch_livre') _onBatchLivrePressed();
               if (value == 'retry_geocode') _onRetryGeocodePressed();
@@ -191,13 +192,25 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'share_to_coequipier',
                 child: ListTile(
                   leading: Icon(Icons.groups_outlined),
                   title: Text('Partager a un coequipier'),
                   subtitle: Text(
                     'Envoie seulement ses arrets affectes',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'assign_rest',
+                child: ListTile(
+                  leading: Icon(Icons.assignment_ind_outlined),
+                  title: Text('Affecter le reste a...'),
+                  subtitle: Text(
+                    'Bulk : tous les arrets non affectes a un coequipier',
                     style: TextStyle(fontSize: 11),
                   ),
                   contentPadding: EdgeInsets.zero,
@@ -706,6 +719,108 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
     return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
         .toUpperCase();
+  }
+
+  /// Affectation en masse : tous les stops non encore affectes (Moi)
+  /// passent au coequipier choisi. Le cas d'usage typique chef d'equipe :
+  /// "je m'occupe des 5 premiers, le reste va a Lucas".
+  Future<void> _onAssignRestPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final p = context.palette;
+    final coequipiers =
+        await ref.read(coequipiersRepositoryProvider).getAllActifs();
+    if (!mounted) return;
+    if (coequipiers.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
+          ),
+        ),
+      );
+      return;
+    }
+    final stops = await ref
+        .read(stopsRepositoryProvider)
+        .getByTournee(widget.tournee.id);
+    final reste =
+        stops.where((s) => s.coequipierId == null).toList(growable: false);
+    if (reste.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Tous les arrets ont deja un coequipier affecte.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<Coequipier>(
+      context: context,
+      backgroundColor: p.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x18,
+            vertical: AppSpacing.x14,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Affecter ${reste.length} arret${reste.length > 1 ? "s" : ""} non affecte${reste.length > 1 ? "s" : ""} a',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              for (final c in coequipiers)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: colorFromTag(
+                      c.colorTag,
+                      defaultColor: AppColors.creamSoft,
+                    ),
+                    child: Text(
+                      _coequipierInitials(c.nom),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                  title: Text(c.nom),
+                  onTap: () => Navigator.of(context).pop(c),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await ref
+        .read(stopsRepositoryProvider)
+        .setCoequipierForUnassigned(widget.tournee.id, picked.id);
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          '${reste.length} arret${reste.length > 1 ? "s" : ""} affecte${reste.length > 1 ? "s" : ""} a ${picked.nom}',
+        ),
+        backgroundColor: AppColors.emerald,
+      ),
+    );
   }
 
   Future<void> _onDemarrerPressed() async {

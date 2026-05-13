@@ -5,6 +5,7 @@ import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/stats_screen.dart';
+import '../screens/tableau_bord_equipe_screen.dart';
 import '../screens/tournees_list_screen.dart';
 import '../theme/app_tokens.dart';
 
@@ -135,6 +136,32 @@ class AppDrawer extends ConsumerWidget {
                   MaterialPageRoute<void>(
                     builder: (_) => const StatsScreen(),
                   ),
+                );
+              },
+            ),
+            // Mode chef d'equipe : ajoute "Tableau de bord equipe"
+            // dans le drawer. Cache pour les livreurs solos pour eviter
+            // de polluer la navigation avec des features non utilisees.
+            Consumer(
+              builder: (context, ref, _) {
+                final modeChef =
+                    ref.watch(modeChefProvider).asData?.value ?? false;
+                if (!modeChef) return const SizedBox.shrink();
+                return ListTile(
+                  leading: const Icon(Icons.dashboard_outlined),
+                  title: const Text('Tableau de bord equipe'),
+                  subtitle: const Text(
+                    'Vue agregee toutes tournees du jour',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const TableauBordEquipeScreen(),
+                      ),
+                    );
+                  },
                 );
               },
             ),

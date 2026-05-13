@@ -695,6 +695,42 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Entreprise & equipe'),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Si tu es chef d\'equipe ou si tu factures sous une raison '
+            'sociale, renseigne tes infos pour personnaliser tes exports.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          const _EntrepriseForm(),
+          const SizedBox(height: AppSpacing.x14),
+          // Toggle "Mode chef" : active la vue tableau de bord equipe
+          // + affectation en masse. Cache si pas pertinent (livreur solo).
+          Consumer(
+            builder: (context, ref, _) {
+              final repo = ref.watch(parametresRepositoryProvider);
+              final mode =
+                  ref.watch(modeChefProvider).asData?.value ?? false;
+              return SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: mode,
+                title: const Text('Mode chef d\'equipe'),
+                subtitle: const Text(
+                  'Active le tableau de bord equipe + affectation en masse',
+                  style: TextStyle(fontSize: 12),
+                ),
+                onChanged: (v) async {
+                  await repo.setModeChef(v);
+                },
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.x18),
           const _SectionTitle('Mon equipe'),
           const SizedBox(height: AppSpacing.x10),
           Consumer(
@@ -1262,6 +1298,114 @@ class _StatusCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Form embarque pour le profil entreprise (nom raison sociale,
+/// SIRET, slogan). Persiste sur perte de focus / dispose. Pas de
+/// validation stricte (formats variables selon entreprise).
+class _EntrepriseForm extends ConsumerStatefulWidget {
+  const _EntrepriseForm();
+
+  @override
+  ConsumerState<_EntrepriseForm> createState() => _EntrepriseFormState();
+}
+
+class _EntrepriseFormState extends ConsumerState<_EntrepriseForm> {
+  final _nomCtrl = TextEditingController();
+  final _siretCtrl = TextEditingController();
+  final _sloganCtrl = TextEditingController();
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final repo = ref.read(parametresRepositoryProvider);
+    final nom = await repo.getEntrepriseNom();
+    final siret = await repo.getEntrepriseSiret();
+    final slogan = await repo.getEntrepriseSlogan();
+    if (!mounted) return;
+    setState(() {
+      _nomCtrl.text = nom ?? '';
+      _siretCtrl.text = siret ?? '';
+      _sloganCtrl.text = slogan ?? '';
+      _loaded = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    // Save final si modifs en attente.
+    if (_loaded) _persistAll();
+    _nomCtrl.dispose();
+    _siretCtrl.dispose();
+    _sloganCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _persistAll() async {
+    final repo = ref.read(parametresRepositoryProvider);
+    final nom = _nomCtrl.text.trim();
+    final siret = _siretCtrl.text.trim();
+    final slogan = _sloganCtrl.text.trim();
+    if (nom.isEmpty) {
+      await repo.clearEntrepriseNom();
+    } else {
+      await repo.setEntrepriseNom(nom);
+    }
+    if (siret.isEmpty) {
+      await repo.clearEntrepriseSiret();
+    } else {
+      await repo.setEntrepriseSiret(siret);
+    }
+    if (slogan.isEmpty) {
+      await repo.clearEntrepriseSlogan();
+    } else {
+      await repo.setEntrepriseSlogan(slogan);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextField(
+          controller: _nomCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Nom / raison sociale (optionnel)',
+            hintText: 'Ex: CALOTE Transports',
+            prefixIcon: Icon(Icons.business_outlined),
+          ),
+          onEditingComplete: _persistAll,
+        ),
+        const SizedBox(height: AppSpacing.x10),
+        TextField(
+          controller: _siretCtrl,
+          decoration: const InputDecoration(
+            labelText: 'SIRET (optionnel)',
+            hintText: '14 chiffres',
+            prefixIcon: Icon(Icons.badge_outlined),
+          ),
+          keyboardType: TextInputType.number,
+          maxLength: 14,
+          onEditingComplete: _persistAll,
+        ),
+        const SizedBox(height: AppSpacing.x10),
+        TextField(
+          controller: _sloganCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Slogan / mention (optionnel)',
+            hintText: 'Ex: Livraison express 7j/7',
+            prefixIcon: Icon(Icons.format_quote_outlined),
+          ),
+          onEditingComplete: _persistAll,
+        ),
+      ],
     );
   }
 }

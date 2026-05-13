@@ -515,6 +515,13 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
             .read(tourneesRepositoryProvider)
             .invalidateOptimization(widget.tourneeId);
       } else {
+        // Pre-remplit le coequipier par defaut de la tournee s'il y en
+        // a un (mode chef d'equipe : "tous les arrets de cette tournee
+        // sont pour Lucas").
+        final tournee = await ref
+            .read(tourneesRepositoryProvider)
+            .getById(widget.tourneeId);
+        final defautCoId = tournee?.coequipierDefautId;
         final companion = StopsCompanion.insert(
           tourneeId: widget.tourneeId,
           adresseBrute: adresseBrute,
@@ -528,6 +535,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
           notes: Value(_orNull(_notesCtrl.text)),
           nomClient: Value(_orNull(_nomClientCtrl.text)),
+          coequipierId: Value(defautCoId),
         );
         await repo.create(companion);
         await ref

@@ -24,6 +24,10 @@ class ParametresRepository {
   static const _kContrasteEleve = 'contraste_eleve';
   static const _kVeilleReminderHHmm = 'veille_reminder_hhmm';
   static const _kThemePreset = 'theme_preset';
+  static const _kEntrepriseNom = 'entreprise_nom';
+  static const _kEntrepriseSiret = 'entreprise_siret';
+  static const _kEntrepriseSlogan = 'entreprise_slogan';
+  static const _kModeChef = 'mode_chef_equipe';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -217,6 +221,39 @@ class ParametresRepository {
     assert(['lime', 'ocean', 'terracotta', 'mono'].contains(preset));
     return _write(_kThemePreset, preset);
   }
+
+  /// Profil entreprise (optionnel) — affiche dans les exports PDF /
+  /// texte. Le chef d'equipe peut renseigner sa raison sociale, son
+  /// SIRET et un slogan court pour personnaliser les bordereaux
+  /// imprimables qu'il distribue a ses coequipiers.
+  Future<String?> getEntrepriseNom() => _readKey(_kEntrepriseNom);
+  Stream<String?> watchEntrepriseNom() => _watchKey(_kEntrepriseNom);
+  Future<void> setEntrepriseNom(String v) =>
+      _write(_kEntrepriseNom, v.trim());
+  Future<int> clearEntrepriseNom() => _delete(_kEntrepriseNom);
+
+  Future<String?> getEntrepriseSiret() => _readKey(_kEntrepriseSiret);
+  Future<void> setEntrepriseSiret(String v) =>
+      _write(_kEntrepriseSiret, v.trim());
+  Future<int> clearEntrepriseSiret() => _delete(_kEntrepriseSiret);
+
+  Future<String?> getEntrepriseSlogan() => _readKey(_kEntrepriseSlogan);
+  Future<void> setEntrepriseSlogan(String v) =>
+      _write(_kEntrepriseSlogan, v.trim());
+  Future<int> clearEntrepriseSlogan() => _delete(_kEntrepriseSlogan);
+
+  /// Mode "chef d'equipe" : active une vue tableau de bord agregee
+  /// (toutes les tournees du jour par coequipier) dans le drawer, et
+  /// l'affectation en masse depuis la liste d'arrets. Par defaut false
+  /// pour ne pas polluer l'UI d'un livreur solo.
+  Future<bool> getModeChef() async =>
+      (await _readKey(_kModeChef)) == '1';
+
+  Stream<bool> watchModeChef() =>
+      _watchKey(_kModeChef).map((v) => v == '1');
+
+  Future<void> setModeChef(bool v) =>
+      _write(_kModeChef, v ? '1' : '0');
 
   /// Estime le cout carburant d'une distance (en metres) selon les
   /// parametres courants. Retourne en EUR (double, arrondi a 0.01).

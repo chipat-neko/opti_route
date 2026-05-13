@@ -228,6 +228,16 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _coequipierDefautIdMeta =
+      const VerificationMeta('coequipierDefautId');
+  @override
+  late final GeneratedColumn<int> coequipierDefautId = GeneratedColumn<int>(
+    'coequipier_defaut_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -259,6 +269,7 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     rappelLe,
     pauseeLe,
     pauseeSeconds,
+    coequipierDefautId,
     creeLe,
   ];
   @override
@@ -424,6 +435,15 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         ),
       );
     }
+    if (data.containsKey('coequipier_defaut_id')) {
+      context.handle(
+        _coequipierDefautIdMeta,
+        coequipierDefautId.isAcceptableOrUnknown(
+          data['coequipier_defaut_id']!,
+          _coequipierDefautIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -515,6 +535,10 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.int,
         data['${effectivePrefix}pausee_seconds'],
       )!,
+      coequipierDefautId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}coequipier_defaut_id'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -590,6 +614,13 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// Cumul des secondes de pause sur cette tournee. Mis a jour au
   /// "Reprendre" : pauseeSeconds += now - pauseeLe.
   final int pauseeSeconds;
+
+  /// Id du coequipier affecte par defaut pour TOUS les nouveaux stops
+  /// crees dans cette tournee (FK vers `coequipiers.id`, nullable).
+  /// Sert au chef d'equipe qui prepare une tournee complete pour Lucas :
+  /// chaque ajout d'arret prend automatiquement `coequipierId = lucas.id`
+  /// sans avoir a le configurer 30x. Modifiable apres coup par stop.
+  final int? coequipierDefautId;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -611,6 +642,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     this.rappelLe,
     this.pauseeLe,
     required this.pauseeSeconds,
+    this.coequipierDefautId,
     required this.creeLe,
   });
   @override
@@ -649,6 +681,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       map['pausee_le'] = Variable<DateTime>(pauseeLe);
     }
     map['pausee_seconds'] = Variable<int>(pauseeSeconds);
+    if (!nullToAbsent || coequipierDefautId != null) {
+      map['coequipier_defaut_id'] = Variable<int>(coequipierDefautId);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -688,6 +723,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ? const Value.absent()
           : Value(pauseeLe),
       pauseeSeconds: Value(pauseeSeconds),
+      coequipierDefautId: coequipierDefautId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coequipierDefautId),
       creeLe: Value(creeLe),
     );
   }
@@ -719,6 +757,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       rappelLe: serializer.fromJson<DateTime?>(json['rappelLe']),
       pauseeLe: serializer.fromJson<DateTime?>(json['pauseeLe']),
       pauseeSeconds: serializer.fromJson<int>(json['pauseeSeconds']),
+      coequipierDefautId: serializer.fromJson<int?>(json['coequipierDefautId']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -745,6 +784,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'rappelLe': serializer.toJson<DateTime?>(rappelLe),
       'pauseeLe': serializer.toJson<DateTime?>(pauseeLe),
       'pauseeSeconds': serializer.toJson<int>(pauseeSeconds),
+      'coequipierDefautId': serializer.toJson<int?>(coequipierDefautId),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -769,6 +809,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     Value<DateTime?> rappelLe = const Value.absent(),
     Value<DateTime?> pauseeLe = const Value.absent(),
     int? pauseeSeconds,
+    Value<int?> coequipierDefautId = const Value.absent(),
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -792,6 +833,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     rappelLe: rappelLe.present ? rappelLe.value : this.rappelLe,
     pauseeLe: pauseeLe.present ? pauseeLe.value : this.pauseeLe,
     pauseeSeconds: pauseeSeconds ?? this.pauseeSeconds,
+    coequipierDefautId: coequipierDefautId.present
+        ? coequipierDefautId.value
+        : this.coequipierDefautId,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -837,6 +881,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       pauseeSeconds: data.pauseeSeconds.present
           ? data.pauseeSeconds.value
           : this.pauseeSeconds,
+      coequipierDefautId: data.coequipierDefautId.present
+          ? data.coequipierDefautId.value
+          : this.coequipierDefautId,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -863,13 +910,14 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('rappelLe: $rappelLe, ')
           ..write('pauseeLe: $pauseeLe, ')
           ..write('pauseeSeconds: $pauseeSeconds, ')
+          ..write('coequipierDefautId: $coequipierDefautId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     nom,
     date,
@@ -889,8 +937,9 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     rappelLe,
     pauseeLe,
     pauseeSeconds,
+    coequipierDefautId,
     creeLe,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -914,6 +963,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.rappelLe == this.rappelLe &&
           other.pauseeLe == this.pauseeLe &&
           other.pauseeSeconds == this.pauseeSeconds &&
+          other.coequipierDefautId == this.coequipierDefautId &&
           other.creeLe == this.creeLe);
 }
 
@@ -937,6 +987,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<DateTime?> rappelLe;
   final Value<DateTime?> pauseeLe;
   final Value<int> pauseeSeconds;
+  final Value<int?> coequipierDefautId;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -958,6 +1009,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.rappelLe = const Value.absent(),
     this.pauseeLe = const Value.absent(),
     this.pauseeSeconds = const Value.absent(),
+    this.coequipierDefautId = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -980,6 +1032,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.rappelLe = const Value.absent(),
     this.pauseeLe = const Value.absent(),
     this.pauseeSeconds = const Value.absent(),
+    this.coequipierDefautId = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -1006,6 +1059,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<DateTime>? rappelLe,
     Expression<DateTime>? pauseeLe,
     Expression<int>? pauseeSeconds,
+    Expression<int>? coequipierDefautId,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -1029,6 +1083,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (rappelLe != null) 'rappel_le': rappelLe,
       if (pauseeLe != null) 'pausee_le': pauseeLe,
       if (pauseeSeconds != null) 'pausee_seconds': pauseeSeconds,
+      if (coequipierDefautId != null)
+        'coequipier_defaut_id': coequipierDefautId,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -1053,6 +1109,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<DateTime?>? rappelLe,
     Value<DateTime?>? pauseeLe,
     Value<int>? pauseeSeconds,
+    Value<int?>? coequipierDefautId,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -1076,6 +1133,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       rappelLe: rappelLe ?? this.rappelLe,
       pauseeLe: pauseeLe ?? this.pauseeLe,
       pauseeSeconds: pauseeSeconds ?? this.pauseeSeconds,
+      coequipierDefautId: coequipierDefautId ?? this.coequipierDefautId,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -1142,6 +1200,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (pauseeSeconds.present) {
       map['pausee_seconds'] = Variable<int>(pauseeSeconds.value);
     }
+    if (coequipierDefautId.present) {
+      map['coequipier_defaut_id'] = Variable<int>(coequipierDefautId.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -1170,6 +1231,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('rappelLe: $rappelLe, ')
           ..write('pauseeLe: $pauseeLe, ')
           ..write('pauseeSeconds: $pauseeSeconds, ')
+          ..write('coequipierDefautId: $coequipierDefautId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -5594,6 +5656,7 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<DateTime?> rappelLe,
       Value<DateTime?> pauseeLe,
       Value<int> pauseeSeconds,
+      Value<int?> coequipierDefautId,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -5617,6 +5680,7 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<DateTime?> rappelLe,
       Value<DateTime?> pauseeLe,
       Value<int> pauseeSeconds,
+      Value<int?> coequipierDefautId,
       Value<DateTime> creeLe,
     });
 
@@ -5745,6 +5809,11 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<int> get pauseeSeconds => $composableBuilder(
     column: $table.pauseeSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get coequipierDefautId => $composableBuilder(
+    column: $table.coequipierDefautId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5883,6 +5952,11 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get coequipierDefautId => $composableBuilder(
+    column: $table.coequipierDefautId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -5977,6 +6051,11 @@ class $$TourneesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get coequipierDefautId => $composableBuilder(
+    column: $table.coequipierDefautId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
 
@@ -6053,6 +6132,7 @@ class $$TourneesTableTableManager
                 Value<DateTime?> rappelLe = const Value.absent(),
                 Value<DateTime?> pauseeLe = const Value.absent(),
                 Value<int> pauseeSeconds = const Value.absent(),
+                Value<int?> coequipierDefautId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -6074,6 +6154,7 @@ class $$TourneesTableTableManager
                 rappelLe: rappelLe,
                 pauseeLe: pauseeLe,
                 pauseeSeconds: pauseeSeconds,
+                coequipierDefautId: coequipierDefautId,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -6097,6 +6178,7 @@ class $$TourneesTableTableManager
                 Value<DateTime?> rappelLe = const Value.absent(),
                 Value<DateTime?> pauseeLe = const Value.absent(),
                 Value<int> pauseeSeconds = const Value.absent(),
+                Value<int?> coequipierDefautId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -6118,6 +6200,7 @@ class $$TourneesTableTableManager
                 rappelLe: rappelLe,
                 pauseeLe: pauseeLe,
                 pauseeSeconds: pauseeSeconds,
+                coequipierDefautId: coequipierDefautId,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0

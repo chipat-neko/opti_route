@@ -68,5 +68,12 @@ class Tournees extends Table {
   IntColumn get pauseeSeconds =>
       integer().withDefault(const Constant(0))();
 
+  /// Id du coequipier affecte par defaut pour TOUS les nouveaux stops
+  /// crees dans cette tournee (FK vers `coequipiers.id`, nullable).
+  /// Sert au chef d'equipe qui prepare une tournee complete pour Lucas :
+  /// chaque ajout d'arret prend automatiquement `coequipierId = lucas.id`
+  /// sans avoir a le configurer 30x. Modifiable apres coup par stop.
+  IntColumn get coequipierDefautId => integer().nullable()();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

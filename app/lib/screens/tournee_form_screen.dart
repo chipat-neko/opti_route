@@ -29,6 +29,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
   late String _profilOrs;
   late bool _eviterPeages;
   DateTime? _rappelLe;
+  int? _coequipierDefautId;
 
   bool get _isEdit => widget.initial != null;
 
@@ -43,6 +44,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
     _profilOrs = t?.profilOrs ?? 'driving-car';
     _eviterPeages = t?.eviterPeages ?? false;
     _rappelLe = t?.rappelLe;
+    _coequipierDefautId = t?.coequipierDefautId;
     if (t != null) {
       _depart = AddressSuggestion(
         displayName: t.pointDepartLabel,
@@ -182,6 +184,25 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
               defaultDate: _date,
               onChanged: (v) => setState(() => _rappelLe = v),
             ),
+            const SizedBox(height: AppSpacing.x18),
+            // Affecter par defaut a un coequipier. Cache si aucun
+            // coequipier en base (livreur solo : pas pertinent).
+            Consumer(
+              builder: (context, ref, _) {
+                final list = ref
+                        .watch(coequipiersActifsProvider)
+                        .asData
+                        ?.value ??
+                    const <Coequipier>[];
+                if (list.isEmpty) return const SizedBox.shrink();
+                return _DefaultCoequipierTile(
+                  coequipiers: list,
+                  value: _coequipierDefautId,
+                  onChanged: (v) =>
+                      setState(() => _coequipierDefautId = v),
+                );
+              },
+            ),
             const SizedBox(height: AppSpacing.x28),
             FilledButton.icon(
               onPressed: _saving ? null : _save,
@@ -308,6 +329,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
       profilOrs: Value(_profilOrs),
       eviterPeages: Value(_eviterPeages),
       rappelLe: Value(_rappelLe),
+      coequipierDefautId: Value(_coequipierDefautId),
     );
 
     try {
@@ -506,5 +528,128 @@ class _DangerButton extends StatelessWidget {
         label: Text(label),
       ),
     );
+  }
+}
+
+/// Tile "Affecter par defaut a" : ouvre un picker de coequipier qui
+/// pre-remplira `coequipierId` pour tous les NOUVEAUX stops crees dans
+/// cette tournee. Modifiable apres coup au cas par cas dans la bottom
+/// sheet d'un stop. Null = Moi.
+class _DefaultCoequipierTile extends StatelessWidget {
+  const _DefaultCoequipierTile({
+    required this.coequipiers,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<Coequipier> coequipiers;
+  final int? value;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final selected = value == null
+        ? null
+        : coequipiers.where((c) => c.id == value).firstOrNull;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.assignment_ind_outlined),
+      title: const Text('Affecter par defaut a'),
+      subtitle: Text(
+        selected == null
+            ? 'Moi (defaut)'
+            : 'Tous les nouveaux arrets : ${selected.nom}',
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: value == null
+          ? const Icon(Icons.add)
+          : IconButton(
+              icon: const Icon(Icons.clear, size: 20),
+              onPressed: () => onChanged(null),
+              tooltip: 'Retirer l\'affectation par defaut',
+            ),
+      onTap: () async {
+        final picked = await showModalBottomSheet<int?>(
+          context: context,
+          backgroundColor: p.cream,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppRadius.r22),
+            ),
+          ),
+          builder: (_) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x18,
+                vertical: AppSpacing.x14,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Affecter par defaut a',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: p.ink,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.x12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const CircleAvatar(
+                      backgroundColor: AppColors.lime,
+                      child: Icon(Icons.person, color: AppColors.ink),
+                    ),
+                    title: const Text('Moi (defaut)'),
+                    trailing: value == null
+                        ? const Icon(Icons.check, color: AppColors.emerald)
+                        : null,
+                    onTap: () => Navigator.of(context).pop(null),
+                  ),
+                  const Divider(),
+                  for (final c in coequipiers)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: colorFromTag(
+                          c.colorTag,
+                          defaultColor: AppColors.creamSoft,
+                        ),
+                        child: Text(
+                          _initialsFor(c.nom),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      ),
+                      title: Text(c.nom),
+                      trailing: c.id == value
+                          ? const Icon(Icons.check, color: AppColors.emerald)
+                          : null,
+                      onTap: () => Navigator.of(context).pop(c.id),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+        // Modal ferme avec selection : on accepte aussi `null` (= Moi).
+        // Modal ferme sans choix (back) : retourne null aussi mais on
+        // ne distingue pas. C'est OK car la valeur null = etat par defaut.
+        if (picked != value) onChanged(picked);
+      },
+    );
+  }
+
+  static String _initialsFor(String nom) {
+    final parts = nom.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 }
