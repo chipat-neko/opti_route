@@ -9,6 +9,7 @@ import '../providers/optimization_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import 'coequipiers_screen.dart';
 import 'mentions_legales_screen.dart';
 
 class ParametresScreen extends ConsumerStatefulWidget {
@@ -688,6 +689,37 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
                     await repo.setVeilleReminderHHmm('$h:$m');
                   }
                 },
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
+          const _SectionTitle('Mon equipe'),
+          const SizedBox(height: AppSpacing.x10),
+          Consumer(
+            builder: (context, ref, _) {
+              final list =
+                  ref.watch(coequipiersAllProvider).asData?.value ?? const [];
+              final nbActifs = list.where((c) => c.actif).length;
+              return ListTile(
+                leading: const Icon(Icons.groups_outlined),
+                title: const Text('Coequipiers'),
+                subtitle: Text(
+                  list.isEmpty
+                      ? 'Aucun coequipier — ajoute tes aidants pour '
+                          'tracker qui livre quoi'
+                      : '$nbActifs actif${nbActifs > 1 ? "s" : ""}'
+                          '${list.length > nbActifs ? " · ${list.length - nbActifs} archive${list.length - nbActifs > 1 ? "s" : ""}" : ""}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                contentPadding: EdgeInsets.zero,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CoequipiersScreen(),
+                  ),
+                ),
               );
             },
           ),

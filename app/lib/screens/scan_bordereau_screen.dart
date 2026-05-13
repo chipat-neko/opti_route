@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../data/bordereau_extraction.dart';
 import '../data/bordereau_parser.dart';
+import '../data/colissimo_bordereau_parser.dart';
 import '../data/ocr_service.dart';
 import '../providers/ocr_provider.dart';
 import '../theme/app_theme.dart';
@@ -338,7 +339,13 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       }
       debugPrint('OCRDUMP === END ===');
 
-      final extraction = BordereauParser().parse(result.lines);
+      // Auto-detection format : si le texte OCR ressemble a un
+      // bordereau Colissimo / La Poste, on utilise le parser dedie ;
+      // sinon le parser MESEXP par defaut.
+      final extraction =
+          ColissimoBordereauParser.looksLikeColissimo(result.lines)
+              ? ColissimoBordereauParser().parse(result.lines)
+              : BordereauParser().parse(result.lines);
       setState(() {
         _imageFile = file;
         _ocr = result;

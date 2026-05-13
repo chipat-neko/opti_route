@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
 import '../data/eta_calculator.dart';
 import '../data/parametres_repository.dart';
@@ -33,6 +34,28 @@ final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
 final savedDestinationsRepositoryProvider =
     Provider<SavedDestinationsRepository>((ref) {
   return SavedDestinationsRepository(ref.watch(appDatabaseProvider));
+});
+
+final coequipiersRepositoryProvider = Provider<CoequipiersRepository>((ref) {
+  return CoequipiersRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Coequipiers actifs (visibles dans le selecteur d'affectation).
+final coequipiersActifsProvider = StreamProvider<List<Coequipier>>((ref) {
+  return ref.watch(coequipiersRepositoryProvider).watchActifs();
+});
+
+/// Tous les coequipiers (actifs + archives) pour l'UI de gestion.
+final coequipiersAllProvider = StreamProvider<List<Coequipier>>((ref) {
+  return ref.watch(coequipiersRepositoryProvider).watchAll();
+});
+
+/// Map id->nom des coequipiers actifs, pour resolution rapide depuis
+/// `stop.coequipierId` dans la liste d'arrets (sans relancer une requete
+/// par row).
+final coequipiersByIdProvider = Provider<Map<int, Coequipier>>((ref) {
+  final list = ref.watch(coequipiersActifsProvider).asData?.value ?? const [];
+  return {for (final c in list) c.id: c};
 });
 
 final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {

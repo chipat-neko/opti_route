@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'tables/coequipiers.dart';
 import 'tables/geocode_cache.dart';
 import 'tables/parametres.dart';
 import 'tables/saved_destinations.dart';
@@ -12,6 +13,7 @@ import 'tables/tournees.dart';
 // Re-export des tables pour que les modules historiques qui faisaient
 // `import 'database.dart'` puissent continuer a utiliser
 // `TourneesCompanion`, `Stop`, etc. sans changer leurs imports.
+export 'tables/coequipiers.dart';
 export 'tables/geocode_cache.dart';
 export 'tables/parametres.dart';
 export 'tables/saved_destinations.dart';
@@ -31,6 +33,7 @@ part 'database.g.dart';
     GeocodeCache,
     SavedDestinations,
     StopHistory,
+    Coequipiers,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -38,7 +41,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -112,6 +115,10 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(savedDestinations, savedDestinations.codeAcces);
             await m.addColumn(
                 savedDestinations, savedDestinations.etageBatiment);
+          }
+          if (from < 20) {
+            await m.createTable(coequipiers);
+            await m.addColumn(stops, stops.coequipierId);
           }
         },
         beforeOpen: (details) async {

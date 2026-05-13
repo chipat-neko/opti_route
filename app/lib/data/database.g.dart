@@ -1416,6 +1416,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _coequipierIdMeta = const VerificationMeta(
+    'coequipierId',
+  );
+  @override
+  late final GeneratedColumn<int> coequipierId = GeneratedColumn<int>(
+    'coequipier_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -1449,6 +1460,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     ordreOptimise,
     ordrePriorite,
     preuvePhotoPath,
+    coequipierId,
     creeLe,
   ];
   @override
@@ -1617,6 +1629,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('coequipier_id')) {
+      context.handle(
+        _coequipierIdMeta,
+        coequipierId.isAcceptableOrUnknown(
+          data['coequipier_id']!,
+          _coequipierIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -1716,6 +1737,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}preuve_photo_path'],
       ),
+      coequipierId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}coequipier_id'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -1770,6 +1795,12 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// Null si pas de photo prise. Stockage privé dans
   /// `app_documents/preuves/<stopId>_<timestamp>.jpg`.
   final String? preuvePhotoPath;
+
+  /// Id du coequipier affecte a cet arret (FK vers `coequipiers.id`).
+  /// Null = Noah lui-meme (cas par defaut, pas d'aidant). Pas de
+  /// cascade : si on supprime un coequipier, on le retire de l'UI
+  /// mais on garde la trace dans les arrets pour l'historique.
+  final int? coequipierId;
   final DateTime creeLe;
   const Stop({
     required this.id,
@@ -1793,6 +1824,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.ordreOptimise,
     this.ordrePriorite,
     this.preuvePhotoPath,
+    this.coequipierId,
     required this.creeLe,
   });
   @override
@@ -1847,6 +1879,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || preuvePhotoPath != null) {
       map['preuve_photo_path'] = Variable<String>(preuvePhotoPath);
     }
+    if (!nullToAbsent || coequipierId != null) {
+      map['coequipier_id'] = Variable<int>(coequipierId);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -1898,6 +1933,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       preuvePhotoPath: preuvePhotoPath == null && nullToAbsent
           ? const Value.absent()
           : Value(preuvePhotoPath),
+      coequipierId: coequipierId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coequipierId),
       creeLe: Value(creeLe),
     );
   }
@@ -1931,6 +1969,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordreOptimise: serializer.fromJson<int?>(json['ordreOptimise']),
       ordrePriorite: serializer.fromJson<int?>(json['ordrePriorite']),
       preuvePhotoPath: serializer.fromJson<String?>(json['preuvePhotoPath']),
+      coequipierId: serializer.fromJson<int?>(json['coequipierId']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -1959,6 +1998,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'ordreOptimise': serializer.toJson<int?>(ordreOptimise),
       'ordrePriorite': serializer.toJson<int?>(ordrePriorite),
       'preuvePhotoPath': serializer.toJson<String?>(preuvePhotoPath),
+      'coequipierId': serializer.toJson<int?>(coequipierId),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -1985,6 +2025,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<int?> ordreOptimise = const Value.absent(),
     Value<int?> ordrePriorite = const Value.absent(),
     Value<String?> preuvePhotoPath = const Value.absent(),
+    Value<int?> coequipierId = const Value.absent(),
     DateTime? creeLe,
   }) => Stop(
     id: id ?? this.id,
@@ -2016,6 +2057,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     preuvePhotoPath: preuvePhotoPath.present
         ? preuvePhotoPath.value
         : this.preuvePhotoPath,
+    coequipierId: coequipierId.present ? coequipierId.value : this.coequipierId,
     creeLe: creeLe ?? this.creeLe,
   );
   Stop copyWithCompanion(StopsCompanion data) {
@@ -2061,6 +2103,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       preuvePhotoPath: data.preuvePhotoPath.present
           ? data.preuvePhotoPath.value
           : this.preuvePhotoPath,
+      coequipierId: data.coequipierId.present
+          ? data.coequipierId.value
+          : this.coequipierId,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -2089,6 +2134,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('preuvePhotoPath: $preuvePhotoPath, ')
+          ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -2117,6 +2163,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     ordreOptimise,
     ordrePriorite,
     preuvePhotoPath,
+    coequipierId,
     creeLe,
   ]);
   @override
@@ -2144,6 +2191,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.ordreOptimise == this.ordreOptimise &&
           other.ordrePriorite == this.ordrePriorite &&
           other.preuvePhotoPath == this.preuvePhotoPath &&
+          other.coequipierId == this.coequipierId &&
           other.creeLe == this.creeLe);
 }
 
@@ -2169,6 +2217,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<int?> ordreOptimise;
   final Value<int?> ordrePriorite;
   final Value<String?> preuvePhotoPath;
+  final Value<int?> coequipierId;
   final Value<DateTime> creeLe;
   const StopsCompanion({
     this.id = const Value.absent(),
@@ -2192,6 +2241,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.preuvePhotoPath = const Value.absent(),
+    this.coequipierId = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   StopsCompanion.insert({
@@ -2216,6 +2266,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.preuvePhotoPath = const Value.absent(),
+    this.coequipierId = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
@@ -2241,6 +2292,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<int>? ordreOptimise,
     Expression<int>? ordrePriorite,
     Expression<String>? preuvePhotoPath,
+    Expression<int>? coequipierId,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -2265,6 +2317,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (ordreOptimise != null) 'ordre_optimise': ordreOptimise,
       if (ordrePriorite != null) 'ordre_priorite': ordrePriorite,
       if (preuvePhotoPath != null) 'preuve_photo_path': preuvePhotoPath,
+      if (coequipierId != null) 'coequipier_id': coequipierId,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -2291,6 +2344,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<int?>? ordreOptimise,
     Value<int?>? ordrePriorite,
     Value<String?>? preuvePhotoPath,
+    Value<int?>? coequipierId,
     Value<DateTime>? creeLe,
   }) {
     return StopsCompanion(
@@ -2315,6 +2369,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       ordreOptimise: ordreOptimise ?? this.ordreOptimise,
       ordrePriorite: ordrePriorite ?? this.ordrePriorite,
       preuvePhotoPath: preuvePhotoPath ?? this.preuvePhotoPath,
+      coequipierId: coequipierId ?? this.coequipierId,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -2385,6 +2440,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (preuvePhotoPath.present) {
       map['preuve_photo_path'] = Variable<String>(preuvePhotoPath.value);
     }
+    if (coequipierId.present) {
+      map['coequipier_id'] = Variable<int>(coequipierId.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -2415,6 +2473,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('preuvePhotoPath: $preuvePhotoPath, ')
+          ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -5051,6 +5110,417 @@ class StopHistoryCompanion extends UpdateCompanion<StopHistoryData> {
   }
 }
 
+class $CoequipiersTable extends Coequipiers
+    with TableInfo<$CoequipiersTable, Coequipier> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CoequipiersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nomMeta = const VerificationMeta('nom');
+  @override
+  late final GeneratedColumn<String> nom = GeneratedColumn<String>(
+    'nom',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 20,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorTagMeta = const VerificationMeta(
+    'colorTag',
+  );
+  @override
+  late final GeneratedColumn<String> colorTag = GeneratedColumn<String>(
+    'color_tag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _telephoneMeta = const VerificationMeta(
+    'telephone',
+  );
+  @override
+  late final GeneratedColumn<String> telephone = GeneratedColumn<String>(
+    'telephone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actifMeta = const VerificationMeta('actif');
+  @override
+  late final GeneratedColumn<bool> actif = GeneratedColumn<bool>(
+    'actif',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("actif" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nom,
+    colorTag,
+    telephone,
+    actif,
+    creeLe,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'coequipiers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Coequipier> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('nom')) {
+      context.handle(
+        _nomMeta,
+        nom.isAcceptableOrUnknown(data['nom']!, _nomMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomMeta);
+    }
+    if (data.containsKey('color_tag')) {
+      context.handle(
+        _colorTagMeta,
+        colorTag.isAcceptableOrUnknown(data['color_tag']!, _colorTagMeta),
+      );
+    }
+    if (data.containsKey('telephone')) {
+      context.handle(
+        _telephoneMeta,
+        telephone.isAcceptableOrUnknown(data['telephone']!, _telephoneMeta),
+      );
+    }
+    if (data.containsKey('actif')) {
+      context.handle(
+        _actifMeta,
+        actif.isAcceptableOrUnknown(data['actif']!, _actifMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Coequipier map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Coequipier(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      nom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nom'],
+      )!,
+      colorTag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_tag'],
+      ),
+      telephone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}telephone'],
+      ),
+      actif: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}actif'],
+      )!,
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+    );
+  }
+
+  @override
+  $CoequipiersTable createAlias(String alias) {
+    return $CoequipiersTable(attachedDatabase, alias);
+  }
+}
+
+class Coequipier extends DataClass implements Insertable<Coequipier> {
+  final int id;
+
+  /// Nom court a afficher en badge (ex: "Papa", "Lucas", "Maman").
+  /// Max 20 chars pour tenir dans les chips/avatars sans wrap.
+  final String nom;
+
+  /// Couleur du tag pour l'avatar (cle dans `colorFromTag` :
+  /// 'lime' / 'emerald' / 'amber' / 'red' / 'cream' / 'ink').
+  /// Null = couleur par defaut (cream).
+  final String? colorTag;
+
+  /// Telephone (optionnel) pour le partage de tournee via SMS / WhatsApp.
+  final String? telephone;
+
+  /// Vrai = visible dans le selecteur. Faux = archive (ancien aidant
+  /// qui ne livre plus avec Noah). On garde l'entree en base pour
+  /// preserver l'historique des stats.
+  final bool actif;
+  final DateTime creeLe;
+  const Coequipier({
+    required this.id,
+    required this.nom,
+    this.colorTag,
+    this.telephone,
+    required this.actif,
+    required this.creeLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['nom'] = Variable<String>(nom);
+    if (!nullToAbsent || colorTag != null) {
+      map['color_tag'] = Variable<String>(colorTag);
+    }
+    if (!nullToAbsent || telephone != null) {
+      map['telephone'] = Variable<String>(telephone);
+    }
+    map['actif'] = Variable<bool>(actif);
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    return map;
+  }
+
+  CoequipiersCompanion toCompanion(bool nullToAbsent) {
+    return CoequipiersCompanion(
+      id: Value(id),
+      nom: Value(nom),
+      colorTag: colorTag == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorTag),
+      telephone: telephone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(telephone),
+      actif: Value(actif),
+      creeLe: Value(creeLe),
+    );
+  }
+
+  factory Coequipier.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Coequipier(
+      id: serializer.fromJson<int>(json['id']),
+      nom: serializer.fromJson<String>(json['nom']),
+      colorTag: serializer.fromJson<String?>(json['colorTag']),
+      telephone: serializer.fromJson<String?>(json['telephone']),
+      actif: serializer.fromJson<bool>(json['actif']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'nom': serializer.toJson<String>(nom),
+      'colorTag': serializer.toJson<String?>(colorTag),
+      'telephone': serializer.toJson<String?>(telephone),
+      'actif': serializer.toJson<bool>(actif),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+    };
+  }
+
+  Coequipier copyWith({
+    int? id,
+    String? nom,
+    Value<String?> colorTag = const Value.absent(),
+    Value<String?> telephone = const Value.absent(),
+    bool? actif,
+    DateTime? creeLe,
+  }) => Coequipier(
+    id: id ?? this.id,
+    nom: nom ?? this.nom,
+    colorTag: colorTag.present ? colorTag.value : this.colorTag,
+    telephone: telephone.present ? telephone.value : this.telephone,
+    actif: actif ?? this.actif,
+    creeLe: creeLe ?? this.creeLe,
+  );
+  Coequipier copyWithCompanion(CoequipiersCompanion data) {
+    return Coequipier(
+      id: data.id.present ? data.id.value : this.id,
+      nom: data.nom.present ? data.nom.value : this.nom,
+      colorTag: data.colorTag.present ? data.colorTag.value : this.colorTag,
+      telephone: data.telephone.present ? data.telephone.value : this.telephone,
+      actif: data.actif.present ? data.actif.value : this.actif,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Coequipier(')
+          ..write('id: $id, ')
+          ..write('nom: $nom, ')
+          ..write('colorTag: $colorTag, ')
+          ..write('telephone: $telephone, ')
+          ..write('actif: $actif, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, nom, colorTag, telephone, actif, creeLe);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Coequipier &&
+          other.id == this.id &&
+          other.nom == this.nom &&
+          other.colorTag == this.colorTag &&
+          other.telephone == this.telephone &&
+          other.actif == this.actif &&
+          other.creeLe == this.creeLe);
+}
+
+class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
+  final Value<int> id;
+  final Value<String> nom;
+  final Value<String?> colorTag;
+  final Value<String?> telephone;
+  final Value<bool> actif;
+  final Value<DateTime> creeLe;
+  const CoequipiersCompanion({
+    this.id = const Value.absent(),
+    this.nom = const Value.absent(),
+    this.colorTag = const Value.absent(),
+    this.telephone = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  });
+  CoequipiersCompanion.insert({
+    this.id = const Value.absent(),
+    required String nom,
+    this.colorTag = const Value.absent(),
+    this.telephone = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  }) : nom = Value(nom);
+  static Insertable<Coequipier> custom({
+    Expression<int>? id,
+    Expression<String>? nom,
+    Expression<String>? colorTag,
+    Expression<String>? telephone,
+    Expression<bool>? actif,
+    Expression<DateTime>? creeLe,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nom != null) 'nom': nom,
+      if (colorTag != null) 'color_tag': colorTag,
+      if (telephone != null) 'telephone': telephone,
+      if (actif != null) 'actif': actif,
+      if (creeLe != null) 'cree_le': creeLe,
+    });
+  }
+
+  CoequipiersCompanion copyWith({
+    Value<int>? id,
+    Value<String>? nom,
+    Value<String?>? colorTag,
+    Value<String?>? telephone,
+    Value<bool>? actif,
+    Value<DateTime>? creeLe,
+  }) {
+    return CoequipiersCompanion(
+      id: id ?? this.id,
+      nom: nom ?? this.nom,
+      colorTag: colorTag ?? this.colorTag,
+      telephone: telephone ?? this.telephone,
+      actif: actif ?? this.actif,
+      creeLe: creeLe ?? this.creeLe,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (nom.present) {
+      map['nom'] = Variable<String>(nom.value);
+    }
+    if (colorTag.present) {
+      map['color_tag'] = Variable<String>(colorTag.value);
+    }
+    if (telephone.present) {
+      map['telephone'] = Variable<String>(telephone.value);
+    }
+    if (actif.present) {
+      map['actif'] = Variable<bool>(actif.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CoequipiersCompanion(')
+          ..write('id: $id, ')
+          ..write('nom: $nom, ')
+          ..write('colorTag: $colorTag, ')
+          ..write('telephone: $telephone, ')
+          ..write('actif: $actif, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5062,6 +5532,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SavedDestinationsTable savedDestinations =
       $SavedDestinationsTable(this);
   late final $StopHistoryTable stopHistory = $StopHistoryTable(this);
+  late final $CoequipiersTable coequipiers = $CoequipiersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5074,6 +5545,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     geocodeCache,
     savedDestinations,
     stopHistory,
+    coequipiers,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -5719,6 +6191,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
       Value<String?> preuvePhotoPath,
+      Value<int?> coequipierId,
       Value<DateTime> creeLe,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
@@ -5744,6 +6217,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
       Value<String?> preuvePhotoPath,
+      Value<int?> coequipierId,
       Value<DateTime> creeLe,
     });
 
@@ -5911,6 +6385,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get preuvePhotoPath => $composableBuilder(
     column: $table.preuvePhotoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get coequipierId => $composableBuilder(
+    column: $table.coequipierId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6102,6 +6581,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get coequipierId => $composableBuilder(
+    column: $table.coequipierId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -6217,6 +6701,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<String> get preuvePhotoPath => $composableBuilder(
     column: $table.preuvePhotoPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get coequipierId => $composableBuilder(
+    column: $table.coequipierId,
     builder: (column) => column,
   );
 
@@ -6350,6 +6839,7 @@ class $$StopsTableTableManager
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<String?> preuvePhotoPath = const Value.absent(),
+                Value<int?> coequipierId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
@@ -6373,6 +6863,7 @@ class $$StopsTableTableManager
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
                 preuvePhotoPath: preuvePhotoPath,
+                coequipierId: coequipierId,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -6398,6 +6889,7 @@ class $$StopsTableTableManager
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<String?> preuvePhotoPath = const Value.absent(),
+                Value<int?> coequipierId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
@@ -6421,6 +6913,7 @@ class $$StopsTableTableManager
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
                 preuvePhotoPath: preuvePhotoPath,
+                coequipierId: coequipierId,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0
@@ -8080,6 +8573,219 @@ typedef $$StopHistoryTableProcessedTableManager =
       StopHistoryData,
       PrefetchHooks Function({bool stopId})
     >;
+typedef $$CoequipiersTableCreateCompanionBuilder =
+    CoequipiersCompanion Function({
+      Value<int> id,
+      required String nom,
+      Value<String?> colorTag,
+      Value<String?> telephone,
+      Value<bool> actif,
+      Value<DateTime> creeLe,
+    });
+typedef $$CoequipiersTableUpdateCompanionBuilder =
+    CoequipiersCompanion Function({
+      Value<int> id,
+      Value<String> nom,
+      Value<String?> colorTag,
+      Value<String?> telephone,
+      Value<bool> actif,
+      Value<DateTime> creeLe,
+    });
+
+class $$CoequipiersTableFilterComposer
+    extends Composer<_$AppDatabase, $CoequipiersTable> {
+  $$CoequipiersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorTag => $composableBuilder(
+    column: $table.colorTag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CoequipiersTableOrderingComposer
+    extends Composer<_$AppDatabase, $CoequipiersTable> {
+  $$CoequipiersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get colorTag => $composableBuilder(
+    column: $table.colorTag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CoequipiersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CoequipiersTable> {
+  $$CoequipiersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nom =>
+      $composableBuilder(column: $table.nom, builder: (column) => column);
+
+  GeneratedColumn<String> get colorTag =>
+      $composableBuilder(column: $table.colorTag, builder: (column) => column);
+
+  GeneratedColumn<String> get telephone =>
+      $composableBuilder(column: $table.telephone, builder: (column) => column);
+
+  GeneratedColumn<bool> get actif =>
+      $composableBuilder(column: $table.actif, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+}
+
+class $$CoequipiersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CoequipiersTable,
+          Coequipier,
+          $$CoequipiersTableFilterComposer,
+          $$CoequipiersTableOrderingComposer,
+          $$CoequipiersTableAnnotationComposer,
+          $$CoequipiersTableCreateCompanionBuilder,
+          $$CoequipiersTableUpdateCompanionBuilder,
+          (
+            Coequipier,
+            BaseReferences<_$AppDatabase, $CoequipiersTable, Coequipier>,
+          ),
+          Coequipier,
+          PrefetchHooks Function()
+        > {
+  $$CoequipiersTableTableManager(_$AppDatabase db, $CoequipiersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CoequipiersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CoequipiersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CoequipiersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> nom = const Value.absent(),
+                Value<String?> colorTag = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => CoequipiersCompanion(
+                id: id,
+                nom: nom,
+                colorTag: colorTag,
+                telephone: telephone,
+                actif: actif,
+                creeLe: creeLe,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String nom,
+                Value<String?> colorTag = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => CoequipiersCompanion.insert(
+                id: id,
+                nom: nom,
+                colorTag: colorTag,
+                telephone: telephone,
+                actif: actif,
+                creeLe: creeLe,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CoequipiersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CoequipiersTable,
+      Coequipier,
+      $$CoequipiersTableFilterComposer,
+      $$CoequipiersTableOrderingComposer,
+      $$CoequipiersTableAnnotationComposer,
+      $$CoequipiersTableCreateCompanionBuilder,
+      $$CoequipiersTableUpdateCompanionBuilder,
+      (
+        Coequipier,
+        BaseReferences<_$AppDatabase, $CoequipiersTable, Coequipier>,
+      ),
+      Coequipier,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8098,4 +8804,6 @@ class $AppDatabaseManager {
       $$SavedDestinationsTableTableManager(_db, _db.savedDestinations);
   $$StopHistoryTableTableManager get stopHistory =>
       $$StopHistoryTableTableManager(_db, _db.stopHistory);
+  $$CoequipiersTableTableManager get coequipiers =>
+      $$CoequipiersTableTableManager(_db, _db.coequipiers);
 }

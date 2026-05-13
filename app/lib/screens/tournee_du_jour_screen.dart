@@ -2432,6 +2432,9 @@ class _StopRow extends ConsumerWidget {
                   ],
                 ),
               ),
+              // Avatar du coequipier affecte (uniquement si != Noah).
+              if (stop.coequipierId != null)
+                _CoequipierAvatar(coequipierId: stop.coequipierId!),
               // ETA estimee (uniquement pour les stops a_livrer).
               if (!isLivre && !isEchec)
                 _EtaBadge(tourneeId: stop.tourneeId, stopId: stop.id),
@@ -2775,6 +2778,62 @@ class _Tag extends StatelessWidget {
         style: style,
       ),
     );
+  }
+}
+
+/// Mini avatar circulaire du coequipier affecte a un arret.
+/// Resolution non-bloquante : si le coequipier n'est pas dans
+/// `coequipiersByIdProvider` (archive ou supprime), on affiche `?`.
+class _CoequipierAvatar extends ConsumerWidget {
+  const _CoequipierAvatar({required this.coequipierId});
+
+  final int coequipierId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final byId = ref.watch(coequipiersByIdProvider);
+    final c = byId[coequipierId];
+    final color = c == null
+        ? context.palette.creamSoft
+        : colorFromTag(c.colorTag, defaultColor: AppColors.lime);
+    final label = c == null ? '?' : _avatarInitials(c.nom);
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.x6),
+      child: Tooltip(
+        message: c?.nom ?? 'Coequipier inconnu',
+        child: Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.ink.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _avatarInitials(String nom) {
+    final parts = nom.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 }
 

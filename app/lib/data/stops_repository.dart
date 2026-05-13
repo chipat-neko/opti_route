@@ -43,6 +43,26 @@ class StopsRepository {
     return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(entry);
   }
 
+  /// Affecte un coequipier a un arret. [coequipierId] null = Noah
+  /// lui-meme (cas par defaut, pas d'aidant).
+  Future<int> setCoequipier(int stopId, int? coequipierId) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(coequipierId: Value(coequipierId)));
+  }
+
+  /// Affecte un coequipier a TOUS les stops d'une tournee qui n'ont
+  /// pas encore d'affectation. Sert au "Tout affecter a X" rapide.
+  Future<int> setCoequipierForUnassigned(
+    int tourneeId,
+    int? coequipierId,
+  ) async {
+    return (_db.update(_db.stops)
+          ..where((s) =>
+              s.tourneeId.equals(tourneeId) &
+              s.coequipierId.isNull()))
+        .write(StopsCompanion(coequipierId: Value(coequipierId)));
+  }
+
   /// Attache (ou retire avec null) une photo preuve a un arret deja
   /// valide. Sert au flow "Marquer livre -> Snackbar 'Photo ?' -> tap
   /// micro -> photo". Ne touche pas au statut, ni a la position GPS,

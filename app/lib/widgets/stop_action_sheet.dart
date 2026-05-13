@@ -149,6 +149,113 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
     setState(() => _navAppDefault = v);
   }
 
+  /// Sub-dialog pour choisir un coequipier dans la liste des actifs.
+  /// "Personne" reset l'affectation (coequipierId -> null).
+  Future<void> _pickCoequipier(
+    BuildContext context,
+    WidgetRef ref,
+    List<Coequipier> coequipiers,
+  ) async {
+    final p = context.palette;
+    final currentId = widget.stop.coequipierId;
+    final picked = await showModalBottomSheet<int?>(
+      context: context,
+      backgroundColor: p.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x18,
+            vertical: AppSpacing.x14,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x14),
+                  decoration: BoxDecoration(
+                    color: p.inkLine,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Affecter a',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x14),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.lime,
+                  child: Icon(Icons.person, color: AppColors.ink),
+                ),
+                title: const Text('Moi (par defaut)'),
+                trailing: currentId == null
+                    ? const Icon(Icons.check, color: AppColors.emerald)
+                    : null,
+                onTap: () => Navigator.of(context).pop(null),
+              ),
+              const Divider(),
+              for (final c in coequipiers)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: colorFromTag(
+                      c.colorTag,
+                      defaultColor: AppColors.creamSoft,
+                    ),
+                    child: Text(
+                      _initialsFor(c.nom),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                  title: Text(c.nom),
+                  trailing: c.id == currentId
+                      ? const Icon(Icons.check, color: AppColors.emerald)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(c.id),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    // Modal ferme sans selection (back / tap exterieur) : on ne touche
+    // pas a l'affectation. Modal ferme avec selection (meme `null` =
+    // "Moi") : on update.
+    if (!context.mounted) return;
+    if (picked == widget.stop.coequipierId) return;
+    await ref
+        .read(stopsRepositoryProvider)
+        .setCoequipier(widget.stop.id, picked);
+  }
+
+  static String _initialsFor(String nom) {
+    final parts = nom.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -398,6 +505,43 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 ),
               ],
               const Divider(height: AppSpacing.x28),
+              // Affectation a un coequipier (cache si aucun coequipier
+              // actif en base : evite de polluer l'UI quand Noah bosse seul).
+              Consumer(
+                builder: (context, ref, _) {
+                  final coequipiers = ref
+                          .watch(coequipiersActifsProvider)
+                          .asData
+                          ?.value ??
+                      const [];
+                  if (coequipiers.isEmpty) return const SizedBox.shrink();
+                  final currentId = widget.stop.coequipierId;
+                  final current = currentId == null
+                      ? null
+                      : coequipiers
+                          .where((c) => c.id == currentId)
+                          .firstOrNull;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: p.ink,
+                          alignment: Alignment.centerLeft,
+                        ),
+                        onPressed: () =>
+                            _pickCoequipier(context, ref, coequipiers),
+                        icon: const Icon(Icons.groups_outlined, size: 18),
+                        label: Text(
+                          current == null
+                              ? 'Affecter a un coequipier'
+                              : 'Affecte : ${current.nom}',
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
               // Photo preuve : accessible avant ou apres validation.
               // Si une photo existe deja, on l'indique discretement.
               TextButton.icon(
