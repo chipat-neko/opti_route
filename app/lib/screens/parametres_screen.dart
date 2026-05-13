@@ -10,9 +10,10 @@ import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import 'coequipiers_screen.dart';
-import 'lock_screen.dart';
 import 'mentions_legales_screen.dart';
-import 'pin_setup_screen.dart';
+import 'parametres/entreprise_form.dart';
+import 'parametres/parametres_widgets.dart';
+import 'parametres/securite_section.dart';
 
 class ParametresScreen extends ConsumerStatefulWidget {
   const ParametresScreen({super.key});
@@ -128,9 +129,9 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x18),
         children: [
-          const _SectionTitle('Geocodage'),
+          const ParametresSectionTitle('Geocodage'),
           const SizedBox(height: AppSpacing.x10),
-          const _StatusCard(
+          const StatusCard(
             highlight: true,
             icon: Icons.verified_outlined,
             title: 'Geocodage 3 sources',
@@ -142,9 +143,9 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Optimisation de tournee'),
+          const ParametresSectionTitle('Optimisation de tournee'),
           const SizedBox(height: AppSpacing.x10),
-          _StatusCard(
+          StatusCard(
             highlight: hasOrsKey,
             icon: hasOrsKey ? Icons.check_circle : Icons.bolt_outlined,
             title: hasOrsKey
@@ -213,7 +214,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Tournee par defaut'),
+          const ParametresSectionTitle('Tournee par defaut'),
           const SizedBox(height: AppSpacing.x10),
           Text(
             'Valeurs preremplies a la creation d\'une nouvelle tournee '
@@ -275,19 +276,19 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           Wrap(
             spacing: AppSpacing.x8,
             children: [
-              _NavAppChip(
+              NavAppChip(
                 label: 'Aucune (demander)',
                 value: null,
                 groupValue: _navAppDefault,
                 onSelected: _setNavApp,
               ),
-              _NavAppChip(
+              NavAppChip(
                 label: 'Google Maps',
                 value: 'maps',
                 groupValue: _navAppDefault,
                 onSelected: _setNavApp,
               ),
-              _NavAppChip(
+              NavAppChip(
                 label: 'Waze',
                 value: 'waze',
                 groupValue: _navAppDefault,
@@ -304,7 +305,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Carburant'),
+          const ParametresSectionTitle('Carburant'),
           const SizedBox(height: AppSpacing.x10),
           Text(
             'Sert au calcul du cout estime affiche sur chaque tournee '
@@ -354,7 +355,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Cache'),
+          const ParametresSectionTitle('Cache'),
           const SizedBox(height: AppSpacing.x10),
           // Mini-stats : aide Noah a decider s'il faut purger ou pas.
           Container(
@@ -463,7 +464,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Notifications'),
+          const ParametresSectionTitle('Notifications'),
           const SizedBox(height: AppSpacing.x10),
           Text(
             'Les notifications locales (rappels de tournee) sont gerees '
@@ -511,7 +512,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Apparence'),
+          const ParametresSectionTitle('Apparence'),
           const SizedBox(height: AppSpacing.x10),
           Text(
             'Mode sombre pour la conduite de nuit. "Auto" suit les '
@@ -530,17 +531,17 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               return Wrap(
                 spacing: AppSpacing.x8,
                 children: [
-                  _ThemeChip(
+                  ThemeChip(
                     label: 'Auto',
                     value: ThemeMode.system,
                     groupValue: mode,
                   ),
-                  _ThemeChip(
+                  ThemeChip(
                     label: 'Clair',
                     value: ThemeMode.light,
                     groupValue: mode,
                   ),
-                  _ThemeChip(
+                  ThemeChip(
                     label: 'Sombre',
                     value: ThemeMode.dark,
                     groupValue: mode,
@@ -576,7 +577,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               return Column(
                 children: [
                   for (final p in AppThemePreset.all)
-                    _PaletteTile(
+                    PaletteTile(
                       preset: p,
                       selected: p.name == preset.name,
                     ),
@@ -587,7 +588,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Accessibilite & confort'),
+          const ParametresSectionTitle('Accessibilite & confort'),
           const SizedBox(height: AppSpacing.x10),
           Text(
             'Adapte l\'interface pour la conduite ou les conditions '
@@ -697,7 +698,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Entreprise & equipe'),
+          const ParametresSectionTitle('Entreprise & equipe'),
           const SizedBox(height: AppSpacing.x10),
           Text(
             'Si tu es chef d\'equipe ou si tu factures sous une raison '
@@ -709,7 +710,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.x12),
-          const _EntrepriseForm(),
+          const EntrepriseForm(),
           const SizedBox(height: AppSpacing.x14),
           // Toggle "Mode chef" : active la vue tableau de bord equipe
           // + affectation en masse. Cache si pas pertinent (livreur solo).
@@ -733,7 +734,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             },
           ),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Mon equipe'),
+          const ParametresSectionTitle('Mon equipe'),
           const SizedBox(height: AppSpacing.x10),
           Consumer(
             builder: (context, ref, _) {
@@ -764,7 +765,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('Securite'),
+          const ParametresSectionTitle('Securite'),
           const SizedBox(height: AppSpacing.x10),
           Text(
             'Verrouille l\'app avec un code a 4 chiffres (et la biometrie '
@@ -778,11 +779,11 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.x12),
-          const _SecuriteSection(),
+          const SecuriteSection(),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const _SectionTitle('A propos'),
+          const ParametresSectionTitle('A propos'),
           const SizedBox(height: AppSpacing.x10),
           ListTile(
             leading: const Icon(Icons.policy_outlined),
@@ -1057,609 +1058,5 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Text(
-      label.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.6,
-        color: p.textMute,
-      ),
-    );
-  }
-}
-
-class _ThemeChip extends ConsumerWidget {
-  const _ThemeChip({
-    required this.label,
-    required this.value,
-    required this.groupValue,
-  });
-
-  final String label;
-  final ThemeMode value;
-  final ThemeMode groupValue;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.palette;
-    final selected = value == groupValue;
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) async {
-        final repo = ref.read(parametresRepositoryProvider);
-        await repo.setThemeMode(switch (value) {
-          ThemeMode.light => 'light',
-          ThemeMode.dark => 'dark',
-          ThemeMode.system => 'system',
-        });
-      },
-      selectedColor: AppColors.lime,
-      backgroundColor: p.paper,
-      side: BorderSide(
-        color: selected ? AppColors.lime : p.inkLine,
-      ),
-      labelStyle: TextStyle(
-        color: p.ink,
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-      ),
-    );
-  }
-}
-
-class _PaletteTile extends ConsumerWidget {
-  const _PaletteTile({required this.preset, required this.selected});
-
-  final AppThemePreset preset;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.palette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        onTap: () async {
-          await ref
-              .read(parametresRepositoryProvider)
-              .setThemePreset(preset.name);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x12,
-            vertical: AppSpacing.x10,
-          ),
-          decoration: BoxDecoration(
-            color: selected ? preset.previewColor.withValues(alpha: 0.10) : p.paper,
-            borderRadius: BorderRadius.circular(AppRadius.r12),
-            border: Border.all(
-              color: selected ? preset.previewColor : p.inkLine,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              // Mini swatch double (light + dark) pour previewer
-              _SwatchPreview(preset: preset),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      preset.displayName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: p.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      preset.description,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: p.textMute,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (selected)
-                Icon(Icons.check_circle, color: preset.previewColor, size: 22),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SwatchPreview extends StatelessWidget {
-  const _SwatchPreview({required this.preset});
-
-  final AppThemePreset preset;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        children: [
-          // Carre light en haut-gauche
-          Positioned(
-            left: 0,
-            top: 0,
-            child: _swatch(preset.light.cream, preset.light.ink),
-          ),
-          // Carre dark en bas-droite
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: _swatch(preset.dark.cream, preset.dark.ink),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _swatch(Color bg, Color border) {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: border.withValues(alpha: 0.4), width: 1),
-      ),
-    );
-  }
-}
-
-class _NavAppChip extends StatelessWidget {
-  const _NavAppChip({
-    required this.label,
-    required this.value,
-    required this.groupValue,
-    required this.onSelected,
-  });
-
-  final String label;
-  final String? value;
-  final String? groupValue;
-  final ValueChanged<String?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final selected = value == groupValue;
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onSelected(value),
-      selectedColor: AppColors.lime,
-      backgroundColor: p.paper,
-      side: BorderSide(
-        color: selected ? AppColors.lime : p.inkLine,
-      ),
-      labelStyle: TextStyle(
-        color: p.ink,
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-      ),
-    );
-  }
-}
-
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({
-    required this.highlight,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final bool highlight;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    // Quand highlight=true, fond lime fixe -> texte ink fixe (signal accent
-    // qui doit rester lisible dans les 2 modes).
-    final fg = highlight ? AppColors.ink : p.ink;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x14),
-      decoration: BoxDecoration(
-        color: highlight ? AppColors.lime : p.creamSoft,
-        borderRadius: BorderRadius.circular(AppRadius.r14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: fg),
-          const SizedBox(width: AppSpacing.x12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    color: fg,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: appMonoStyle(
-                    fontSize: 11,
-                    color: fg.withValues(alpha: 0.75),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Form embarque pour le profil entreprise (nom raison sociale,
-/// SIRET, slogan). Persiste sur perte de focus / dispose. Pas de
-/// validation stricte (formats variables selon entreprise).
-class _EntrepriseForm extends ConsumerStatefulWidget {
-  const _EntrepriseForm();
-
-  @override
-  ConsumerState<_EntrepriseForm> createState() => _EntrepriseFormState();
-}
-
-class _EntrepriseFormState extends ConsumerState<_EntrepriseForm> {
-  final _nomCtrl = TextEditingController();
-  final _siretCtrl = TextEditingController();
-  final _sloganCtrl = TextEditingController();
-  bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final repo = ref.read(parametresRepositoryProvider);
-    final nom = await repo.getEntrepriseNom();
-    final siret = await repo.getEntrepriseSiret();
-    final slogan = await repo.getEntrepriseSlogan();
-    if (!mounted) return;
-    setState(() {
-      _nomCtrl.text = nom ?? '';
-      _siretCtrl.text = siret ?? '';
-      _sloganCtrl.text = slogan ?? '';
-      _loaded = true;
-    });
-  }
-
-  @override
-  void dispose() {
-    // Save final si modifs en attente.
-    if (_loaded) _persistAll();
-    _nomCtrl.dispose();
-    _siretCtrl.dispose();
-    _sloganCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _persistAll() async {
-    final repo = ref.read(parametresRepositoryProvider);
-    final nom = _nomCtrl.text.trim();
-    final siret = _siretCtrl.text.trim();
-    final slogan = _sloganCtrl.text.trim();
-    if (nom.isEmpty) {
-      await repo.clearEntrepriseNom();
-    } else {
-      await repo.setEntrepriseNom(nom);
-    }
-    if (siret.isEmpty) {
-      await repo.clearEntrepriseSiret();
-    } else {
-      await repo.setEntrepriseSiret(siret);
-    }
-    if (slogan.isEmpty) {
-      await repo.clearEntrepriseSlogan();
-    } else {
-      await repo.setEntrepriseSlogan(slogan);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TextField(
-          controller: _nomCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Nom / raison sociale (optionnel)',
-            hintText: 'Ex: CALOTE Transports',
-            prefixIcon: Icon(Icons.business_outlined),
-          ),
-          onEditingComplete: _persistAll,
-        ),
-        const SizedBox(height: AppSpacing.x10),
-        TextField(
-          controller: _siretCtrl,
-          decoration: const InputDecoration(
-            labelText: 'SIRET (optionnel)',
-            hintText: '14 chiffres',
-            prefixIcon: Icon(Icons.badge_outlined),
-          ),
-          keyboardType: TextInputType.number,
-          maxLength: 14,
-          onEditingComplete: _persistAll,
-        ),
-        const SizedBox(height: AppSpacing.x10),
-        TextField(
-          controller: _sloganCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Slogan / mention (optionnel)',
-            hintText: 'Ex: Livraison express 7j/7',
-            prefixIcon: Icon(Icons.format_quote_outlined),
-          ),
-          onEditingComplete: _persistAll,
-        ),
-      ],
-    );
-  }
-}
-
-/// Section "Securite" : toggle verrou + bouton changer PIN + toggle
-/// biometrie + slider auto-lock. Compacte, posee dans Parametres.
-class _SecuriteSection extends ConsumerStatefulWidget {
-  const _SecuriteSection();
-
-  @override
-  ConsumerState<_SecuriteSection> createState() => _SecuriteSectionState();
-}
-
-class _SecuriteSectionState extends ConsumerState<_SecuriteSection> {
-  bool _biometricSupported = false;
-  bool _biometricActive = false;
-  int _autoLockMinutes = ParametresRepository.defaultAutoLockMinutes;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _refresh();
-  }
-
-  Future<void> _refresh() async {
-    final params = ref.read(parametresRepositoryProvider);
-    final svc = ref.read(securityServiceProvider);
-    final supported = await svc.canUseBiometrics();
-    final bio = await params.getBiometrieActive();
-    final mins = await params.getAutoLockMinutes();
-    if (!mounted) return;
-    setState(() {
-      _biometricSupported = supported;
-      _biometricActive = bio;
-      _autoLockMinutes = mins;
-      _loading = false;
-    });
-  }
-
-  Future<void> _toggleVerrou(bool wantOn) async {
-    if (wantOn) {
-      final ok = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(builder: (_) => const PinSetupScreen()),
-      );
-      if (ok != true) return;
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verrouillage active')),
-      );
-    } else {
-      // Demande verification PIN avant de desactiver.
-      final ok = await _askPinConfirm(
-        title: 'Desactiver le verrou',
-        message: 'Saisis ton code pour confirmer',
-      );
-      if (ok != true) return;
-      await ref.read(securityServiceProvider).disableLock();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verrouillage desactive')),
-      );
-      _refresh();
-    }
-  }
-
-  Future<bool?> _askPinConfirm({
-    required String title,
-    required String message,
-  }) async {
-    // Reutilise LockScreen modulo : un peu lourd, mais coherent.
-    bool unlocked = false;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => LockScreen(
-          allowBiometric: false,
-          onUnlocked: () {
-            unlocked = true;
-            Navigator.of(context).pop();
-          },
-        ),
-      ),
-    );
-    return unlocked;
-  }
-
-  Future<void> _changePin() async {
-    final ok = await _askPinConfirm(
-      title: 'Changer le code',
-      message: 'Saisis ton code actuel',
-    );
-    if (ok != true) return;
-    if (!mounted) return;
-    final picked = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const PinSetupScreen()),
-    );
-    if (picked == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Code mis a jour')),
-      );
-    }
-  }
-
-  Future<void> _toggleBiometrie(bool v) async {
-    final params = ref.read(parametresRepositoryProvider);
-    await params.setBiometrieActive(v);
-    if (!mounted) return;
-    setState(() => _biometricActive = v);
-  }
-
-  Future<void> _setAutoLock(int minutes) async {
-    final params = ref.read(parametresRepositoryProvider);
-    await params.setAutoLockMinutes(minutes);
-    if (!mounted) return;
-    setState(() => _autoLockMinutes = minutes);
-  }
-
-  String _formatAutoLock(int m) {
-    if (m == 0) return 'Jamais (uniquement au demarrage)';
-    if (m == 1) return 'Apres 1 minute';
-    return 'Apres $m minutes';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.x14),
-        child: Center(
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-    final lockEnabled = ref
-            .watch(lockEnabledStreamProvider)
-            .asData
-            ?.value ??
-        false;
-
-    return Column(
-      children: [
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          value: lockEnabled,
-          title: const Text('Verrouiller l\'app'),
-          subtitle: Text(
-            lockEnabled
-                ? 'Code a 4 chiffres demande au demarrage'
-                : 'Ouvre l\'app sans confirmation (defaut)',
-            style: const TextStyle(fontSize: 12),
-          ),
-          onChanged: _toggleVerrou,
-        ),
-        if (lockEnabled) ...[
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.pin_outlined),
-            title: const Text('Changer le code'),
-            subtitle: const Text(
-              'Renouvelle ton PIN apres saisie de l\'actuel',
-              style: TextStyle(fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _changePin,
-          ),
-          if (_biometricSupported)
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _biometricActive,
-              title: const Text('Empreinte / visage'),
-              subtitle: const Text(
-                'Deverrouille sans saisir le code',
-                style: TextStyle(fontSize: 12),
-              ),
-              secondary: const Icon(Icons.fingerprint),
-              onChanged: _toggleBiometrie,
-            ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.timer_outlined),
-            title: const Text('Verrouillage auto'),
-            subtitle: Text(
-              _formatAutoLock(_autoLockMinutes),
-              style: const TextStyle(fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
-              final picked = await showModalBottomSheet<int>(
-                context: context,
-                builder: (_) => _AutoLockPicker(current: _autoLockMinutes),
-              );
-              if (picked != null) await _setAutoLock(picked);
-            },
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _AutoLockPicker extends StatelessWidget {
-  const _AutoLockPicker({required this.current});
-  final int current;
-
-  static const _options = [
-    (0, 'Jamais'),
-    (1, 'Apres 1 minute'),
-    (5, 'Apres 5 minutes'),
-    (15, 'Apres 15 minutes'),
-    (30, 'Apres 30 minutes'),
-    (60, 'Apres 1 heure'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: _options.map((o) {
-          final selected = o.$1 == current;
-          return ListTile(
-            title: Text(o.$2),
-            trailing: selected
-                ? const Icon(Icons.check, color: AppColors.emerald)
-                : null,
-            onTap: () => Navigator.of(context).pop(o.$1),
-          );
-        }).toList(),
-      ),
-    );
   }
 }
