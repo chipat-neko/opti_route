@@ -9,6 +9,7 @@ import '../data/database.dart';
 import '../data/stats_service.dart';
 import '../providers/database_providers.dart';
 import 'carnet_adresses_screen.dart' show carnetStreamProvider;
+import 'facturation_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -54,6 +55,8 @@ class StatsScreen extends ConsumerWidget {
             _CoequipiersStatsCard(),
             SizedBox(height: AppSpacing.x14),
             _TopRaisonsEchecCard(),
+            SizedBox(height: AppSpacing.x14),
+            _FacturationCard(),
             SizedBox(height: AppSpacing.x14),
             _ExportCsvCard(),
           ],
@@ -1164,6 +1167,94 @@ class _RaisonBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Carte d'acces a l'ecran Facturation. CTA emerald pour distinguer
+/// visuellement de la carte motivation lime.
+class _FacturationCard extends ConsumerWidget {
+  const _FacturationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.emerald, AppColors.emeraldDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.r18),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const FacturationScreen(),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: AppColors.lime,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.receipt_long_outlined,
+                    color: AppColors.ink,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'FACTURATION MENSUELLE',
+                        style: appMonoStyle(
+                          fontSize: 10.5,
+                          letterSpacing: 0.6,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.cream.withValues(alpha: 0.75),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Calculer ton recap facturable',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: p.cream,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'EUR par arret / colis / km + marge brute',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.cream.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward, color: p.cream),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

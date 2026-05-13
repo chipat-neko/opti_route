@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pour les entreprises — opti_route</title>
+<meta name="description" content="Solution opti_route pour les entreprises de livraison : gestion d'equipe, suivi GPS temps reel, facturation client, integration ERP. Phase 1 gratuit, Phase 2 cloud.">
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  /* Calculateur ROI */
+  .roi-calc {
+    background: var(--paper);
+    border-radius: var(--radius-22);
+    padding: var(--space-28);
+    border: 1px solid var(--divider);
+    box-shadow: var(--shadow-card);
+    margin: var(--space-22) 0;
+  }
+  .roi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-28);
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .roi-grid { grid-template-columns: 1fr; }
+  }
+  .roi-input {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    margin-bottom: var(--space-14);
+  }
+  .roi-input label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .roi-input label small {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-mute);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .roi-input input[type=number] {
+    background: var(--bg-soft);
+    border: 1px solid var(--ink-line);
+    border-radius: var(--radius-10);
+    padding: var(--space-10) var(--space-14);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    transition: border-color 200ms;
+  }
+  .roi-input input[type=number]:focus {
+    outline: none;
+    border-color: var(--emerald);
+    box-shadow: 0 0 0 3px rgba(14, 124, 90, 0.15);
+  }
+  .roi-results {
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: var(--radius-18);
+    padding: var(--space-22);
+  }
+  .roi-result {
+    margin-bottom: var(--space-18);
+  }
+  .roi-result-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--lime);
+    line-height: 1;
+    margin-bottom: var(--space-6);
+  }
+  .roi-result-label {
+    font-size: 0.85rem;
+    color: rgba(245, 243, 238, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+  }
+  .roi-result-detail {
+    font-size: 0.75rem;
+    color: rgba(245, 243, 238, 0.5);
+    margin-top: 4px;
+  }
+
+  /* Tableau comparaison */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--paper);
+    border-radius: var(--radius-18);
+    overflow: hidden;
+    margin: var(--space-22) 0;
+    box-shadow: var(--shadow-card);
+  }
+  .compare-table th, .compare-table td {
+    padding: var(--space-14) var(--space-18);
+    text-align: left;
+    border-bottom: 1px solid var(--divider);
+    font-size: 0.95rem;
+  }
+  .compare-table th {
+    background: var(--bg-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+  }
+  .compare-table th.highlight, .compare-table td.highlight {
+    background: rgba(184, 242, 74, 0.08);
+  }
+  .compare-table .yes { color: var(--emerald); font-weight: 700; }
+  .compare-table .no { color: var(--text-faint); }
+  .compare-table .partial { color: var(--amber); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="features.html">Features</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="faq.html">FAQ</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-64) 0; max-width: 1100px;">
+
+  <span class="eyebrow">Pour les entreprises de livraison</span>
+  <h1>Outil pro pour <span style="color: var(--emerald);">flottes & equipes structurees</span>.</h1>
+  <p style="font-size: 1.1rem; margin: var(--space-22) 0 var(--space-40); max-width: 720px;">
+    opti_route s'adapte du livreur solo au gestionnaire de flotte.
+    Decouvre les features pro, le calculateur ROI, et la difference
+    entre Phase 1 (gratuit, local) et Phase 2 (cloud, temps reel).
+  </p>
+
+  <!-- ===== CALCULATEUR ROI ===== -->
+  <section style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">Estimation interactive</span>
+    <h2 style="margin-bottom: var(--space-18);">Calculateur de gain de temps</h2>
+    <p style="margin-bottom: var(--space-18); max-width: 680px;">
+      Combien de temps tu fais perdre a tes livreurs en planifiant les
+      tournees a la main ? Combien gagnes-tu avec une optimisation
+      VROOM automatique ? Joue avec les valeurs.
+    </p>
+
+    <div class="roi-calc">
+      <div class="roi-grid">
+        <div>
+          <div class="roi-input">
+            <label>Nombre de livreurs
+              <small>Coequipiers actifs dans ton equipe</small>
+            </label>
+            <input type="number" id="roiLivreurs" min="1" max="100" value="3">
+          </div>
+          <div class="roi-input">
+            <label>Arrets / tournee / livreur
+              <small>Moyenne d'arrets quotidiens par personne</small>
+            </label>
+            <input type="number" id="roiArrets" min="1" max="200" value="20">
+          </div>
+          <div class="roi-input">
+            <label>Jours travailles / mois
+              <small>20 = 5 jours/semaine</small>
+            </label>
+            <input type="number" id="roiJours" min="1" max="31" value="22">
+          </div>
+          <div class="roi-input">
+            <label>Cout horaire moyen (EUR)
+              <small>Brut charges incluses</small>
+            </label>
+            <input type="number" id="roiCout" min="0" max="200" step="0.5" value="18">
+          </div>
+          <div class="roi-input">
+            <label>Gain estime par tournee (min)
+              <small>Optimisation + scan bordereaux. Defaut 15 min/personne/jour</small>
+            </label>
+            <input type="number" id="roiGain" min="0" max="120" value="15">
+          </div>
+        </div>
+
+        <div class="roi-results">
+          <div class="roi-result">
+            <div class="roi-result-value" id="roiHeuresMois">—</div>
+            <div class="roi-result-label">Heures economisees / mois</div>
+            <div class="roi-result-detail" id="roiHeuresDetail"></div>
+          </div>
+          <div class="roi-result">
+            <div class="roi-result-value" id="roiEurMois">—</div>
+            <div class="roi-result-label">EUR economises / mois</div>
+            <div class="roi-result-detail" id="roiEurDetail"></div>
+          </div>
+          <div class="roi-result">
+            <div class="roi-result-value" id="roiEurAn">—</div>
+            <div class="roi-result-label">EUR economises / an</div>
+            <div class="roi-result-detail">Sur la base de 12 mois</div>
+          </div>
+          <p style="font-size: 0.8rem; color: rgba(245, 243, 238, 0.5); margin-top: var(--space-14); font-style: italic;">
+            Estimation indicative. Les vrais gains dependent de la
+            geographie, du type de colis et de la formation des
+            livreurs. Phase 1 (gratuit, local) ou Phase 2 (~25-50
+            USD/mois pour la sync) ne changent pas ce calcul.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TABLEAU COMPARATIF P1 / P2 ===== -->
+  <section style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">Phase 1 vs Phase 2</span>
+    <h2 style="margin-bottom: var(--space-18);">Ce que change la sync cloud</h2>
+    <p style="margin-bottom: var(--space-22); max-width: 680px;">
+      La Phase 1 est gratuite et fonctionnelle. La Phase 2 ajoute
+      uniquement ce qui demande un backend.
+    </p>
+
+    <div style="overflow-x: auto;">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Phase 1 (gratuit)</th>
+            <th class="highlight">Phase 2 (cloud)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Optimisation tournee VROOM</td><td class="yes">✓ 500/jour</td><td class="yes highlight">✓ 10K+/mois</td></tr>
+          <tr><td>Scan bordereaux OCR</td><td class="yes">✓ Local</td><td class="yes highlight">✓ + transporteurs additionnels</td></tr>
+          <tr><td>Gestion equipe locale (1 phone)</td><td class="yes">✓</td><td class="yes highlight">✓</td></tr>
+          <tr><td>Tableau de bord web (CSV)</td><td class="yes">✓ Upload manuel</td><td class="yes highlight">✓ Sync temps reel</td></tr>
+          <tr><td>App par coequipier (chacun son phone)</td><td class="no">— Non</td><td class="yes highlight">✓ Auth + sync</td></tr>
+          <tr><td>Suivi GPS temps reel des livreurs</td><td class="no">— Non</td><td class="yes highlight">✓ Map live</td></tr>
+          <tr><td>Notifications push (chef &harr; livreurs)</td><td class="partial">~ Locales seulement</td><td class="yes highlight">✓ Cross-app</td></tr>
+          <tr><td>Backup cloud automatique</td><td class="no">— Exports manuels</td><td class="yes highlight">✓ Chiffre</td></tr>
+          <tr><td>Stats consolidees multi-livreurs</td><td class="partial">~ Local au chef</td><td class="yes highlight">✓ Vue equipe live</td></tr>
+          <tr><td>Facturation client mensuelle</td><td class="yes">✓ PDF local</td><td class="yes highlight">✓ + envoi mail auto</td></tr>
+          <tr><td>RGPD compliant (donnees en France/UE)</td><td class="yes">✓ Tout local</td><td class="yes highlight">✓ Region UE configurable</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== CAS D'USAGE ===== -->
+  <section style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">Cas d'usage</span>
+    <h2 style="margin-bottom: var(--space-22);">Pour qui ?</h2>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="7" r="4"/><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
+          </svg>
+        </div>
+        <h3>Livreur independant</h3>
+        <p>30 a 80 arrets/jour, gere son propre carnet et ses tournees. Phase 1 suffit largement, 0 cout.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <h3>Petit chef d'equipe (2-5)</h3>
+        <p>Repartit les tournees, recoit les retours via WhatsApp/SMS. Phase 1 OK avec affectation + partage cible.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+        </div>
+        <h3>Entreprise structuree (5-20)</h3>
+        <p>Plusieurs vehicules, planification quotidienne, facturation client. Phase 1 possible avec discipline ; Phase 2 recommande pour la sync.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          </svg>
+        </div>
+        <h3>Flotte pro (20+)</h3>
+        <p>ERP integration, suivi RH, conformite RGPD avancee. Cible Phase 3 avec API publique + multi-vehicules VROOM.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== INTERESSE ? ===== -->
+  <div class="cta">
+    <h2>Interesse par la version pro ?</h2>
+    <p>La Phase 2 (sync multi-app temps reel) demarrera des qu'un budget ~25-50 USD/mois est valide. En attendant, la Phase 1 est dispo gratuitement.</p>
+    <a href="https://github.com/chipat-neko/opti_route/issues" class="btn btn-secondary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+      Ouvrir une discussion GitHub
+    </a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route</a> · Phase 1 gratuit ·
+      <a href="mentions-legales.html">Mentions legales</a> ·
+      <span class="mono">© CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+  // ---------- Calculateur ROI ----------
+  (function () {
+    const ids = ['roiLivreurs', 'roiArrets', 'roiJours', 'roiCout', 'roiGain'];
+    const inputs = ids.map((id) => document.getElementById(id));
+    const outHeures = document.getElementById('roiHeuresMois');
+    const outHeuresDetail = document.getElementById('roiHeuresDetail');
+    const outEur = document.getElementById('roiEurMois');
+    const outEurDetail = document.getElementById('roiEurDetail');
+    const outEurAn = document.getElementById('roiEurAn');
+
+    function eur(n) {
+      const cents = Math.round(n * 100);
+      return (cents / 100).toLocaleString('fr-FR', {
+        style: 'currency', currency: 'EUR',
+      });
+    }
+
+    function recalc() {
+      const livreurs = +inputs[0].value || 0;
+      const arrets = +inputs[1].value || 0;
+      const jours = +inputs[2].value || 0;
+      const cout = +inputs[3].value || 0;
+      const gain = +inputs[4].value || 0;
+      // Le "gain par tournee (min)" depend du nb d'arrets : plus
+      // d'arrets = plus de gain. On modelise un facteur logarithmique :
+      // gain effectif = gain_base * (1 + log(arrets/20)/2) cap entre
+      // 0.5x et 2x.
+      const factor = Math.max(
+        0.5,
+        Math.min(2, 1 + Math.log(Math.max(1, arrets) / 20) / 2)
+      );
+      const gainEffectifMin = gain * factor;
+      const heuresMois = (gainEffectifMin / 60) * jours * livreurs;
+      const eurMois = heuresMois * cout;
+      const eurAn = eurMois * 12;
+
+      outHeures.textContent = heuresMois.toFixed(1) + ' h';
+      outHeuresDetail.textContent =
+        `${gainEffectifMin.toFixed(0)} min/livreur/jour · ${livreurs} livreur(s) · ${jours} jours`;
+      outEur.textContent = eur(eurMois);
+      outEurDetail.textContent = `Sur la base de ${eur(cout)}/h`;
+      outEurAn.textContent = eur(eurAn);
+    }
+
+    inputs.forEach((i) => i.addEventListener('input', recalc));
+    recalc();
+  })();
+</script>
+</body>
+</html>
