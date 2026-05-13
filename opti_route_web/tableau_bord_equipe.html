@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableau de bord equipe — opti_route web</title>
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .chef-banner {
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-dark, #0a5c43));
+    color: white;
+    border-radius: var(--radius-14);
+    padding: var(--space-14) var(--space-18);
+    margin-bottom: var(--space-22);
+    display: flex;
+    align-items: center;
+    gap: var(--space-14);
+  }
+  .chef-banner .icon-wrap {
+    width: 48px; height: 48px;
+    background: var(--lime);
+    border-radius: var(--radius-12);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+  .chef-banner .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    opacity: 0.85;
+    font-weight: 800;
+  }
+  .chef-banner h2 { margin: 2px 0 0; font-size: 1.1rem; font-weight: 800; }
+
+  .equipe-strip {
+    display: flex;
+    gap: var(--space-10);
+    overflow-x: auto;
+    padding-bottom: var(--space-10);
+    margin-bottom: var(--space-22);
+  }
+  .equipe-card {
+    flex-shrink: 0;
+    width: 130px;
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-12);
+    padding: var(--space-12);
+    text-align: center;
+  }
+  .equipe-card .avatar-big {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto var(--space-8);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem; font-weight: 800;
+    color: var(--ink);
+  }
+  .equipe-card .nom { font-weight: 700; font-size: 0.92rem; color: var(--ink); }
+  .equipe-card .perf {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem; color: var(--text-mute); margin-top: 2px;
+  }
+  .equipe-card .reussite {
+    margin-top: 6px;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  .equipe-tournee-row {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-12);
+    padding: var(--space-12) var(--space-14);
+    margin-bottom: var(--space-8);
+    display: flex; align-items: center; gap: var(--space-12);
+  }
+  .equipe-tournee-row .avatar-mini {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(14, 20, 16, 0.15);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem; font-weight: 800;
+    color: var(--ink);
+  }
+  .equipe-tournee-row .info { flex: 1; }
+  .equipe-tournee-row .nom { font-weight: 700; font-size: 0.95rem; color: var(--ink); }
+  .equipe-tournee-row .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; color: var(--text-mute); margin-top: 2px;
+  }
+  .equipe-progress {
+    width: 80px; height: 6px; border-radius: 3px;
+    background: var(--bg-soft); position: relative; overflow: hidden;
+  }
+  .equipe-progress .fill { height: 100%; background: var(--emerald); }
+  .equipe-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem; font-weight: 800;
+    min-width: 50px; text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
+    </a>
+    <nav class="app-nav">
+      <a href="index.html">Accueil</a>
+      <a href="tournees.html">Tournees</a>
+      <a href="carnet.html">Carnet</a>
+      <a href="stats.html">Stats</a>
+      <a href="facturation.html">Facturation</a>
+      <a href="parametres.html">Parametres</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-32) 0; max-width: 800px;">
+
+  <span class="eyebrow">Mode chef d'equipe</span>
+  <h1>Tableau de bord equipe.</h1>
+
+  <div class="chef-banner">
+    <div class="icon-wrap">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3m-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3m0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5m8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+    </div>
+    <div>
+      <div class="label">VUE AGREGEE - AUJOURD'HUI 14 MAI</div>
+      <h2>Mon equipe gere 4 tournees, 64 arrets, 142 colis.</h2>
+    </div>
+  </div>
+
+  <h2 style="font-size: 1.05rem; margin-bottom: var(--space-10);">Performance des coequipiers (30 derniers jours)</h2>
+  <div class="equipe-strip">
+    <div class="equipe-card">
+      <div class="avatar-big" style="background: #B8F24A;">M</div>
+      <div class="nom">Moi (Noah)</div>
+      <div class="perf">94 / 96 livres</div>
+      <span class="reussite" style="background: var(--emerald); color: white;">98%</span>
+    </div>
+    <div class="equipe-card">
+      <div class="avatar-big" style="background: #F2A14A;">L</div>
+      <div class="nom">Lucas</div>
+      <div class="perf">38 / 42 livres</div>
+      <span class="reussite" style="background: var(--emerald); color: white;">90%</span>
+    </div>
+    <div class="equipe-card">
+      <div class="avatar-big" style="background: #A05D8E; color: white;">M</div>
+      <div class="nom">Maelle</div>
+      <div class="perf">52 / 58 livres</div>
+      <span class="reussite" style="background: var(--amber); color: var(--ink);">90%</span>
+    </div>
+    <div class="equipe-card">
+      <div class="avatar-big" style="background: #15803D; color: white;">D</div>
+      <div class="nom">Damien</div>
+      <div class="perf">24 / 36 livres</div>
+      <span class="reussite" style="background: var(--red); color: white;">67%</span>
+    </div>
+  </div>
+
+  <h2 style="font-size: 1.05rem; margin-bottom: var(--space-10);">Tournees d'aujourd'hui</h2>
+
+  <div class="equipe-tournee-row">
+    <div class="avatar-mini" style="background: #B8F24A;">M</div>
+    <div class="info">
+      <div class="nom">Centre-ville mardi (Noah)</div>
+      <div class="meta">12 ARRETS &middot; 28 COLIS &middot; EN COURS - 1H32</div>
+    </div>
+    <div class="equipe-progress"><div class="fill" style="width: 42%; background: var(--lime);"></div></div>
+    <span class="equipe-counter">5/12</span>
+  </div>
+
+  <div class="equipe-tournee-row">
+    <div class="avatar-mini" style="background: #F2A14A;">L</div>
+    <div class="info">
+      <div class="nom">Tournee Lucas - secteur sud</div>
+      <div class="meta">18 ARRETS &middot; 42 COLIS &middot; EN COURS - 2H05</div>
+    </div>
+    <div class="equipe-progress"><div class="fill" style="width: 67%;"></div></div>
+    <span class="equipe-counter">12/18</span>
+  </div>
+
+  <div class="equipe-tournee-row">
+    <div class="avatar-mini" style="background: #A05D8E; color: white;">M</div>
+    <div class="info">
+      <div class="nom">Tournee Maelle - rive droite</div>
+      <div class="meta">22 ARRETS &middot; 51 COLIS &middot; EN COURS - 1H50</div>
+    </div>
+    <div class="equipe-progress"><div class="fill" style="width: 100%; background: var(--emerald);"></div></div>
+    <span class="equipe-counter" style="color: var(--emerald);">22/22</span>
+  </div>
+
+  <div class="equipe-tournee-row">
+    <div class="avatar-mini" style="background: #15803D; color: white;">D</div>
+    <div class="info">
+      <div class="nom">Tournee Damien - centre + Pessac</div>
+      <div class="meta">12 ARRETS &middot; 21 COLIS &middot; PAS DEMARREE</div>
+    </div>
+    <div class="equipe-progress"><div class="fill" style="width: 0%;"></div></div>
+    <span class="equipe-counter" style="color: var(--text-mute);">0/12</span>
+  </div>
+
+  <div style="margin-top: var(--space-22); display: flex; gap: var(--space-10); flex-wrap: wrap;">
+    <button class="btn btn-primary">+ Affecter une nouvelle tournee</button>
+    <button class="btn btn-secondary">PDF par coequipier</button>
+    <button class="btn btn-secondary">Partager via WhatsApp</button>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route web</a> &middot; Demo interactive &middot;
+      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
