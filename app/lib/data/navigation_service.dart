@@ -44,4 +44,15 @@ abstract class NavigationService {
       mode: LaunchMode.externalApplication,
     );
   }
+
+  /// Helper generique : lance une URI dans une app externe. Retourne
+  /// `false` silencieusement si aucune app ne peut l'ouvrir. Sert au
+  /// partage tournee (sms:, whatsapp://, https://wa.me/...).
+  static Future<bool> tryLaunch(Uri uri) async {
+    try {
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  }
 }

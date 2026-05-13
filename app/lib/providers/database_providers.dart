@@ -136,6 +136,16 @@ final motivationStatsProvider = FutureProvider<MotivationStats>((ref) async {
   return ref.read(statsServiceProvider).compteursMotivants();
 });
 
+/// Stats par coequipier sur la fenetre [days] derniers jours. Map
+/// `coequipierId? -> CoequipierStats`. Cle null = Noah lui-meme.
+final statsParCoequipierProvider =
+    FutureProvider.family<Map<int?, CoequipierStats>, int>(
+        (ref, days) async {
+  ref.watch(tourneesStreamProvider);
+  final since = DateTime.now().subtract(Duration(days: days));
+  return ref.read(statsServiceProvider).statsParCoequipier(since: since);
+});
+
 /// ETA estimee pour chaque stop d'une tournee donnee. Map stopId ->
 /// DateTime (heure d'arrivee estimee). Recalcule en watch des stops
 /// (changement d'ordre / statut) et du `tourneesStreamProvider`.

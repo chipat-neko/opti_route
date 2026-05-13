@@ -166,6 +166,52 @@ class StatsService {
     }
   }
 
+  /// Stats agregees par coequipier sur la fenetre `[since, now]`.
+  /// Retourne une map `coequipierId -> CoequipierStats`. La cle null
+  /// represente "Moi" (Noah lui-meme, stops sans `coequipierId`).
+  ///
+  /// Si aucun coequipier n'a ete affecte sur la periode, retourne
+  /// une map vide (l'UI doit gerer ce cas en n'affichant rien).
+  Future<Map<int?, CoequipierStats>> statsParCoequipier({
+    required DateTime since,
+  }) async {
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since)))
+        .get();
+    if (tournees.isEmpty) return const {};
+
+    final tourneeIds = tournees.map((t) => t.id).toList();
+    final stops = await (_db.select(_db.stops)
+          ..where((s) => s.tourneeId.isIn(tourneeIds)))
+        .get();
+
+    final acc = <int?, _CoequipierAcc>{};
+    for (final s in stops) {
+      final entry = acc.putIfAbsent(
+        s.coequipierId,
+        () => _CoequipierAcc(),
+      );
+      entry.nbArrets++;
+      if (s.statutLivraison == 'livre') {
+        entry.nbLivres++;
+        entry.colisLivres += s.nbColis;
+      } else if (s.statutLivraison == 'echec') {
+        entry.nbEchecs++;
+      }
+    }
+
+    return {
+      for (final e in acc.entries)
+        e.key: CoequipierStats(
+          coequipierId: e.key,
+          nbArrets: e.value.nbArrets,
+          nbLivres: e.value.nbLivres,
+          nbEchecs: e.value.nbEchecs,
+          colisLivres: e.value.colisLivres,
+        ),
+    };
+  }
+
   /// Statistiques motivantes : compteurs cumules depuis le 1er
   /// janvier de l'annee courante, et streak en cours de tournees
   /// terminees a 100% (aucun echec). Sert au tile "Tu as parcouru X km
@@ -312,4 +358,40 @@ class MotivationStats {
   /// Nombre de tournees terminees consecutives sans aucun echec
   /// (depuis la derniere tournee). 0 si la derniere a un echec.
   final int streakSansEchec;
+}
+
+/// Accumulateur interne pour le compute `statsParCoequipier` (mutable
+/// au cours de l'iteration, converti en `CoequipierStats` immuable en
+/// sortie).
+class _CoequipierAcc {
+  int nbArrets = 0;
+  int nbLivres = 0;
+  int nbEchecs = 0;
+  int colisLivres = 0;
+}
+
+/// Stats agregees pour un coequipier (ou Noah lui-meme si
+/// `coequipierId == null`).
+class CoequipierStats {
+  const CoequipierStats({
+    required this.coequipierId,
+    required this.nbArrets,
+    required this.nbLivres,
+    required this.nbEchecs,
+    required this.colisLivres,
+  });
+
+  /// Null = Noah lui-meme (stops sans affectation).
+  final int? coequipierId;
+  final int nbArrets;
+  final int nbLivres;
+  final int nbEchecs;
+  final int colisLivres;
+
+  /// Taux de reussite (livres / (livres + echecs)). 0 si rien valide.
+  double get tauxReussite {
+    final total = nbLivres + nbEchecs;
+    if (total == 0) return 0;
+    return nbLivres / total;
+  }
 }

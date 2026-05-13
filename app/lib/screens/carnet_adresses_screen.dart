@@ -9,6 +9,7 @@ import '../data/carnet_export_service.dart';
 import '../data/carnet_import_service.dart';
 import '../data/carnet_vcard_export_service.dart';
 import '../data/database.dart';
+import '../data/saved_destinations_repository.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -29,6 +30,8 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   /// Filtre couleur actif (`colorTag`). Null = tous. 'favoris' = uniquement
   /// les `isFavori = true` (cas special pour faciliter le tri).
   String? _colorFilter;
+  /// Filtre tag libre (`tagsJson`). Null = aucun filtre tag.
+  String? _tagFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +134,49 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
                 ],
               ],
             ),
+          ),
+          // Deuxieme row : tags libres (uniquement ceux presents dans
+          // le carnet). Cachee si aucun tag.
+          Consumer(
+            builder: (context, ref, _) {
+              final allEntries =
+                  ref.watch(carnetStreamProvider).asData?.value ?? const [];
+              final allTags = <String>{};
+              for (final e in allEntries) {
+                allTags.addAll(
+                  SavedDestinationsRepository.parseTags(e.tagsJson),
+                );
+              }
+              if (allTags.isEmpty) return const SizedBox.shrink();
+              final sorted = allTags.toList()..sort();
+              return SizedBox(
+                height: 36,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x18,
+                  ),
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _TagFilterChip(
+                      label: 'tag: tous',
+                      selected: _tagFilter == null,
+                      onSelected: () =>
+                          setState(() => _tagFilter = null),
+                    ),
+                    const SizedBox(width: 8),
+                    for (final t in sorted) ...[
+                      _TagFilterChip(
+                        label: t,
+                        selected: _tagFilter == t,
+                        onSelected: () =>
+                            setState(() => _tagFilter = t),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
           Expanded(
             child: stream.when(
@@ -286,6 +332,13 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         filtered = filtered.where((d) => d.colorTag == cf);
       }
     }
+    final tf = _tagFilter;
+    if (tf != null) {
+      filtered = filtered.where((d) {
+        final tags = SavedDestinationsRepository.parseTags(d.tagsJson);
+        return tags.any((t) => t.toLowerCase() == tf.toLowerCase());
+      });
+    }
     if (q.isEmpty) return filtered.toList();
     final norm = _normalize(q);
     return filtered.where((d) {
@@ -373,6 +426,52 @@ class _ColorFilterChip extends StatelessWidget {
             fontSize: 12,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
             color: fg,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Chip de filtre tag libre. Style monochrome (pas de couleur d'accent)
+/// pour distinguer visuellement des filtres couleur ci-dessus.
+class _TagFilterChip extends StatelessWidget {
+  const _TagFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r22),
+      onTap: onSelected,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x10,
+          vertical: 5,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? p.ink : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.r22),
+          border: Border.all(
+            color: selected ? Colors.transparent : p.inkLine,
+            width: 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            color: selected ? p.paper : p.ink,
           ),
         ),
       ),

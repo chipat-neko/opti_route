@@ -103,13 +103,39 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               if (value == 'delete') _confirmDeleteTournee();
               if (value == 'export_pdf') _onExportPdfPressed();
               if (value == 'share_text') _onShareTextPressed();
+              if (value == 'share_to_coequipier') {
+                _onShareToCoequipierPressed();
+              }
+              if (value == 'pause_short') _onPauseShortPressed();
               if (value == 'batch_livre') _onBatchLivrePressed();
               if (value == 'retry_geocode') _onRetryGeocodePressed();
               if (value == 'undo_last') _onUndoLastStatusPressed();
               if (value == 'duplicate_plus7') _onDuplicatePlus7Pressed();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
+            itemBuilder: (_) => [
+              if (widget.tournee.statut == 'en_cours')
+                PopupMenuItem(
+                  value: 'pause_short',
+                  child: ListTile(
+                    leading: Icon(
+                      widget.tournee.pauseeLe == null
+                          ? Icons.pause_circle_outline
+                          : Icons.play_circle_outline,
+                      color: AppColors.amber,
+                    ),
+                    title: Text(
+                      widget.tournee.pauseeLe == null
+                          ? 'Pause courte (pause dejeuner)'
+                          : 'Reprendre la tournee',
+                    ),
+                    subtitle: const Text(
+                      'Met le chrono en pause sans arreter la tournee',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              const PopupMenuItem(
                 value: 'batch_livre',
                 child: ListTile(
                   leading: Icon(Icons.done_all, color: AppColors.emerald),
@@ -160,6 +186,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
                   title: Text('Partager en texte'),
                   subtitle: Text(
                     'WhatsApp, SMS, mail...',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'share_to_coequipier',
+                child: ListTile(
+                  leading: Icon(Icons.groups_outlined),
+                  title: Text('Partager a un coequipier'),
+                  subtitle: Text(
+                    'Envoie seulement ses arrets affectes',
                     style: TextStyle(fontSize: 11),
                   ),
                   contentPadding: EdgeInsets.zero,
@@ -524,6 +562,152 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     }
   }
 
+  /// Affiche un selecteur de coequipier, puis genere un text-share
+  /// filtre sur ses arrets affectes. Si le coequipier a un numero, on
+  /// pre-remplit l'intent vers WhatsApp / SMS via url_launcher.
+  Future<void> _onShareToCoequipierPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final p = context.palette;
+    final coequipiers =
+        await ref.read(coequipiersRepositoryProvider).getAllActifs();
+    if (!mounted) return;
+    if (coequipiers.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final picked = await showModalBottomSheet<Coequipier>(
+      context: context,
+      backgroundColor: p.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x18,
+            vertical: AppSpacing.x14,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Partager a',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              for (final c in coequipiers)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: colorFromTag(
+                      c.colorTag,
+                      defaultColor: AppColors.creamSoft,
+                    ),
+                    child: Text(
+                      _coequipierInitials(c.nom),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                  title: Text(c.nom),
+                  subtitle: c.telephone != null && c.telephone!.isNotEmpty
+                      ? Text(c.telephone!)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(c),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (picked == null || !mounted) return;
+
+    try {
+      final allStops = await ref
+          .read(stopsRepositoryProvider)
+          .getByTournee(widget.tournee.id);
+      final stopsLui =
+          allStops.where((s) => s.coequipierId == picked.id).toList();
+      if (stopsLui.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Aucun arret affecte a ${picked.nom}. Affecte-lui des '
+              'arrets depuis la bottom sheet d\'un arret.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final service = TourneeTextShareService(
+        parametres: ref.read(parametresRepositoryProvider),
+      );
+      final text = await service.formatPlainText(
+        tournee: widget.tournee,
+        stops: stopsLui,
+      );
+      final preamble =
+          'Tes arrets pour ${widget.tournee.nom} (${stopsLui.length}) :\n\n';
+
+      // Si le coequipier a un telephone, on tente WhatsApp d'abord
+      // (le scheme `whatsapp://` ouvre l'app si installee), puis SMS.
+      // Sinon fallback share natif (Share.share).
+      final tel = picked.telephone?.replaceAll(RegExp(r'\D'), '');
+      if (tel != null && tel.isNotEmpty) {
+        final waUri = Uri.parse(
+          'https://wa.me/33${tel.startsWith('0') ? tel.substring(1) : tel}'
+          '?text=${Uri.encodeComponent(preamble + text)}',
+        );
+        final ok = await NavigationService.tryLaunch(waUri);
+        if (!ok) {
+          // Fallback SMS
+          final smsUri = Uri.parse(
+            'sms:${picked.telephone}'
+            '?body=${Uri.encodeComponent(preamble + text)}',
+          );
+          await NavigationService.tryLaunch(smsUri);
+        }
+      } else {
+        // Pas de tel : share natif
+        await service.shareAsText(
+          tournee: widget.tournee,
+          stops: stopsLui,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur au partage : $e')),
+      );
+    }
+  }
+
+  static String _coequipierInitials(String nom) {
+    final parts = nom.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
+  }
+
   Future<void> _onDemarrerPressed() async {
     final messenger = ScaffoldMessenger.of(context);
     // Demande la permission GPS avant de basculer en mode en_cours
@@ -561,6 +745,45 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  /// Pause "courte" (pause dejeuner par ex) sans changer le statut de
+  /// la tournee. Toggle entre pause / reprendre selon que `pauseeLe`
+  /// est deja set ou non.
+  ///
+  /// La duree pausee s'accumule dans `pauseeSeconds` au moment du
+  /// "Reprendre". Ce cumul est utilise par les stats (heures
+  /// travaillees effectives) et a l'affichage chrono "Demarree il y a".
+  Future<void> _onPauseShortPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = ref.read(tourneesRepositoryProvider);
+    final t = await repo.getById(widget.tournee.id);
+    if (t == null || !mounted) return;
+    if (t.pauseeLe == null) {
+      await repo.pauseTournee(t.id);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Tournee en pause. Tap "Reprendre" quand tu repars.'),
+          backgroundColor: AppColors.amber,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } else {
+      await repo.reprendreTournee(t.id);
+      if (!mounted) return;
+      final pauseDuree = DateTime.now().difference(t.pauseeLe!);
+      final mins = pauseDuree.inMinutes;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'C\'est reparti. Pause de ${mins}min comptee.',
+          ),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _onArreterPressed() async {
@@ -815,6 +1038,7 @@ class _Body extends StatelessWidget {
             stops: stops,
             tourneeTerminee: tournee.statut == 'terminee',
             demareeLe: tournee.demareeLe,
+            isEnPause: tournee.pauseeLe != null,
           ),
         ],
         if (tournee.statut == 'en_cours') ...[
@@ -1919,6 +2143,7 @@ class _ProgressBanner extends StatelessWidget {
     required this.stops,
     required this.tourneeTerminee,
     this.demareeLe,
+    this.isEnPause = false,
   });
 
   final List<Stop> stops;
@@ -1927,6 +2152,10 @@ class _ProgressBanner extends StatelessWidget {
   /// Timestamp du tap "Demarrer" pour calculer le temps ecoule depuis.
   /// Null = tournee jamais demarree (pas d'affichage dans le bandeau).
   final DateTime? demareeLe;
+
+  /// Si vrai, affiche un badge "EN PAUSE" et masque le compteur de
+  /// temps ecoule (pour eviter de croire que le chrono court).
+  final bool isEnPause;
 
   @override
   Widget build(BuildContext context) {
@@ -1983,7 +2212,7 @@ class _ProgressBanner extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    if (demareeLe != null)
+                    if (demareeLe != null && !isEnPause)
                       Padding(
                         padding: const EdgeInsets.only(top: 1),
                         child: Text(
@@ -1998,7 +2227,38 @@ class _ProgressBanner extends StatelessWidget {
                   ],
                 ),
               ),
-              if (colisTotal > 0)
+              if (isEnPause)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber,
+                    borderRadius: BorderRadius.circular(AppRadius.r8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.pause_circle_filled,
+                        size: 14,
+                        color: AppColors.ink,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'EN PAUSE',
+                        style: appMonoStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (colisTotal > 0)
                 Text(
                   '$colisLivres / $colisTotal colis',
                   style: appMonoStyle(

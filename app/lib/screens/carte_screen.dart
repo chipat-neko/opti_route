@@ -29,6 +29,10 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
   final _mapController = MapController();
   CameraFit? _currentFit;
   bool _fullscreen = false;
+  // Filtres statut : par defaut tout visible. Tap sur un chip toggle.
+  bool _showALivrer = true;
+  bool _showLivre = true;
+  bool _showEchec = true;
 
   @override
   void dispose() {
@@ -43,6 +47,16 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
     SystemChrome.setEnabledSystemUIMode(
       _fullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
     );
+  }
+
+  /// Vrai si un stop passe les filtres statut courants. Sert a masquer
+  /// dynamiquement les markers sur la carte sans toucher au repo.
+  bool _passesStatusFilter(Stop s) {
+    return switch (s.statutLivraison) {
+      'livre' => _showLivre,
+      'echec' => _showEchec,
+      _ => _showALivrer,
+    };
   }
 
   /// Demande la permission GPS si necessaire, recupere la position
@@ -86,8 +100,10 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
 
   Widget _buildMap(List<Stop> stops) {
     final p = context.palette;
-    final stopsGeoreferenced =
-        stops.where((s) => s.lat != null && s.lng != null).toList();
+    final stopsGeoreferenced = stops
+        .where((s) => s.lat != null && s.lng != null)
+        .where(_passesStatusFilter)
+        .toList();
 
     final depot = LatLng(
       widget.tournee.pointDepartLat,
@@ -152,7 +168,45 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
             ),
           ],
         ),
-        if (stopsGeoreferenced.isEmpty) const _EmptyOverlay(),
+        if (stopsGeoreferenced.isEmpty &&
+            (_showALivrer && _showLivre && _showEchec))
+          const _EmptyOverlay(),
+        // Row de filtres statut, superposee en haut. SafeArea pour
+        // eviter de passer sous le notch.
+        Positioned(
+          top: AppSpacing.x6,
+          left: AppSpacing.x12,
+          right: AppSpacing.x12,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _MapFilterChip(
+                    label: 'A livrer',
+                    color: AppColors.lime,
+                    selected: _showALivrer,
+                    onTap: () => setState(() => _showALivrer = !_showALivrer),
+                  ),
+                  const SizedBox(width: AppSpacing.x6),
+                  _MapFilterChip(
+                    label: 'Livre',
+                    color: AppColors.emerald,
+                    selected: _showLivre,
+                    onTap: () => setState(() => _showLivre = !_showLivre),
+                  ),
+                  const SizedBox(width: AppSpacing.x6),
+                  _MapFilterChip(
+                    label: 'Echec',
+                    color: AppColors.red,
+                    selected: _showEchec,
+                    onTap: () => setState(() => _showEchec = !_showEchec),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         Positioned(
           right: AppSpacing.x16,
           bottom: AppSpacing.x18,
@@ -549,6 +603,71 @@ class _InfoChip extends StatelessWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Chip de filtre statut sur la carte. Tap = toggle. Le fond utilise
+/// la couleur du statut (lime/emerald/red), avec un cran d'opacite
+/// quand le filtre est desactive (visuel "cache").
+class _MapFilterChip extends StatelessWidget {
+  const _MapFilterChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r22),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x10,
+          vertical: 5,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? color : p.paper,
+          borderRadius: BorderRadius.circular(AppRadius.r22),
+          border: Border.all(
+            color: selected ? Colors.transparent : color.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!selected)
+              Icon(Icons.visibility_off_outlined, size: 14, color: color)
+            else
+              const Icon(Icons.check, size: 14, color: AppColors.ink),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: selected ? AppColors.ink : color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
