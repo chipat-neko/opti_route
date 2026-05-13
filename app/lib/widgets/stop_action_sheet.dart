@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../data/navigation_service.dart';
 import '../providers/database_providers.dart';
-import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import 'stop_action_sheet_widgets.dart';
 
 /// Action choisie par le livreur dans la bottom sheet de validation
 /// d'un arret.
@@ -343,7 +343,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       ),
                     ),
                     const Spacer(),
-                    _StepperButton(
+                    StepperButton(
                       icon: Icons.remove,
                       onPressed: _nbColis > 1
                           ? () => _adjustNbColis(-1)
@@ -362,7 +362,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                         ),
                       ),
                     ),
-                    _StepperButton(
+                    StepperButton(
                       icon: Icons.add,
                       onPressed: () => _adjustNbColis(1),
                     ),
@@ -396,7 +396,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: _FenetreInlineField(
+                    child: FenetreInlineField(
                       label: 'Pas avant',
                       value: stop.fenetreDebut,
                       onChanged: (t) =>
@@ -405,7 +405,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   ),
                   const SizedBox(width: AppSpacing.x10),
                   Expanded(
-                    child: _FenetreInlineField(
+                    child: FenetreInlineField(
                       label: 'Avant',
                       value: stop.fenetreFin,
                       onChanged: (t) => _persistFenetre(
@@ -420,7 +420,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: _NavButton(
+                    child: NavButton(
                       label: 'Maps',
                       icon: Icons.map_outlined,
                       preferred: _navAppDefault == 'maps',
@@ -432,7 +432,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   ),
                   const SizedBox(width: AppSpacing.x10),
                   Expanded(
-                    child: _NavButton(
+                    child: NavButton(
                       label: 'Waze',
                       icon: Icons.navigation_outlined,
                       preferred: _navAppDefault == 'waze',
@@ -448,14 +448,14 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
             ],
 
             if (_pickingRaison)
-              _RaisonEchecPicker(
+              RaisonEchecPicker(
                 onPicked: (raison) =>
                     Navigator.of(context).pop(MarkEchecAction(raison)),
                 onBack: () => setState(() => _pickingRaison = false),
               )
             else ...[
               if (hasStatut)
-                _StatutBanner(
+                StatutBanner(
                   isLivre: isLivre,
                   raison: stop.raisonEchec,
                 ),
@@ -575,289 +575,6 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatutBanner extends StatelessWidget {
-  const _StatutBanner({required this.isLivre, this.raison});
-
-  final bool isLivre;
-  final String? raison;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = isLivre
-        ? AppColors.emeraldSoft
-        : AppColors.red.withValues(alpha: 0.12);
-    final fg = isLivre ? AppColors.emerald : AppColors.red;
-    final libelle = isLivre ? 'Livre' : 'Echec : ${_humanRaison(raison)}';
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x12,
-        vertical: AppSpacing.x10,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppRadius.r10),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isLivre ? Icons.check_circle : Icons.cancel,
-            color: fg,
-            size: 18,
-          ),
-          const SizedBox(width: AppSpacing.x8),
-          Expanded(
-            child: Text(
-              libelle,
-              style: TextStyle(
-                color: fg,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _humanRaison(String? r) {
-    return switch (r) {
-      'absent' => 'absent',
-      'refuse' => 'refuse',
-      'adresse_fausse' => 'adresse fausse',
-      'autre' => 'autre',
-      _ => 'sans raison',
-    };
-  }
-}
-
-/// Bouton circulaire - / + pour le compteur de colis. Disabled si
-/// `onPressed == null` (typiquement quand on est a 1 et qu'on veut
-/// pas descendre en dessous).
-class _StepperButton extends StatelessWidget {
-  const _StepperButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final disabled = onPressed == null;
-    return Material(
-      color: disabled ? p.inkLine : p.paper,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onPressed,
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(
-            icon,
-            size: 18,
-            color: disabled ? p.textFaint : p.ink,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Bouton 'Maps' / 'Waze' dans le bottom sheet. Quand `preferred` est
-/// vrai (= cette app a ete choisie comme defaut dans Parametres), on
-/// l'affiche en plein (FilledButton vert) pour la mettre en avant.
-/// Sinon en outlined neutre.
-class _NavButton extends StatelessWidget {
-  const _NavButton({
-    required this.label,
-    required this.icon,
-    required this.preferred,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool preferred;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    if (preferred) {
-      return FilledButton.icon(
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.emerald,
-          foregroundColor: p.paper,
-          minimumSize: const Size(0, 48),
-        ),
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18),
-        label: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      );
-    }
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: p.ink,
-        minimumSize: const Size(0, 48),
-      ),
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label,
-          style: const TextStyle(fontWeight: FontWeight.w700)),
-    );
-  }
-}
-
-/// Picker compact d'une heure (HH:mm) qui sauvegarde inline. Affiche
-/// "Pas avant 09:30" ou "--:--" si vide, avec un X pour effacer.
-class _FenetreInlineField extends StatelessWidget {
-  const _FenetreInlineField({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final String? value;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final filled = value != null && value!.isNotEmpty;
-    return Material(
-      color: p.creamSoft,
-      borderRadius: BorderRadius.circular(AppRadius.r10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.r10),
-        onTap: () => _pick(context),
-        onLongPress: filled ? () => onChanged(null) : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x10,
-            vertical: AppSpacing.x8,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.access_time, size: 16, color: p.textMute),
-              const SizedBox(width: AppSpacing.x6),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: appMonoStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                        color: p.textMute,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      filled ? value! : '--:--',
-                      style: appMonoStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: filled ? p.ink : p.textFaint,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (filled)
-                GestureDetector(
-                  onTap: () => onChanged(null),
-                  child: Icon(Icons.close, size: 16, color: p.textMute),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pick(BuildContext context) async {
-    final init = _parseHHmm(value) ?? const TimeOfDay(hour: 9, minute: 0);
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: init,
-    );
-    if (picked == null) return;
-    final hh = picked.hour.toString().padLeft(2, '0');
-    final mm = picked.minute.toString().padLeft(2, '0');
-    onChanged('$hh:$mm');
-  }
-
-  static TimeOfDay? _parseHHmm(String? s) {
-    if (s == null || s.isEmpty) return null;
-    final parts = s.split(':');
-    if (parts.length != 2) return null;
-    final h = int.tryParse(parts[0]);
-    final m = int.tryParse(parts[1]);
-    if (h == null || m == null) return null;
-    return TimeOfDay(hour: h, minute: m);
-  }
-}
-
-class _RaisonEchecPicker extends StatelessWidget {
-  const _RaisonEchecPicker({required this.onPicked, required this.onBack});
-
-  final ValueChanged<String> onPicked;
-  final VoidCallback onBack;
-
-  static const _options = [
-    ('absent', 'Absent', Icons.person_off_outlined),
-    ('refuse', 'Refuse le colis', Icons.front_hand_outlined),
-    ('adresse_fausse', 'Adresse fausse', Icons.wrong_location_outlined),
-    ('autre', 'Autre', Icons.more_horiz),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Raison de l\'echec',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: p.ink,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x10),
-        for (final (id, label, icon) in _options) ...[
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: p.ink,
-              minimumSize: const Size(0, 48),
-              alignment: Alignment.centerLeft,
-            ),
-            onPressed: () => onPicked(id),
-            icon: Icon(icon, size: 18),
-            label: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x8),
-        ],
-        const SizedBox(height: AppSpacing.x6),
-        TextButton.icon(
-          onPressed: onBack,
-          icon: const Icon(Icons.arrow_back, size: 18),
-          label: const Text('Retour'),
-        ),
-      ],
     );
   }
 }
