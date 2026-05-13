@@ -30,7 +30,7 @@ import 'tournee_du_jour/banners.dart';
 import 'tournee_du_jour/prochain_arret_card.dart';
 import 'tournee_du_jour/progress_banner.dart';
 import 'tournee_du_jour/stat_row.dart';
-import 'tournee_du_jour/stop_row.dart';
+import 'tournee_du_jour/stops_list.dart';
 import 'tournee_form_screen.dart';
 
 class TourneeDuJourScreen extends ConsumerStatefulWidget {
@@ -1269,7 +1269,7 @@ class _Body extends StatelessWidget {
         ],
         const SizedBox(height: AppSpacing.x18),
         if (stops.isEmpty)
-          const _StopsPlaceholder()
+          const StopsPlaceholder()
         else
           _StopsSection(stops: stops),
       ],
@@ -1542,7 +1542,7 @@ class _StopsSectionState extends ConsumerState<_StopsSection> {
             ),
           )
         else
-          _StopsList(stops: filtered, reorderable: !isFiltered),
+          StopsList(stops: filtered, reorderable: !isFiltered),
       ],
     );
   }
@@ -1745,207 +1745,6 @@ class _Fabs extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-/// Bandeau de progression / bilan qui s'affiche des qu'au moins un
-/// arret a un statut definitif. Quand toute la tournee est terminee,
-/// passe en mode "Tournee terminee" avec un fond vert.
-
-class _StopsPlaceholder extends StatelessWidget {
-  const _StopsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x22),
-      decoration: BoxDecoration(
-        color: p.paper,
-        borderRadius: BorderRadius.circular(AppRadius.r18),
-        border: Border.all(color: p.divider),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: p.creamSoft,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.add_road_outlined,
-              color: p.ink,
-              size: 26,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          Text(
-            'Pas encore d\'arrets',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: p.ink,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x6),
-          Text(
-            'Tape sur "Ajouter un arret" pour commencer a remplir ta tournee.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: p.textMute,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StopsList extends ConsumerStatefulWidget {
-  const _StopsList({required this.stops, this.reorderable = true});
-
-  final List<Stop> stops;
-
-  /// Quand `false` (typiquement pendant une recherche), le drag-and-drop
-  /// est desactive : la poignee `drag_handle` est masquee et la liste
-  /// utilise un simple `ListView` au lieu de `ReorderableListView`.
-  /// L'ordre n'a pas de sens sur une liste filtree.
-  final bool reorderable;
-
-  @override
-  ConsumerState<_StopsList> createState() => _StopsListState();
-}
-
-class _StopsListState extends ConsumerState<_StopsList> {
-  /// Copie locale des stops, manipulee pendant le drag-and-drop. Quand
-  /// le stream Drift emet une nouvelle liste, on resync (sauf si on est
-  /// en plein milieu d'un drag, auquel cas on attend la fin).
-  late List<Stop> _local;
-  bool _dragging = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _local = List.of(widget.stops);
-  }
-
-  @override
-  void didUpdateWidget(_StopsList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!_dragging) {
-      _local = List.of(widget.stops);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    if (!widget.reorderable) {
-      // Mode lecture seule (typiquement pendant une recherche). La liste
-      // est un simple ListView ; chaque _StopRow recoit `showDragHandle:
-      // false` pour cacher la poignee qui n'a pas de sens ici.
-      return Container(
-        decoration: BoxDecoration(
-          color: p.paper,
-          borderRadius: BorderRadius.circular(AppRadius.r18),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            for (var i = 0; i < widget.stops.length; i++)
-              StopRow(
-                key: ValueKey('stop-${widget.stops[i].id}'),
-                stop: widget.stops[i],
-                index: i + 1,
-                dragIndex: i,
-                showDragHandle: false,
-                onDelete: () => _confirmDelete(context, ref, widget.stops[i]),
-              ),
-          ],
-        ),
-      );
-    }
-    return Container(
-      decoration: BoxDecoration(
-        color: p.paper,
-        borderRadius: BorderRadius.circular(AppRadius.r18),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        buildDefaultDragHandles: false,
-        itemCount: _local.length,
-        onReorderStart: (_) => _dragging = true,
-        onReorder: _onReorder,
-        itemBuilder: (context, i) {
-          final stop = _local[i];
-          return StopRow(
-            key: ValueKey('stop-${stop.id}'),
-            stop: stop,
-            index: i + 1,
-            dragIndex: i,
-            onDelete: () => _confirmDelete(context, ref, stop),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _onReorder(int oldIndex, int newIndex) async {
-    final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
-    setState(() {
-      final item = _local.removeAt(oldIndex);
-      _local.insert(adjusted, item);
-    });
-    // Persister le nouvel ordre. La liste des stops du stream va etre
-    // rafraichie automatiquement avec ces nouveaux ordreOptimise.
-    await ref
-        .read(stopsRepositoryProvider)
-        .applyOptimizedOrder(_local.map((s) => s.id).toList());
-    _dragging = false;
-  }
-
-  Future<void> _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    Stop stop,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Supprimer cet arret ?'),
-        content: Text(
-          stop.nomClient != null && stop.nomClient!.isNotEmpty
-              ? '${stop.nomClient} - ${stop.adresseBrute}'
-              : stop.adresseBrute,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton.tonal(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && context.mounted) {
-      await ref.read(stopsRepositoryProvider).delete(stop.id);
-      await ref
-          .read(tourneesRepositoryProvider)
-          .invalidateOptimization(stop.tourneeId);
-      // Auto-reorder local apres suppression d'un stop.
-      await ref
-          .read(localReorderServiceProvider)
-          .reorder(stop.tourneeId);
-    }
   }
 }
 
