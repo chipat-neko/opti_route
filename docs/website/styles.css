@@ -105,6 +105,36 @@ p { color: var(--text-mute); }
 a { color: var(--emerald); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* Accessibilité : screen reader only (visuellement cache mais lu). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Accessibilité : focus clavier toujours visible. Outline lime sur
+   fonds clairs, ink sur fonds lime/accent. Respecte prefers-reduced. */
+*:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.btn-secondary:focus-visible,
+.btn:focus-visible {
+  outline-color: var(--ink);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+}
+
 .mono {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   letter-spacing: 0.02em;

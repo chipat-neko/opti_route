@@ -292,18 +292,54 @@
       .replace(/'/g, '&#039;');
   }
 
+  // ---------- Persistance localStorage ----------
+  // On stocke le DERNIER CSV charge pour eviter de re-uploader a chaque
+  // reload. Limite localStorage ~5 MB, largement suffisant pour un
+  // export annuel (~30 KB). Cle isolee par origin.
+  const STORAGE_KEY = 'opti_route_last_csv';
+  const STORAGE_DATE = 'opti_route_last_csv_date';
+
+  function saveCsvToStorage(text) {
+    try {
+      localStorage.setItem(STORAGE_KEY, text);
+      localStorage.setItem(STORAGE_DATE, new Date().toISOString());
+    } catch (_) {
+      // QuotaExceeded ou private mode : ignorer silencieusement
+    }
+  }
+
+  function loadCsvFromStorage() {
+    try {
+      return {
+        text: localStorage.getItem(STORAGE_KEY),
+        date: localStorage.getItem(STORAGE_DATE),
+      };
+    } catch (_) {
+      return { text: null, date: null };
+    }
+  }
+
+  function clearCsvStorage() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_DATE);
+    } catch (_) {}
+  }
+
   // ---------- File handlers ----------
   function handleFile(file) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const rows = parseCSV(e.target.result);
+        const text = e.target.result;
+        const rows = parseCSV(text);
         const tournees = rowsToTournees(rows);
         if (tournees.length === 0) {
           alert('Le CSV est vide ou ne contient aucune tournee.');
           return;
         }
+        saveCsvToStorage(text);
         renderResults(tournees);
       } catch (err) {
         alert('Erreur de parsing : ' + err.message);
@@ -354,10 +390,37 @@
       resetBtn.addEventListener('click', (e) => {
         e.preventDefault();
         destroyCharts();
+        clearCsvStorage();
         document.getElementById('results').classList.add('hidden');
         document.getElementById('uploadZone').classList.remove('hidden');
         fileInput.value = '';
       });
+    }
+
+    // ---------- Auto-restore au chargement de la page ----------
+    // Si un CSV a deja ete uploade dans cette session/navigateur, on
+    // le restaure direct (skip la zone d'upload). L'utilisateur peut
+    // "Remplacer le fichier" via le bouton resetBtn dans la banner.
+    const restored = loadCsvFromStorage();
+    if (restored.text) {
+      try {
+        const rows = parseCSV(restored.text);
+        const tournees = rowsToTournees(rows);
+        if (tournees.length > 0) {
+          renderResults(tournees);
+          // Update la banner pour indiquer que c'est restaure
+          const summary = document.getElementById('bannerSummary');
+          if (summary && restored.date) {
+            const d = new Date(restored.date);
+            const dateStr = d.toLocaleDateString('fr-FR') +
+              ' a ' + d.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+            summary.textContent += ` · restaure du ${dateStr}`;
+          }
+        }
+      } catch (_) {
+        // CSV stocke corrompu, on l'efface
+        clearCsvStorage();
+      }
     }
 
     // Imprimer
