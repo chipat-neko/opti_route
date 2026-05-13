@@ -24,9 +24,26 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+  /// PageController qui orchestre la navigation entre les 5 pages.
+  /// Permet l'animation `nextPage` / `previousPage` declenchees par les
+  /// boutons en bas de l'ecran (precedent / suivant).
   final _pageController = PageController();
+
+  /// Controller du champ de saisie de la cle ORS sur la derniere page.
+  /// La valeur est persistee dans `parametres.ors_api_key` a la fin
+  /// du walkthrough (cf. `_finish`).
   final _orsKeyCtrl = TextEditingController();
+
+  /// Index de la page courante (0..4). Mis a jour via
+  /// `PageView.onPageChanged`. Sert a :
+  /// - choisir entre "Passer" (page 0) et "Precedent" (pages 1+)
+  /// - choisir entre "Suivant" (pages 0..3) et "Commencer" (page 4)
+  /// - colorer le bon indicateur "dot" en bas.
   int _currentPage = 0;
+
+  /// True pendant la persistance finale (le user a tape "Commencer").
+  /// Bloque les boutons pour eviter un double-tap qui declencherait
+  /// 2 appels concurrents a `setOnboardingDone`.
   bool _saving = false;
 
   @override
@@ -119,13 +136,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  /// Bouton "Passer" sur la 1re page : marque l'onboarding comme
+  /// termine SANS saisir de cle ORS. L'utilisateur pourra la coller
+  /// plus tard via Parametres > Optimisation. Le HomeScreen watch le
+  /// flag onboarding_done et bascule automatiquement vers le contenu
+  /// normal des qu'il est mis a true.
   Future<void> _skip() async {
     setState(() => _saving = true);
     await ref.read(parametresRepositoryProvider).setOnboardingDone();
-    // Pas besoin de pop : HomeScreen watch le stream du flag et
-    // rebuild automatiquement vers le contenu normal.
   }
 
+  /// Bouton "Commencer" sur la derniere page : sauvegarde la cle ORS
+  /// si l'utilisateur l'a saisie, puis marque l'onboarding comme
+  /// termine. Si le champ est vide, on ne touche pas a la cle ORS
+  /// (l'utilisateur peut decider de la saisir plus tard).
   Future<void> _finish() async {
     setState(() => _saving = true);
     final repo = ref.read(parametresRepositoryProvider);
@@ -137,6 +161,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
+/// ────────────────────────────────────────────────────────────────
+/// Page 1/5 : "Bienvenue" — hero d'accueil avec icone camion lime
+/// et liste de 4 features cles (optimisation, GPS, carnet, vie privee).
+/// ────────────────────────────────────────────────────────────────
 class _PageBienvenue extends StatelessWidget {
   const _PageBienvenue();
 
@@ -243,6 +271,11 @@ class _PageBienvenue extends StatelessWidget {
   ];
 }
 
+/// ────────────────────────────────────────────────────────────────
+/// Page 2/5 : "Comment ca marche" — 4 etapes numerotees explicant
+/// le workflow d'une tournee (cree, ajoute des arrets, optimise,
+/// demarre).
+/// ────────────────────────────────────────────────────────────────
 class _PageConcept extends StatelessWidget {
   const _PageConcept();
 
@@ -344,6 +377,11 @@ class _PageConcept extends StatelessWidget {
   ];
 }
 
+/// ────────────────────────────────────────────────────────────────
+/// Page 3/5 : "Scan bordereau" — explication de l'OCR avec liste
+/// des 3 formats reconnus (MESEXP, Colissimo, Chronopost). Accessible
+/// depuis le menu Plus pendant la creation d'une tournee.
+/// ────────────────────────────────────────────────────────────────
 class _PageScan extends StatelessWidget {
   const _PageScan();
 
@@ -456,6 +494,12 @@ class _PageScan extends StatelessWidget {
   ];
 }
 
+/// ────────────────────────────────────────────────────────────────
+/// Page 4/5 : "Mode equipe & facturation" — features avancees pour
+/// les chefs d'equipe : affectation d'arrets, partage cible (WhatsApp/
+/// SMS), PDF par coequipier, recap facturable. Activable via toggle
+/// "Mode chef d'equipe" dans Parametres.
+/// ────────────────────────────────────────────────────────────────
 class _PageChefEquipe extends StatelessWidget {
   const _PageChefEquipe();
 
@@ -587,6 +631,16 @@ class _PageChefEquipe extends StatelessWidget {
   ];
 }
 
+/// ────────────────────────────────────────────────────────────────
+/// Page 5/5 (derniere) : "Cle OpenRouteService" — saisie de la cle
+/// API gratuite ORS. Bouton "Creer un compte gratuit" qui ouvre
+/// https://openrouteservice.org/dev/#/signup dans le navigateur.
+///
+/// La cle est OPTIONNELLE : on peut taper "Commencer" sans rien
+/// saisir, l'app fonctionnera mais le bouton "Optimiser" sera grise
+/// tant qu'aucune cle n'est definie (cf. Parametres > Optimisation
+/// pour la saisir plus tard).
+/// ────────────────────────────────────────────────────────────────
 class _PageOrsKey extends StatelessWidget {
   const _PageOrsKey({required this.controller});
 
@@ -665,6 +719,12 @@ class _PageOrsKey extends StatelessWidget {
   }
 }
 
+/// ────────────────────────────────────────────────────────────────
+/// Indicateurs de progression — la rangee de "dots" en bas de l'ecran.
+/// Le dot de la page courante est plus large (24 px) et plus fonce
+/// (ink), les autres sont des petits dots inkLine (8 px). Animation
+/// 250 ms a chaque changement de page.
+/// ────────────────────────────────────────────────────────────────
 class _Indicators extends StatelessWidget {
   const _Indicators({required this.currentPage, required this.total});
 
