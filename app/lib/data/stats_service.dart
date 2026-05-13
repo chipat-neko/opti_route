@@ -265,6 +265,42 @@ class StatsService {
     );
   }
 
+  /// Top N des raisons d'echec sur la fenetre `[since, now]`, triees
+  /// du plus frequent au moins frequent. Sert au tile "Pourquoi tes
+  /// echecs" dans Stats : Noah voit a quoi attribuer ses ratés pour
+  /// agir (pre-appeler les clients absents, etc.).
+  ///
+  /// Retourne une liste de records `(raison, n)`. Vide si pas d'echec
+  /// sur la periode.
+  Future<List<({String raison, int n})>> topRaisonsEchecGlobales({
+    required DateTime since,
+    int limit = 5,
+  }) async {
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since)))
+        .get();
+    if (tournees.isEmpty) return const [];
+    final stops = await (_db.select(_db.stops)
+          ..where((s) =>
+              s.tourneeId.isIn(tournees.map((t) => t.id).toList()) &
+              s.statutLivraison.equals('echec')))
+        .get();
+
+    final raisonsCount = <String, int>{};
+    for (final s in stops) {
+      final r = s.raisonEchec;
+      if (r != null && r.isNotEmpty) {
+        raisonsCount[r] = (raisonsCount[r] ?? 0) + 1;
+      }
+    }
+    final entries = raisonsCount.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries
+        .take(limit)
+        .map((e) => (raison: e.key, n: e.value))
+        .toList(growable: false);
+  }
+
   /// Genere un CSV des tournees dans la fenetre `[since, now]`. Une
   /// ligne par tournee. Sert au bouton "Exporter en Excel" dans Stats.
   Future<String> exportCsvTournees({required DateTime since}) async {

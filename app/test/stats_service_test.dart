@@ -685,6 +685,140 @@ void main() {
     });
   });
 
+  group('StatsService.topRaisonsEchecGlobales', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<int> seedTournee() async {
+      return db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime.now(),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+            ),
+          );
+    }
+
+    test('aucune tournee : liste vide', () async {
+      final r = await stats.topRaisonsEchecGlobales(
+        since: DateTime(2020, 1, 1),
+      );
+      expect(r, isEmpty);
+    });
+
+    test('seulement livres : liste vide (pas d echec a compter)',
+        () async {
+      final tId = await seedTournee();
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'A',
+              statutLivraison: const Value('livre'),
+            ),
+          );
+      final r = await stats.topRaisonsEchecGlobales(
+        since: DateTime(2020, 1, 1),
+      );
+      expect(r, isEmpty);
+    });
+
+    test('tri par frequence desc + limit applique', () async {
+      final tId = await seedTournee();
+      // 3 absent + 2 refuse + 1 autre + 1 adresse_fausse
+      for (var i = 0; i < 3; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'absent-$i',
+                statutLivraison: const Value('echec'),
+                raisonEchec: const Value('absent'),
+              ),
+            );
+      }
+      for (var i = 0; i < 2; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'refuse-$i',
+                statutLivraison: const Value('echec'),
+                raisonEchec: const Value('refuse'),
+              ),
+            );
+      }
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'autre',
+              statutLivraison: const Value('echec'),
+              raisonEchec: const Value('autre'),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'fausse',
+              statutLivraison: const Value('echec'),
+              raisonEchec: const Value('adresse_fausse'),
+            ),
+          );
+
+      final r = await stats.topRaisonsEchecGlobales(
+        since: DateTime(2020, 1, 1),
+      );
+      expect(r.length, 4);
+      expect(r[0].raison, 'absent');
+      expect(r[0].n, 3);
+      expect(r[1].raison, 'refuse');
+      expect(r[1].n, 2);
+    });
+
+    test('limit limite a N premiers', () async {
+      final tId = await seedTournee();
+      for (var i = 0; i < 3; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'a-$i',
+                statutLivraison: const Value('echec'),
+                raisonEchec: Value('r$i'),
+              ),
+            );
+      }
+      final r = await stats.topRaisonsEchecGlobales(
+        since: DateTime(2020, 1, 1),
+        limit: 2,
+      );
+      expect(r.length, 2);
+    });
+
+    test('echec sans raison renseignee : exclu du compte', () async {
+      final tId = await seedTournee();
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'A',
+              statutLivraison: const Value('echec'),
+              // raisonEchec laisse null
+            ),
+          );
+      final r = await stats.topRaisonsEchecGlobales(
+        since: DateTime(2020, 1, 1),
+      );
+      expect(r, isEmpty);
+    });
+  });
+
   group('TourneeStats - constante empty', () {
     test('TourneeStats.empty : tout a zero', () {
       const s = TourneeStats.empty;

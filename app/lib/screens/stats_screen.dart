@@ -53,6 +53,8 @@ class StatsScreen extends ConsumerWidget {
             SizedBox(height: AppSpacing.x14),
             _CoequipiersStatsCard(),
             SizedBox(height: AppSpacing.x14),
+            _TopRaisonsEchecCard(),
+            SizedBox(height: AppSpacing.x14),
             _ExportCsvCard(),
           ],
         ),
@@ -1025,5 +1027,144 @@ class _CoequipierRow extends StatelessWidget {
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
     return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
         .toUpperCase();
+  }
+}
+
+/// Carte "Top 5 raisons d'echec - 30 derniers jours". Affiche un mini
+/// classement avec barres de progression relatives a la raison majoritaire.
+/// Cachee si aucun echec sur la periode.
+class _TopRaisonsEchecCard extends ConsumerWidget {
+  const _TopRaisonsEchecCard();
+
+  static const _days = 30;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final async = ref.watch(topRaisonsEchecProvider(_days));
+    final list = async.asData?.value ?? const [];
+    if (list.isEmpty) return const SizedBox.shrink();
+
+    final max = list.first.n;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: p.paper,
+        borderRadius: BorderRadius.circular(AppRadius.r18),
+        border: Border.all(color: p.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.report_outlined,
+                  color: AppColors.red, size: 18),
+              const SizedBox(width: AppSpacing.x8),
+              Text(
+                'POURQUOI TES ECHECS - 30 DERNIERS JOURS',
+                style: appMonoStyle(
+                  fontSize: 10.5,
+                  color: p.textMute,
+                  letterSpacing: 0.6,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          for (final entry in list) _RaisonBar(
+            raison: _humanRaison(entry.raison),
+            n: entry.n,
+            max: max,
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          Text(
+            'Tu peux limiter les "absent" en pre-appelant les clients '
+            'la veille. Pour "adresse fausse", verifie le GPS dans le '
+            'carnet d\'abord.',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: p.textMute,
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Traduction des codes raison vers du francais lisible.
+  static String _humanRaison(String r) {
+    return switch (r) {
+      'absent' => 'Client absent',
+      'refuse' => 'Refuse',
+      'adresse_fausse' => 'Adresse fausse',
+      'autre' => 'Autre',
+      _ => r,
+    };
+  }
+}
+
+class _RaisonBar extends StatelessWidget {
+  const _RaisonBar({
+    required this.raison,
+    required this.n,
+    required this.max,
+  });
+
+  final String raison;
+  final int n;
+  final int max;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final pct = max == 0 ? 0.0 : n / max;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              raison,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: p.ink,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: pct,
+                minHeight: 8,
+                backgroundColor: p.creamSoft,
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.red),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          SizedBox(
+            width: 32,
+            child: Text(
+              '$n',
+              textAlign: TextAlign.right,
+              style: appMonoStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
