@@ -26,6 +26,7 @@ import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
 import 'parametres_screen.dart';
 import 'tournee_du_jour/progress_banner.dart';
+import 'tournee_du_jour/stat_row.dart';
 import 'tournee_du_jour/stop_row.dart';
 import 'tournee_form_screen.dart';
 
@@ -1234,7 +1235,7 @@ class _Body extends StatelessWidget {
         _Header(tournee: tournee),
         _AutresTourneesDuJourBanner(currentTourneeId: tournee.id),
         const SizedBox(height: AppSpacing.x16),
-        _StatRow(
+        StatRow(
           arretsCount: stops.length,
           colisTotal: stops.fold<int>(0, (sum, s) => sum + s.nbColis),
           distanceMeters: tournee.distanceTotaleM,
@@ -1862,66 +1863,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _StatRow extends StatelessWidget {
-  const _StatRow({
-    required this.arretsCount,
-    required this.colisTotal,
-    this.distanceMeters,
-    this.durationSeconds,
-  });
-
-  final int arretsCount;
-  final int colisTotal;
-  final int? distanceMeters;
-  final int? durationSeconds;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final hasDistance = distanceMeters != null && distanceMeters! > 0;
-    final hasDuration = durationSeconds != null && durationSeconds! > 0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x16,
-        vertical: AppSpacing.x14,
-      ),
-      decoration: BoxDecoration(
-        color: p.paper,
-        borderRadius: BorderRadius.circular(AppRadius.r18),
-      ),
-      child: Row(
-        children: [
-          _StatTile(label: 'Arrets', value: '$arretsCount'),
-          const _StatDivider(),
-          _StatTile(label: 'Colis', value: '$colisTotal'),
-          const _StatDivider(),
-          _StatTile(
-            label: 'Distance',
-            value: hasDistance
-                ? (distanceMeters! / 1000).toStringAsFixed(1)
-                : ' - ',
-            unit: hasDistance ? 'km' : null,
-          ),
-          const _StatDivider(),
-          _StatTile(
-            label: 'Duree',
-            value: hasDuration ? _formatDuration(durationSeconds!) : ' - ',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatDivider extends StatelessWidget {
-  const _StatDivider();
-
-  @override
-  Widget build(BuildContext context) =>
-      Container(width: 1, height: 28, color: context.palette.divider);
-}
-
 /// Petit bandeau qui affiche une estimation du cout carburant pour la
 /// tournee, base sur le param `coutCarburantLitre` x `consoLitresPar100Km`
 /// x la distance totale calculee par ORS. Discret : juste une ligne
@@ -1974,61 +1915,6 @@ class _CoutCarburantBanner extends ConsumerWidget {
     final entier = cents ~/ 100;
     final dec = (cents % 100).toString().padLeft(2, '0');
     return '$entier,$dec EUR';
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, this.unit});
-
-  final String label;
-  final String value;
-  final String? unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            RichText(
-              text: TextSpan(
-                style: appMonoStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: p.ink,
-                  letterSpacing: -0.5,
-                ),
-                children: [
-                  TextSpan(text: value),
-                  if (unit != null)
-                    TextSpan(
-                      text: ' $unit',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: p.textMute,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x6),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                fontSize: 11,
-                color: p.textMute,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.6,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
