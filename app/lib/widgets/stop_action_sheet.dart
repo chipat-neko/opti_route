@@ -1,14 +1,14 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show OrderingTerm, Value;
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../data/database.dart';
 import '../data/navigation_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
+import 'stop_action_sheet_pickers.dart';
 import 'stop_action_sheet_widgets.dart';
 
 /// Action choisie par le livreur dans la bottom sheet de validation
@@ -160,111 +160,18 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
     setState(() => _navAppDefault = v);
   }
 
-  /// Sub-dialog pour choisir un coequipier dans la liste des actifs.
-  /// "Personne" reset l'affectation (coequipierId -> null).
-  Future<void> _pickCoequipier(
-    BuildContext context,
-    WidgetRef ref,
-    List<Coequipier> coequipiers,
-  ) async {
-    final p = context.palette;
-    final currentId = widget.stop.coequipierId;
-    final picked = await showModalBottomSheet<int?>(
+  /// Wrapper qui delegue a [showTargetTourneePicker] puis pop le sheet
+  /// principal avec [MoveToTourneeAction]. Place ici plutot que dans
+  /// le picker car ce dernier ne connait pas l'action sealed.
+  Future<void> _onMoveTo(BuildContext context) async {
+    final pickedId = await showTargetTourneePicker(
       context: context,
-      backgroundColor: p.cream,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.r22),
-        ),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x18,
-            vertical: AppSpacing.x14,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: AppSpacing.x14),
-                  decoration: BoxDecoration(
-                    color: p.inkLine,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                'Affecter a',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: p.ink,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.x14),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(
-                  backgroundColor: AppColors.lime,
-                  child: Icon(Icons.person, color: AppColors.ink),
-                ),
-                title: const Text('Moi (par defaut)'),
-                trailing: currentId == null
-                    ? const Icon(Icons.check, color: AppColors.emerald)
-                    : null,
-                onTap: () => Navigator.of(context).pop(null),
-              ),
-              const Divider(),
-              for (final c in coequipiers)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: colorFromTag(
-                      c.colorTag,
-                      defaultColor: AppColors.creamSoft,
-                    ),
-                    child: Text(
-                      _initialsFor(c.nom),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ),
-                  title: Text(c.nom),
-                  trailing: c.id == currentId
-                      ? const Icon(Icons.check, color: AppColors.emerald)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(c.id),
-                ),
-            ],
-          ),
-        ),
-      ),
+      ref: ref,
+      stop: widget.stop,
     );
-    // Modal ferme sans selection (back / tap exterieur) : on ne touche
-    // pas a l'affectation. Modal ferme avec selection (meme `null` =
-    // "Moi") : on update.
+    if (pickedId == null) return;
     if (!context.mounted) return;
-    if (picked == widget.stop.coequipierId) return;
-    await ref
-        .read(stopsRepositoryProvider)
-        .setCoequipier(widget.stop.id, picked);
-  }
-
-  static String _initialsFor(String nom) {
-    final parts = nom.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) {
-      return parts.first.substring(0, 1).toUpperCase();
-    }
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
-        .toUpperCase();
+    Navigator.of(context).pop(MoveToTourneeAction(pickedId));
   }
 
   @override
@@ -541,7 +448,12 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                           alignment: Alignment.centerLeft,
                         ),
                         onPressed: () =>
-                            _pickCoequipier(context, ref, coequipiers),
+                            showCoequipierPicker(
+                              context: context,
+                              ref: ref,
+                              stop: widget.stop,
+                              coequipiers: coequipiers,
+                            ),
                         icon: const Icon(Icons.groups_outlined, size: 18),
                         label: Text(
                           current == null
@@ -577,7 +489,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 style: TextButton.styleFrom(
                   foregroundColor: p.ink,
                 ),
-                onPressed: () => _pickTargetTournee(context),
+                onPressed: () => _onMoveTo(context),
                 icon: const Icon(Icons.swap_horiz, size: 18),
                 label: const Text('Deplacer vers une autre tournee'),
               ),
@@ -595,102 +507,5 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
         ),
       ),
     );
-  }
-
-  /// Ouvre une bottom sheet listant toutes les tournees **autres** que
-  /// la tournee courante du stop, ordonnees par date desc (les plus
-  /// recentes en haut, plus probable de bouger un stop vers la
-  /// tournee du jour qu'une de l'an dernier).
-  ///
-  /// Tap sur une tournee -> pop le sheet courant avec
-  /// MoveToTourneeAction(targetId). Le caller (StopRow._onTap) execute
-  /// le deplacement + invalide les optims + auto-reorder.
-  Future<void> _pickTargetTournee(BuildContext context) async {
-    final p = context.palette;
-    final db = ref.read(appDatabaseProvider);
-    // Charge toutes les tournees != tournee courante, tri date desc.
-    final tournees = await (db.select(db.tournees)
-          ..where((t) => t.id.isNotValue(widget.stop.tourneeId))
-          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
-        .get();
-    if (!context.mounted) return;
-    if (tournees.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucune autre tournee disponible.')),
-      );
-      return;
-    }
-
-    final df = DateFormat('d MMM yyyy', 'fr');
-    final pickedId = await showModalBottomSheet<int>(
-      context: context,
-      backgroundColor: p.cream,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.r22),
-        ),
-      ),
-      builder: (sheetCtx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.x18,
-            AppSpacing.x14,
-            AppSpacing.x18,
-            AppSpacing.x18,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: AppSpacing.x14),
-                  decoration: BoxDecoration(
-                    color: p.inkLine,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                'Deplacer vers une tournee',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: p.ink,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.x10),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: tournees.length,
-                  itemBuilder: (_, i) {
-                    final t = tournees[i];
-                    return ListTile(
-                      leading: const Icon(Icons.local_shipping_outlined),
-                      title: Text(
-                        t.nom,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: Text(df.format(t.date)),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(sheetCtx).pop(t.id),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (pickedId == null) return;
-    if (!context.mounted) return;
-    // Pop le sheet principal avec l'action - le caller traitera le move.
-    Navigator.of(context).pop(MoveToTourneeAction(pickedId));
   }
 }
