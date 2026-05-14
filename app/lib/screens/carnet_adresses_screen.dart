@@ -219,7 +219,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
 
   Future<void> _onImportPressed() async {
     final messenger = ScaffoldMessenger.of(context);
-    final picked = await FilePicker.platform.pickFiles(
+    final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv'],
     );

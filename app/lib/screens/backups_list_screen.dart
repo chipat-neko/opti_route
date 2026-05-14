@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../data/backup_service.dart';
 import '../data/backups_list_service.dart';
+import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -39,6 +40,11 @@ class BackupsListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mes backups'),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _onCreateBackupNow(context, ref),
+        icon: const Icon(Icons.backup_outlined),
+        label: const Text('Backup maintenant'),
+      ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -67,6 +73,56 @@ class BackupsListScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// Force la creation d'un backup *maintenant* dans le dossier
+  /// `auto_backups/`. Affiche un loader pendant la generation (peut
+  /// prendre 1-3 s pour zipper DB + photos preuves), invalide la liste
+  /// pour qu'il apparaisse, et snack le resultat.
+  Future<void> _onCreateBackupNow(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    // Loader bloquant : si Noah tape 2x rapidement, on evite 2 zips.
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.x18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: AppSpacing.x12),
+                Text('Creation du backup...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    try {
+      await ref.read(autoBackupServiceProvider).runBackupNow();
+      ref.invalidate(_backupsListProvider);
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // ferme le loader
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Backup cree'),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // ferme le loader
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Erreur creation backup : $e'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
   }
 }
 

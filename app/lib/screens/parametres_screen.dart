@@ -1370,7 +1370,7 @@ class _RestoreTileState extends ConsumerState<_RestoreTile> {
     if (!mounted) return;
 
     // 2. file_picker
-    final picked = await FilePicker.platform.pickFiles(
+    final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip'],
       dialogTitle: 'Choisir un backup opti_route (.zip)',

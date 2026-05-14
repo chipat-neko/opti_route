@@ -8,6 +8,12 @@ import 'parametres_repository.dart';
 /// Service de notifications locales (rappels "tournee a preparer",
 /// "tournee non finie", + tests). 100% local au telephone via
 /// flutter_local_notifications, aucune CB / backend / Firebase.
+///
+/// Note migration v18 -> v21 : toutes les methodes du plugin sont
+/// passees aux named parameters (breaking change v20). Le param
+/// `uiLocalNotificationDateInterpretation` a aussi ete retire de
+/// `zonedSchedule` en v19 -- les notifs iOS l'utilisent dorenavant
+/// implicitement comme "absoluteTime".
 class NotificationsService {
   NotificationsService._();
   static final instance = NotificationsService._();
@@ -50,7 +56,7 @@ class NotificationsService {
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: android);
-    await _plugin.initialize(settings);
+    await _plugin.initialize(settings: settings);
 
     // Demande la permission pour Android 13+ (POST_NOTIFICATIONS).
     final androidImpl = _plugin
@@ -70,11 +76,12 @@ class NotificationsService {
     final when = tz.TZDateTime.now(tz.local)
         .add(Duration(seconds: seconds));
     await _plugin.zonedSchedule(
-      _testId,
-      'Test notification opti_route',
-      'Bravo, les notifs locales marchent ! (declenchee a ${_format(when)})',
-      when,
-      NotificationDetails(
+      id: _testId,
+      title: 'Test notification opti_route',
+      body:
+          'Bravo, les notifs locales marchent ! (declenchee a ${_format(when)})',
+      scheduledDate: when,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           'opti_route',
@@ -84,12 +91,10 @@ class NotificationsService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
-  Future<void> cancelTest() => _plugin.cancel(_testId);
+  Future<void> cancelTest() => _plugin.cancel(id: _testId);
 
   /// Programme un rappel de tournee pour [when] (DateTime local).
   /// L'id est derive de l'id Drift de la tournee pour eviter les
@@ -105,7 +110,7 @@ class NotificationsService {
   }) async {
     await init();
     final notifId = _tourneeNotifId(tourneeId);
-    await _plugin.cancel(notifId);
+    await _plugin.cancel(id: notifId);
     final tzWhen = tz.TZDateTime.from(when, tz.local);
     final now = tz.TZDateTime.now(tz.local);
     if (!tzWhen.isAfter(now)) {
@@ -113,11 +118,11 @@ class NotificationsService {
       return;
     }
     await _plugin.zonedSchedule(
-      notifId,
-      'Tournee a preparer : $nomTournee',
-      'C\'est l\'heure de demarrer ta tournee dans opti_route.',
-      tzWhen,
-      NotificationDetails(
+      id: notifId,
+      title: 'Tournee a preparer : $nomTournee',
+      body: 'C\'est l\'heure de demarrer ta tournee dans opti_route.',
+      scheduledDate: tzWhen,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           'opti_route',
@@ -127,8 +132,6 @@ class NotificationsService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -136,7 +139,7 @@ class NotificationsService {
   /// si aucun rappel n'etait planifie.
   Future<void> cancelTourneeRappel(int tourneeId) async {
     await init();
-    await _plugin.cancel(_tourneeNotifId(tourneeId));
+    await _plugin.cancel(id: _tourneeNotifId(tourneeId));
   }
 
   /// Cancel global : utile a la desinstallation simulee depuis
@@ -158,16 +161,16 @@ class NotificationsService {
   }) async {
     await init();
     final notifId = _veilleNotifId(tourneeId);
-    await _plugin.cancel(notifId);
+    await _plugin.cancel(id: notifId);
     final tzWhen = tz.TZDateTime.from(when, tz.local);
     final now = tz.TZDateTime.now(tz.local);
     if (!tzWhen.isAfter(now)) return;
     await _plugin.zonedSchedule(
-      notifId,
-      'Demain : $nomTournee',
-      'Pense a preparer tes colis ce soir.',
-      tzWhen,
-      NotificationDetails(
+      id: notifId,
+      title: 'Demain : $nomTournee',
+      body: 'Pense a preparer tes colis ce soir.',
+      scheduledDate: tzWhen,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           'opti_route',
@@ -177,14 +180,12 @@ class NotificationsService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
   Future<void> cancelVeilleReminder(int tourneeId) async {
     await init();
-    await _plugin.cancel(_veilleNotifId(tourneeId));
+    await _plugin.cancel(id: _veilleNotifId(tourneeId));
   }
 
   /// Notification immediate post-tournee : "X livrees / Y echecs / Z min
@@ -211,10 +212,10 @@ class NotificationsService {
     final body = '$nbLivres livraisons, $nbEchecs echecs, '
         '${_humanDuration(dureeTotaleMin)}';
     await _plugin.show(
-      notifId,
-      'Tournee terminee : $nomTournee',
-      body,
-      NotificationDetails(
+      id: notifId,
+      title: 'Tournee terminee : $nomTournee',
+      body: body,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           'opti_route',
@@ -245,10 +246,10 @@ class NotificationsService {
     }
     final notifId = _pendingStopsNotifId(tourneeId);
     await _plugin.show(
-      notifId,
-      'Arrets oublies : $nomTournee',
-      'Il reste $nbPending arret${nbPending > 1 ? "s" : ""} a livrer.',
-      NotificationDetails(
+      id: notifId,
+      title: 'Arrets oublies : $nomTournee',
+      body: 'Il reste $nbPending arret${nbPending > 1 ? "s" : ""} a livrer.',
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           'opti_route',
@@ -282,10 +283,10 @@ class NotificationsService {
     }
     final size = _humanSize(sizeBytes);
     await _plugin.show(
-      _backupSuccessId,
-      'Sauvegarde auto reussie',
-      'Backup de $size cree. Consultable dans Parametres > Mes backups.',
-      NotificationDetails(
+      id: _backupSuccessId,
+      title: 'Sauvegarde auto reussie',
+      body: 'Backup de $size cree. Consultable dans Parametres > Mes backups.',
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           'opti_route',

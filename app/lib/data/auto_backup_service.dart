@@ -63,6 +63,22 @@ class AutoBackupService {
     }
   }
 
+  /// Force la generation d'un backup *maintenant*, sans tenir compte
+  /// de la periode configuree. Utile pour le FAB "Creer un backup
+  /// maintenant" de [BackupsListScreen] : l'utilisateur veut une
+  /// sauvegarde a la demande dans le meme dossier que les
+  /// auto-backups (pour qu'elle apparaisse dans la liste).
+  ///
+  /// Met aussi a jour `lastAt` pour que le prochain auto-backup soit
+  /// reporte (sinon on aurait 2 backups consecutifs).
+  ///
+  /// Throw si la DB est introuvable (cas pratiquement impossible en
+  /// runtime mais on prefere une erreur explicite).
+  Future<void> runBackupNow() async {
+    await _runBackup();
+    await _params.setLastAutoBackupAt(DateTime.now());
+  }
+
   /// Genere effectivement le zip dans le dossier external/auto_backups/.
   /// Reutilise la meme structure que BackupService (DB + photos +
   /// manifest) pour que les fichiers soient interoperables avec un

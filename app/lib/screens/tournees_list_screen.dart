@@ -37,7 +37,7 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      final picked = await FilePicker.platform.pickFiles(
+      final picked = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
         dialogTitle: 'Choisir un template opti_route (.json)',
