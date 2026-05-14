@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/parametres_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
 
@@ -46,14 +47,12 @@ class QuietHoursTile extends ConsumerWidget {
             label: start ?? 'Debut',
             isPlaceholder: start == null,
             onTap: () async {
+              final parsed = ParametresRepository.parseHHmm(start);
               final picked = await showTimePicker(
                 context: context,
-                initialTime: start == null
+                initialTime: parsed == null
                     ? const TimeOfDay(hour: 12, minute: 0)
-                    : TimeOfDay(
-                        hour: int.parse(start.split(':')[0]),
-                        minute: int.parse(start.split(':')[1]),
-                      ),
+                    : TimeOfDay(hour: parsed.hour, minute: parsed.minute),
               );
               if (picked != null) {
                 final h = picked.hour.toString().padLeft(2, '0');
@@ -71,14 +70,12 @@ class QuietHoursTile extends ConsumerWidget {
             label: end ?? 'Fin',
             isPlaceholder: end == null,
             onTap: () async {
+              final parsed = ParametresRepository.parseHHmm(end);
               final picked = await showTimePicker(
                 context: context,
-                initialTime: end == null
+                initialTime: parsed == null
                     ? const TimeOfDay(hour: 14, minute: 0)
-                    : TimeOfDay(
-                        hour: int.parse(end.split(':')[0]),
-                        minute: int.parse(end.split(':')[1]),
-                      ),
+                    : TimeOfDay(hour: parsed.hour, minute: parsed.minute),
               );
               if (picked != null) {
                 final h = picked.hour.toString().padLeft(2, '0');

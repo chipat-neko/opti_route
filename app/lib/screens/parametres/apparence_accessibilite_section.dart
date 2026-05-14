@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/parametres_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
 import 'parametres_widgets.dart';
@@ -202,12 +203,10 @@ class AccessibiliteSection extends ConsumerWidget {
                       ],
                     ),
               onTap: () async {
-                final initial = hhmm == null
+                final parsed = ParametresRepository.parseHHmm(hhmm);
+                final initial = parsed == null
                     ? const TimeOfDay(hour: 21, minute: 0)
-                    : TimeOfDay(
-                        hour: int.parse(hhmm.split(':')[0]),
-                        minute: int.parse(hhmm.split(':')[1]),
-                      );
+                    : TimeOfDay(hour: parsed.hour, minute: parsed.minute);
                 final picked = await showTimePicker(
                   context: context,
                   initialTime: initial,

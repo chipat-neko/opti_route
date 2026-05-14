@@ -380,6 +380,16 @@ class ParametresRepository {
     return h * 60 + m;
   }
 
+  /// Parse une chaine "HH:mm" en tuple (hour, minute) ou retourne null
+  /// si le format est invalide. Helper expose pour les widgets qui
+  /// veulent reutiliser cette logique (TimePicker initialTime).
+  static ({int hour, int minute})? parseHHmm(String? hhmm) {
+    if (hhmm == null) return null;
+    final mins = _parseMinutes(hhmm);
+    if (mins == null) return null;
+    return (hour: mins ~/ 60, minute: mins % 60);
+  }
+
   /// Periode du backup auto local. Valeurs : 'jamais' (defaut) /
   /// 'hebdo' / 'mensuel'. Cf [AutoBackupService] pour le declenchement
   /// au boot. Pas de typage strict (enum) volontairement -- les

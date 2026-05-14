@@ -100,12 +100,23 @@ class AddressSuggestion {
     return displayName;
   }
 
+  /// Deserialise une AddressSuggestion depuis un map JSON. Strict sur
+  /// lat/lng : si l'un des deux ne parse pas (cle absente, valeur non
+  /// numerique), throw [FormatException] -- le caller doit catch et
+  /// skip cette entree plutot que d'inserer un point sentinelle a
+  /// (0, 0) qui pointerait dans le golfe de Guinee.
   factory AddressSuggestion.fromJson(Map<String, dynamic> json) {
     final address = (json['address'] as Map?)?.cast<String, dynamic>();
+    final lat = double.tryParse(json['lat']?.toString() ?? '');
+    final lon = double.tryParse(json['lon']?.toString() ?? '');
+    if (lat == null || lon == null) {
+      throw const FormatException(
+          'AddressSuggestion.fromJson : lat ou lon manquants/invalides');
+    }
     return AddressSuggestion(
       displayName: json['display_name'] as String? ?? '',
-      lat: double.parse(json['lat'].toString()),
-      lon: double.parse(json['lon'].toString()),
+      lat: lat,
+      lon: lon,
       road: address?['road'] as String? ??
           address?['pedestrian'] as String? ??
           address?['cycleway'] as String?,

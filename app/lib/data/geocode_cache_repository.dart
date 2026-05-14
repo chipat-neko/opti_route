@@ -34,11 +34,28 @@ class GeocodeCacheRepository {
       return null;
     }
 
-    final list = jsonDecode(row.responseJson) as List;
-    return list
-        .whereType<Map<String, dynamic>>()
-        .map(AddressSuggestion.fromJson)
-        .toList(growable: false);
+    // Decode tolerant : si le JSON ou une entree individuelle est
+    // corrompu (downgrade format, ecriture interrompue...), on traite
+    // comme cache miss plutot que de crasher. Le caller refetchera.
+    List<dynamic> list;
+    try {
+      final decoded = jsonDecode(row.responseJson);
+      if (decoded is! List) throw const FormatException('cache not a list');
+      list = decoded;
+    } catch (_) {
+      await (_db.delete(_db.geocodeCache)
+            ..where((c) => c.query.equals(key)))
+          .go();
+      return null;
+    }
+    final out = <AddressSuggestion>[];
+    for (final entry in list) {
+      if (entry is! Map<String, dynamic>) continue;
+      try {
+        out.add(AddressSuggestion.fromJson(entry));
+      } catch (_) {/* skip entree corrompue, on garde les autres */}
+    }
+    return out;
   }
 
   /// Ecrit (ou ecrase) une entree de cache. Si la liste est vide on
