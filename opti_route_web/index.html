@@ -1,234 +1,46 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>opti_route — Demo web interactive</title>
-<meta name="description" content="Demo web interactive complete de l'application opti_route : 14 ecrans interactifs reproduisant toute l'app mobile.">
-<meta name="theme-color" content="#0E1410">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="app.css">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-<style>
-  .cat-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.74rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-mute);
-    margin: var(--space-32) 0 var(--space-14);
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--divider);
-  }
-</style>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="opti_route">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>opti_route</title>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
 
-<header class="site-header">
-  <div class="container nav">
-    <a href="index.html" class="brand">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="10" r="3"/>
-          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
-        </svg>
-      </span>
-      opti_route <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7em; color: var(--text-mute); margin-left: 6px;">web</span>
-    </a>
-    <nav class="app-nav">
-      <a href="index.html" class="active">Accueil</a>
-      <a href="tournees.html">Tournees</a>
-      <a href="carnet.html">Carnet</a>
-      <a href="stats.html">Stats</a>
-      <a href="facturation.html">Facturation</a>
-      <a href="parametres.html">Parametres</a>
-      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" style="margin-left: 8px;">
-        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-      </button>
-    </nav>
-  </div>
-</header>
-
-<main class="container">
-
-  <section class="app-hero">
-    <span class="eyebrow">Demo web complete</span>
-    <h1>opti_route, en navigateur.</h1>
-    <p class="sub">
-      <strong>14 ecrans interactifs</strong> reproduisant toute l'application
-      mobile : creation de tournee, mode terrain, scan OCR, mode chef
-      d'equipe, securite PIN/biometrie, onboarding. Donnees fictives,
-      mais navigation 100 % fonctionnelle.
-    </p>
-  </section>
-
-  <div class="demo-banner">
-    <span class="icon">i</span>
-    <p>
-      <strong>Cette demo est en mode lecture seule.</strong>
-      Les boutons reagissent visuellement mais ne sauvegardent rien. Pour
-      utiliser l'app pour de vrai, telecharge l'APK Android depuis
-      <a href="../site_doc/install-apk.html">le guide install</a>.
-    </p>
-  </div>
-
-  <!-- ─── Section 1 : Decouverte / Premier lancement ─── -->
-  <h2 class="cat-title">Premier lancement</h2>
-  <div class="screens-grid">
-    <a href="onboarding.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      </div>
-      <h3>Onboarding</h3>
-      <p>Walkthrough en 5 pages : bienvenue, concept, scan OCR, equipe, cle ORS.</p>
-    </a>
-    <a href="verrouillage.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      </div>
-      <h3>Verrouillage</h3>
-      <p>Ecran PIN au cold start (tape 1234 pour deverrouiller). Biometrie en bonus.</p>
-    </a>
-    <a href="pin_setup.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H7v2h2v2H7v2h2v-2h2v2h2v-2h2v2h2v-2h-2v-2h2v-2h-2V9h2V7h-2V5h-2v2h-2V5h-2v2H9V5H7v2h2z"/></svg>
-      </div>
-      <h3>Setup PIN</h3>
-      <p>Definir un code 4 chiffres en 2 etapes (saisie + confirmation).</p>
-    </a>
-  </div>
-
-  <!-- ─── Section 2 : Workflow tournees ─── -->
-  <h2 class="cat-title">Workflow tournees</h2>
-  <div class="screens-grid">
-    <a href="tournees.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v4M16 4v4"/></svg>
-      </div>
-      <h3>Liste des tournees</h3>
-      <p>Toutes les tournees groupees par statut : en cours, planifiees, terminees.</p>
-    </a>
-    <a href="nouvelle_tournee.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-      </div>
-      <h3>Nouvelle tournee</h3>
-      <p>Formulaire : nom, date, point de depart, vehicule, capacite, rappel.</p>
-    </a>
-    <a href="tournee.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h12l4 4v6H3z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-      </div>
-      <h3>Mode terrain</h3>
-      <p>Progression + prochain arret + 12 stops avec tags, ETAs, drag.</p>
-    </a>
-    <a href="ajout_arret.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      </div>
-      <h3>Ajouter un arret</h3>
-      <p>Autocomplete BAN / SIRENE / Photon + colis, priorite, fenetres, notes.</p>
-    </a>
-    <a href="carte.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>
-      </div>
-      <h3>Carte interactive</h3>
-      <p>OpenStreetMap + polyline VROOM optimisee + pins colores selon statut.</p>
-    </a>
-    <a href="scan_bordereau.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M21 7V5a2 2 0 0 0-2-2h-2M3 17v2a2 2 0 0 0 2 2h2M21 17v2a2 2 0 0 1-2 2h-2M7 12h10"/></svg>
-      </div>
-      <h3>Scan bordereau</h3>
-      <p>OCR ML Kit : MESEXP / Colissimo / Chronopost + geolocalisation auto.</p>
-    </a>
-  </div>
-
-  <!-- ─── Section 3 : Carnet & equipe ─── -->
-  <h2 class="cat-title">Carnet &amp; equipe</h2>
-  <div class="screens-grid">
-    <a href="carnet.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16l7-3z"/></svg>
-      </div>
-      <h3>Carnet d'adresses</h3>
-      <p>10 clients avec recherche live + avatars colores.</p>
-    </a>
-    <a href="edit_client.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </div>
-      <h3>Fiche client</h3>
-      <p>Edition : nom, adresse, tel, couleur tag, code interphone, notes.</p>
-    </a>
-    <a href="tableau_bord_equipe.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><circle cx="17" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M15 11h4a4 4 0 0 1 4 4v2"/></svg>
-      </div>
-      <h3>Tableau de bord equipe</h3>
-      <p>Vue chef : perfs par coequipier (30j) + progression des tournees du jour.</p>
-    </a>
-    <a href="coequipiers.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <h3>Coequipiers</h3>
-      <p>Gestion equipe : 3 actifs + 1 archive avec avatars colores.</p>
-    </a>
-  </div>
-
-  <!-- ─── Section 4 : Pilotage ─── -->
-  <h2 class="cat-title">Pilotage</h2>
-  <div class="screens-grid">
-    <a href="stats.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
-      </div>
-      <h3>Statistiques</h3>
-      <p>Motivation + perfs 7/30/365j + top clients + raisons d'echec.</p>
-    </a>
-    <a href="facturation.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-      </div>
-      <h3>Facturation</h3>
-      <p>Recap mensuel HT avec calcul live + cout carburant + marge brute.</p>
-    </a>
-    <a href="parametres.html" class="screen-card">
-      <div class="icon-big">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </div>
-      <h3>Parametres</h3>
-      <p>Cle ORS, theme, palette, securite PIN, entreprise, carburant.</p>
-    </a>
-  </div>
-
-  <div class="cta" style="margin-top: var(--space-44);">
-    <h2>Tu veux l'app pour de vrai ?</h2>
-    <p>L'APK Android est gratuit, 100 % local, aucun compte requis.</p>
-    <a href="../site_doc/install-apk.html" class="btn btn-primary">Installer l'APK</a>
-    <a href="../site_doc/index.html" class="btn btn-secondary" style="margin-left: var(--space-10);">Site officiel</a>
-  </div>
-
-</main>
-
-<footer class="site-footer">
-  <div class="container">
-    <p class="footer-copy">
-      <a href="index.html">opti_route web</a> &middot; Demo interactive complete (14 ecrans) &middot;
-      <a href="../site_doc/mentions-legales.html">Mentions legales</a> &middot;
-      <span class="mono">&copy; CALOTE Noah, 2026</span>
-    </p>
-  </div>
-</footer>
-
-<script src="script.js"></script>
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
