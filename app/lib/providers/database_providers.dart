@@ -12,6 +12,7 @@ import '../data/saved_destinations_repository.dart';
 import '../data/sheets_repository.dart';
 import '../data/stats_service.dart';
 import '../data/stops_repository.dart';
+import '../data/template_share_service.dart';
 import '../data/tournees_repository.dart';
 import '../data/unified_search_service.dart';
 import '../theme/app_tokens.dart';
@@ -32,6 +33,17 @@ final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
   return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Service d'export/import de templates de tournee au format JSON.
+/// Use case Phase 1 (pas de cloud) : partager un template entre
+/// coequipiers via WhatsApp/mail/Drive. Le destinataire recoit un
+/// fichier .json qu'il importe via "Importer un template".
+final templateShareServiceProvider = Provider<TemplateShareService>((ref) {
+  return TemplateShareService(
+    tournees: ref.watch(tourneesRepositoryProvider),
+    stops: ref.watch(stopsRepositoryProvider),
+  );
 });
 
 /// Service de recherche unifiee : scan en parallele tournees + stops +

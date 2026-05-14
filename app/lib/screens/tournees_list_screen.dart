@@ -1,8 +1,12 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../data/template_share_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -24,6 +28,57 @@ class TourneesListScreen extends ConsumerStatefulWidget {
 class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
   String _query = '';
 
+  /// Action de l'icone download dans l'AppBar : ouvre le file picker
+  /// pour selectionner un fichier .json exporte par un autre user
+  /// (typiquement un coequipier qui partage son template via WhatsApp).
+  /// Importe la tournee et ses stops, marque `isTemplate = true`, et
+  /// ouvre l'ecran de la nouvelle tournee.
+  Future<void> _onImportTemplate() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        dialogTitle: 'Choisir un template opti_route (.json)',
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final path = picked.files.first.path;
+      if (path == null) return;
+      final body = await File(path).readAsString();
+      final newId =
+          await ref.read(templateShareServiceProvider).importFromJson(body);
+      final newTournee =
+          await ref.read(tourneesRepositoryProvider).getById(newId);
+      if (!mounted || newTournee == null) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Template "${newTournee.nom}" importe'),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => TourneeDuJourScreen(tournee: newTournee),
+        ),
+      );
+    } on TemplateShareException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Import refuse : ${e.message}'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur import : $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -43,6 +98,11 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
                 builder: (_) => const UnifiedSearchScreen(),
               ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Importer un template (JSON)',
+            onPressed: _onImportTemplate,
           ),
         ],
       ),
@@ -556,6 +616,38 @@ class _TourneeRow extends ConsumerWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
+              // Partager le template via JSON + share natif (visible
+              // uniquement si la tournee est marquee template, sinon
+              // c'est rarement pertinent).
+              if (tournee.isTemplate) ...[
+                const SizedBox(height: AppSpacing.x8),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: p.paper,
+                    foregroundColor: p.ink,
+                    minimumSize: const Size(0, 52),
+                    alignment: Alignment.centerLeft,
+                  ),
+                  onPressed: () async {
+                    Navigator.of(sheetContext).pop();
+                    try {
+                      await ref
+                          .read(templateShareServiceProvider)
+                          .shareTemplate(tournee.id);
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Erreur partage : $e')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.ios_share),
+                  label: const Text(
+                    'Partager le template (JSON)',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
