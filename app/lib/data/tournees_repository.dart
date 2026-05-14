@@ -112,8 +112,12 @@ class TourneesRepository {
       final stops = await (_db.select(_db.stops)
             ..where((s) => s.tourneeId.equals(sourceId)))
           .get();
-      for (final s in stops) {
-        await _db.into(_db.stops).insert(
+      // Batch insert (1 statement multi-row au lieu de N round-trips
+      // SQLite) -- gain substantiel sur les tournees a 30+ arrets.
+      if (stops.isNotEmpty) {
+        await _db.batch((batch) {
+          batch.insertAll(_db.stops, [
+            for (final s in stops)
               StopsCompanion.insert(
                 tourneeId: newId,
                 adresseBrute: s.adresseBrute,
@@ -133,7 +137,8 @@ class TourneesRepository {
                 // - raisonEchec default = null
                 // - ordreOptimise default = null
               ),
-            );
+          ]);
+        });
       }
       return newId;
     });

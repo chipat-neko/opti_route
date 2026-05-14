@@ -1091,16 +1091,13 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
 
   /// Ecrit `ordrePriorite = position dans la liste` (1-based) pour
   /// chaque stop. Permet aux prochaines optimisations de reprendre
-  /// l'ordre choisi sans redemander.
+  /// l'ordre choisi sans redemander. Batch atomique (1 round-trip
+  /// SQLite au lieu de N).
   Future<void> _persistOrdrePriorite(List<int> orderedIds) async {
     if (orderedIds.isEmpty) return;
-    final repo = ref.read(stopsRepositoryProvider);
-    for (var i = 0; i < orderedIds.length; i++) {
-      await repo.update(
-        orderedIds[i],
-        StopsCompanion(ordrePriorite: Value(i + 1)),
-      );
-    }
+    await ref
+        .read(stopsRepositoryProvider)
+        .applyOrdrePriorite(orderedIds);
   }
 
   /// Pre-telecharge les tuiles OSM de la bbox (depot + arrets
