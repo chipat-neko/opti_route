@@ -719,6 +719,32 @@ table.dashboard-table {
   .upload-zone h3 { font-size: 1rem; }
 }
 
+/* "Pause cafe" : bouton Ko-fi discret dans le footer. Petite pille
+   amber + texte avec emoji, hover bouge legerement pour signaler
+   l'interactivite. Place dans .footer-copy de toutes les pages. */
+.kofi-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(242, 161, 74, 0.18);
+  color: var(--ink) !important;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none !important;
+  margin-left: var(--space-8);
+  transition: transform 120ms ease, background 120ms ease;
+  border: 1px solid rgba(242, 161, 74, 0.4);
+}
+.kofi-link:hover {
+  background: rgba(242, 161, 74, 0.32);
+  transform: translateY(-1px);
+}
+body.dark .kofi-link {
+  color: var(--lime) !important;
+}
+
 /* Print : optimise pour PDF dashboard */
 @media print {
   .site-header, .site-footer, .upload-zone, .muted-banner,
