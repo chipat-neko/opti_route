@@ -10,6 +10,7 @@ import '../widgets/app_drawer.dart';
 import '../widgets/drawer_badge_icon.dart';
 import '../widgets/offline_geocode_banner.dart';
 import 'tournee_du_jour_screen.dart';
+import 'unified_search_screen.dart';
 import 'tournee_form_screen.dart';
 
 class TourneesListScreen extends ConsumerStatefulWidget {
@@ -33,6 +34,17 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
       appBar: AppBar(
         leading: const DrawerBadgeIcon(),
         title: const Text('Historique des tournees'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Recherche universelle',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const UnifiedSearchScreen(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [

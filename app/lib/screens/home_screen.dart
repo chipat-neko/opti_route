@@ -8,6 +8,7 @@ import '../widgets/drawer_badge_icon.dart';
 import 'onboarding_screen.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
+import 'unified_search_screen.dart';
 
 /// Routeur principal qui choisit entre :
 /// - l'OnboardingScreen si l'utilisateur n'a pas encore fini le
@@ -79,6 +80,19 @@ class _NoTourTodayScreen extends StatelessWidget {
       appBar: AppBar(
         leading: const DrawerBadgeIcon(),
         title: const Text('Aujourd\'hui'),
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(Icons.search),
+              tooltip: 'Rechercher tournees, arrets, clients',
+              onPressed: () => Navigator.of(ctx).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const UnifiedSearchScreen(),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Center(
         child: Padding(

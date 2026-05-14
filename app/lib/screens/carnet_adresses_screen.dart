@@ -14,6 +14,7 @@ import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import 'carnet_edit_screen.dart';
+import 'unified_search_screen.dart';
 
 /// Liste des entrees du carnet d'adresses local. Recherche en haut,
 /// tap sur une entree -> ecran d'edition. Swipe -> supprimer.
@@ -41,6 +42,15 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       appBar: AppBar(
         title: const Text('Carnet d\'adresses'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Recherche universelle',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const UnifiedSearchScreen(),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.file_upload_outlined),
             tooltip: 'Importer un CSV',

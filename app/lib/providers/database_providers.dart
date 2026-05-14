@@ -13,6 +13,7 @@ import '../data/sheets_repository.dart';
 import '../data/stats_service.dart';
 import '../data/stops_repository.dart';
 import '../data/tournees_repository.dart';
+import '../data/unified_search_service.dart';
 import '../theme/app_tokens.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -31,6 +32,22 @@ final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
   return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Service de recherche unifiee : scan en parallele tournees + stops +
+/// carnet, scoring Levenshtein. Utilise par [unifiedSearchProvider]
+/// et par le UnifiedSearchScreen accessible via l'icone Search des
+/// AppBars principaux.
+final unifiedSearchServiceProvider = Provider<UnifiedSearchService>((ref) {
+  return UnifiedSearchService(ref.watch(appDatabaseProvider));
+});
+
+/// Recherche live pour une query donnee. Family pour pouvoir watcher
+/// plusieurs queries en parallele si jamais (typiquement 1 a la fois
+/// dans l'UI). FutureProvider car le service fait du I/O Drift.
+final unifiedSearchProvider =
+    FutureProvider.family<List<SearchHit>, String>((ref, query) async {
+  return ref.watch(unifiedSearchServiceProvider).search(query);
 });
 
 /// Service de re-ordonnancement LOCAL (nearest-neighbor, haversine).
