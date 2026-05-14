@@ -25,6 +25,12 @@
     <!-- Survie au reboot pour les notifs deja planifiees. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
+    <!-- Biometrie (empreinte / visage / iris) pour deverrouiller l'app
+         via local_auth. USE_BIOMETRIC remplace USE_FINGERPRINT depuis
+         Android 9. Permission "normal" : pas de prompt runtime, juste
+         declaration manifest. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+
     <application
         android:label="Opti Route"
         android:name="${applicationName}"
