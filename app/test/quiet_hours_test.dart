@@ -184,4 +184,37 @@ void main() {
       });
     });
   });
+
+  group('ParametresRepository.parseHHmm', () {
+    test('format valide -> tuple (h, m)', () {
+      final r = ParametresRepository.parseHHmm('09:30');
+      expect(r, isNotNull);
+      expect(r!.hour, 9);
+      expect(r.minute, 30);
+    });
+
+    test('null en entree -> null', () {
+      expect(ParametresRepository.parseHHmm(null), isNull);
+    });
+
+    test('format invalide (pas de :) -> null', () {
+      expect(ParametresRepository.parseHHmm('0930'), isNull);
+    });
+
+    test('heure hors borne -> null', () {
+      expect(ParametresRepository.parseHHmm('25:00'), isNull);
+      expect(ParametresRepository.parseHHmm('-1:30'), isNull);
+    });
+
+    test('minute hors borne -> null', () {
+      expect(ParametresRepository.parseHHmm('12:60'), isNull);
+      expect(ParametresRepository.parseHHmm('12:-1'), isNull);
+    });
+
+    test('non-numerique -> null', () {
+      expect(ParametresRepository.parseHHmm('ab:cd'), isNull);
+      expect(ParametresRepository.parseHHmm(''), isNull);
+      expect(ParametresRepository.parseHHmm('12:'), isNull);
+    });
+  });
 }
