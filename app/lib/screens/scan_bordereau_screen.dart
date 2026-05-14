@@ -352,7 +352,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
 
       // Auto-detection format : Chronopost (tracking XR.../XE...FR)
       // puis Colissimo (6A.../6L...), sinon parser MESEXP par defaut.
-      final BordereauExtraction extraction;
+      BordereauExtraction extraction;
       if (ChronopostBordereauParser.looksLikeChronopost(result.lines)) {
         extraction = ChronopostBordereauParser().parse(result.lines);
       } else if (ColissimoBordereauParser.looksLikeColissimo(result.lines)) {
@@ -360,6 +360,28 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       } else {
         extraction = BordereauParser().parse(result.lines);
       }
+      // Validation BAN post-OCR : si l'extraction a une adresse, on
+      // l'envoie a la BAN pour verifier l'existence + corriger la
+      // ville / CP en cas de faute OCR. Best-effort (timeout 15s,
+      // erreur reseau silencieuse).
+      try {
+        final validation = await ref
+            .read(bordereauValidatorProvider)
+            .validate(extraction);
+        if (validation.validated) {
+          extraction = validation.extraction;
+          if (validation.correctionsApplied.isNotEmpty) {
+            debugPrint('OCRDUMP === VALIDATION BAN ===');
+            for (final c in validation.correctionsApplied) {
+              debugPrint('OCRDUMP corr: $c');
+            }
+            debugPrint('OCRDUMP score: ${validation.validationScore}');
+          }
+        }
+      } catch (_) {
+        // best-effort : on garde l'extraction non validee
+      }
+      if (!mounted) return;
       setState(() {
         _imageFile = file;
         _ocr = result;
