@@ -5,7 +5,6 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' show Position;
-import 'package:intl/intl.dart';
 
 import '../data/database.dart';
 import '../data/location_service.dart';
@@ -27,6 +26,8 @@ import 'carte_screen.dart';
 import 'parametres_screen.dart';
 import 'tournee_du_jour/autres_tournees_banner.dart';
 import 'tournee_du_jour/banners.dart';
+import 'tournee_du_jour/fabs.dart';
+import 'tournee_du_jour/header.dart';
 import 'tournee_du_jour/prochain_arret_card.dart';
 import 'tournee_du_jour/progress_banner.dart';
 import 'tournee_du_jour/stat_row.dart';
@@ -255,7 +256,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
-      floatingActionButton: _Fabs(
+      floatingActionButton: Fabs(
         tournee: widget.tournee,
         onAjouter: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -1235,7 +1236,7 @@ class _Body extends StatelessWidget {
         AppSpacing.x18,
       ),
       children: [
-        _Header(tournee: tournee),
+        Header(tournee: tournee),
         AutresTourneesDuJourBanner(currentTourneeId: tournee.id),
         const SizedBox(height: AppSpacing.x16),
         StatRow(
@@ -1630,120 +1631,6 @@ class _StatutFilterChip extends StatelessWidget {
         fontSize: 12,
       ),
       visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.tournee});
-
-  final Tournee tournee;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final dateLabel = DateFormat('EEEE d MMMM', 'fr')
-        .format(tournee.date)
-        .toUpperCase();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          dateLabel,
-          style: appMonoStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: p.textMute,
-            letterSpacing: 0.6,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x6),
-        Text(
-          tournee.nom,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            color: p.ink,
-            letterSpacing: -0.5,
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x4),
-        Text(
-          'Depart : ${tournee.pointDepartLabel}',
-          style: TextStyle(
-            fontSize: 13,
-            color: p.textMute,
-            height: 1.4,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-}
-
-/// Pile de FloatingActionButtons en bas a droite. Le bouton du bas est
-/// 'Ajouter un arret' (toujours present). Au-dessus, selon le statut
-/// de la tournee :
-/// - 'optimisee' : 'Demarrer' (vert lime).
-/// - 'en_cours'  : 'Pause' (amber).
-/// - autres : aucun bouton supplementaire.
-class _Fabs extends StatelessWidget {
-  const _Fabs({
-    required this.tournee,
-    required this.onAjouter,
-    required this.onDemarrer,
-    required this.onArreter,
-  });
-
-  final Tournee tournee;
-  final VoidCallback onAjouter;
-  final VoidCallback onDemarrer;
-  final VoidCallback onArreter;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final isOptimisee = tournee.statut == 'optimisee';
-    final isEnCours = tournee.statut == 'en_cours';
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (isOptimisee)
-          FloatingActionButton.extended(
-            heroTag: 'fab-demarrer',
-            backgroundColor: AppColors.lime,
-            foregroundColor: p.ink,
-            onPressed: onDemarrer,
-            icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text(
-              'Demarrer',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-        if (isEnCours)
-          FloatingActionButton.extended(
-            heroTag: 'fab-arreter',
-            backgroundColor: AppColors.amber,
-            foregroundColor: p.ink,
-            onPressed: onArreter,
-            icon: const Icon(Icons.pause_rounded),
-            label: const Text(
-              'Pause',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-        if (isOptimisee || isEnCours) const SizedBox(height: AppSpacing.x10),
-        FloatingActionButton.extended(
-          heroTag: 'fab-ajouter',
-          onPressed: onAjouter,
-          icon: const Icon(Icons.add),
-          label: const Text('Ajouter un arret'),
-        ),
-      ],
     );
   }
 }
