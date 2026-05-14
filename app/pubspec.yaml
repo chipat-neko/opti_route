@@ -58,6 +58,10 @@ dependencies:
   local_auth: ^2.3.0
   local_auth_android: ^1.0.46
   crypto: ^3.0.5
+  # Package `image` pour manipuler les pixels (rotations 90/180/270)
+  # lors du re-OCR en cas de bordereau scanne dans le mauvais sens.
+  # Pas de plugin natif : 100 % Dart, marche aussi en web.
+  image: ^4.5.4
 
 dev_dependencies:
   flutter_test:

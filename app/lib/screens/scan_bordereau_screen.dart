@@ -329,12 +329,22 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       }
 
       final file = File(picked.path);
-      final result = await ref.read(ocrServiceProvider).extractFromFile(file);
+      // OCR robuste : si le 1er essai donne un score qualite faible
+      // (image scannee dans le mauvais sens / floutee), on retente
+      // automatiquement avec rotations 90/180/270 et on garde le
+      // meilleur resultat. Cas normal (image bien orientee) = 1 seul
+      // appel ML Kit, donc pas de surcout.
+      final rotated = await ref
+          .read(ocrServiceProvider)
+          .extractFromFileWithRotations(file);
+      final result = rotated.result;
 
       if (!mounted) return;
       // Dump des lignes OCR dans logcat (filtrable via tag OCRDUMP)
       // pour debug a distance via `adb logcat -s flutter:V | grep OCRDUMP`.
-      debugPrint('OCRDUMP === START (${result.lines.length} lignes) ===');
+      debugPrint('OCRDUMP === START (${result.lines.length} lignes, '
+          'rotation ${rotated.rotationDegrees} deg, score ${rotated.qualityScore}, '
+          'tentatives ${rotated.attemptedRotations}) ===');
       for (var i = 0; i < result.lines.length; i++) {
         debugPrint('OCRDUMP ${i.toString().padLeft(2, "0")}: ${result.lines[i]}');
       }
