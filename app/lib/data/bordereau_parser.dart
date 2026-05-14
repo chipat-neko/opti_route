@@ -37,7 +37,9 @@ class BordereauParser {
   static final _cpVilleRegex = RegExp(
     // \b en debut pour eviter de matcher au milieu d'un long numero
     // (ex: "0237911586 THEODORE CHARTRES" matchait "11586 THEODORE").
-    r"\b(\d{5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-']+)",
+    // [\s\-]+ accepte aussi le format "FR-CP-VILLE" ou "FR - CP - VILLE"
+    // des etiquettes colis Transports France Alliance.
+    r"\b(\d{5})[\s\-]+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-']+)",
   );
   static final _cpRegex = RegExp(r'\b(\d{5})\b');
   static final _telRegex = RegExp(r'\b(0\d[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2})\b');
@@ -337,9 +339,13 @@ class BordereauParser {
 
   /// Vrai si le nom semble peu fiable (trop court, ou contient un
   /// libelle technique).
+  ///
+  /// Seuil de longueur fixe a 3 caracteres pour accepter les noms
+  /// courts mais legitimes : "NOVA" (4), "IBM", "BMW", "FA45". Le
+  /// filtre principal est la liste de mots techniques.
   static bool _looksUnreliable(String? name) {
     if (name == null || name.isEmpty) return true;
-    if (name.length < 5) return true;
+    if (name.length < 3) return true;
     final lower = name.toLowerCase();
     const technicalWords = [
       'lettre',

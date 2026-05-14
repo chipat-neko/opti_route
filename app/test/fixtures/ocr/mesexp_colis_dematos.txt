@@ -1,0 +1,28 @@
+# Etiquette colis MESEXP (Transports France Alliance)
+# Source : bordereaux_test/colis/MVIMG_20260511_063125.jpg
+# Destinataire attendu : DE MATOS ANTONIO, 28240 LA LOUPE
+# Confiance attendue : high
+---
+Transports
+France Alliance
+Centre Livreur
+Eure et Loir Acheminement
+28630 - GELLAINVILLE
+Tel : 02 37 84 44 41
+EXP : UNIKALO
+FR - 28110 - LUCE
+Date : 07/05/26
+RECEP :
+28146356
+UM : 1/1
+Poids : 5.00 Kg
+INSTRUCTION(S)
+28
+T07
+TRAVÉE :
+REF. :
+PRODUIT : MESEXP
+Destinataire :
+DE MATOS ANTONIO
+1 RUE DE L'ABREUVOIRE
+FR - 28240 - LA LOUPE
