@@ -280,6 +280,107 @@ void main() {
       expect(t2ExistingFresh!.tourneeId, t2);
     });
 
+    test('scenario multi-coequipiers : dispatch + bulk + stats par personne',
+        () async {
+      // Setup : 3 coequipiers (Lucas, Sarah, Tom) + chef (null)
+      final lucasId = await coequipiers.create(nom: 'Lucas');
+      final sarahId = await coequipiers.create(nom: 'Sarah');
+      final tomId = await coequipiers.create(nom: 'Tom');
+
+      final tId = await tournees.create(TourneesCompanion.insert(
+        nom: 'Tournee multi-equipe',
+        date: DateTime(2026, 5, 14),
+        pointDepartLat: 48.0,
+        pointDepartLng: 1.0,
+        pointDepartLabel: 'Depot',
+        // Pas de coequipierDefautId : chaque stop sera affecte
+        // explicitement pour tester le dispatch.
+      ));
+
+      // 9 stops : 3 par personne au depart, 0 pour le chef.
+      // Variation de nbColis pour verifier l'agregation colisLivres.
+      Future<int> mkStop(int? coId, int colis) => stops.create(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'addr',
+              nbColis: Value(colis),
+              coequipierId: Value(coId),
+            ),
+          );
+      final lucasStops = [
+        await mkStop(lucasId, 3),
+        await mkStop(lucasId, 2),
+        await mkStop(lucasId, 1),
+      ];
+      final sarahStops = [
+        await mkStop(sarahId, 5),
+        await mkStop(sarahId, 1),
+        await mkStop(sarahId, 4),
+      ];
+      final tomStops = [
+        await mkStop(tomId, 2),
+        await mkStop(tomId, 2),
+        await mkStop(tomId, 2),
+      ];
+
+      // 1. Dispatch initial : Lucas 3, Sarah 3, Tom 3.
+      final byPersonneBefore =
+          await stats.statsParCoequipier(since: DateTime(2026, 1, 1));
+      // Aucune livraison faite encore -> nbLivres=0 partout.
+      expect(byPersonneBefore[lucasId]?.nbLivres ?? 0, 0);
+
+      // 2. Bulk : tous les stops de Lucas validés livrés.
+      for (final id in lucasStops) {
+        await stops.markLivre(id, position: (lat: 48.5, lng: 1.5));
+      }
+      // Sarah : 2 livrés, 1 échec.
+      await stops.markLivre(sarahStops[0]);
+      await stops.markLivre(sarahStops[1]);
+      await stops.markEchec(sarahStops[2], 'adresse_incorrecte');
+      // Tom : aucun (a_livrer).
+
+      // 3. Stats par coequipier après ce dispatch.
+      final byPersonneAfter =
+          await stats.statsParCoequipier(since: DateTime(2026, 1, 1));
+      expect(byPersonneAfter[lucasId]!.nbLivres, 3);
+      expect(byPersonneAfter[lucasId]!.colisLivres, 6); // 3+2+1
+      expect(byPersonneAfter[sarahId]!.nbLivres, 2);
+      expect(byPersonneAfter[sarahId]!.nbEchecs, 1);
+      expect(byPersonneAfter[sarahId]!.colisLivres, 6); // 5+1
+      // Tom n'a rien valide → pas d'entree dans la map ou nbLivres=0.
+      expect(byPersonneAfter[tomId]?.nbLivres ?? 0, 0);
+
+      // 4. Reassignement bulk : tous les stops de Tom transferes a Lucas
+      //    (cas : Tom tombe malade en cours de tournee).
+      for (final id in tomStops) {
+        await stops.setCoequipier(id, lucasId);
+      }
+      final tomAfter = await stops.getByTournee(tId);
+      expect(tomAfter.where((s) => s.coequipierId == tomId), isEmpty);
+      expect(
+        tomAfter
+            .where((s) => s.coequipierId == lucasId && tomStops.contains(s.id))
+            .length,
+        3,
+      );
+
+      // 5. Archive Sarah (fin de mission). Ses stops historiques
+      //    gardent son id pour les stats des semaines passees.
+      await coequipiers.update(sarahId, actif: false);
+      final actifs = await coequipiers.watchActifs().first;
+      expect(actifs.map((c) => c.id), isNot(contains(sarahId)));
+      // Mais les stops valides par Sarah gardent son id (preservation
+      // historique).
+      final sarahLivre = await stops.getById(sarahStops[0]);
+      expect(sarahLivre!.coequipierId, sarahId);
+
+      // 6. Top raisons echec : 1x adresse_incorrecte
+      final topRaisons = await stats
+          .topRaisonsEchecGlobales(since: DateTime(2026, 1, 1));
+      expect(topRaisons.first.raison, 'adresse_incorrecte');
+      expect(topRaisons.first.n, 1);
+    });
+
     test(
         'scenario hors-ligne : stops sans coords sont detectables + '
         'retry batch fonctionne', () async {
