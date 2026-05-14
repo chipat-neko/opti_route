@@ -45,6 +45,7 @@ class StatsScreen extends ConsumerWidget {
         onRefresh: () async {
           // Invalide tous les providers stats pour relancer les calculs
           // (Drift est en watch mais certains providers sont futures).
+          ref.invalidate(statsBundleProvider);
           ref.invalidate(statsProvider);
           ref.invalidate(colisParJourProvider);
           ref.invalidate(coutCarburantCumuleProvider);

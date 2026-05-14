@@ -5,6 +5,92 @@ import 'package:opti_route/data/database.dart';
 import 'package:opti_route/data/stats_service.dart';
 
 void main() {
+  group('StatsService.computeBundle + computeFromBundle', () {
+    late AppDatabase db;
+    late StatsService stats;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      stats = StatsService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('bundle vide si pas de tournee dans la fenetre', () async {
+      final b = await stats.computeBundle(since: DateTime(2030, 1, 1));
+      expect(b.isEmpty, isTrue);
+      expect(b.tournees, isEmpty);
+      expect(b.stops, isEmpty);
+    });
+
+    test('computeFromBundle filtre in-memory sur sous-fenetre', () async {
+      // 3 tournees : J-1, J-10, J-100. Bundle sur 365j.
+      final now = DateTime.now();
+      Future<int> seed(int daysAgo, int colis) async {
+        final tId = await db.into(db.tournees).insert(
+              TourneesCompanion.insert(
+                nom: 'T-$daysAgo',
+                date: now.subtract(Duration(days: daysAgo)),
+                pointDepartLat: 48.0,
+                pointDepartLng: 1.0,
+                pointDepartLabel: 'D',
+                statut: const Value('terminee'),
+              ),
+            );
+        final sId = await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'A',
+                nbColis: Value(colis),
+              ),
+            );
+        await db.update(db.stops).replace(
+              (await (db.select(db.stops)
+                        ..where((s) => s.id.equals(sId)))
+                      .getSingle())
+                  .copyWith(statutLivraison: 'livre'),
+            );
+        return tId;
+      }
+
+      await seed(1, 3);
+      await seed(10, 2);
+      await seed(100, 5);
+
+      final bundle = await stats.computeBundle(
+        since: now.subtract(const Duration(days: 365)),
+      );
+      expect(bundle.tournees, hasLength(3));
+      expect(bundle.stops, hasLength(3));
+
+      // Fenetre 7j : seule la tournee J-1 compte.
+      final stats7 = StatsService.computeFromBundle(
+        bundle,
+        since: now.subtract(const Duration(days: 7)),
+      );
+      expect(stats7.nbTournees, 1);
+      expect(stats7.nbColisLivres, 3);
+
+      // Fenetre 30j : J-1 + J-10.
+      final stats30 = StatsService.computeFromBundle(
+        bundle,
+        since: now.subtract(const Duration(days: 30)),
+      );
+      expect(stats30.nbTournees, 2);
+      expect(stats30.nbColisLivres, 5); // 3+2
+
+      // Fenetre 365j : les 3.
+      final stats365 = StatsService.computeFromBundle(
+        bundle,
+        since: now.subtract(const Duration(days: 365)),
+      );
+      expect(stats365.nbTournees, 3);
+      expect(stats365.nbColisLivres, 10); // 3+2+5
+    });
+  });
+
   group('StatsService.compute', () {
     late AppDatabase db;
     late StatsService stats;
