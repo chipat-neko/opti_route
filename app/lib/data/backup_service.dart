@@ -101,20 +101,116 @@ class BackupService {
     return outPath;
   }
 
-  /// Restore : pas implemente dans cette premiere version. Le pattern
-  /// est risque (remplace la DB en cours d'utilisation -> il faut
-  /// fermer la connexion Drift + remplacer le fichier + relancer
-  /// l'app). A faire dans un sprint dedie quand on aura besoin.
+  /// Prepare un restore depuis [zipPath].
   ///
-  /// Pour l'instant, en cas de perte, l'utilisateur peut decompresser
-  /// le zip manuellement et copier `database.sqlite` au bon endroit
-  /// avant de relancer l'app (procedure dans /docs).
-  Future<void> restoreFromZip(String zipPath) async {
-    throw UnimplementedError(
-      'Restore not yet implemented - decompresse manuellement le zip '
-      'et copie database.sqlite dans le dossier de l\'app, ou attends '
-      'la v2 du backup service.',
+  /// **Strategie deferred** : on ne peut pas remplacer le fichier DB
+  /// pendant que Drift y tient une connexion ouverte. Solution :
+  /// 1. Decompresser le zip dans `temp/restore/`.
+  /// 2. Valider le manifest (eviter qu'on restore depuis un zip qui
+  ///    n'est pas un backup opti_route).
+  /// 3. Copier `database.sqlite` du zip vers
+  ///    `<docs>/opti_route.sqlite.pending_restore`.
+  /// 4. Copier toutes les photos `preuves/*.jpg` extraites vers
+  ///    `<docs>/preuves/` (operation immediate, pas de fichier ouvert).
+  /// 5. Demander a l'utilisateur de **redemarrer l'app**. Au prochain
+  ///    boot, [applyPendingRestoreIfAny] detecte le fichier
+  ///    `.pending_restore` et swap avant d'ouvrir Drift.
+  ///
+  /// Throws [BackupException] si zip invalide, manifest absent, ou
+  /// `database.sqlite` manquant a l'interieur.
+  Future<void> prepareRestore(String zipPath) async {
+    final zipFile = File(zipPath);
+    if (!await zipFile.exists()) {
+      throw const BackupException('Fichier zip introuvable');
+    }
+    final bytes = await zipFile.readAsBytes();
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(bytes);
+    } catch (_) {
+      throw const BackupException('Fichier zip corrompu ou illisible');
+    }
+
+    // Sanity-check : manifest present + format reconnu
+    final manifestEntry = archive.files.firstWhere(
+      (f) => f.name == 'manifest.json',
+      orElse: () => ArchiveFile('', 0, []),
     );
+    if (manifestEntry.size == 0) {
+      throw const BackupException(
+          'Pas un backup opti_route (manifest.json absent)');
+    }
+    final manifestBody = String.fromCharCodes(manifestEntry.content as List<int>);
+    if (!manifestBody.contains('opti_route_backup_v1')) {
+      throw const BackupException(
+          'Format de backup non supporte (mis a jour de l\'app requise ?)');
+    }
+
+    // DB SQLite obligatoire
+    final dbEntry = archive.files.firstWhere(
+      (f) => f.name == 'database.sqlite',
+      orElse: () => ArchiveFile('', 0, []),
+    );
+    if (dbEntry.size == 0) {
+      throw const BackupException('database.sqlite absent du backup');
+    }
+
+    final docs = await getApplicationDocumentsDirectory();
+    // Pose la DB en .pending_restore : le swap se fera au prochain boot.
+    final pendingPath = '${docs.path}${Platform.pathSeparator}'
+        'opti_route.sqlite.pending_restore';
+    final pendingFile = File(pendingPath);
+    await pendingFile.writeAsBytes(dbEntry.content as List<int>);
+
+    // Photos preuves : on peut les restorer immediatement (aucun
+    // fichier ouvert par l'app, juste de la lecture/ecriture disque).
+    final preuvesDir = Directory(
+        '${docs.path}${Platform.pathSeparator}preuves');
+    if (!await preuvesDir.exists()) await preuvesDir.create();
+    for (final entry in archive.files) {
+      if (!entry.name.startsWith('preuves/')) continue;
+      if (!entry.name.toLowerCase().endsWith('.jpg')) continue;
+      if (entry.size == 0) continue;
+      final outPath =
+          '${preuvesDir.path}${Platform.pathSeparator}'
+          '${entry.name.substring("preuves/".length)}';
+      try {
+        await File(outPath).writeAsBytes(entry.content as List<int>);
+      } catch (_) {/* photo individuelle KO = on continue */}
+    }
+  }
+
+  /// Verifie l'existence d'un fichier `.pending_restore` et l'applique
+  /// (swap avec la DB courante). A appeler au boot **avant** d'ouvrir
+  /// AppDatabase, sinon Drift va creer une connexion sur l'ancienne
+  /// DB et le swap echouera (fichier verrouille).
+  ///
+  /// Retourne true si un restore a ete applique. L'UI peut alors
+  /// afficher un toast "Restore reussi".
+  static Future<bool> applyPendingRestoreIfAny() async {
+    final docs = await getApplicationDocumentsDirectory();
+    final pending = File('${docs.path}${Platform.pathSeparator}'
+        'opti_route.sqlite.pending_restore');
+    if (!await pending.exists()) return false;
+    final target = File('${docs.path}${Platform.pathSeparator}'
+        'opti_route.sqlite');
+    try {
+      // Si l'ancienne DB existe, on la garde en .pre_restore pour
+      // safety (l'utilisateur peut revenir en arriere manuellement).
+      if (await target.exists()) {
+        final backupOldPath = '${target.path}.pre_restore';
+        try {
+          await target.copy(backupOldPath);
+        } catch (_) {/* best-effort */}
+        await target.delete();
+      }
+      await pending.rename(target.path);
+      return true;
+    } catch (e) {
+      // Erreur de swap (permissions, disque plein...). On laisse le
+      // .pending_restore en place pour retry au prochain boot.
+      return false;
+    }
   }
 
   /// Cherche le fichier DB SQLite genere par `drift_flutter`. Drift

@@ -34,6 +34,8 @@ class ParametresRepository {
   static const _kAutoLockMinutes = 'auto_lock_minutes';
   static const _kQuietHoursStart = 'quiet_hours_start';
   static const _kQuietHoursEnd = 'quiet_hours_end';
+  static const _kAutoBackupPeriod = 'auto_backup_period';
+  static const _kLastAutoBackupAt = 'last_auto_backup_at';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -377,6 +379,35 @@ class ParametresRepository {
     if (h < 0 || h > 23 || m < 0 || m > 59) return null;
     return h * 60 + m;
   }
+
+  /// Periode du backup auto local. Valeurs : 'jamais' (defaut) /
+  /// 'hebdo' / 'mensuel'. Cf [AutoBackupService] pour le declenchement
+  /// au boot. Pas de typage strict (enum) volontairement -- les
+  /// valeurs sont stockees telles quelles dans la table parametres,
+  /// flexibles pour l'avenir.
+  Future<String> getAutoBackupPeriod() async {
+    return (await _readKey(_kAutoBackupPeriod)) ?? 'jamais';
+  }
+
+  Stream<String> watchAutoBackupPeriod() =>
+      _watchKey(_kAutoBackupPeriod).map((v) => v ?? 'jamais');
+
+  Future<void> setAutoBackupPeriod(String value) {
+    assert(['jamais', 'hebdo', 'mensuel'].contains(value));
+    return _write(_kAutoBackupPeriod, value);
+  }
+
+  /// Timestamp du dernier backup auto reussi (ISO8601). Sert au
+  /// service a savoir si la periode est atteinte. Null = aucun
+  /// backup auto encore execute.
+  Future<DateTime?> getLastAutoBackupAt() async {
+    final raw = await _readKey(_kLastAutoBackupAt);
+    if (raw == null) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> setLastAutoBackupAt(DateTime when) =>
+      _write(_kLastAutoBackupAt, when.toIso8601String());
 
   /// Estime le cout carburant d'une distance (en metres) selon les
   /// parametres courants. Retourne en EUR (double, arrondi a 0.01).

@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'data/backup_service.dart';
 import 'data/notifications_service.dart';
 import 'providers/database_providers.dart';
 import 'providers/geocoding_providers.dart';
@@ -16,6 +17,12 @@ import 'theme/app_tokens.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('fr_FR');
+  // **CRITIQUE** : applique un eventuel restore en attente AVANT
+  // d'ouvrir Drift. Si un fichier `.pending_restore` est present
+  // (cf BackupService.prepareRestore), il sera swap a la place de la
+  // DB courante. Sans ce check ici, Drift ouvre l'ancienne DB et le
+  // swap ne se fait plus jamais.
+  await BackupService.applyPendingRestoreIfAny();
   // Init notifications locales (best-effort, ne pas bloquer le boot
   // si echec).
   unawaited(NotificationsService.instance.init());
@@ -45,6 +52,11 @@ class OptiRouteApp extends ConsumerWidget {
     // pas `watch`) car on ne veut pas rebuilder a chaque tentative.
     // Le Provider auto-appelle start() a la 1ere lecture.
     ref.read(offlineGeocodeAutomationProvider);
+
+    // Auto-backup local : check si la periode est echue et genere
+    // un .zip dans /Android/data/.../files/auto_backups/. En arriere-
+    // plan (unawaited) pour ne pas bloquer l'UI au demarrage.
+    unawaited(ref.read(autoBackupServiceProvider).maybeRunAutoBackup());
 
     // Branche le ParametresRepository sur le NotificationsService
     // pour qu'il puisse consulter le creneau quiet hours avant chaque

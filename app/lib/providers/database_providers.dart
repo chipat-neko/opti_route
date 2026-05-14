@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
+import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
@@ -106,6 +107,13 @@ final coequipiersByIdProvider = Provider<Map<int, Coequipier>>((ref) {
 
 final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
   return ParametresRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Service de sauvegarde locale periodique (cf AutoBackupService).
+/// Le declenchement reel se fait depuis main.dart via
+/// `maybeRunAutoBackup()` au boot (best-effort, en arriere-plan).
+final autoBackupServiceProvider = Provider<AutoBackupService>((ref) {
+  return AutoBackupService(ref.watch(parametresRepositoryProvider));
 });
 
 /// Service de verrouillage local (PIN + biometrie). Hash SHA-256 +
