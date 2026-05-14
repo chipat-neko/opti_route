@@ -1,0 +1,63 @@
+# Bordereau MESEXP complet (page A4)
+# Source : bordereaux_test/mesexp/MVIMG_20260511_074001.jpg
+# Destinataire attendu : NOVA, 28190 COURVILLE SUR EURE
+# Confiance attendue : high
+---
+N° récépissé
+28140063
+Date expédition
+07/05/2026
+Client
+DLD100
+U.M.
+1
+Poids
+75
+Vol/Lg
+Port
+payé
+Régime
+MESEXP
+Messagerie Express
+Nature de la marchandise
+NA
+Ligne
+T01.1
+Expéditeur
+DECOUPE LASER DROUAISE
+1 rue jules pasdeloup
+FR 28100 DREUX
+Destinataire
+NOVA
+RUE DU THYMERAIS
+VILLAGE DES ENTREPRISES
+Lieu de livraison
+28190 COURVILLE SUR EURE
+Ref. exped.
+261270
+Ref. dest.
+Contact destinataire
+Tel : 0337232115 NOVA
+Instruction de livraison - Document de suivi
+total colis : 1
+Lettre de Voiture
+Facture
+Port HT
+T.V.A.
+Port TTC
+Débour
+Commissionnaire ou transporteur principal
+Transporteur livreur
+Eure et Loir Acheminement
+24 AVENUE LOUIS PASTEUR
+28630 GELLAINVILLE
+Siret : 97880271800012 Tel : 02 37 84 44 41
+Eure et Loir Acheminement
+24 AVENUE LOUIS PASTEUR
+28630 GELLAINVILLE
+Siret : 97880271800012 Tel : 02 37 84 44 41
+Marchandise reçue en bon état
+Le
+à
+heures
+Nom, Signature et Cachet obligatoire

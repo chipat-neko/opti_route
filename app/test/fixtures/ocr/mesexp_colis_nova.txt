@@ -1,0 +1,32 @@
+# Etiquette colis MESEXP (Transports France Alliance)
+# Source : bordereaux_test/colis/MVIMG_20260511_063133.jpg
+# Destinataire attendu : NOVA, 28190 COURVILLE SUR EURE
+# Confiance attendue : high
+---
+Transports
+France Alliance
+Centre Livreur
+Eure et Loir Acheminement
+28630 - GELLAINVILLE
+Tel : 02 37 84 44 41
+EXP : DECOUPE LASER DROUAISE
+FR - 28100 - DREUX
+Date : 07/05/26
+RECEP :
+28140063
+UM : 1/1
+Poids : 75.00 Kg
+INSTRUCTION(S)
+28
+T10
+TRAVÉE :
+REF. : 261270
+PRODUIT : MESEXP
+DOCUMENTS CI-INCLUS
+LIEFERSCHEIN BEILIEGEND
+DOCUMENT ENCLOSED
+Destinataire :
+NOVA
+rue du Thymerais
+village des entreprises
+FR-28190-COURVILLE SUR EURE

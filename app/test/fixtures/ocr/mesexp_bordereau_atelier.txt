@@ -1,0 +1,63 @@
+# Bordereau MESEXP complet (page A4)
+# Source : bordereaux_test/mesexp/MVIMG_20260511_074024.jpg
+# Destinataire attendu : ATELIER MENUISERIE DU CENTRE SARL, 28240 LA LOUPE
+# Confiance attendue : high
+---
+N° récépissé
+425571660563
+Date expédition
+07/05/2026
+Client
+TOL100
+U.M.
+1
+Poids
+13.48
+Vol/Lg
+Port
+payé
+Régime
+MESEXP
+Messagerie Express
+Nature de la marchandise
+Ligne
+T07.1
+Expéditeur
+COULEURS DE TOLLENS DREUX
+PLACE DU VIEUX PRE
+FR 28100 DREUX
+Destinataire
+ATELIER MENUISERIE DU CENTRE SARL
+LE HOUX
+Lieu de livraison
+28240 LA LOUPE
+Ref. exped.
+DRE.26028060
+Ref. dest.
+26028060
+Contact destinataire
+Tel : +33237494674 ATELIER MENUISERIE DU CENTRE
+Instruction de livraison - Document de suivi
+/
+Lettre de Voiture
+Facture
+Port HT
+T.V.A.
+Port TTC
+Débour
+00FA280000448569
+Commissionnaire ou transporteur principal
+Transporteur livreur
+Eure et Loir Acheminement
+24 AVENUE LOUIS PASTEUR
+28630 GELLAINVILLE
+Siret : 97880271800012 Tel : 02 37 84 44 41
+Eure et Loir Acheminement
+24 AVENUE LOUIS PASTEUR
+28630 GELLAINVILLE
+Siret : 97880271800012 Tel : 02 37 84 44 41
+Marchandise reçue en bon état
+Le
+à
+heures
+Nom, Signature et Cachet obligatoire
