@@ -11,6 +11,7 @@ name: Deploy site web (Flutter Web -> GitHub Pages)
     branches: [main]
     paths:
       - 'app/**'
+      - 'site_doc/**'
       - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
@@ -65,6 +66,21 @@ jobs:
       # /opti_route/.
       - name: Build web (release)
         run: flutter build web --release --base-href "/opti_route/"
+
+      # Copie le site vitrine statique (site_doc/) dans un sous-dossier
+      # `site/` du build Flutter Web, pour qu'il soit accessible a
+      # `https://chipat-neko.github.io/opti_route/site/` parallelement
+      # a l'app Flutter elle-meme (servie a la racine `/opti_route/`).
+      #
+      # Le site vitrine est en HTML/CSS/JS statique : aucun build, juste
+      # une copie. Les liens internes sont en chemins relatifs (ex:
+      # `<a href="features.html">`), donc ils fonctionneront tels quels
+      # depuis le sous-chemin.
+      - name: Copy site_doc into build output
+        working-directory: .
+        run: |
+          mkdir -p app/build/web/site
+          cp -r site_doc/* app/build/web/site/
 
       # Setup Pages : prepare la configuration GitHub Pages (cree
       # l'environnement si premiere fois, recupere l'URL de deploy).
