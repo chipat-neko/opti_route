@@ -24,28 +24,22 @@ import 'package:opti_route/theme/app_theme.dart';
 /// ce qui resout l'exception "Timer is still pending" historique.
 /// Cf [_pumpScreen] qui implementee ce pattern.
 ///
-/// **Bloqueur restant : google_fonts en environnement test**. Le
-/// theme utilise `GoogleFonts.manrope` qui fetch en HTTP au runtime.
-/// En test, `TestWidgetsFlutterBinding` mock HTTP, ce qui leve
-/// "Failed to load font" en post-test (test passe mais la phase de
-/// cleanup echoue). Workaround : `GoogleFonts.config.allowRuntimeFetching = false`
-/// + bundler Manrope-Regular.ttf / Manrope-Bold.ttf / etc. en
-/// `assets/fonts/` et les declarer dans pubspec.yaml. ~5 ttf x ~150 KB
-/// = ~750 KB d'APK supplementaire. Chantier separe, garde skipped
-/// pour le moment.
-const _smokeSkip = 'Bug google_fonts en test : Manrope fetch HTTP. '
-    'Fix : bundler les .ttf en assets + GoogleFonts.config.allowRuntimeFetching = false.';
+/// **Solution google_fonts** : depuis 2026-05-14, les .ttf Manrope +
+/// JetBrainsMono sont bundle dans `assets/fonts/` (cf pubspec.yaml).
+/// On set `GoogleFonts.config.allowRuntimeFetching = false` au
+/// `setUpAll`, ce qui force google_fonts a utiliser les assets
+/// locaux au lieu de fetcher via HTTP (qui est mock par
+/// TestWidgetsFlutterBinding).
 
 void main() {
   setUpAll(() {
-    // Empeche google_fonts de fetcher Manrope/JetBrainsMono via HTTP
-    // (TestWidgetsFlutterBinding bloque HTTP, ca leve une exception
-    // "Failed to load font" post-test). Inutile tant que les .ttf
-    // ne sont pas bundle en assets (cf docstring du fichier).
+    // Empeche google_fonts de fetcher en HTTP (le main.dart le fait
+    // deja, mais les tests court-circuitent main() donc on le refait
+    // ici par defense). Les .ttf sont bundle en `assets/fonts/`.
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  group('Smoke render — mode clair', skip: _smokeSkip, () {
+  group('Smoke render — mode clair', () {
     testWidgets('HomeScreen rend sans crash', (tester) async {
       await _pumpScreen(tester, const HomeScreen(), brightness: Brightness.light);
       expect(tester.takeException(), isNull);
@@ -70,7 +64,7 @@ void main() {
     });
   });
 
-  group('Smoke render — mode sombre', skip: _smokeSkip, () {
+  group('Smoke render — mode sombre', () {
     testWidgets('HomeScreen rend sans crash en sombre', (tester) async {
       await _pumpScreen(tester, const HomeScreen(), brightness: Brightness.dark);
       expect(tester.takeException(), isNull);

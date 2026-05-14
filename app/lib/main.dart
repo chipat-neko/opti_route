@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'data/backup_service.dart';
@@ -16,6 +17,12 @@ import 'theme/app_tokens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Bloque le fetch HTTP de google_fonts : les .ttf Manrope +
+  // JetBrainsMono sont desormais bundle en `assets/fonts/` (cf
+  // pubspec.yaml). Sans ce flag, google_fonts essaye d'abord HTTP
+  // au cold start, ce qui ralentit l'ouverture si offline et fait
+  // crasher les widget_smoke_test (HTTP mock par TestWidgetsBinding).
+  GoogleFonts.config.allowRuntimeFetching = false;
   await initializeDateFormatting('fr_FR');
   // **CRITIQUE** : applique un eventuel restore en attente AVANT
   // d'ouvrir Drift. Si un fichier `.pending_restore` est present
