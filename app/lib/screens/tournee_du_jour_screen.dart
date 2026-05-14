@@ -4,16 +4,19 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../data/database.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
 import '../data/notifications_service.dart';
+import '../data/tile_prefetch_service.dart';
 import '../data/tournee_pdf_service.dart';
 import '../data/tournee_text_share_service.dart';
 import '../providers/geocoding_providers.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
+import '../providers/tile_provider.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/drawer_badge_icon.dart';
@@ -150,6 +153,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         _onExportPdfPressed();
       case PlusAction.exportPdfCo:
         _onExportPdfPerCoequipierPressed();
+      case PlusAction.prefetchTuiles:
+        _onPrefetchTuilesPressed();
       case PlusAction.delete:
         _confirmDeleteTournee();
     }
@@ -1096,6 +1101,128 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         StopsCompanion(ordrePriorite: Value(i + 1)),
       );
     }
+  }
+
+  /// Pre-telecharge les tuiles OSM de la bbox (depot + arrets
+  /// geocodes) aux zooms 13-16. Affiche d'abord une dialog de
+  /// confirmation avec l'estimation taille + nb tuiles, puis une
+  /// progress dialog pendant le download. Etape 4 du plan GPS.
+  Future<void> _onPrefetchTuilesPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final stops =
+        await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
+    if (!mounted) return;
+
+    // Collecte des points : depot + arrets geocodes (lat/lng non nuls).
+    final points = <LatLng>[
+      LatLng(widget.tournee.pointDepartLat, widget.tournee.pointDepartLng),
+      for (final s in stops)
+        if (s.lat != null && s.lng != null) LatLng(s.lat!, s.lng!),
+    ];
+    if (points.length < 2) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Aucun arret geocode. Geolocalise d\'abord les arrets.'),
+      ));
+      return;
+    }
+
+    final estimate = TilePrefetchService.estimate(points: points);
+    if (estimate.tiles > TilePrefetchService.maxTiles) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          'Zone trop large (${estimate.tiles} tuiles). Limite '
+          '${TilePrefetchService.maxTiles}.',
+        ),
+      ));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Telecharger pour hors-ligne ?'),
+        content: Text(
+          '${estimate.tiles} tuiles a telecharger '
+          '(~${estimate.estimatedSizeLabel}).\n\n'
+          'Les tuiles serviront a afficher la carte meme sans 4G '
+          'pendant cette tournee. Operation a faire de preference '
+          'en wifi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Telecharger'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final service = TilePrefetchService(ref.read(cachedTileProviderInstance));
+    final progress = ValueNotifier<({int done, int total})>(
+      (done: 0, total: estimate.tiles),
+    );
+
+    // Progress dialog non-bloquante (rentre dans la stack mais on la
+    // pop nous-meme a la fin). Animation desactivee pour eviter le
+    // flicker entre chaque update.
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Telechargement...'),
+        content: ValueListenableBuilder<({int done, int total})>(
+          valueListenable: progress,
+          builder: (_, v, _) {
+            final ratio = v.total == 0 ? 0.0 : v.done / v.total;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LinearProgressIndicator(value: ratio),
+                const SizedBox(height: 12),
+                Text('${v.done} / ${v.total} tuiles'),
+              ],
+            );
+          },
+        ),
+      ),
+    ));
+
+    var downloaded = 0;
+    String? errorMsg;
+    try {
+      downloaded = await service.prefetchBbox(
+        points: points,
+        onProgress: (done, total) {
+          progress.value = (done: done, total: total);
+        },
+      );
+    } on TilePrefetchError catch (e) {
+      errorMsg = e.message;
+    } catch (e) {
+      errorMsg = 'Erreur : $e';
+    }
+
+    if (mounted) Navigator.of(context).pop(); // ferme la progress dialog
+    progress.dispose();
+    if (!mounted) return;
+    if (errorMsg != null) {
+      messenger.showSnackBar(SnackBar(content: Text(errorMsg)));
+      return;
+    }
+    final failed = estimate.tiles - downloaded;
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+        '$downloaded / ${estimate.tiles} tuiles en cache'
+        '${failed > 0 ? ' ($failed echec(s))' : ''}',
+      ),
+      backgroundColor: AppColors.emerald,
+    ));
   }
 }
 

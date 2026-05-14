@@ -28,6 +28,7 @@ enum PlusAction {
   assignRest,
   exportPdf,
   exportPdfCo,
+  prefetchTuiles,
   delete,
 }
 
@@ -167,6 +168,18 @@ class PlusMenu extends StatelessWidget {
             title: Text('Exporter PDF par coequipier'),
             subtitle: Text(
               'Fiche individuelle (un PDF par personne)',
+              style: TextStyle(fontSize: 11),
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: PlusAction.prefetchTuiles,
+          child: ListTile(
+            leading: Icon(Icons.cloud_download_outlined),
+            title: Text('Telecharger pour hors-ligne'),
+            subtitle: Text(
+              'Tuiles carte de la zone (zone faible 4G)',
               style: TextStyle(fontSize: 11),
             ),
             contentPadding: EdgeInsets.zero,
