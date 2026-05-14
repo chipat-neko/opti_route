@@ -50,8 +50,12 @@ class BanGeocodingService implements GeocodingService {
       'autocomplete': '1',
     });
 
-    final response =
-        await _client.get(uri, headers: {'User-Agent': _userAgent});
+    final response = await _client
+        .get(uri, headers: {'User-Agent': _userAgent})
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw const GeocodingException('BAN timeout'),
+        );
 
     if (response.statusCode != 200) {
       throw GeocodingException('Reponse BAN ${response.statusCode}');
@@ -94,8 +98,13 @@ class BanGeocodingService implements GeocodingService {
       'lat': lat.toString(),
       'limit': '1',
     });
-    final response =
-        await _client.get(uri, headers: {'User-Agent': _userAgent});
+    final response = await _client
+        .get(uri, headers: {'User-Agent': _userAgent})
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () =>
+              throw const GeocodingException('BAN reverse timeout'),
+        );
     if (response.statusCode != 200) {
       throw GeocodingException('Reponse BAN reverse ${response.statusCode}');
     }

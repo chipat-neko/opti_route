@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableau de bord chef d'equipe — opti_route</title>
+<meta name="description" content="Dashboard web interactif pour visualiser tes tournees opti_route exportees en CSV depuis ton telephone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="index.html#features">Features</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container dashboard-shell">
+
+  <span class="eyebrow">Tableau de bord chef d'equipe</span>
+  <h1>Visualise tes tournees exportees.</h1>
+  <p class="sub">
+    Upload le CSV genere par <strong>Statistiques &rarr; Exporter en CSV</strong> sur ton telephone
+    (<a href="guide-csv.html">voir le guide pas a pas</a>).
+    Toutes les donnees restent dans ton navigateur — rien n'est uploade, rien n'est partage.
+  </p>
+
+  <!-- Zone d'upload -->
+  <div id="uploadZone" class="upload-zone">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <h3>Depose ton CSV ici</h3>
+    <p>ou <span class="browse">clique pour parcourir</span></p>
+    <input type="file" id="fileInput" accept=".csv,text/csv">
+    <p style="margin-top: var(--space-22); font-size: 0.85rem;">
+      <a href="#example" id="loadExample">Pas de CSV ? Charger un exemple de demo</a>
+    </p>
+  </div>
+
+  <!-- Resultats (cache jusqu'a upload) -->
+  <div id="results" class="hidden" aria-live="polite" aria-atomic="false">
+
+    <div class="muted-banner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span><strong id="bannerSummary">N tournees</strong> chargees depuis ton CSV. <a href="#" id="resetBtn" style="color: inherit; text-decoration: underline;">Remplacer le fichier</a></span>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="dashboard-stats">
+      <div class="stat-card">
+        <div class="stat-value" id="statTournees">—</div>
+        <div class="stat-label">Tournees</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statArrets">—</div>
+        <div class="stat-label">Arrets total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statColis">—</div>
+        <div class="stat-label">Colis livres</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statKm">—</div>
+        <div class="stat-label">Kilometres</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statDuree">—</div>
+        <div class="stat-label">Duree totale</div>
+      </div>
+    </div>
+
+    <!-- Graphes -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: var(--space-22); margin-bottom: var(--space-22);">
+      <div class="chart-wrap">
+        <h3>Colis livres par tournee</h3>
+        <canvas id="chartColis"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <h3>Repartition statuts</h3>
+        <canvas id="chartStatuts"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <h3>Distance parcourue (km)</h3>
+      <canvas id="chartKm"></canvas>
+    </div>
+
+    <!-- Tableau brut -->
+    <div class="dashboard-table-wrap">
+      <table class="dashboard-table" id="dataTable">
+        <caption class="sr-only">Tournees du CSV charge</caption>
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Nom</th>
+            <th scope="col">Statut</th>
+            <th scope="col">Arrets</th>
+            <th scope="col">Colis livres</th>
+            <th scope="col">Km</th>
+            <th scope="col">Duree (min)</th>
+            <th scope="col">Pause (min)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div style="display: flex; gap: var(--space-12); flex-wrap: wrap; margin-bottom: var(--space-40);">
+      <button class="btn btn-secondary" id="downloadXlsxBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Re-telecharger en CSV propre
+      </button>
+      <button class="btn btn-ghost" id="printBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Imprimer / PDF
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      Tableau de bord web · 100% local au navigateur · <a href="index.html">Retour accueil</a>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

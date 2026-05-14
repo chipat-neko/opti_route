@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Installer l'APK sur Android — opti_route</title>
+<meta name="description" content="Guide pas a pas pour installer l'app opti_route sur ton telephone Android sans passer par le Play Store.">
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .step {
+    background: var(--paper);
+    border-radius: var(--radius-14);
+    border: 1px solid var(--divider);
+    padding: var(--space-22);
+    margin-bottom: var(--space-18);
+    display: flex;
+    gap: var(--space-18);
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--lime);
+    color: #0E1410;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step-body { flex: 1; min-width: 0; }
+  .step-body h3 {
+    margin: 0 0 var(--space-8);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .step-body p {
+    color: var(--text-mute);
+    line-height: 1.6;
+    margin-bottom: var(--space-10);
+    font-size: 0.95rem;
+  }
+  .step-body code {
+    background: var(--bg-soft);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.85em;
+  }
+  .step-body kbd {
+    background: var(--bg-soft);
+    border: 1px solid var(--divider);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78em;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .note {
+    border-radius: var(--radius-14);
+    padding: var(--space-14) var(--space-18);
+    margin: var(--space-22) 0;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    border-left: 4px solid;
+  }
+  .note.info { background: rgba(34, 197, 94, 0.08); border-color: var(--emerald); color: var(--ink); }
+  .note.warn { background: rgba(245, 158, 11, 0.10); border-color: #f59e0b; color: var(--ink); }
+  body.dark .note.info { background: rgba(34, 197, 94, 0.10); }
+  body.dark .note.warn { background: rgba(245, 158, 11, 0.10); }
+
+  .variant-picker {
+    background: var(--paper);
+    border-radius: var(--radius-14);
+    border: 1px solid var(--divider);
+    padding: var(--space-22);
+    margin-bottom: var(--space-22);
+  }
+  .variant-picker h3 {
+    font-size: 1rem;
+    margin: 0 0 var(--space-12);
+    color: var(--ink);
+  }
+  .variant-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-12);
+  }
+  .variant-card {
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-10);
+    padding: var(--space-12) var(--space-14);
+    transition: border 200ms, transform 200ms;
+  }
+  .variant-card:hover { border-color: var(--lime); transform: translateY(-2px); }
+  .variant-card .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--emerald);
+    margin-bottom: 4px;
+  }
+  .variant-card .name {
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .variant-card .size {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-mute);
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="features.html">Features</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="dashboard.html">Dashboard</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-64) 0; max-width: 820px;">
+
+  <span class="eyebrow">Installation</span>
+  <h1>Installer l'APK sur Android.</h1>
+  <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-28);">
+    opti_route n'est pas encore sur le Play Store (Phase 2). Pour l'instant,
+    tu installes l'APK directement (sideload). C'est rapide, sans inscription,
+    et tu gardes la main sur les mises a jour.
+  </p>
+
+  <div class="note warn">
+    <strong>Securite Android.</strong> Android te previendra que l'app vient
+    d'une "source inconnue". C'est normal : ce n'est pas le Play Store. Le
+    code source est public sur GitHub si tu veux verifier ce qui tourne sur
+    ton phone.
+  </div>
+
+  <!-- Variante a telecharger -->
+  <div class="variant-picker">
+    <h3>Quelle variante telecharger ?</h3>
+    <div class="variant-options">
+      <div class="variant-card">
+        <div class="tag">Recommande</div>
+        <div class="name">arm64-v8a</div>
+        <div class="size">~39 MB &middot; Tous les phones modernes (>2017)</div>
+      </div>
+      <div class="variant-card">
+        <div class="tag">Vieux phones</div>
+        <div class="name">armeabi-v7a</div>
+        <div class="size">~12 MB &middot; Phones 2014-2016</div>
+      </div>
+      <div class="variant-card">
+        <div class="tag">Universel</div>
+        <div class="name">universal</div>
+        <div class="size">~57 MB &middot; Marche partout, plus lourd</div>
+      </div>
+    </div>
+    <p style="margin-top: var(--space-12); font-size: 0.9rem; color: var(--text-mute);">
+      En cas de doute, prends <strong>arm64-v8a</strong>. Si l'install
+      echoue avec "le package n'est pas compatible", essaie
+      <strong>universal</strong>.
+    </p>
+  </div>
+
+  <h2 style="margin: var(--space-32) 0 var(--space-18);">Procedure</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Telecharger le fichier APK</h3>
+      <p>
+        Va sur la page des
+        <a href="https://github.com/chipat-neko/opti_route/releases">releases GitHub</a>
+        depuis ton telephone. Sous la derniere release, telecharge le fichier
+        <code>app-arm64-v8a-release.apk</code> (ou la variante adaptee).
+      </p>
+      <p>
+        Si ton navigateur te demande "Telecharger ce type de fichier ?", confirme.
+      </p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Autoriser les sources inconnues (1x suffisant)</h3>
+      <p>
+        Sur Android 8+, l'autorisation se donne <strong>par application</strong>
+        (Chrome, Drive, Files, etc.). Quand tu ouvres l'APK telecharge,
+        Android propose un bouton <kbd>Parametres</kbd>. Clique dessus puis
+        active <kbd>Autoriser depuis cette source</kbd> pour le navigateur
+        ou l'app fichiers que tu utilises.
+      </p>
+      <p>
+        Sur les Android plus anciens : <kbd>Parametres</kbd> &rarr;
+        <kbd>Securite</kbd> &rarr; coche <kbd>Sources inconnues</kbd>.
+      </p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Ouvrir l'APK et confirmer l'installation</h3>
+      <p>
+        Reviens sur la notification de telechargement ou ouvre l'app
+        <strong>Fichiers</strong> &rarr; <strong>Telechargements</strong>.
+        Tape sur <code>app-arm64-v8a-release.apk</code>.
+      </p>
+      <p>
+        Android affiche une fenetre "Installer cette application ?". Confirme
+        avec <kbd>Installer</kbd>. Quelques secondes apres, l'app
+        <strong>opti_route</strong> apparait dans ton tiroir d'applications.
+      </p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Premier lancement & cle OpenRouteService</h3>
+      <p>
+        L'app demarre sur l'onboarding qui explique comment recuperer ta
+        cle gratuite OpenRouteService (500 optimisations/jour).
+        <a href="https://openrouteservice.org/dev">openrouteservice.org/dev</a>
+        &rarr; cree un compte gratuit &rarr; copie la cle &rarr; colle-la dans Parametres.
+      </p>
+      <p>
+        Sans cle, tu peux quand meme utiliser le mode manuel : ajouter des
+        arrets sans optimisation et naviguer via Maps/Waze a cote.
+      </p>
+    </div>
+  </div>
+
+  <h2 style="margin: var(--space-32) 0 var(--space-18);">Mettre a jour l'app</h2>
+
+  <div class="note info">
+    <strong>Pas de mise a jour auto en Phase 1.</strong> Quand une nouvelle
+    version sort, tu telecharges le nouvel APK et tu re-installes par-dessus.
+    Tes donnees (tournees, carnet, photos) sont conservees. Android remplace
+    juste le code de l'app.
+  </div>
+
+  <p style="font-size: 0.95rem; color: var(--text-mute); margin-bottom: var(--space-22);">
+    Active les notifications GitHub sur le repo
+    <a href="https://github.com/chipat-neko/opti_route">chipat-neko/opti_route</a>
+    pour etre alerte des nouvelles releases. Tu peux aussi suivre le
+    <a href="changelog.html">changelog</a>.
+  </p>
+
+  <h2 style="margin: var(--space-32) 0 var(--space-18);">Probleme courant</h2>
+
+  <h3 style="font-size: 1rem; margin: var(--space-18) 0 var(--space-8);">"Le package n'est pas compatible"</h3>
+  <p style="font-size: 0.95rem; color: var(--text-mute); margin-bottom: var(--space-14);">
+    Ton phone n'a pas la bonne architecture CPU. Telecharge la variante
+    <strong>universal</strong> (un peu plus lourde mais marche partout).
+  </p>
+
+  <h3 style="font-size: 1rem; margin: var(--space-18) 0 var(--space-8);">"App non installee" sans autre detail</h3>
+  <p style="font-size: 0.95rem; color: var(--text-mute); margin-bottom: var(--space-14);">
+    Probablement un APK corrompu pendant le download. Relance le
+    telechargement (clic droit ou re-clic, "Telecharger a nouveau") et
+    re-tente.
+  </p>
+
+  <h3 style="font-size: 1rem; margin: var(--space-18) 0 var(--space-8);">"Probleme d'analyse du package"</h3>
+  <p style="font-size: 0.95rem; color: var(--text-mute); margin-bottom: var(--space-14);">
+    Memoire pleine ou Android trop ancien (<5.0 Lollipop). Verifie
+    l'espace dispo (Parametres &rarr; Stockage) et la version Android
+    (Parametres &rarr; A propos du telephone).
+  </p>
+
+  <div class="cta">
+    <h2>Une question pas dans la liste ?</h2>
+    <p>Va voir la FAQ ou ouvre une issue GitHub.</p>
+    <a href="faq.html" class="btn btn-primary">Voir la FAQ</a>
+    <a href="https://github.com/chipat-neko/opti_route/issues" class="btn btn-secondary" style="margin-left: var(--space-10);">
+      Ouvrir une issue
+    </a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route</a> &middot; Phase 1 gratuit &middot;
+      <a href="mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

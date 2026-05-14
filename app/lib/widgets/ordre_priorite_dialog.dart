@@ -60,6 +60,7 @@ class _OrdrePrioriteDialogState extends State<OrdrePrioriteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Dialog(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadius.r18)),
@@ -86,18 +87,18 @@ class _OrdrePrioriteDialogState extends State<OrdrePrioriteDialog> {
                 children: [
                   Text(
                     widget.titre,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
+                      color: p.ink,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.x6),
                   Text(
                     widget.sousTitre,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.textMute,
+                      color: p.textMute,
                       height: 1.4,
                     ),
                   ),
@@ -174,15 +175,16 @@ class _ReorderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final nomRaw = stop.nomClient?.trim() ?? '';
     final hasNom = nomRaw.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x6),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.paper,
+          color: p.paper,
           borderRadius: BorderRadius.circular(AppRadius.r14),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(color: p.divider),
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.x12,
@@ -203,7 +205,7 @@ class _ReorderTile extends StatelessWidget {
                 style: appMonoStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
-                  color: AppColors.ink,
+                  color: p.ink,
                 ),
               ),
             ),
@@ -215,10 +217,10 @@ class _ReorderTile extends StatelessWidget {
                   if (hasNom)
                     Text(
                       nomRaw,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: p.ink,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -227,7 +229,7 @@ class _ReorderTile extends StatelessWidget {
                     stop.adresseNormalisee ?? stop.adresseBrute,
                     style: TextStyle(
                       fontSize: hasNom ? 12 : 14,
-                      color: hasNom ? AppColors.textMute : AppColors.ink,
+                      color: hasNom ? p.textMute : p.ink,
                       fontWeight: hasNom ? FontWeight.w500 : FontWeight.w600,
                     ),
                     maxLines: 2,
@@ -238,14 +240,14 @@ class _ReorderTile extends StatelessWidget {
             ),
             ReorderableDragStartListener(
               index: index,
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.x8,
                   vertical: AppSpacing.x8,
                 ),
                 child: Icon(
                   Icons.drag_handle,
-                  color: AppColors.textMute,
+                  color: p.textMute,
                 ),
               ),
             ),

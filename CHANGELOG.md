@@ -6,6 +6,111 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
+### Session autonome 2026-05-11 (Vague 8 quality + features livraison)
+
+**Refactor mode sombre** (17 fichiers, 314 occurrences `AppColors.X` → `p.X`
+via `AppPalette`). 8 smoke tests UI clair + sombre.
+
+**Optimisation VROOM enrichie** (migration v15) : choix profil
+Voiture/VUL ou Camion >3.5t (driving-hgv), capacité véhicule respectée par
+le solveur, évitement des péages (avoid_features tollways). Couvert par
++4 tests.
+
+**Mode hors-ligne** : saisie d'arrêt en zone sans 4G via dialog texte
+pur, badge "GPS manquant" dans la liste, batch re-géocodage via menu
+Plus. Service `StopsGeocodeRetryService` + 4 tests.
+
+**Rappels locaux par tournée** (migration v16) : champ `rappelLe`
+configurable dans le form (date + heure picker), notif
+`exactAllowWhileIdle` programmée via `NotificationsService.scheduleTourneeRappel`.
+Auto-cancel quand la tournée passe en `terminee` ou est supprimée.
+
+**Carnet enrichi** (migration v17) :
+- Notes pré-définies par client (`notesCarnet`), re-proposées à la
+  prochaine création d'arrêt pour ce client
+- Filtre par couleur / favoris (row de chips scrollable)
+- Dernier passage affiché sur chaque tile
+- Export vCard (.vcf, RFC 2426) compatible import Contacts Android
+- Couleur custom propagée sur les disques rang du Top 5
+
+**Tournée du jour enrichie** :
+- Édition rapide des fenêtres horaires inline (bottom sheet)
+- Détection de doublons à la création (haversine 30 m)
+- Undo dernier statut (via stop_history)
+- Refaire dans 7 jours (duplicate avec targetDate)
+- Coût carburant estimé (params EUR/L + L/100km), affiché en bandeau et
+  cumulé dans Stats
+- Partage texte court (WhatsApp/SMS) avec coût intégré
+
+**Stats** :
+- Carte "Colis par jour de la semaine" (barchart 7 jours)
+- Carte "Top 5 clients" (avec couleur custom du carnet)
+- Cumul coût carburant par fenêtre temporelle
+- Pull-to-refresh
+
+**Carte** : bouton "Centrer sur ma position GPS".
+
+**Paramètres** : stats cache (tuiles MB + nb géocodages), bouton
+"Annuler tous les rappels", section Carburant.
+
+**Drawer** : compteur dynamique "X tournées aujourd'hui".
+
+**Helpers extraits** : `GeoUtils.haversineMeters` + areClose dans
+`lib/data/geo_utils.dart` (testable sans Flutter).
+
+**Tests** : 85 → 182 (+97). Nouveaux fichiers : geo_utils,
+geocode_cache_repository, bordereau_extraction, parametres_repository,
+stops_geocode_retry, tournee_text_share, carnet_vcard_export,
+ban_geocoding_service, photon_service, france_geocoding_service.
+Extensions sur stats_service, stops_repository, tournees_repository,
+openroute_optimization_service.
+
+`flutter analyze` : **0 issue** (dart fix appliqué + docstrings tool/
+nettoyées).
+
+**Nettoyage** : suppression de `nominatim_service.dart` (~204 lignes
+de code mort) — remplacé par FranceGeocodingService depuis longtemps.
+
+**Bilan session** : 39+ commits, 0 issue `flutter analyze`, APK
+release **v1.1.0+2** (~96 MB) prêt à `app/build/app/outputs/flutter-apk/app-release.apk`.
+
+### Session 2026-05-12 (fixes terrain + extension tests)
+
+**Fix critique R8/Proguard** : `flutter_local_notifications` crashait
+`PlatformException(Missing type parameter)` à la sauvegarde d'une
+tournée parce que R8 mangeait les `TypeToken` génériques de Gson en
+build release. Ajout des règles Proguard officielles
+(`-keep class com.dexterous.** { *; }` + `Signature`/`Annotation`).
+
+**Mojibakes UI** : 11 occurrences de `'â€"'` (em-dash double-encodé),
+bullets `'â€¢'`, et flèches `'â†'` (right arrow) corrigées dans 9 écrans
+visibles utilisateur (drawer tooltip, mentions légales, carte, tournée
+du jour, ajout arrêt, etc.) — remplacement par caractères ASCII propres
+(`-`, `*`, `->`).
+
+**Tests étendus** : 285 → 356 (+71). Nouveaux fichiers `sheets_repository_test`,
+extensions sur `app_tokens` (+19 tests context.palette + lerp + tags),
+`parametres_repository` (+21 tests watchers + ORS key + onboarding),
+`address_suggestion` (+7 tests fromJson + secondaryLabel),
+`saved_destinations` (+5 tests proximité + favori + accents),
+`tournee_text_share` (+4 tests fenêtres + notes), `photon_service` (+6),
+`ban_geocoding_service` (+5 reverse), `recherche_entreprises` (+4).
+
+**Script `scripts/mirror-phone.ps1` compatible PS5.1** : l'opérateur
+`?.` (PS7+) plantait sur Windows PowerShell 5.1 — remplacé par un
+`if` simple.
+
+**Bilan extension** : +14 commits, +71 tests, fix UI critique livré.
+APK v1.1.0+2 rebuild avec les fixes.
+
+**Documentation** :
+- `docs/user-guide.md` : guide utilisateur exhaustif
+- `docs/play_store/listing.md` : fiche Play Store enrichie
+- `docs/session-2026-05-11-autonome.md` : recap session
+- `README.md` mis à jour avec les nouvelles capacités
+
+---
+
 ### Ajouté
 - Plan détaillé Phase 1 version gratuite (`docs/plan_free.md`).
 - Plan détaillé version CB avec Google Maps Platform (`docs/plan_cb.md`).

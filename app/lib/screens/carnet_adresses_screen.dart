@@ -6,11 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/carnet_export_service.dart';
 import '../data/carnet_import_service.dart';
+import '../data/carnet_vcard_export_service.dart';
 import '../data/database.dart';
+import '../data/saved_destinations_repository.dart';
 import '../providers/database_providers.dart';
-import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
-import 'carnet_edit_screen.dart';
+import 'carnet_adresses/carnet_tile.dart';
+import 'carnet_adresses/filter_chips.dart';
+import 'carnet_adresses/providers.dart';
+import 'unified_search_screen.dart';
 
 /// Liste des entrees du carnet d'adresses local. Recherche en haut,
 /// tap sur une entree -> ecran d'edition. Swipe -> supprimer.
@@ -24,6 +28,11 @@ class CarnetAdressesScreen extends ConsumerStatefulWidget {
 
 class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   String _query = '';
+  /// Filtre couleur actif (`colorTag`). Null = tous. 'favoris' = uniquement
+  /// les `isFavori = true` (cas special pour faciliter le tri).
+  String? _colorFilter;
+  /// Filtre tag libre (`tagsJson`). Null = aucun filtre tag.
+  String? _tagFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -34,14 +43,52 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         title: const Text('Carnet d\'adresses'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Recherche universelle',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const UnifiedSearchScreen(),
+              ),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.file_upload_outlined),
             tooltip: 'Importer un CSV',
             onPressed: _onImportPressed,
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share),
-            tooltip: 'Exporter en CSV',
-            onPressed: _onExportPressed,
+            tooltip: 'Exporter',
+            onSelected: (value) {
+              if (value == 'csv') _onExportPressed();
+              if (value == 'vcard') _onExportVcardPressed();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'csv',
+                child: ListTile(
+                  leading: Icon(Icons.description_outlined),
+                  title: Text('Exporter en CSV'),
+                  subtitle: Text(
+                    'Sauvegarde tableur',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'vcard',
+                child: ListTile(
+                  leading: Icon(Icons.contact_phone_outlined),
+                  title: Text('Exporter en vCard'),
+                  subtitle: Text(
+                    'Import direct dans Contacts',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -52,7 +99,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
               AppSpacing.x18,
               AppSpacing.x14,
               AppSpacing.x18,
-              AppSpacing.x10,
+              AppSpacing.x4,
             ),
             child: TextField(
               decoration: const InputDecoration(
@@ -62,12 +109,91 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
               onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
             ),
           ),
+          // Chips de filtre par couleur / favoris : un mini scroll
+          // horizontal pour ne pas pousser la liste vers le bas.
+          SizedBox(
+            height: 40,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x18,
+              ),
+              scrollDirection: Axis.horizontal,
+              children: [
+                ColorFilterChip(
+                  label: 'Tous',
+                  selected: _colorFilter == null,
+                  onSelected: () => setState(() => _colorFilter = null),
+                ),
+                const SizedBox(width: 8),
+                ColorFilterChip(
+                  label: 'Favoris',
+                  selected: _colorFilter == 'favoris',
+                  color: AppColors.amber,
+                  onSelected: () =>
+                      setState(() => _colorFilter = 'favoris'),
+                ),
+                const SizedBox(width: 8),
+                for (final (tag, color) in colorTagOptions) ...[
+                  ColorFilterChip(
+                    label: tag,
+                    selected: _colorFilter == tag,
+                    color: color,
+                    onSelected: () => setState(() => _colorFilter = tag),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+          // Deuxieme row : tags libres (uniquement ceux presents dans
+          // le carnet). Cachee si aucun tag.
+          Consumer(
+            builder: (context, ref, _) {
+              final allEntries =
+                  ref.watch(carnetStreamProvider).asData?.value ?? const [];
+              final allTags = <String>{};
+              for (final e in allEntries) {
+                allTags.addAll(
+                  SavedDestinationsRepository.parseTags(e.tagsJson),
+                );
+              }
+              if (allTags.isEmpty) return const SizedBox.shrink();
+              final sorted = allTags.toList()..sort();
+              return SizedBox(
+                height: 36,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x18,
+                  ),
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    TagFilterChip(
+                      label: 'tag: tous',
+                      selected: _tagFilter == null,
+                      onSelected: () =>
+                          setState(() => _tagFilter = null),
+                    ),
+                    const SizedBox(width: 8),
+                    for (final t in sorted) ...[
+                      TagFilterChip(
+                        label: t,
+                        selected: _tagFilter == t,
+                        onSelected: () =>
+                            setState(() => _tagFilter = t),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
           Expanded(
             child: stream.when(
               data: (all) {
                 final filtered = _filter(all, _query);
                 if (filtered.isEmpty) {
-                  return _EmptyState(hasQuery: _query.isNotEmpty);
+                  return CarnetEmptyState(hasQuery: _query.isNotEmpty);
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.fromLTRB(
@@ -78,7 +204,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (context, i) =>
-                      _CarnetTile(entry: filtered[i]),
+                      CarnetTile(entry: filtered[i]),
                 );
               },
               loading: () =>
@@ -93,7 +219,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
 
   Future<void> _onImportPressed() async {
     final messenger = ScaffoldMessenger.of(context);
-    final picked = await FilePicker.platform.pickFiles(
+    final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv'],
     );
@@ -181,10 +307,51 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
     }
   }
 
+  Future<void> _onExportVcardPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final service = CarnetVcardExportService(
+        ref.read(savedDestinationsRepositoryProvider),
+      );
+      final count = await service.exportAndShare();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(count > 0
+              ? '$count fiche(s) vCard generee(s)'
+              : 'Carnet vide, rien a exporter'),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'export vCard : $e')),
+      );
+    }
+  }
+
   List<SavedDestination> _filter(List<SavedDestination> all, String q) {
-    if (q.isEmpty) return all;
+    Iterable<SavedDestination> filtered = all;
+    final cf = _colorFilter;
+    if (cf != null) {
+      if (cf == 'favoris') {
+        filtered = filtered.where((d) => d.isFavori);
+      } else {
+        filtered = filtered.where((d) => d.colorTag == cf);
+      }
+    }
+    final tf = _tagFilter;
+    if (tf != null) {
+      filtered = filtered.where((d) {
+        final tags = SavedDestinationsRepository.parseTags(d.tagsJson);
+        return tags.any((t) => t.toLowerCase() == tf.toLowerCase());
+      });
+    }
+    if (q.isEmpty) return filtered.toList();
     final norm = _normalize(q);
-    return all.where((d) {
+    return filtered.where((d) {
       final hay = _normalize([
         d.nomClient ?? '',
         d.adresseDisplay,
@@ -205,221 +372,12 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
       'ÿ': 'y', 'ý': 'y',
       'ñ': 'n',
-      'œ': 'oe', 'æ': 'ae',
+      'Å“': 'oe', 'æ': 'ae',
     };
     final buf = StringBuffer();
     for (final ch in lower.split('')) {
       buf.write(map[ch] ?? ch);
     }
     return buf.toString();
-  }
-}
-
-/// Provider local : on n'a pas besoin de l'exposer ailleurs.
-final carnetStreamProvider =
-    StreamProvider.autoDispose<List<SavedDestination>>((ref) {
-  return ref.watch(savedDestinationsRepositoryProvider).watchAll();
-});
-
-class _CarnetTile extends ConsumerWidget {
-  const _CarnetTile({required this.entry});
-  final SavedDestination entry;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final nom = entry.nomClient?.trim() ?? '';
-    final hasNom = nom.isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-      child: Dismissible(
-        key: ValueKey('carnet-${entry.id}'),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          decoration: BoxDecoration(
-            color: AppColors.red.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(AppRadius.r14),
-          ),
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x22),
-          child: const Icon(Icons.delete_outline, color: AppColors.red),
-        ),
-        confirmDismiss: (_) async {
-          return await showDialog<bool>(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: const Text('Supprimer du carnet ?'),
-                  content: Text(
-                    hasNom
-                        ? '"$nom" sera supprime du carnet d\'adresses local.'
-                        : '"${entry.adresseDisplay}" sera supprime du '
-                            'carnet d\'adresses local.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Annuler'),
-                    ),
-                    FilledButton.tonal(
-                      style: FilledButton.styleFrom(
-                        backgroundColor:
-                            AppColors.red.withValues(alpha: 0.15),
-                        foregroundColor: AppColors.red,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Supprimer'),
-                    ),
-                  ],
-                ),
-              ) ??
-              false;
-        },
-        onDismissed: (_) async {
-          await ref
-              .read(savedDestinationsRepositoryProvider)
-              .delete(entry.id);
-        },
-        child: Material(
-          color: AppColors.paper,
-          borderRadius: BorderRadius.circular(AppRadius.r14),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.r14),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => CarnetEditScreen(entry: entry),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.x14),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => ref
-                        .read(savedDestinationsRepositoryProvider)
-                        .toggleFavori(entry.id),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        // Priorite : colorTag custom > favori amber >
-                        // lime par defaut.
-                        color: colorFromTag(
-                          entry.colorTag,
-                          defaultColor: entry.isFavori
-                              ? AppColors.amber
-                              : AppColors.lime,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        entry.isFavori ? Icons.star : Icons.bookmark,
-                        color: AppColors.ink,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.x12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (hasNom)
-                          Text(
-                            nom,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.ink,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        Text(
-                          entry.adresseDisplay,
-                          style: TextStyle(
-                            fontSize: hasNom ? 12 : 14,
-                            color: hasNom
-                                ? AppColors.textMute
-                                : AppColors.ink,
-                            fontWeight:
-                                hasNom ? FontWeight.w500 : FontWeight.w600,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          entry.useCount > 1
-                              ? 'Livre ${entry.useCount} fois'
-                              : 'Livre 1 fois',
-                          style: appMonoStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textFaint,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right,
-                      color: AppColors.textFaint),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasQuery});
-
-  final bool hasQuery;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: const BoxDecoration(
-                color: AppColors.creamSoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.bookmark_outline,
-                size: 44,
-                color: AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x18),
-            Text(
-              hasQuery ? 'Aucun resultat' : 'Carnet vide',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: AppSpacing.x8),
-            Text(
-              hasQuery
-                  ? 'Aucune adresse ne correspond a ta recherche.'
-                  : 'Le carnet se remplit automatiquement a chaque arret '
-                      'valide. Reviens ici plus tard pour modifier ou '
-                      'supprimer une entree.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMute,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -5,11 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/address_suggestion.dart';
 import '../data/bordereau_extraction.dart';
 import '../data/database.dart';
+import '../data/geo_utils.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
-import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import 'ajout_arret/form_widgets.dart';
 import 'scan_bordereau_screen.dart';
 
 /// Ajout (potentiellement multiple) d'arrets a une tournee, avec
@@ -52,6 +53,13 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   TimeOfDay? _fenetreFin;
   bool _saving = false;
   int _addressFieldVersion = 0;
+
+  /// Mode hors-ligne : Noah a entre une adresse brute non geocodee
+  /// (pas de coords lat/lng). On garde le texte ici pour le sauver
+  /// dans `adresseBrute`. L'arret sera flagge "GPS manquant" dans la
+  /// liste de la tournee et l'utilisateur pourra le re-geocoder plus
+  /// tard (en l'editant) une fois revenu en zone couverte.
+  String? _offlineAddressText;
 
   bool get _isEdit => widget.initial != null;
 
@@ -142,6 +150,8 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               onSuggestionSelected: (s) {
                 setState(() {
                   _address = s;
+                  // Une vraie suggestion ecrase la saisie hors-ligne.
+                  if (s != null) _offlineAddressText = null;
                   // Si c'est une selection du carnet local, on pre-remplit
                   // aussi le champ "Nom du client" (sauf si l'utilisateur
                   // a deja saisi quelque chose).
@@ -152,20 +162,57 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                       _nomClientCtrl.text.trim().isEmpty) {
                     _nomClientCtrl.text = s.poiName!;
                   }
+                  // Idem pour les notes pre-definies du carnet (code
+                  // interphone, instructions). On les pre-remplit
+                  // seulement si Noah n'a pas encore tape ses propres
+                  // notes pour cet arret.
+                  if (s != null &&
+                      s.fromCarnet &&
+                      s.notesCarnet != null &&
+                      s.notesCarnet!.trim().isNotEmpty &&
+                      _notesCtrl.text.trim().isEmpty) {
+                    _notesCtrl.text = s.notesCarnet!;
+                  }
                 });
               },
             ),
-            const SizedBox(height: AppSpacing.x10),
-            OutlinedButton.icon(
-              onPressed: _saving ? null : _scanBordereau,
-              icon: const Icon(Icons.document_scanner_outlined),
-              label: const Text('Scanner un bordereau'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
+            if (_offlineAddressText != null) ...[
+              const SizedBox(height: AppSpacing.x6),
+              OfflineAddressBanner(
+                text: _offlineAddressText!,
+                onClear: () =>
+                    setState(() => _offlineAddressText = null),
               ),
+            ],
+            const SizedBox(height: AppSpacing.x10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _saving ? null : _scanBordereau,
+                    icon: const Icon(Icons.document_scanner_outlined),
+                    label: const Text('Scanner'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _saving ? null : _enterOfflineAddress,
+                    icon: const Icon(Icons.signal_cellular_off_outlined),
+                    label: const Text('Hors ligne'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Client / Enseigne (optionnel)'),
+            const SectionTitle('Client / Enseigne (optionnel)'),
             const SizedBox(height: AppSpacing.x10),
             TextFormField(
               controller: _nomClientCtrl,
@@ -191,14 +238,14 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Priorite'),
+            const SectionTitle('Priorite'),
             const SizedBox(height: AppSpacing.x10),
-            _PriorityChips(
+            PriorityChips(
               value: _priorite,
               onChanged: (v) => setState(() => _priorite = v),
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Colis'),
+            const SectionTitle('Colis'),
             const SizedBox(height: AppSpacing.x10),
             Row(
               children: [
@@ -227,12 +274,12 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Fenetre horaire (optionnel)'),
+            const SectionTitle('Fenetre horaire (optionnel)'),
             const SizedBox(height: AppSpacing.x10),
             Row(
               children: [
                 Expanded(
-                  child: _TimePickerField(
+                  child: TimePickerField(
                     label: 'Pas avant',
                     value: _fenetreDebut,
                     onChanged: (t) => setState(() => _fenetreDebut = t),
@@ -240,7 +287,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                 ),
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(
-                  child: _TimePickerField(
+                  child: TimePickerField(
                     label: 'Avant',
                     value: _fenetreFin,
                     onChanged: (t) => setState(() => _fenetreFin = t),
@@ -335,6 +382,11 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       await ref
           .read(tourneesRepositoryProvider)
           .invalidateOptimization(widget.tourneeId);
+      // Auto-reorder local (nearest-neighbor, sans appel ORS) :
+      // maintient l'ordre des arrets pre-trie a chaque modif.
+      await ref
+          .read(localReorderServiceProvider)
+          .reorder(widget.tourneeId);
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
@@ -412,11 +464,27 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
 
   Future<void> _save({required bool addAnother}) async {
     if (!_formKey.currentState!.validate()) return;
-    if (_address == null) {
+    if (_address == null && _offlineAddressText == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Choisis une adresse')),
       );
       return;
+    }
+
+    // Detection doublon : si on est en train de creer (pas edit) ET
+    // on a des coords, on regarde s'il existe deja un arret dans la
+    // tournee tres proche (< 30 m haversine) ou avec la meme adresse
+    // brute (case-insensitive). Avertit avant de creer.
+    if (!_isEdit && _address != null) {
+      final doublon = await _findPossibleDoublon(
+        lat: _address!.lat,
+        lng: _address!.lon,
+        adresse: _address!.adressePostale,
+      );
+      if (doublon != null && mounted) {
+        final keepGoing = await _askConfirmDoublon(doublon);
+        if (!keepGoing) return;
+      }
     }
 
     setState(() => _saving = true);
@@ -424,13 +492,21 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     final repo = ref.read(stopsRepositoryProvider);
     final carnet = ref.read(savedDestinationsRepositoryProvider);
 
+    // En mode hors-ligne : adresseBrute = texte tape, lat/lng = null.
+    // Sinon : on prend l'AddressSuggestion complete.
+    final isOffline = _address == null && _offlineAddressText != null;
+    final adresseBrute =
+        isOffline ? _offlineAddressText! : _address!.adressePostale;
+    final lat = isOffline ? null : _address!.lat;
+    final lng = isOffline ? null : _address!.lon;
+
     try {
       if (_isEdit) {
         final companion = StopsCompanion(
-          adresseBrute: Value(_address!.adressePostale),
-          adresseNormalisee: Value(_address!.adressePostale),
-          lat: Value(_address!.lat),
-          lng: Value(_address!.lon),
+          adresseBrute: Value(adresseBrute),
+          adresseNormalisee: Value(adresseBrute),
+          lat: Value(lat),
+          lng: Value(lng),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
           priorite: Value(_priorite),
           fenetreDebut: Value(_formatTime(_fenetreDebut)),
@@ -444,12 +520,19 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
             .read(tourneesRepositoryProvider)
             .invalidateOptimization(widget.tourneeId);
       } else {
+        // Pre-remplit le coequipier par defaut de la tournee s'il y en
+        // a un (mode chef d'equipe : "tous les arrets de cette tournee
+        // sont pour Lucas").
+        final tournee = await ref
+            .read(tourneesRepositoryProvider)
+            .getById(widget.tourneeId);
+        final defautCoId = tournee?.coequipierDefautId;
         final companion = StopsCompanion.insert(
           tourneeId: widget.tourneeId,
-          adresseBrute: _address!.adressePostale,
-          adresseNormalisee: Value(_address!.adressePostale),
-          lat: Value(_address!.lat),
-          lng: Value(_address!.lon),
+          adresseBrute: adresseBrute,
+          adresseNormalisee: Value(adresseBrute),
+          lat: Value(lat),
+          lng: Value(lng),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
           priorite: Value(_priorite),
           fenetreDebut: Value(_formatTime(_fenetreDebut)),
@@ -457,6 +540,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
           notes: Value(_orNull(_notesCtrl.text)),
           nomClient: Value(_orNull(_nomClientCtrl.text)),
+          coequipierId: Value(defautCoId),
         );
         await repo.create(companion);
         await ref
@@ -464,25 +548,29 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
             .invalidateOptimization(widget.tourneeId);
       }
 
-      // Carnet d'adresses : on enregistre (ou rafraichit) silencieusement.
+      // Carnet d'adresses : seulement si on a des coords (sinon
+      // l'entree carnet est inutile, on ne peut pas la geolocaliser
+      // ni la reproposer en autocomplete avec une distance).
       // Ne doit jamais bloquer l'enregistrement de l'arret.
-      try {
-        await carnet.upsertFromValidatedStop(
-          nomClient: _orNull(_nomClientCtrl.text),
-          adresseDisplay: _address!.adressePostale,
-          lat: _address!.lat,
-          lng: _address!.lon,
-          rue: _address!.road == null
-              ? null
-              : (_address!.houseNumber != null &&
-                      _address!.houseNumber!.isNotEmpty
-                  ? '${_address!.houseNumber} ${_address!.road}'
-                  : _address!.road),
-          codePostal: _address!.postcode,
-          ville: _address!.city,
-        );
-      } catch (_) {
-        // Silencieux : le carnet est un bonus, pas un bloquant.
+      if (!isOffline) {
+        try {
+          await carnet.upsertFromValidatedStop(
+            nomClient: _orNull(_nomClientCtrl.text),
+            adresseDisplay: _address!.adressePostale,
+            lat: _address!.lat,
+            lng: _address!.lon,
+            rue: _address!.road == null
+                ? null
+                : (_address!.houseNumber != null &&
+                        _address!.houseNumber!.isNotEmpty
+                    ? '${_address!.houseNumber} ${_address!.road}'
+                    : _address!.road),
+            codePostal: _address!.postcode,
+            ville: _address!.city,
+          );
+        } catch (_) {
+          // Silencieux : le carnet est un bonus, pas un bloquant.
+        }
       }
 
       if (!mounted) return;
@@ -522,132 +610,158 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   }
 
   String? _orNull(String s) => s.trim().isEmpty ? null : s.trim();
-}
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.6,
-        color: AppColors.textMute,
-      ),
-    );
+  /// Retourne le Stop deja present dans la tournee qui ressemble a
+  /// l'adresse passee, soit par coords (< 30 m haversine), soit par
+  /// adresse brute identique (case-insensitive). Null si pas de
+  /// doublon detecte.
+  Future<Stop?> _findPossibleDoublon({
+    required double lat,
+    required double lng,
+    required String adresse,
+  }) async {
+    final repo = ref.read(stopsRepositoryProvider);
+    final stops = await repo.getByTournee(widget.tourneeId);
+    final adresseLower = adresse.toLowerCase().trim();
+    for (final s in stops) {
+      if (s.adresseBrute.toLowerCase().trim() == adresseLower) return s;
+      if (s.lat != null && s.lng != null) {
+        if (GeoUtils.areClose(
+          lat1: lat,
+          lon1: lng,
+          lat2: s.lat!,
+          lon2: s.lng!,
+          thresholdMeters: 30,
+        )) {
+          return s;
+        }
+      }
+    }
+    return null;
   }
-}
 
-class _PriorityChips extends StatelessWidget {
-  const _PriorityChips({required this.value, required this.onChanged});
-
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  static const _options = [
-    ('obligatoire_premier', 'En premier', AppColors.lime),
-    ('flexible', 'Flexible', AppColors.creamSoft),
-    ('obligatoire_dernier', 'En dernier', AppColors.lime),
-    ('eviter_si_possible', 'Eviter', AppColors.amber),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.x8,
-      runSpacing: AppSpacing.x8,
-      children: [
-        for (final (id, label, accent) in _options)
-          ChoiceChip(
-            label: Text(label),
-            selected: value == id,
-            onSelected: (sel) {
-              if (sel) onChanged(id);
-            },
-            selectedColor: accent,
-            backgroundColor: AppColors.paper,
-            side: BorderSide(
-              color: value == id ? accent : AppColors.inkLine,
-            ),
-            labelStyle: TextStyle(
-              color: AppColors.ink,
-              fontWeight: value == id ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _TimePickerField extends StatelessWidget {
-  const _TimePickerField({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final TimeOfDay? value;
-  final ValueChanged<TimeOfDay?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final display = value == null
-        ? '—'
-        : '${value!.hour.toString().padLeft(2, '0')}:${value!.minute.toString().padLeft(2, '0')}';
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppRadius.r14),
-      onTap: () async {
-        final picked = await showTimePicker(
-          context: context,
-          initialTime: value ?? const TimeOfDay(hour: 9, minute: 0),
-        );
-        if (picked != null) onChanged(picked);
-      },
-      onLongPress: value == null ? null : () => onChanged(null),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x14,
-          vertical: AppSpacing.x12,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.paper,
-          borderRadius: BorderRadius.circular(AppRadius.r14),
-          border: Border.all(color: AppColors.inkLine),
-        ),
-        child: Row(
+  /// Dialog "Doublon possible" : affiche les details du Stop ressemblant
+  /// et demande confirmation. Retourne true si l'utilisateur veut
+  /// quand meme creer le nouvel arret.
+  Future<bool> _askConfirmDoublon(Stop doublon) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Doublon possible ?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.access_time, size: 18, color: AppColors.ink),
-            const SizedBox(width: AppSpacing.x8),
-            Expanded(
+            const Text(
+              'Un arret tres proche existe deja dans cette tournee :',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.x10),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppRadius.r10),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textMute,
-                      fontWeight: FontWeight.w600,
+                  if (doublon.nomClient != null &&
+                      doublon.nomClient!.isNotEmpty)
+                    Text(
+                      doublon.nomClient!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
                     ),
-                  ),
                   Text(
-                    display,
-                    style: appMonoStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    doublon.adresseBrute,
+                    style: const TextStyle(color: AppColors.ink),
                   ),
                 ],
               ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Ajouter quand meme'),
+          ),
+        ],
       ),
     );
+    return result == true;
+  }
+
+  // Note : haversine deplace dans `GeoUtils` (lib/data/geo_utils.dart)
+  // pour pouvoir le tester sans dependance Flutter et l'utiliser depuis
+  // d'autres ecrans.
+
+  /// Dialog "Saisie hors-ligne" : un seul champ texte que l'utilisateur
+  /// remplit a la main quand l'autocomplete echoue (zone rurale sans
+  /// 4G typiquement). Le texte sauvegarde dans `_offlineAddressText`
+  /// devient `adresseBrute` du Stop, sans lat/lng. L'arret apparait
+  /// avec un badge "GPS manquant" dans la tournee et peut etre
+  /// re-edite plus tard pour declencher le geocodage.
+  Future<void> _enterOfflineAddress() async {
+    final ctrl = TextEditingController(text: _offlineAddressText ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Saisie hors ligne'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tape l\'adresse complete a la main. Le GPS sera '
+                'manquant tant que tu n\'auras pas re-edite cet arret '
+                'avec une connexion (re-selection depuis l\'autocomplete).',
+                style: TextStyle(fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Adresse',
+                  hintText: '12 rue des Lilas, 28100 Dreux',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(ctrl.text.trim()),
+              child: const Text('Valider'),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted) return;
+    if (result == null) return;
+    final trimmed = result.trim();
+    if (trimmed.isEmpty) {
+      setState(() => _offlineAddressText = null);
+      return;
+    }
+    setState(() {
+      _offlineAddressText = trimmed;
+      _address = null;
+    });
   }
 }

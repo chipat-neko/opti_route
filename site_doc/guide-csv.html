@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide : exporter ton CSV pour le tableau de bord — opti_route</title>
+<meta name="description" content="Comment exporter le CSV de tes tournees depuis l'app et l'ouvrir dans le tableau de bord web opti_route.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="dashboard.html">Dashboard</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-64) 0; max-width: 780px;">
+
+  <span class="eyebrow">Guide pas a pas</span>
+  <h1>Exporter ton CSV pour le tableau de bord.</h1>
+  <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-40);">
+    Le tableau de bord web lit un fichier CSV genere par l'app. En 3
+    etapes tu auras tes tournees visualisees sur grand ecran.
+  </p>
+
+  <!-- Step 1 -->
+  <div class="feature-card" style="margin-bottom: var(--space-22);">
+    <div style="display: flex; align-items: center; gap: var(--space-14); margin-bottom: var(--space-12);">
+      <div class="step-num" style="position: static;">1</div>
+      <h3 style="margin: 0;">Ouvre Statistiques dans l'app</h3>
+    </div>
+    <p>
+      Drawer (menu en haut a gauche) <strong>&rarr; Statistiques</strong>.
+      Tu y vois le recap 7j / 30j / 365j, la carte de motivation lime
+      et le breakdown par coequipier.
+    </p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="feature-card" style="margin-bottom: var(--space-22);">
+    <div style="display: flex; align-items: center; gap: var(--space-14); margin-bottom: var(--space-12);">
+      <div class="step-num" style="position: static;">2</div>
+      <h3 style="margin: 0;">Tape "Exporter en CSV"</h3>
+    </div>
+    <p>
+      Tout en bas de l'ecran Stats, la carte "EXPORTER LES STATS" a
+      un bouton bleu/lime <strong>"Exporter en CSV"</strong>. Tap.
+      Le selecteur natif Android propose ou envoyer le fichier :
+    </p>
+    <ul style="margin: var(--space-12) 0 0 var(--space-22);">
+      <li>Gmail / Outlook (te l'envoyer a toi-meme)</li>
+      <li>Google Drive (sync automatique avec ton PC)</li>
+      <li>Telegram / WhatsApp (te l'envoyer)</li>
+      <li>Bluetooth direct vers ton PC</li>
+    </ul>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="feature-card" style="margin-bottom: var(--space-40);">
+    <div style="display: flex; align-items: center; gap: var(--space-14); margin-bottom: var(--space-12);">
+      <div class="step-num" style="position: static;">3</div>
+      <h3 style="margin: 0;">Charge-le dans le dashboard web</h3>
+    </div>
+    <p>
+      Ouvre le <a href="dashboard.html">tableau de bord</a> sur ton
+      ordinateur. Glisse-depose ton fichier <code>.csv</code> sur la
+      zone de drop, ou clique pour parcourir. Le viewer affiche
+      immediatement :
+    </p>
+    <ul style="margin: var(--space-12) 0 0 var(--space-22);">
+      <li>5 stat cards (Tournees / Arrets / Colis / Km / Duree)</li>
+      <li>3 graphes (colis livres, statuts, distance)</li>
+      <li>Tableau brut trie</li>
+      <li>Boutons re-export propre + impression PDF</li>
+    </ul>
+  </div>
+
+  <!-- Format details -->
+  <div style="background: var(--bg-soft); border-radius: var(--radius-18); padding: var(--space-22); margin-bottom: var(--space-40);">
+    <h3 style="margin-bottom: var(--space-12);">Format du CSV (pour les curieux)</h3>
+    <p style="margin-bottom: var(--space-14);">
+      Le fichier respecte le format RFC 4180 (compatible Excel,
+      Google Sheets, Numbers). Le header est :
+    </p>
+    <pre class="mono" style="background: var(--paper); padding: var(--space-14); border-radius: var(--radius-10); overflow: auto; font-size: 0.85rem; border: 1px solid var(--divider);">date,nom,statut,arrets,colis_livres,distance_km,duree_min,pause_min
+2026-05-13,Tournee mardi,terminee,15,22,52.1,210,20</pre>
+    <p style="margin-top: var(--space-12); font-size: 0.9rem;">
+      Le statut peut etre <code>brouillon</code>, <code>optimisee</code>,
+      <code>en_cours</code> ou <code>terminee</code>. La duree exclut
+      les pauses (cumul du chrono effectif).
+    </p>
+  </div>
+
+  <!-- Confidentialite -->
+  <div class="muted-banner">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+    <span>
+      <strong>100% local au navigateur.</strong> Aucun upload n'est fait
+      vers un serveur opti_route ou un tiers. Le CSV reste sur ton
+      ordinateur, parse en memoire.
+    </span>
+  </div>
+
+  <div style="margin-top: var(--space-40); display: flex; gap: var(--space-12); flex-wrap: wrap;">
+    <a href="dashboard.html" class="btn btn-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      Ouvrir le tableau de bord
+    </a>
+    <a href="index.html" class="btn btn-ghost">Retour a l'accueil</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route</a> · Phase 1 gratuit · 100% prive · <span class="mono">© CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/stats_screen.dart';
+import '../screens/tableau_bord_equipe_screen.dart';
 import '../screens/tournees_list_screen.dart';
 import '../theme/app_tokens.dart';
 
@@ -19,15 +20,17 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasEnCours = ref.watch(hasTourneeEnCoursProvider);
+    final tourneesAujourdhui = ref.watch(tourneesDuJourProvider);
+    final p = context.palette;
     return Drawer(
-      backgroundColor: AppColors.cream,
+      backgroundColor: p.cream,
       surfaceTintColor: Colors.transparent,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.x22,
                 AppSpacing.x28,
                 AppSpacing.x22,
@@ -41,16 +44,22 @@ class AppDrawer extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
+                      color: p.ink,
                       letterSpacing: -0.4,
                     ),
                   ),
-                  SizedBox(height: AppSpacing.x4),
+                  const SizedBox(height: AppSpacing.x4),
                   Text(
-                    'Optimisation de tournees',
+                    tourneesAujourdhui.isEmpty
+                        ? 'Aucune tournee aujourd\'hui'
+                        : tourneesAujourdhui.length == 1
+                            ? '1 tournee aujourd\'hui'
+                            : '${tourneesAujourdhui.length} tournees '
+                                'aujourd\'hui',
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textMute,
+                      color: p.textMute,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -73,7 +82,7 @@ class AppDrawer extends ConsumerWidget {
                           color: AppColors.lime,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.cream,
+                            color: p.cream,
                             width: 1.5,
                           ),
                         ),
@@ -127,6 +136,32 @@ class AppDrawer extends ConsumerWidget {
                   MaterialPageRoute<void>(
                     builder: (_) => const StatsScreen(),
                   ),
+                );
+              },
+            ),
+            // Mode chef d'equipe : ajoute "Tableau de bord equipe"
+            // dans le drawer. Cache pour les livreurs solos pour eviter
+            // de polluer la navigation avec des features non utilisees.
+            Consumer(
+              builder: (context, ref, _) {
+                final modeChef =
+                    ref.watch(modeChefProvider).asData?.value ?? false;
+                if (!modeChef) return const SizedBox.shrink();
+                return ListTile(
+                  leading: const Icon(Icons.dashboard_outlined),
+                  title: const Text('Tableau de bord equipe'),
+                  subtitle: const Text(
+                    'Vue agregee toutes tournees du jour',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const TableauBordEquipeScreen(),
+                      ),
+                    );
+                  },
                 );
               },
             ),

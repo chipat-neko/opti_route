@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 2.6.1+2027
 
 environment:
   sdk: ^3.11.5
@@ -49,12 +49,26 @@ dependencies:
   image_picker: ^1.2.2
   url_launcher: ^6.3.1
   geolocator: ^14.0.0
-  share_plus: ^11.1.0
+  share_plus: ^12.0.0
   path_provider: ^2.1.5
   pdf: ^3.11.4
-  file_picker: ^8.1.7
-  flutter_local_notifications: ^18.0.1
-  timezone: ^0.10.0
+  file_picker: ^11.0.0
+  flutter_local_notifications: ^21.0.0
+  timezone: ^0.11.0
+  local_auth: ^3.0.0
+  local_auth_android: ^2.0.0
+  crypto: ^3.0.5
+  # Package `image` pour manipuler les pixels (rotations 90/180/270)
+  # lors du re-OCR en cas de bordereau scanne dans le mauvais sens.
+  # Pas de plugin natif : 100 % Dart, marche aussi en web.
+  image: ^4.5.4
+  # Connectivity_plus : observe les changements wifi/mobile/none pour
+  # declencher automatiquement le re-geocodage des arrets ajoutes en
+  # mode hors-ligne (cf OfflineGeocodeAutomation).
+  connectivity_plus: ^7.1.0
+  # Archive : creation / lecture de zip pour le backup complet
+  # (DB SQLite + photos preuves) en un seul fichier partageable.
+  archive: ^4.0.7
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +84,14 @@ dev_dependencies:
   build_runner: ^2.15.0
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.7
+  # Utilises uniquement par les tests pour mocker path_provider
+  # (BackupService et AutoBackupService dependent de
+  # getApplicationDocumentsDirectory + getExternalStorageDirectory).
+  # Ce sont en fait des dependances transitives de path_provider en
+  # runtime, mais on les declare explicitement ici pour pouvoir les
+  # importer dans test/backup_service_test.dart.
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 # App icon : pin lime + trace de route sur fond ink, designee via
 # Claude Design. Sources d'origine versionnees dans
@@ -115,6 +137,16 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Fonts bundled localement : permet a `google_fonts` d'utiliser les
+  # versions embarquees au lieu de fetcher en HTTP. Indispensable
+  # pour : (1) marcher hors-ligne sans depender de fonts.gstatic.com,
+  # (2) faire passer les widget_smoke_test (HTTP bloque par
+  # TestWidgetsFlutterBinding). Le nom de fichier doit matcher la
+  # convention Google Fonts : `<Family>-<Weight>.ttf`.
+  # Total : ~350 KB d'APK.
+  assets:
+    - assets/fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

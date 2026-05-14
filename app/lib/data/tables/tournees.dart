@@ -34,5 +34,46 @@ class Tournees extends Table {
   BoolColumn get isTemplate =>
       boolean().withDefault(const Constant(false))();
 
+  /// Profil OpenRouteService utilise pour le calcul d'itineraire :
+  /// - `driving-car` (defaut) : VL classique, prend toutes les routes
+  /// - `driving-hgv` : camion lourd > 3.5t, respecte les restrictions
+  ///   de hauteur, poids, largeur, interdictions camion et evite les
+  ///   centres-ville pietonnises.
+  ///
+  /// Pour Noah en VUL standard (< 3.5t), `driving-car` est correct.
+  /// `driving-hgv` peut etre necessaire pour les transporteurs PL.
+  TextColumn get profilOrs =>
+      text().withDefault(const Constant('driving-car'))();
+
+  /// Eviter les peages quand on calcule l'itineraire. Ajoute
+  /// `options.avoid_features: ['tollways']` aux appels Directions ORS.
+  /// Defaut false : pour un livreur urbain les peages sont rares et
+  /// l'evitement allonge enormement le trajet.
+  BoolColumn get eviterPeages =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Date / heure a laquelle une notification locale de rappel doit
+  /// se declencher (ex: 6h45 le matin de la tournee pour reveiller
+  /// Noah). Null = pas de rappel programme. Stocke en local time, on
+  /// le re-zone via flutter_local_notifications a la programmation.
+  DateTimeColumn get rappelLe => dateTime().nullable()();
+
+  /// Timestamp du dernier tap "Mettre en pause". Null si jamais paused
+  /// ou si actuellement en cours. Sert au calcul du temps reellement
+  /// travaille (exclut les pauses).
+  DateTimeColumn get pauseeLe => dateTime().nullable()();
+
+  /// Cumul des secondes de pause sur cette tournee. Mis a jour au
+  /// "Reprendre" : pauseeSeconds += now - pauseeLe.
+  IntColumn get pauseeSeconds =>
+      integer().withDefault(const Constant(0))();
+
+  /// Id du coequipier affecte par defaut pour TOUS les nouveaux stops
+  /// crees dans cette tournee (FK vers `coequipiers.id`, nullable).
+  /// Sert au chef d'equipe qui prepare une tournee complete pour Lucas :
+  /// chaque ajout d'arret prend automatiquement `coequipierId = lucas.id`
+  /// sans avoir a le configurer 30x. Modifiable apres coup par stop.
+  IntColumn get coequipierDefautId => integer().nullable()();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

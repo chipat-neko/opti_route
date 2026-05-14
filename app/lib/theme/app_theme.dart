@@ -9,7 +9,8 @@ import 'app_tokens.dart';
 /// - **Police UI** : Manrope (Google Fonts) — 400/500/600/700/800.
 /// - **Police chiffres / mono** : JetBrains Mono — exposée via [appMonoStyle].
 /// - **Couleurs** : palette cream/ink/lime/emerald de la spec.
-ThemeData buildAppTheme() => _buildTheme(brightness: Brightness.light);
+ThemeData buildAppTheme({AppThemePreset preset = AppThemePreset.lime}) =>
+    _buildTheme(brightness: Brightness.light, preset: preset);
 
 /// Variante sombre du thème pour la conduite de nuit (#73).
 ///
@@ -17,31 +18,33 @@ ThemeData buildAppTheme() => _buildTheme(brightness: Brightness.light);
 /// conservant les couleurs de marque (lime / emerald / red / amber)
 /// qui restent lisibles sur fond sombre.
 ///
-/// **Limite connue** : certains widgets custom utilisent encore les
-/// constantes `AppColors.*` en dur (cream/paper/ink) et ne basculent
-/// pas. Ils gardent leur apparence claire. Refactor complet à faire
-/// dans une PR future si ce n'est pas assez sombre la nuit.
-ThemeData buildAppThemeDark() => _buildTheme(brightness: Brightness.dark);
+/// Couvert par Vague 8 : 17 fichiers refactorés (314 occurrences
+/// `AppColors.X` → `context.palette.X` via `AppPalette`). Les couleurs
+/// d'accent fixes (lime/emerald/amber/red) restent volontairement
+/// hardcodées avec un foreground `AppColors.ink` fixe pour préserver
+/// le contraste.
+ThemeData buildAppThemeDark({AppThemePreset preset = AppThemePreset.lime}) =>
+    _buildTheme(brightness: Brightness.dark, preset: preset);
 
-ThemeData _buildTheme({required Brightness brightness}) {
+ThemeData _buildTheme({
+  required Brightness brightness,
+  required AppThemePreset preset,
+}) {
   final isDark = brightness == Brightness.dark;
+  final palette = isDark ? preset.dark : preset.light;
 
-  // Palette dynamique selon le mode.
-  final bg = isDark ? AppColors.ink : AppColors.cream;
-  final bgSoft = isDark ? AppColors.inkSoft : AppColors.creamSoft;
-  final surface = isDark ? AppColors.inkSoft : AppColors.paper;
-  final onSurface = isDark ? AppColors.cream : AppColors.ink;
-  final onSurfaceMute = isDark
-      ? AppColors.cream.withValues(alpha: 0.65)
-      : AppColors.textMute;
-  final outline = isDark
-      ? AppColors.cream.withValues(alpha: 0.15)
-      : AppColors.inkLine;
-  final divider = isDark
-      ? AppColors.cream.withValues(alpha: 0.08)
-      : AppColors.divider;
-  final primaryFg = isDark ? AppColors.lime : AppColors.lime;
-  final primaryBg = isDark ? AppColors.cream : AppColors.ink;
+  // Palette dynamique selon le preset + mode.
+  final bg = palette.cream;
+  final bgSoft = palette.creamSoft;
+  final surface = palette.paper;
+  final onSurface = palette.ink;
+  final onSurfaceMute = palette.textMute;
+  final outline = palette.inkLine;
+  final divider = palette.divider;
+  // Boutons primaires : fond ink (texte cream dessus), accent du preset
+  // disponible via colorScheme.secondary.
+  final primaryFg = AppColors.lime;
+  final primaryBg = palette.ink;
 
   final base = ThemeData(useMaterial3: true, brightness: brightness);
 
@@ -98,7 +101,7 @@ ThemeData _buildTheme({required Brightness brightness}) {
     textTheme: textTheme,
     primaryTextTheme: textTheme,
     extensions: <ThemeExtension<dynamic>>[
-      isDark ? AppPalette.dark : AppPalette.light,
+      palette,
     ],
     appBarTheme: AppBarTheme(
       backgroundColor: bg,

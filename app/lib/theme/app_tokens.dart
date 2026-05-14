@@ -163,6 +163,93 @@ class AppPalette extends ThemeExtension<AppPalette> {
     textFaint: Color(0x80F5F3EE), // cream 50%
   );
 
+  // ─── Palette OCEAN (bleus apaisants) ──────────────────────────────
+  /// Ocean clair : surfaces bleu pale, texte bleu marine.
+  static const oceanLight = AppPalette(
+    cream: Color(0xFFEEF4F7),
+    creamSoft: Color(0xFFDDE9EE),
+    paper: Color(0xFFFAFCFD),
+    ink: Color(0xFF0E2A3A),
+    inkSoft: Color(0xFF1A3849),
+    inkLine: Color(0xFFC4D8E5),
+    divider: Color(0x140E2A3A),
+    text: Color(0xFF0E2A3A),
+    textMute: Color(0xFF5C7080),
+    textFaint: Color(0xFF8AA0B0),
+  );
+
+  /// Ocean sombre : marine profond avec accents bleu pale.
+  static const oceanDark = AppPalette(
+    cream: Color(0xFF0E2A3A),
+    creamSoft: Color(0xFF1A3849),
+    paper: Color(0xFF1A3849),
+    ink: Color(0xFFEEF4F7),
+    inkSoft: Color(0xFFDDE9EE),
+    inkLine: Color(0x33EEF4F7),
+    divider: Color(0x1AEEF4F7),
+    text: Color(0xFFEEF4F7),
+    textMute: Color(0xB3EEF4F7),
+    textFaint: Color(0x80EEF4F7),
+  );
+
+  // ─── Palette TERRACOTTA (chauds, terre cuite) ─────────────────────
+  /// Terracotta clair : surfaces sable, texte chocolat.
+  static const terracottaLight = AppPalette(
+    cream: Color(0xFFF6EDDF),
+    creamSoft: Color(0xFFEBDFCC),
+    paper: Color(0xFFFFFAF1),
+    ink: Color(0xFF2D1B0E),
+    inkSoft: Color(0xFF3D2818),
+    inkLine: Color(0xFFE0D0B8),
+    divider: Color(0x142D1B0E),
+    text: Color(0xFF2D1B0E),
+    textMute: Color(0xFF6E5240),
+    textFaint: Color(0xFF9A8268),
+  );
+
+  /// Terracotta sombre : brun chocolat profond, textes beige.
+  static const terracottaDark = AppPalette(
+    cream: Color(0xFF1F1410),
+    creamSoft: Color(0xFF2D2014),
+    paper: Color(0xFF2D2014),
+    ink: Color(0xFFF6EDDF),
+    inkSoft: Color(0xFFEBDFCC),
+    inkLine: Color(0x33F6EDDF),
+    divider: Color(0x1AF6EDDF),
+    text: Color(0xFFF6EDDF),
+    textMute: Color(0xB3F6EDDF),
+    textFaint: Color(0x80F6EDDF),
+  );
+
+  // ─── Palette MONO (epuree, noir et blanc) ─────────────────────────
+  /// Mono clair : blanc pur, noir profond. Maximum de contraste.
+  static const monoLight = AppPalette(
+    cream: Color(0xFFFAFAFA),
+    creamSoft: Color(0xFFF0F0F0),
+    paper: Color(0xFFFFFFFF),
+    ink: Color(0xFF111111),
+    inkSoft: Color(0xFF1F1F1F),
+    inkLine: Color(0xFFE0E0E0),
+    divider: Color(0x14111111),
+    text: Color(0xFF111111),
+    textMute: Color(0xFF555555),
+    textFaint: Color(0xFF8A8A8A),
+  );
+
+  /// Mono sombre : noir pur, blanc casse. Style OLED.
+  static const monoDark = AppPalette(
+    cream: Color(0xFF0A0A0A),
+    creamSoft: Color(0xFF1A1A1A),
+    paper: Color(0xFF1A1A1A),
+    ink: Color(0xFFFAFAFA),
+    inkSoft: Color(0xFFF0F0F0),
+    inkLine: Color(0x33FAFAFA),
+    divider: Color(0x1AFAFAFA),
+    text: Color(0xFFFAFAFA),
+    textMute: Color(0xB3FAFAFA),
+    textFaint: Color(0x80FAFAFA),
+  );
+
   @override
   AppPalette copyWith({
     Color? cream,
@@ -213,6 +300,90 @@ class AppPalette extends ThemeExtension<AppPalette> {
 extension AppPaletteContext on BuildContext {
   AppPalette get palette {
     return Theme.of(this).extension<AppPalette>() ?? AppPalette.light;
+  }
+}
+
+/// Un theme complet (clair + sombre) avec une couleur d'accent
+/// principale. Permet a l'utilisateur de choisir entre plusieurs
+/// ambiances dans Parametres.
+///
+/// Les couleurs de signalisation (lime=succes, rouge=echec, amber=warning,
+/// emerald=action) restent identiques sur tous les presets pour preserver
+/// la coherence des indicateurs metier. Seules les **surfaces** (cream/
+/// ink/paper/...) et la **couleur d'accent primaire** changent.
+class AppThemePreset {
+  const AppThemePreset({
+    required this.name,
+    required this.displayName,
+    required this.description,
+    required this.light,
+    required this.dark,
+    required this.previewColor,
+  });
+
+  /// Identifiant stocke en base (`theme_preset` dans parametres).
+  final String name;
+
+  /// Nom affiche dans le selecteur UI ("Lime (defaut)", "Ocean", etc.).
+  final String displayName;
+
+  /// Texte explicatif court affiche sous le nom dans le selecteur.
+  final String description;
+
+  final AppPalette light;
+  final AppPalette dark;
+
+  /// Couleur dominante du preset (utilisee comme aperçu rond dans le
+  /// selecteur). Generalement la couleur la plus visible/iconique.
+  final Color previewColor;
+
+  static const lime = AppThemePreset(
+    name: 'lime',
+    displayName: 'Lime',
+    description: 'Vert lime sur cream — defaut',
+    light: AppPalette.light,
+    dark: AppPalette.dark,
+    previewColor: AppColors.lime,
+  );
+
+  static const ocean = AppThemePreset(
+    name: 'ocean',
+    displayName: 'Ocean',
+    description: 'Bleus apaisants — conduite zen',
+    light: AppPalette.oceanLight,
+    dark: AppPalette.oceanDark,
+    previewColor: Color(0xFF2196F3),
+  );
+
+  static const terracotta = AppThemePreset(
+    name: 'terracotta',
+    displayName: 'Terracotta',
+    description: 'Tons chauds — fin de journee',
+    light: AppPalette.terracottaLight,
+    dark: AppPalette.terracottaDark,
+    previewColor: Color(0xFFE67E22),
+  );
+
+  static const mono = AppThemePreset(
+    name: 'mono',
+    displayName: 'Mono',
+    description: 'Noir et blanc — maximum lisibilite',
+    light: AppPalette.monoLight,
+    dark: AppPalette.monoDark,
+    previewColor: Color(0xFF111111),
+  );
+
+  /// Liste de tous les presets dans l'ordre d'affichage dans Parametres.
+  static const all = <AppThemePreset>[lime, ocean, terracotta, mono];
+
+  /// Retourne le preset correspondant a `name`, fallback sur lime si
+  /// le nom est inconnu (cas d'une valeur orpheline en base apres
+  /// retrait d'un theme).
+  static AppThemePreset fromName(String? name) {
+    return all.firstWhere(
+      (p) => p.name == name,
+      orElse: () => lime,
+    );
   }
 }
 

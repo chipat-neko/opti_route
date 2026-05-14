@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://chipat-neko.github.io/opti_route/website/sitemap.xml

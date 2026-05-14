@@ -21,6 +21,17 @@ class TourneesRepository {
         .getSingleOrNull();
   }
 
+  /// Stream d'une tournee unique pour pouvoir watcher ses changements
+  /// de statut / pauseeLe / etc. Indispensable pour que l'ecran
+  /// `TourneeDuJourScreen` re-rende quand on appelle `update()` depuis
+  /// les actions (Demarrer / Pause / Arreter) -- sans ce stream, l'UI
+  /// continue a afficher l'objet `widget.tournee` immuable passe au
+  /// constructeur (bug observe sur la checklist 2026-05-14).
+  Stream<Tournee?> watchById(int id) {
+    return (_db.select(_db.tournees)..where((t) => t.id.equals(id)))
+        .watchSingleOrNull();
+  }
+
   Future<int> create(TourneesCompanion entry) {
     return _db.into(_db.tournees).insert(entry);
   }
@@ -77,7 +88,7 @@ class TourneesRepository {
   /// La date du clone est `nouvelle DateTime.now()` (date du jour),
   /// pour qu'il apparaisse en haut de l'historique. Retourne l'id du
   /// nouveau clone.
-  Future<int> duplicate(int sourceId) async {
+  Future<int> duplicate(int sourceId, {DateTime? targetDate}) async {
     return _db.transaction(() async {
       final source = await getById(sourceId);
       if (source == null) {
@@ -86,11 +97,13 @@ class TourneesRepository {
       final newId = await _db.into(_db.tournees).insert(
             TourneesCompanion.insert(
               nom: _suffixCopie(source.nom),
-              date: DateTime.now(),
+              date: targetDate ?? DateTime.now(),
               pointDepartLat: source.pointDepartLat,
               pointDepartLng: source.pointDepartLng,
               pointDepartLabel: source.pointDepartLabel,
               vehiculeCapaciteColis: Value(source.vehiculeCapaciteColis),
+              profilOrs: Value(source.profilOrs),
+              eviterPeages: Value(source.eviterPeages),
               // Pas de statut / metriques / trace : nouvelle tournee
               // -> brouillon, pas encore optimisee.
             ),
@@ -134,6 +147,28 @@ class TourneesRepository {
     final base = m.group(1)!.trim();
     final n = int.tryParse(m.group(2) ?? '') ?? 1;
     return '$base (copie ${n + 1})';
+  }
+
+  /// Met une tournee `en_cours` en pause : pose le timestamp `pauseeLe`
+  /// = now. Le reset auto au "Reprendre" ajoute la duree pausee au
+  /// cumul `pauseeSeconds`.
+  Future<int> pauseTournee(int id) {
+    return (_db.update(_db.tournees)..where((t) => t.id.equals(id))).write(
+      TourneesCompanion(pauseeLe: Value(DateTime.now())),
+    );
+  }
+
+  /// Reprend une tournee en pause : ajoute la duree pausee au cumul
+  /// `pauseeSeconds` et reset `pauseeLe` a null.
+  Future<int> reprendreTournee(int id) async {
+    final t = await getById(id);
+    if (t == null || t.pauseeLe == null) return 0;
+    final pausedSeconds = DateTime.now().difference(t.pauseeLe!).inSeconds;
+    return (_db.update(_db.tournees)..where((row) => row.id.equals(id)))
+        .write(TourneesCompanion(
+      pauseeLe: const Value(null),
+      pauseeSeconds: Value(t.pauseeSeconds + pausedSeconds),
+    ));
   }
 
   /// Efface les metadonnees d'optimisation d'une tournee : `optimiseeLe`,

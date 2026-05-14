@@ -58,8 +58,14 @@ class RechercheEntreprisesService implements GeocodingService {
       },
     );
 
-    final response =
-        await _client.get(uri, headers: {'User-Agent': _userAgent});
+    final response = await _client
+        .get(uri, headers: {'User-Agent': _userAgent})
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw const GeocodingException(
+            'Recherche-Entreprises timeout',
+          ),
+        );
 
     if (response.statusCode != 200) {
       throw GeocodingException(

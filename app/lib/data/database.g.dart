@@ -167,6 +167,77 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _profilOrsMeta = const VerificationMeta(
+    'profilOrs',
+  );
+  @override
+  late final GeneratedColumn<String> profilOrs = GeneratedColumn<String>(
+    'profil_ors',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('driving-car'),
+  );
+  static const VerificationMeta _eviterPeagesMeta = const VerificationMeta(
+    'eviterPeages',
+  );
+  @override
+  late final GeneratedColumn<bool> eviterPeages = GeneratedColumn<bool>(
+    'eviter_peages',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("eviter_peages" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _rappelLeMeta = const VerificationMeta(
+    'rappelLe',
+  );
+  @override
+  late final GeneratedColumn<DateTime> rappelLe = GeneratedColumn<DateTime>(
+    'rappel_le',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pauseeLeMeta = const VerificationMeta(
+    'pauseeLe',
+  );
+  @override
+  late final GeneratedColumn<DateTime> pauseeLe = GeneratedColumn<DateTime>(
+    'pausee_le',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pauseeSecondsMeta = const VerificationMeta(
+    'pauseeSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> pauseeSeconds = GeneratedColumn<int>(
+    'pausee_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _coequipierDefautIdMeta =
+      const VerificationMeta('coequipierDefautId');
+  @override
+  late final GeneratedColumn<int> coequipierDefautId = GeneratedColumn<int>(
+    'coequipier_defaut_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -193,6 +264,12 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     traceGeojson,
     demareeLe,
     isTemplate,
+    profilOrs,
+    eviterPeages,
+    rappelLe,
+    pauseeLe,
+    pauseeSeconds,
+    coequipierDefautId,
     creeLe,
   ];
   @override
@@ -322,6 +399,51 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         isTemplate.isAcceptableOrUnknown(data['is_template']!, _isTemplateMeta),
       );
     }
+    if (data.containsKey('profil_ors')) {
+      context.handle(
+        _profilOrsMeta,
+        profilOrs.isAcceptableOrUnknown(data['profil_ors']!, _profilOrsMeta),
+      );
+    }
+    if (data.containsKey('eviter_peages')) {
+      context.handle(
+        _eviterPeagesMeta,
+        eviterPeages.isAcceptableOrUnknown(
+          data['eviter_peages']!,
+          _eviterPeagesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('rappel_le')) {
+      context.handle(
+        _rappelLeMeta,
+        rappelLe.isAcceptableOrUnknown(data['rappel_le']!, _rappelLeMeta),
+      );
+    }
+    if (data.containsKey('pausee_le')) {
+      context.handle(
+        _pauseeLeMeta,
+        pauseeLe.isAcceptableOrUnknown(data['pausee_le']!, _pauseeLeMeta),
+      );
+    }
+    if (data.containsKey('pausee_seconds')) {
+      context.handle(
+        _pauseeSecondsMeta,
+        pauseeSeconds.isAcceptableOrUnknown(
+          data['pausee_seconds']!,
+          _pauseeSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('coequipier_defaut_id')) {
+      context.handle(
+        _coequipierDefautIdMeta,
+        coequipierDefautId.isAcceptableOrUnknown(
+          data['coequipier_defaut_id']!,
+          _coequipierDefautIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -393,6 +515,30 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_template'],
       )!,
+      profilOrs: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profil_ors'],
+      )!,
+      eviterPeages: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}eviter_peages'],
+      )!,
+      rappelLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}rappel_le'],
+      ),
+      pauseeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}pausee_le'],
+      ),
+      pauseeSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pausee_seconds'],
+      )!,
+      coequipierDefautId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}coequipier_defaut_id'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -437,6 +583,44 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// Sert pour les tournees recurrentes (memes 30 clients chaque
   /// semaine).
   final bool isTemplate;
+
+  /// Profil OpenRouteService utilise pour le calcul d'itineraire :
+  /// - `driving-car` (defaut) : VL classique, prend toutes les routes
+  /// - `driving-hgv` : camion lourd > 3.5t, respecte les restrictions
+  ///   de hauteur, poids, largeur, interdictions camion et evite les
+  ///   centres-ville pietonnises.
+  ///
+  /// Pour Noah en VUL standard (< 3.5t), `driving-car` est correct.
+  /// `driving-hgv` peut etre necessaire pour les transporteurs PL.
+  final String profilOrs;
+
+  /// Eviter les peages quand on calcule l'itineraire. Ajoute
+  /// `options.avoid_features: ['tollways']` aux appels Directions ORS.
+  /// Defaut false : pour un livreur urbain les peages sont rares et
+  /// l'evitement allonge enormement le trajet.
+  final bool eviterPeages;
+
+  /// Date / heure a laquelle une notification locale de rappel doit
+  /// se declencher (ex: 6h45 le matin de la tournee pour reveiller
+  /// Noah). Null = pas de rappel programme. Stocke en local time, on
+  /// le re-zone via flutter_local_notifications a la programmation.
+  final DateTime? rappelLe;
+
+  /// Timestamp du dernier tap "Mettre en pause". Null si jamais paused
+  /// ou si actuellement en cours. Sert au calcul du temps reellement
+  /// travaille (exclut les pauses).
+  final DateTime? pauseeLe;
+
+  /// Cumul des secondes de pause sur cette tournee. Mis a jour au
+  /// "Reprendre" : pauseeSeconds += now - pauseeLe.
+  final int pauseeSeconds;
+
+  /// Id du coequipier affecte par defaut pour TOUS les nouveaux stops
+  /// crees dans cette tournee (FK vers `coequipiers.id`, nullable).
+  /// Sert au chef d'equipe qui prepare une tournee complete pour Lucas :
+  /// chaque ajout d'arret prend automatiquement `coequipierId = lucas.id`
+  /// sans avoir a le configurer 30x. Modifiable apres coup par stop.
+  final int? coequipierDefautId;
   final DateTime creeLe;
   const Tournee({
     required this.id,
@@ -453,6 +637,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     this.traceGeojson,
     this.demareeLe,
     required this.isTemplate,
+    required this.profilOrs,
+    required this.eviterPeages,
+    this.rappelLe,
+    this.pauseeLe,
+    required this.pauseeSeconds,
+    this.coequipierDefautId,
     required this.creeLe,
   });
   @override
@@ -482,6 +672,18 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       map['demaree_le'] = Variable<DateTime>(demareeLe);
     }
     map['is_template'] = Variable<bool>(isTemplate);
+    map['profil_ors'] = Variable<String>(profilOrs);
+    map['eviter_peages'] = Variable<bool>(eviterPeages);
+    if (!nullToAbsent || rappelLe != null) {
+      map['rappel_le'] = Variable<DateTime>(rappelLe);
+    }
+    if (!nullToAbsent || pauseeLe != null) {
+      map['pausee_le'] = Variable<DateTime>(pauseeLe);
+    }
+    map['pausee_seconds'] = Variable<int>(pauseeSeconds);
+    if (!nullToAbsent || coequipierDefautId != null) {
+      map['coequipier_defaut_id'] = Variable<int>(coequipierDefautId);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -512,6 +714,18 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ? const Value.absent()
           : Value(demareeLe),
       isTemplate: Value(isTemplate),
+      profilOrs: Value(profilOrs),
+      eviterPeages: Value(eviterPeages),
+      rappelLe: rappelLe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rappelLe),
+      pauseeLe: pauseeLe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pauseeLe),
+      pauseeSeconds: Value(pauseeSeconds),
+      coequipierDefautId: coequipierDefautId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coequipierDefautId),
       creeLe: Value(creeLe),
     );
   }
@@ -538,6 +752,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       traceGeojson: serializer.fromJson<String?>(json['traceGeojson']),
       demareeLe: serializer.fromJson<DateTime?>(json['demareeLe']),
       isTemplate: serializer.fromJson<bool>(json['isTemplate']),
+      profilOrs: serializer.fromJson<String>(json['profilOrs']),
+      eviterPeages: serializer.fromJson<bool>(json['eviterPeages']),
+      rappelLe: serializer.fromJson<DateTime?>(json['rappelLe']),
+      pauseeLe: serializer.fromJson<DateTime?>(json['pauseeLe']),
+      pauseeSeconds: serializer.fromJson<int>(json['pauseeSeconds']),
+      coequipierDefautId: serializer.fromJson<int?>(json['coequipierDefautId']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -559,6 +779,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'traceGeojson': serializer.toJson<String?>(traceGeojson),
       'demareeLe': serializer.toJson<DateTime?>(demareeLe),
       'isTemplate': serializer.toJson<bool>(isTemplate),
+      'profilOrs': serializer.toJson<String>(profilOrs),
+      'eviterPeages': serializer.toJson<bool>(eviterPeages),
+      'rappelLe': serializer.toJson<DateTime?>(rappelLe),
+      'pauseeLe': serializer.toJson<DateTime?>(pauseeLe),
+      'pauseeSeconds': serializer.toJson<int>(pauseeSeconds),
+      'coequipierDefautId': serializer.toJson<int?>(coequipierDefautId),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -578,6 +804,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     Value<String?> traceGeojson = const Value.absent(),
     Value<DateTime?> demareeLe = const Value.absent(),
     bool? isTemplate,
+    String? profilOrs,
+    bool? eviterPeages,
+    Value<DateTime?> rappelLe = const Value.absent(),
+    Value<DateTime?> pauseeLe = const Value.absent(),
+    int? pauseeSeconds,
+    Value<int?> coequipierDefautId = const Value.absent(),
     DateTime? creeLe,
   }) => Tournee(
     id: id ?? this.id,
@@ -596,6 +828,14 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     traceGeojson: traceGeojson.present ? traceGeojson.value : this.traceGeojson,
     demareeLe: demareeLe.present ? demareeLe.value : this.demareeLe,
     isTemplate: isTemplate ?? this.isTemplate,
+    profilOrs: profilOrs ?? this.profilOrs,
+    eviterPeages: eviterPeages ?? this.eviterPeages,
+    rappelLe: rappelLe.present ? rappelLe.value : this.rappelLe,
+    pauseeLe: pauseeLe.present ? pauseeLe.value : this.pauseeLe,
+    pauseeSeconds: pauseeSeconds ?? this.pauseeSeconds,
+    coequipierDefautId: coequipierDefautId.present
+        ? coequipierDefautId.value
+        : this.coequipierDefautId,
     creeLe: creeLe ?? this.creeLe,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
@@ -632,6 +872,18 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       isTemplate: data.isTemplate.present
           ? data.isTemplate.value
           : this.isTemplate,
+      profilOrs: data.profilOrs.present ? data.profilOrs.value : this.profilOrs,
+      eviterPeages: data.eviterPeages.present
+          ? data.eviterPeages.value
+          : this.eviterPeages,
+      rappelLe: data.rappelLe.present ? data.rappelLe.value : this.rappelLe,
+      pauseeLe: data.pauseeLe.present ? data.pauseeLe.value : this.pauseeLe,
+      pauseeSeconds: data.pauseeSeconds.present
+          ? data.pauseeSeconds.value
+          : this.pauseeSeconds,
+      coequipierDefautId: data.coequipierDefautId.present
+          ? data.coequipierDefautId.value
+          : this.coequipierDefautId,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -653,13 +905,19 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
           ..write('isTemplate: $isTemplate, ')
+          ..write('profilOrs: $profilOrs, ')
+          ..write('eviterPeages: $eviterPeages, ')
+          ..write('rappelLe: $rappelLe, ')
+          ..write('pauseeLe: $pauseeLe, ')
+          ..write('pauseeSeconds: $pauseeSeconds, ')
+          ..write('coequipierDefautId: $coequipierDefautId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     nom,
     date,
@@ -674,8 +932,14 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     traceGeojson,
     demareeLe,
     isTemplate,
+    profilOrs,
+    eviterPeages,
+    rappelLe,
+    pauseeLe,
+    pauseeSeconds,
+    coequipierDefautId,
     creeLe,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -694,6 +958,12 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.traceGeojson == this.traceGeojson &&
           other.demareeLe == this.demareeLe &&
           other.isTemplate == this.isTemplate &&
+          other.profilOrs == this.profilOrs &&
+          other.eviterPeages == this.eviterPeages &&
+          other.rappelLe == this.rappelLe &&
+          other.pauseeLe == this.pauseeLe &&
+          other.pauseeSeconds == this.pauseeSeconds &&
+          other.coequipierDefautId == this.coequipierDefautId &&
           other.creeLe == this.creeLe);
 }
 
@@ -712,6 +982,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<String?> traceGeojson;
   final Value<DateTime?> demareeLe;
   final Value<bool> isTemplate;
+  final Value<String> profilOrs;
+  final Value<bool> eviterPeages;
+  final Value<DateTime?> rappelLe;
+  final Value<DateTime?> pauseeLe;
+  final Value<int> pauseeSeconds;
+  final Value<int?> coequipierDefautId;
   final Value<DateTime> creeLe;
   const TourneesCompanion({
     this.id = const Value.absent(),
@@ -728,6 +1004,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
     this.isTemplate = const Value.absent(),
+    this.profilOrs = const Value.absent(),
+    this.eviterPeages = const Value.absent(),
+    this.rappelLe = const Value.absent(),
+    this.pauseeLe = const Value.absent(),
+    this.pauseeSeconds = const Value.absent(),
+    this.coequipierDefautId = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   TourneesCompanion.insert({
@@ -745,6 +1027,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.traceGeojson = const Value.absent(),
     this.demareeLe = const Value.absent(),
     this.isTemplate = const Value.absent(),
+    this.profilOrs = const Value.absent(),
+    this.eviterPeages = const Value.absent(),
+    this.rappelLe = const Value.absent(),
+    this.pauseeLe = const Value.absent(),
+    this.pauseeSeconds = const Value.absent(),
+    this.coequipierDefautId = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
@@ -766,6 +1054,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<String>? traceGeojson,
     Expression<DateTime>? demareeLe,
     Expression<bool>? isTemplate,
+    Expression<String>? profilOrs,
+    Expression<bool>? eviterPeages,
+    Expression<DateTime>? rappelLe,
+    Expression<DateTime>? pauseeLe,
+    Expression<int>? pauseeSeconds,
+    Expression<int>? coequipierDefautId,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -784,6 +1078,13 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       if (traceGeojson != null) 'trace_geojson': traceGeojson,
       if (demareeLe != null) 'demaree_le': demareeLe,
       if (isTemplate != null) 'is_template': isTemplate,
+      if (profilOrs != null) 'profil_ors': profilOrs,
+      if (eviterPeages != null) 'eviter_peages': eviterPeages,
+      if (rappelLe != null) 'rappel_le': rappelLe,
+      if (pauseeLe != null) 'pausee_le': pauseeLe,
+      if (pauseeSeconds != null) 'pausee_seconds': pauseeSeconds,
+      if (coequipierDefautId != null)
+        'coequipier_defaut_id': coequipierDefautId,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -803,6 +1104,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<String?>? traceGeojson,
     Value<DateTime?>? demareeLe,
     Value<bool>? isTemplate,
+    Value<String>? profilOrs,
+    Value<bool>? eviterPeages,
+    Value<DateTime?>? rappelLe,
+    Value<DateTime?>? pauseeLe,
+    Value<int>? pauseeSeconds,
+    Value<int?>? coequipierDefautId,
     Value<DateTime>? creeLe,
   }) {
     return TourneesCompanion(
@@ -821,6 +1128,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       traceGeojson: traceGeojson ?? this.traceGeojson,
       demareeLe: demareeLe ?? this.demareeLe,
       isTemplate: isTemplate ?? this.isTemplate,
+      profilOrs: profilOrs ?? this.profilOrs,
+      eviterPeages: eviterPeages ?? this.eviterPeages,
+      rappelLe: rappelLe ?? this.rappelLe,
+      pauseeLe: pauseeLe ?? this.pauseeLe,
+      pauseeSeconds: pauseeSeconds ?? this.pauseeSeconds,
+      coequipierDefautId: coequipierDefautId ?? this.coequipierDefautId,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -872,6 +1185,24 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (isTemplate.present) {
       map['is_template'] = Variable<bool>(isTemplate.value);
     }
+    if (profilOrs.present) {
+      map['profil_ors'] = Variable<String>(profilOrs.value);
+    }
+    if (eviterPeages.present) {
+      map['eviter_peages'] = Variable<bool>(eviterPeages.value);
+    }
+    if (rappelLe.present) {
+      map['rappel_le'] = Variable<DateTime>(rappelLe.value);
+    }
+    if (pauseeLe.present) {
+      map['pausee_le'] = Variable<DateTime>(pauseeLe.value);
+    }
+    if (pauseeSeconds.present) {
+      map['pausee_seconds'] = Variable<int>(pauseeSeconds.value);
+    }
+    if (coequipierDefautId.present) {
+      map['coequipier_defaut_id'] = Variable<int>(coequipierDefautId.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -895,6 +1226,12 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('traceGeojson: $traceGeojson, ')
           ..write('demareeLe: $demareeLe, ')
           ..write('isTemplate: $isTemplate, ')
+          ..write('profilOrs: $profilOrs, ')
+          ..write('eviterPeages: $eviterPeages, ')
+          ..write('rappelLe: $rappelLe, ')
+          ..write('pauseeLe: $pauseeLe, ')
+          ..write('pauseeSeconds: $pauseeSeconds, ')
+          ..write('coequipierDefautId: $coequipierDefautId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -1130,6 +1467,28 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _preuvePhotoPathMeta = const VerificationMeta(
+    'preuvePhotoPath',
+  );
+  @override
+  late final GeneratedColumn<String> preuvePhotoPath = GeneratedColumn<String>(
+    'preuve_photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coequipierIdMeta = const VerificationMeta(
+    'coequipierId',
+  );
+  @override
+  late final GeneratedColumn<int> coequipierId = GeneratedColumn<int>(
+    'coequipier_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
   @override
   late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
@@ -1162,6 +1521,8 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     livreLe,
     ordreOptimise,
     ordrePriorite,
+    preuvePhotoPath,
+    coequipierId,
     creeLe,
   ];
   @override
@@ -1321,6 +1682,24 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('preuve_photo_path')) {
+      context.handle(
+        _preuvePhotoPathMeta,
+        preuvePhotoPath.isAcceptableOrUnknown(
+          data['preuve_photo_path']!,
+          _preuvePhotoPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('coequipier_id')) {
+      context.handle(
+        _coequipierIdMeta,
+        coequipierId.isAcceptableOrUnknown(
+          data['coequipier_id']!,
+          _coequipierIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('cree_le')) {
       context.handle(
         _creeLeMeta,
@@ -1416,6 +1795,14 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.int,
         data['${effectivePrefix}ordre_priorite'],
       ),
+      preuvePhotoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preuve_photo_path'],
+      ),
+      coequipierId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}coequipier_id'],
+      ),
       creeLe: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cree_le'],
@@ -1465,6 +1852,17 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// 1 = livre en premier de son groupe, 2 = en deuxieme, etc.
   /// Null = pas applicable (priorite flexible / eviter).
   final int? ordrePriorite;
+
+  /// Chemin local (filesystem app) de la photo preuve de livraison.
+  /// Null si pas de photo prise. Stockage privé dans
+  /// `app_documents/preuves/<stopId>_<timestamp>.jpg`.
+  final String? preuvePhotoPath;
+
+  /// Id du coequipier affecte a cet arret (FK vers `coequipiers.id`).
+  /// Null = Noah lui-meme (cas par defaut, pas d'aidant). Pas de
+  /// cascade : si on supprime un coequipier, on le retire de l'UI
+  /// mais on garde la trace dans les arrets pour l'historique.
+  final int? coequipierId;
   final DateTime creeLe;
   const Stop({
     required this.id,
@@ -1487,6 +1885,8 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.livreLe,
     this.ordreOptimise,
     this.ordrePriorite,
+    this.preuvePhotoPath,
+    this.coequipierId,
     required this.creeLe,
   });
   @override
@@ -1538,6 +1938,12 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || ordrePriorite != null) {
       map['ordre_priorite'] = Variable<int>(ordrePriorite);
     }
+    if (!nullToAbsent || preuvePhotoPath != null) {
+      map['preuve_photo_path'] = Variable<String>(preuvePhotoPath);
+    }
+    if (!nullToAbsent || coequipierId != null) {
+      map['coequipier_id'] = Variable<int>(coequipierId);
+    }
     map['cree_le'] = Variable<DateTime>(creeLe);
     return map;
   }
@@ -1586,6 +1992,12 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordrePriorite: ordrePriorite == null && nullToAbsent
           ? const Value.absent()
           : Value(ordrePriorite),
+      preuvePhotoPath: preuvePhotoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preuvePhotoPath),
+      coequipierId: coequipierId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coequipierId),
       creeLe: Value(creeLe),
     );
   }
@@ -1618,6 +2030,8 @@ class Stop extends DataClass implements Insertable<Stop> {
       livreLe: serializer.fromJson<DateTime?>(json['livreLe']),
       ordreOptimise: serializer.fromJson<int?>(json['ordreOptimise']),
       ordrePriorite: serializer.fromJson<int?>(json['ordrePriorite']),
+      preuvePhotoPath: serializer.fromJson<String?>(json['preuvePhotoPath']),
+      coequipierId: serializer.fromJson<int?>(json['coequipierId']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
     );
   }
@@ -1645,6 +2059,8 @@ class Stop extends DataClass implements Insertable<Stop> {
       'livreLe': serializer.toJson<DateTime?>(livreLe),
       'ordreOptimise': serializer.toJson<int?>(ordreOptimise),
       'ordrePriorite': serializer.toJson<int?>(ordrePriorite),
+      'preuvePhotoPath': serializer.toJson<String?>(preuvePhotoPath),
+      'coequipierId': serializer.toJson<int?>(coequipierId),
       'creeLe': serializer.toJson<DateTime>(creeLe),
     };
   }
@@ -1670,6 +2086,8 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<DateTime?> livreLe = const Value.absent(),
     Value<int?> ordreOptimise = const Value.absent(),
     Value<int?> ordrePriorite = const Value.absent(),
+    Value<String?> preuvePhotoPath = const Value.absent(),
+    Value<int?> coequipierId = const Value.absent(),
     DateTime? creeLe,
   }) => Stop(
     id: id ?? this.id,
@@ -1698,6 +2116,10 @@ class Stop extends DataClass implements Insertable<Stop> {
     ordrePriorite: ordrePriorite.present
         ? ordrePriorite.value
         : this.ordrePriorite,
+    preuvePhotoPath: preuvePhotoPath.present
+        ? preuvePhotoPath.value
+        : this.preuvePhotoPath,
+    coequipierId: coequipierId.present ? coequipierId.value : this.coequipierId,
     creeLe: creeLe ?? this.creeLe,
   );
   Stop copyWithCompanion(StopsCompanion data) {
@@ -1740,6 +2162,12 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordrePriorite: data.ordrePriorite.present
           ? data.ordrePriorite.value
           : this.ordrePriorite,
+      preuvePhotoPath: data.preuvePhotoPath.present
+          ? data.preuvePhotoPath.value
+          : this.preuvePhotoPath,
+      coequipierId: data.coequipierId.present
+          ? data.coequipierId.value
+          : this.coequipierId,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
     );
   }
@@ -1767,6 +2195,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
+          ..write('preuvePhotoPath: $preuvePhotoPath, ')
+          ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -1794,6 +2224,8 @@ class Stop extends DataClass implements Insertable<Stop> {
     livreLe,
     ordreOptimise,
     ordrePriorite,
+    preuvePhotoPath,
+    coequipierId,
     creeLe,
   ]);
   @override
@@ -1820,6 +2252,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.livreLe == this.livreLe &&
           other.ordreOptimise == this.ordreOptimise &&
           other.ordrePriorite == this.ordrePriorite &&
+          other.preuvePhotoPath == this.preuvePhotoPath &&
+          other.coequipierId == this.coequipierId &&
           other.creeLe == this.creeLe);
 }
 
@@ -1844,6 +2278,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<DateTime?> livreLe;
   final Value<int?> ordreOptimise;
   final Value<int?> ordrePriorite;
+  final Value<String?> preuvePhotoPath;
+  final Value<int?> coequipierId;
   final Value<DateTime> creeLe;
   const StopsCompanion({
     this.id = const Value.absent(),
@@ -1866,6 +2302,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
+    this.preuvePhotoPath = const Value.absent(),
+    this.coequipierId = const Value.absent(),
     this.creeLe = const Value.absent(),
   });
   StopsCompanion.insert({
@@ -1889,6 +2327,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
+    this.preuvePhotoPath = const Value.absent(),
+    this.coequipierId = const Value.absent(),
     this.creeLe = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
@@ -1913,6 +2353,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<DateTime>? livreLe,
     Expression<int>? ordreOptimise,
     Expression<int>? ordrePriorite,
+    Expression<String>? preuvePhotoPath,
+    Expression<int>? coequipierId,
     Expression<DateTime>? creeLe,
   }) {
     return RawValuesInsertable({
@@ -1936,6 +2378,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (livreLe != null) 'livre_le': livreLe,
       if (ordreOptimise != null) 'ordre_optimise': ordreOptimise,
       if (ordrePriorite != null) 'ordre_priorite': ordrePriorite,
+      if (preuvePhotoPath != null) 'preuve_photo_path': preuvePhotoPath,
+      if (coequipierId != null) 'coequipier_id': coequipierId,
       if (creeLe != null) 'cree_le': creeLe,
     });
   }
@@ -1961,6 +2405,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<DateTime?>? livreLe,
     Value<int?>? ordreOptimise,
     Value<int?>? ordrePriorite,
+    Value<String?>? preuvePhotoPath,
+    Value<int?>? coequipierId,
     Value<DateTime>? creeLe,
   }) {
     return StopsCompanion(
@@ -1984,6 +2430,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       livreLe: livreLe ?? this.livreLe,
       ordreOptimise: ordreOptimise ?? this.ordreOptimise,
       ordrePriorite: ordrePriorite ?? this.ordrePriorite,
+      preuvePhotoPath: preuvePhotoPath ?? this.preuvePhotoPath,
+      coequipierId: coequipierId ?? this.coequipierId,
       creeLe: creeLe ?? this.creeLe,
     );
   }
@@ -2051,6 +2499,12 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (ordrePriorite.present) {
       map['ordre_priorite'] = Variable<int>(ordrePriorite.value);
     }
+    if (preuvePhotoPath.present) {
+      map['preuve_photo_path'] = Variable<String>(preuvePhotoPath.value);
+    }
+    if (coequipierId.present) {
+      map['coequipier_id'] = Variable<int>(coequipierId.value);
+    }
     if (creeLe.present) {
       map['cree_le'] = Variable<DateTime>(creeLe.value);
     }
@@ -2080,6 +2534,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
           ..write('ordrePriorite: $ordrePriorite, ')
+          ..write('preuvePhotoPath: $preuvePhotoPath, ')
+          ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe')
           ..write(')'))
         .toString();
@@ -3374,6 +3830,61 @@ class $SavedDestinationsTable extends SavedDestinations
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _notesCarnetMeta = const VerificationMeta(
+    'notesCarnet',
+  );
+  @override
+  late final GeneratedColumn<String> notesCarnet = GeneratedColumn<String>(
+    'notes_carnet',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tagsJsonMeta = const VerificationMeta(
+    'tagsJson',
+  );
+  @override
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+    'tags_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _photoPathMeta = const VerificationMeta(
+    'photoPath',
+  );
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+    'photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _codeAccesMeta = const VerificationMeta(
+    'codeAcces',
+  );
+  @override
+  late final GeneratedColumn<String> codeAcces = GeneratedColumn<String>(
+    'code_acces',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _etageBatimentMeta = const VerificationMeta(
+    'etageBatiment',
+  );
+  @override
+  late final GeneratedColumn<String> etageBatiment = GeneratedColumn<String>(
+    'etage_batiment',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3389,6 +3900,11 @@ class $SavedDestinationsTable extends SavedDestinations
     creeLe,
     isFavori,
     colorTag,
+    notesCarnet,
+    tagsJson,
+    photoPath,
+    codeAcces,
+    etageBatiment,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3489,6 +4005,42 @@ class $SavedDestinationsTable extends SavedDestinations
         colorTag.isAcceptableOrUnknown(data['color_tag']!, _colorTagMeta),
       );
     }
+    if (data.containsKey('notes_carnet')) {
+      context.handle(
+        _notesCarnetMeta,
+        notesCarnet.isAcceptableOrUnknown(
+          data['notes_carnet']!,
+          _notesCarnetMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tags_json')) {
+      context.handle(
+        _tagsJsonMeta,
+        tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta),
+      );
+    }
+    if (data.containsKey('photo_path')) {
+      context.handle(
+        _photoPathMeta,
+        photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta),
+      );
+    }
+    if (data.containsKey('code_acces')) {
+      context.handle(
+        _codeAccesMeta,
+        codeAcces.isAcceptableOrUnknown(data['code_acces']!, _codeAccesMeta),
+      );
+    }
+    if (data.containsKey('etage_batiment')) {
+      context.handle(
+        _etageBatimentMeta,
+        etageBatiment.isAcceptableOrUnknown(
+          data['etage_batiment']!,
+          _etageBatimentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3550,6 +4102,26 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.string,
         data['${effectivePrefix}color_tag'],
       ),
+      notesCarnet: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes_carnet'],
+      ),
+      tagsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags_json'],
+      ),
+      photoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_path'],
+      ),
+      codeAcces: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code_acces'],
+      ),
+      etageBatiment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etage_batiment'],
+      ),
     );
   }
 
@@ -3591,6 +4163,30 @@ class SavedDestination extends DataClass
   /// 'red', 'amber', 'cream', 'ink'). Null = couleur par defaut
   /// (lime ou amber selon isFavori).
   final String? colorTag;
+
+  /// Notes pre-definies par client : code interphone, instructions
+  /// fragiles, heures preferees, etc. Affichees automatiquement comme
+  /// notes du prochain arret cree pour ce client (pre-remplies dans le
+  /// champ Notes de `AjoutArretScreen`). L'utilisateur peut les
+  /// surcharger pour cet arret precis sans modifier le carnet.
+  final String? notesCarnet;
+
+  /// Liste de tags libres sous forme JSON (ex: '["pro","fragile"]').
+  /// Null = aucun tag. L'UI filtre par tag dans la liste du carnet.
+  final String? tagsJson;
+
+  /// Chemin local d'une photo de la facade / interphone (aide visuelle
+  /// a la livraison). Null si pas de photo. Stockee en
+  /// `app_documents/carnet/<id>_<ts>.jpg`.
+  final String? photoPath;
+
+  /// Code d'acces (interphone, portail) — courant et explicite.
+  /// Affiche en gros dans la fiche client. Optionnel.
+  final String? codeAcces;
+
+  /// Etage / batiment / appartement, separe du code pour pouvoir
+  /// l'afficher en gros lui aussi. Ex: "Bat C, 3e etage, app. 12".
+  final String? etageBatiment;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -3605,6 +4201,11 @@ class SavedDestination extends DataClass
     required this.creeLe,
     required this.isFavori,
     this.colorTag,
+    this.notesCarnet,
+    this.tagsJson,
+    this.photoPath,
+    this.codeAcces,
+    this.etageBatiment,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3632,6 +4233,21 @@ class SavedDestination extends DataClass
     if (!nullToAbsent || colorTag != null) {
       map['color_tag'] = Variable<String>(colorTag);
     }
+    if (!nullToAbsent || notesCarnet != null) {
+      map['notes_carnet'] = Variable<String>(notesCarnet);
+    }
+    if (!nullToAbsent || tagsJson != null) {
+      map['tags_json'] = Variable<String>(tagsJson);
+    }
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
+    if (!nullToAbsent || codeAcces != null) {
+      map['code_acces'] = Variable<String>(codeAcces);
+    }
+    if (!nullToAbsent || etageBatiment != null) {
+      map['etage_batiment'] = Variable<String>(etageBatiment);
+    }
     return map;
   }
 
@@ -3658,6 +4274,21 @@ class SavedDestination extends DataClass
       colorTag: colorTag == null && nullToAbsent
           ? const Value.absent()
           : Value(colorTag),
+      notesCarnet: notesCarnet == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notesCarnet),
+      tagsJson: tagsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tagsJson),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
+      codeAcces: codeAcces == null && nullToAbsent
+          ? const Value.absent()
+          : Value(codeAcces),
+      etageBatiment: etageBatiment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(etageBatiment),
     );
   }
 
@@ -3680,6 +4311,11 @@ class SavedDestination extends DataClass
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       isFavori: serializer.fromJson<bool>(json['isFavori']),
       colorTag: serializer.fromJson<String?>(json['colorTag']),
+      notesCarnet: serializer.fromJson<String?>(json['notesCarnet']),
+      tagsJson: serializer.fromJson<String?>(json['tagsJson']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
+      codeAcces: serializer.fromJson<String?>(json['codeAcces']),
+      etageBatiment: serializer.fromJson<String?>(json['etageBatiment']),
     );
   }
   @override
@@ -3699,6 +4335,11 @@ class SavedDestination extends DataClass
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'isFavori': serializer.toJson<bool>(isFavori),
       'colorTag': serializer.toJson<String?>(colorTag),
+      'notesCarnet': serializer.toJson<String?>(notesCarnet),
+      'tagsJson': serializer.toJson<String?>(tagsJson),
+      'photoPath': serializer.toJson<String?>(photoPath),
+      'codeAcces': serializer.toJson<String?>(codeAcces),
+      'etageBatiment': serializer.toJson<String?>(etageBatiment),
     };
   }
 
@@ -3716,6 +4357,11 @@ class SavedDestination extends DataClass
     DateTime? creeLe,
     bool? isFavori,
     Value<String?> colorTag = const Value.absent(),
+    Value<String?> notesCarnet = const Value.absent(),
+    Value<String?> tagsJson = const Value.absent(),
+    Value<String?> photoPath = const Value.absent(),
+    Value<String?> codeAcces = const Value.absent(),
+    Value<String?> etageBatiment = const Value.absent(),
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -3730,6 +4376,13 @@ class SavedDestination extends DataClass
     creeLe: creeLe ?? this.creeLe,
     isFavori: isFavori ?? this.isFavori,
     colorTag: colorTag.present ? colorTag.value : this.colorTag,
+    notesCarnet: notesCarnet.present ? notesCarnet.value : this.notesCarnet,
+    tagsJson: tagsJson.present ? tagsJson.value : this.tagsJson,
+    photoPath: photoPath.present ? photoPath.value : this.photoPath,
+    codeAcces: codeAcces.present ? codeAcces.value : this.codeAcces,
+    etageBatiment: etageBatiment.present
+        ? etageBatiment.value
+        : this.etageBatiment,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -3752,6 +4405,15 @@ class SavedDestination extends DataClass
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
       isFavori: data.isFavori.present ? data.isFavori.value : this.isFavori,
       colorTag: data.colorTag.present ? data.colorTag.value : this.colorTag,
+      notesCarnet: data.notesCarnet.present
+          ? data.notesCarnet.value
+          : this.notesCarnet,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
+      codeAcces: data.codeAcces.present ? data.codeAcces.value : this.codeAcces,
+      etageBatiment: data.etageBatiment.present
+          ? data.etageBatiment.value
+          : this.etageBatiment,
     );
   }
 
@@ -3770,7 +4432,12 @@ class SavedDestination extends DataClass
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('creeLe: $creeLe, ')
           ..write('isFavori: $isFavori, ')
-          ..write('colorTag: $colorTag')
+          ..write('colorTag: $colorTag, ')
+          ..write('notesCarnet: $notesCarnet, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('codeAcces: $codeAcces, ')
+          ..write('etageBatiment: $etageBatiment')
           ..write(')'))
         .toString();
   }
@@ -3790,6 +4457,11 @@ class SavedDestination extends DataClass
     creeLe,
     isFavori,
     colorTag,
+    notesCarnet,
+    tagsJson,
+    photoPath,
+    codeAcces,
+    etageBatiment,
   );
   @override
   bool operator ==(Object other) =>
@@ -3807,7 +4479,12 @@ class SavedDestination extends DataClass
           other.lastUsedAt == this.lastUsedAt &&
           other.creeLe == this.creeLe &&
           other.isFavori == this.isFavori &&
-          other.colorTag == this.colorTag);
+          other.colorTag == this.colorTag &&
+          other.notesCarnet == this.notesCarnet &&
+          other.tagsJson == this.tagsJson &&
+          other.photoPath == this.photoPath &&
+          other.codeAcces == this.codeAcces &&
+          other.etageBatiment == this.etageBatiment);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -3824,6 +4501,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<DateTime> creeLe;
   final Value<bool> isFavori;
   final Value<String?> colorTag;
+  final Value<String?> notesCarnet;
+  final Value<String?> tagsJson;
+  final Value<String?> photoPath;
+  final Value<String?> codeAcces;
+  final Value<String?> etageBatiment;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -3838,6 +4520,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.creeLe = const Value.absent(),
     this.isFavori = const Value.absent(),
     this.colorTag = const Value.absent(),
+    this.notesCarnet = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.codeAcces = const Value.absent(),
+    this.etageBatiment = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -3853,6 +4540,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.creeLe = const Value.absent(),
     this.isFavori = const Value.absent(),
     this.colorTag = const Value.absent(),
+    this.notesCarnet = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.codeAcces = const Value.absent(),
+    this.etageBatiment = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -3870,6 +4562,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<DateTime>? creeLe,
     Expression<bool>? isFavori,
     Expression<String>? colorTag,
+    Expression<String>? notesCarnet,
+    Expression<String>? tagsJson,
+    Expression<String>? photoPath,
+    Expression<String>? codeAcces,
+    Expression<String>? etageBatiment,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3885,6 +4582,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (creeLe != null) 'cree_le': creeLe,
       if (isFavori != null) 'is_favori': isFavori,
       if (colorTag != null) 'color_tag': colorTag,
+      if (notesCarnet != null) 'notes_carnet': notesCarnet,
+      if (tagsJson != null) 'tags_json': tagsJson,
+      if (photoPath != null) 'photo_path': photoPath,
+      if (codeAcces != null) 'code_acces': codeAcces,
+      if (etageBatiment != null) 'etage_batiment': etageBatiment,
     });
   }
 
@@ -3902,6 +4604,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<DateTime>? creeLe,
     Value<bool>? isFavori,
     Value<String?>? colorTag,
+    Value<String?>? notesCarnet,
+    Value<String?>? tagsJson,
+    Value<String?>? photoPath,
+    Value<String?>? codeAcces,
+    Value<String?>? etageBatiment,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -3917,6 +4624,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       creeLe: creeLe ?? this.creeLe,
       isFavori: isFavori ?? this.isFavori,
       colorTag: colorTag ?? this.colorTag,
+      notesCarnet: notesCarnet ?? this.notesCarnet,
+      tagsJson: tagsJson ?? this.tagsJson,
+      photoPath: photoPath ?? this.photoPath,
+      codeAcces: codeAcces ?? this.codeAcces,
+      etageBatiment: etageBatiment ?? this.etageBatiment,
     );
   }
 
@@ -3962,6 +4674,21 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (colorTag.present) {
       map['color_tag'] = Variable<String>(colorTag.value);
     }
+    if (notesCarnet.present) {
+      map['notes_carnet'] = Variable<String>(notesCarnet.value);
+    }
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
+    }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
+    if (codeAcces.present) {
+      map['code_acces'] = Variable<String>(codeAcces.value);
+    }
+    if (etageBatiment.present) {
+      map['etage_batiment'] = Variable<String>(etageBatiment.value);
+    }
     return map;
   }
 
@@ -3980,7 +4707,12 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('creeLe: $creeLe, ')
           ..write('isFavori: $isFavori, ')
-          ..write('colorTag: $colorTag')
+          ..write('colorTag: $colorTag, ')
+          ..write('notesCarnet: $notesCarnet, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('codeAcces: $codeAcces, ')
+          ..write('etageBatiment: $etageBatiment')
           ..write(')'))
         .toString();
   }
@@ -4440,6 +5172,417 @@ class StopHistoryCompanion extends UpdateCompanion<StopHistoryData> {
   }
 }
 
+class $CoequipiersTable extends Coequipiers
+    with TableInfo<$CoequipiersTable, Coequipier> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CoequipiersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nomMeta = const VerificationMeta('nom');
+  @override
+  late final GeneratedColumn<String> nom = GeneratedColumn<String>(
+    'nom',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 20,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorTagMeta = const VerificationMeta(
+    'colorTag',
+  );
+  @override
+  late final GeneratedColumn<String> colorTag = GeneratedColumn<String>(
+    'color_tag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _telephoneMeta = const VerificationMeta(
+    'telephone',
+  );
+  @override
+  late final GeneratedColumn<String> telephone = GeneratedColumn<String>(
+    'telephone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actifMeta = const VerificationMeta('actif');
+  @override
+  late final GeneratedColumn<bool> actif = GeneratedColumn<bool>(
+    'actif',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("actif" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nom,
+    colorTag,
+    telephone,
+    actif,
+    creeLe,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'coequipiers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Coequipier> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('nom')) {
+      context.handle(
+        _nomMeta,
+        nom.isAcceptableOrUnknown(data['nom']!, _nomMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomMeta);
+    }
+    if (data.containsKey('color_tag')) {
+      context.handle(
+        _colorTagMeta,
+        colorTag.isAcceptableOrUnknown(data['color_tag']!, _colorTagMeta),
+      );
+    }
+    if (data.containsKey('telephone')) {
+      context.handle(
+        _telephoneMeta,
+        telephone.isAcceptableOrUnknown(data['telephone']!, _telephoneMeta),
+      );
+    }
+    if (data.containsKey('actif')) {
+      context.handle(
+        _actifMeta,
+        actif.isAcceptableOrUnknown(data['actif']!, _actifMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Coequipier map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Coequipier(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      nom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nom'],
+      )!,
+      colorTag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_tag'],
+      ),
+      telephone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}telephone'],
+      ),
+      actif: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}actif'],
+      )!,
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+    );
+  }
+
+  @override
+  $CoequipiersTable createAlias(String alias) {
+    return $CoequipiersTable(attachedDatabase, alias);
+  }
+}
+
+class Coequipier extends DataClass implements Insertable<Coequipier> {
+  final int id;
+
+  /// Nom court a afficher en badge (ex: "Papa", "Lucas", "Maman").
+  /// Max 20 chars pour tenir dans les chips/avatars sans wrap.
+  final String nom;
+
+  /// Couleur du tag pour l'avatar (cle dans `colorFromTag` :
+  /// 'lime' / 'emerald' / 'amber' / 'red' / 'cream' / 'ink').
+  /// Null = couleur par defaut (cream).
+  final String? colorTag;
+
+  /// Telephone (optionnel) pour le partage de tournee via SMS / WhatsApp.
+  final String? telephone;
+
+  /// Vrai = visible dans le selecteur. Faux = archive (ancien aidant
+  /// qui ne livre plus avec Noah). On garde l'entree en base pour
+  /// preserver l'historique des stats.
+  final bool actif;
+  final DateTime creeLe;
+  const Coequipier({
+    required this.id,
+    required this.nom,
+    this.colorTag,
+    this.telephone,
+    required this.actif,
+    required this.creeLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['nom'] = Variable<String>(nom);
+    if (!nullToAbsent || colorTag != null) {
+      map['color_tag'] = Variable<String>(colorTag);
+    }
+    if (!nullToAbsent || telephone != null) {
+      map['telephone'] = Variable<String>(telephone);
+    }
+    map['actif'] = Variable<bool>(actif);
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    return map;
+  }
+
+  CoequipiersCompanion toCompanion(bool nullToAbsent) {
+    return CoequipiersCompanion(
+      id: Value(id),
+      nom: Value(nom),
+      colorTag: colorTag == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorTag),
+      telephone: telephone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(telephone),
+      actif: Value(actif),
+      creeLe: Value(creeLe),
+    );
+  }
+
+  factory Coequipier.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Coequipier(
+      id: serializer.fromJson<int>(json['id']),
+      nom: serializer.fromJson<String>(json['nom']),
+      colorTag: serializer.fromJson<String?>(json['colorTag']),
+      telephone: serializer.fromJson<String?>(json['telephone']),
+      actif: serializer.fromJson<bool>(json['actif']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'nom': serializer.toJson<String>(nom),
+      'colorTag': serializer.toJson<String?>(colorTag),
+      'telephone': serializer.toJson<String?>(telephone),
+      'actif': serializer.toJson<bool>(actif),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+    };
+  }
+
+  Coequipier copyWith({
+    int? id,
+    String? nom,
+    Value<String?> colorTag = const Value.absent(),
+    Value<String?> telephone = const Value.absent(),
+    bool? actif,
+    DateTime? creeLe,
+  }) => Coequipier(
+    id: id ?? this.id,
+    nom: nom ?? this.nom,
+    colorTag: colorTag.present ? colorTag.value : this.colorTag,
+    telephone: telephone.present ? telephone.value : this.telephone,
+    actif: actif ?? this.actif,
+    creeLe: creeLe ?? this.creeLe,
+  );
+  Coequipier copyWithCompanion(CoequipiersCompanion data) {
+    return Coequipier(
+      id: data.id.present ? data.id.value : this.id,
+      nom: data.nom.present ? data.nom.value : this.nom,
+      colorTag: data.colorTag.present ? data.colorTag.value : this.colorTag,
+      telephone: data.telephone.present ? data.telephone.value : this.telephone,
+      actif: data.actif.present ? data.actif.value : this.actif,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Coequipier(')
+          ..write('id: $id, ')
+          ..write('nom: $nom, ')
+          ..write('colorTag: $colorTag, ')
+          ..write('telephone: $telephone, ')
+          ..write('actif: $actif, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, nom, colorTag, telephone, actif, creeLe);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Coequipier &&
+          other.id == this.id &&
+          other.nom == this.nom &&
+          other.colorTag == this.colorTag &&
+          other.telephone == this.telephone &&
+          other.actif == this.actif &&
+          other.creeLe == this.creeLe);
+}
+
+class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
+  final Value<int> id;
+  final Value<String> nom;
+  final Value<String?> colorTag;
+  final Value<String?> telephone;
+  final Value<bool> actif;
+  final Value<DateTime> creeLe;
+  const CoequipiersCompanion({
+    this.id = const Value.absent(),
+    this.nom = const Value.absent(),
+    this.colorTag = const Value.absent(),
+    this.telephone = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  });
+  CoequipiersCompanion.insert({
+    this.id = const Value.absent(),
+    required String nom,
+    this.colorTag = const Value.absent(),
+    this.telephone = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  }) : nom = Value(nom);
+  static Insertable<Coequipier> custom({
+    Expression<int>? id,
+    Expression<String>? nom,
+    Expression<String>? colorTag,
+    Expression<String>? telephone,
+    Expression<bool>? actif,
+    Expression<DateTime>? creeLe,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nom != null) 'nom': nom,
+      if (colorTag != null) 'color_tag': colorTag,
+      if (telephone != null) 'telephone': telephone,
+      if (actif != null) 'actif': actif,
+      if (creeLe != null) 'cree_le': creeLe,
+    });
+  }
+
+  CoequipiersCompanion copyWith({
+    Value<int>? id,
+    Value<String>? nom,
+    Value<String?>? colorTag,
+    Value<String?>? telephone,
+    Value<bool>? actif,
+    Value<DateTime>? creeLe,
+  }) {
+    return CoequipiersCompanion(
+      id: id ?? this.id,
+      nom: nom ?? this.nom,
+      colorTag: colorTag ?? this.colorTag,
+      telephone: telephone ?? this.telephone,
+      actif: actif ?? this.actif,
+      creeLe: creeLe ?? this.creeLe,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (nom.present) {
+      map['nom'] = Variable<String>(nom.value);
+    }
+    if (colorTag.present) {
+      map['color_tag'] = Variable<String>(colorTag.value);
+    }
+    if (telephone.present) {
+      map['telephone'] = Variable<String>(telephone.value);
+    }
+    if (actif.present) {
+      map['actif'] = Variable<bool>(actif.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CoequipiersCompanion(')
+          ..write('id: $id, ')
+          ..write('nom: $nom, ')
+          ..write('colorTag: $colorTag, ')
+          ..write('telephone: $telephone, ')
+          ..write('actif: $actif, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4451,6 +5594,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SavedDestinationsTable savedDestinations =
       $SavedDestinationsTable(this);
   late final $StopHistoryTable stopHistory = $StopHistoryTable(this);
+  late final $CoequipiersTable coequipiers = $CoequipiersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4463,6 +5607,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     geocodeCache,
     savedDestinations,
     stopHistory,
+    coequipiers,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4506,6 +5651,12 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
       Value<bool> isTemplate,
+      Value<String> profilOrs,
+      Value<bool> eviterPeages,
+      Value<DateTime?> rappelLe,
+      Value<DateTime?> pauseeLe,
+      Value<int> pauseeSeconds,
+      Value<int?> coequipierDefautId,
       Value<DateTime> creeLe,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
@@ -4524,6 +5675,12 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<String?> traceGeojson,
       Value<DateTime?> demareeLe,
       Value<bool> isTemplate,
+      Value<String> profilOrs,
+      Value<bool> eviterPeages,
+      Value<DateTime?> rappelLe,
+      Value<DateTime?> pauseeLe,
+      Value<int> pauseeSeconds,
+      Value<int?> coequipierDefautId,
       Value<DateTime> creeLe,
     });
 
@@ -4627,6 +5784,36 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<bool> get isTemplate => $composableBuilder(
     column: $table.isTemplate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get profilOrs => $composableBuilder(
+    column: $table.profilOrs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get eviterPeages => $composableBuilder(
+    column: $table.eviterPeages,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get rappelLe => $composableBuilder(
+    column: $table.rappelLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get pauseeLe => $composableBuilder(
+    column: $table.pauseeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pauseeSeconds => $composableBuilder(
+    column: $table.pauseeSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get coequipierDefautId => $composableBuilder(
+    column: $table.coequipierDefautId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4740,6 +5927,36 @@ class $$TourneesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get profilOrs => $composableBuilder(
+    column: $table.profilOrs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get eviterPeages => $composableBuilder(
+    column: $table.eviterPeages,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get rappelLe => $composableBuilder(
+    column: $table.rappelLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get pauseeLe => $composableBuilder(
+    column: $table.pauseeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pauseeSeconds => $composableBuilder(
+    column: $table.pauseeSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get coequipierDefautId => $composableBuilder(
+    column: $table.coequipierDefautId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -4815,6 +6032,30 @@ class $$TourneesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get profilOrs =>
+      $composableBuilder(column: $table.profilOrs, builder: (column) => column);
+
+  GeneratedColumn<bool> get eviterPeages => $composableBuilder(
+    column: $table.eviterPeages,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get rappelLe =>
+      $composableBuilder(column: $table.rappelLe, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get pauseeLe =>
+      $composableBuilder(column: $table.pauseeLe, builder: (column) => column);
+
+  GeneratedColumn<int> get pauseeSeconds => $composableBuilder(
+    column: $table.pauseeSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get coequipierDefautId => $composableBuilder(
+    column: $table.coequipierDefautId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get creeLe =>
       $composableBuilder(column: $table.creeLe, builder: (column) => column);
 
@@ -4886,6 +6127,12 @@ class $$TourneesTableTableManager
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
                 Value<bool> isTemplate = const Value.absent(),
+                Value<String> profilOrs = const Value.absent(),
+                Value<bool> eviterPeages = const Value.absent(),
+                Value<DateTime?> rappelLe = const Value.absent(),
+                Value<DateTime?> pauseeLe = const Value.absent(),
+                Value<int> pauseeSeconds = const Value.absent(),
+                Value<int?> coequipierDefautId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
@@ -4902,6 +6149,12 @@ class $$TourneesTableTableManager
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
                 isTemplate: isTemplate,
+                profilOrs: profilOrs,
+                eviterPeages: eviterPeages,
+                rappelLe: rappelLe,
+                pauseeLe: pauseeLe,
+                pauseeSeconds: pauseeSeconds,
+                coequipierDefautId: coequipierDefautId,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -4920,6 +6173,12 @@ class $$TourneesTableTableManager
                 Value<String?> traceGeojson = const Value.absent(),
                 Value<DateTime?> demareeLe = const Value.absent(),
                 Value<bool> isTemplate = const Value.absent(),
+                Value<String> profilOrs = const Value.absent(),
+                Value<bool> eviterPeages = const Value.absent(),
+                Value<DateTime?> rappelLe = const Value.absent(),
+                Value<DateTime?> pauseeLe = const Value.absent(),
+                Value<int> pauseeSeconds = const Value.absent(),
+                Value<int?> coequipierDefautId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
@@ -4936,6 +6195,12 @@ class $$TourneesTableTableManager
                 traceGeojson: traceGeojson,
                 demareeLe: demareeLe,
                 isTemplate: isTemplate,
+                profilOrs: profilOrs,
+                eviterPeages: eviterPeages,
+                rappelLe: rappelLe,
+                pauseeLe: pauseeLe,
+                pauseeSeconds: pauseeSeconds,
+                coequipierDefautId: coequipierDefautId,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0
@@ -5008,6 +6273,8 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
+      Value<String?> preuvePhotoPath,
+      Value<int?> coequipierId,
       Value<DateTime> creeLe,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
@@ -5032,6 +6299,8 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
       Value<int?> ordrePriorite,
+      Value<String?> preuvePhotoPath,
+      Value<int?> coequipierId,
       Value<DateTime> creeLe,
     });
 
@@ -5194,6 +6463,16 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<int> get ordrePriorite => $composableBuilder(
     column: $table.ordrePriorite,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preuvePhotoPath => $composableBuilder(
+    column: $table.preuvePhotoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get coequipierId => $composableBuilder(
+    column: $table.coequipierId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5380,6 +6659,16 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get preuvePhotoPath => $composableBuilder(
+    column: $table.preuvePhotoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get coequipierId => $composableBuilder(
+    column: $table.coequipierId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get creeLe => $composableBuilder(
     column: $table.creeLe,
     builder: (column) => ColumnOrderings(column),
@@ -5490,6 +6779,16 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<int> get ordrePriorite => $composableBuilder(
     column: $table.ordrePriorite,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get preuvePhotoPath => $composableBuilder(
+    column: $table.preuvePhotoPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get coequipierId => $composableBuilder(
+    column: $table.coequipierId,
     builder: (column) => column,
   );
 
@@ -5622,6 +6921,8 @@ class $$StopsTableTableManager
                 Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
+                Value<String?> preuvePhotoPath = const Value.absent(),
+                Value<int?> coequipierId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
@@ -5644,6 +6945,8 @@ class $$StopsTableTableManager
                 livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
+                preuvePhotoPath: preuvePhotoPath,
+                coequipierId: coequipierId,
                 creeLe: creeLe,
               ),
           createCompanionCallback:
@@ -5668,6 +6971,8 @@ class $$StopsTableTableManager
                 Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
+                Value<String?> preuvePhotoPath = const Value.absent(),
+                Value<int?> coequipierId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
@@ -5690,6 +6995,8 @@ class $$StopsTableTableManager
                 livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
                 ordrePriorite: ordrePriorite,
+                preuvePhotoPath: preuvePhotoPath,
+                coequipierId: coequipierId,
                 creeLe: creeLe,
               ),
           withReferenceMapper: (p0) => p0
@@ -6548,6 +7855,11 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<DateTime> creeLe,
       Value<bool> isFavori,
       Value<String?> colorTag,
+      Value<String?> notesCarnet,
+      Value<String?> tagsJson,
+      Value<String?> photoPath,
+      Value<String?> codeAcces,
+      Value<String?> etageBatiment,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -6564,6 +7876,11 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<DateTime> creeLe,
       Value<bool> isFavori,
       Value<String?> colorTag,
+      Value<String?> notesCarnet,
+      Value<String?> tagsJson,
+      Value<String?> photoPath,
+      Value<String?> codeAcces,
+      Value<String?> etageBatiment,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -6637,6 +7954,31 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<String> get colorTag => $composableBuilder(
     column: $table.colorTag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notesCarnet => $composableBuilder(
+    column: $table.notesCarnet,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+    column: $table.tagsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get codeAcces => $composableBuilder(
+    column: $table.codeAcces,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etageBatiment => $composableBuilder(
+    column: $table.etageBatiment,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6714,6 +8056,31 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.colorTag,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get notesCarnet => $composableBuilder(
+    column: $table.notesCarnet,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+    column: $table.tagsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get codeAcces => $composableBuilder(
+    column: $table.codeAcces,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etageBatiment => $composableBuilder(
+    column: $table.etageBatiment,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -6769,6 +8136,25 @@ class $$SavedDestinationsTableAnnotationComposer
 
   GeneratedColumn<String> get colorTag =>
       $composableBuilder(column: $table.colorTag, builder: (column) => column);
+
+  GeneratedColumn<String> get notesCarnet => $composableBuilder(
+    column: $table.notesCarnet,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
+
+  GeneratedColumn<String> get codeAcces =>
+      $composableBuilder(column: $table.codeAcces, builder: (column) => column);
+
+  GeneratedColumn<String> get etageBatiment => $composableBuilder(
+    column: $table.etageBatiment,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -6824,6 +8210,11 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<bool> isFavori = const Value.absent(),
                 Value<String?> colorTag = const Value.absent(),
+                Value<String?> notesCarnet = const Value.absent(),
+                Value<String?> tagsJson = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<String?> codeAcces = const Value.absent(),
+                Value<String?> etageBatiment = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -6838,6 +8229,11 @@ class $$SavedDestinationsTableTableManager
                 creeLe: creeLe,
                 isFavori: isFavori,
                 colorTag: colorTag,
+                notesCarnet: notesCarnet,
+                tagsJson: tagsJson,
+                photoPath: photoPath,
+                codeAcces: codeAcces,
+                etageBatiment: etageBatiment,
               ),
           createCompanionCallback:
               ({
@@ -6854,6 +8250,11 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<bool> isFavori = const Value.absent(),
                 Value<String?> colorTag = const Value.absent(),
+                Value<String?> notesCarnet = const Value.absent(),
+                Value<String?> tagsJson = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<String?> codeAcces = const Value.absent(),
+                Value<String?> etageBatiment = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -6868,6 +8269,11 @@ class $$SavedDestinationsTableTableManager
                 creeLe: creeLe,
                 isFavori: isFavori,
                 colorTag: colorTag,
+                notesCarnet: notesCarnet,
+                tagsJson: tagsJson,
+                photoPath: photoPath,
+                codeAcces: codeAcces,
+                etageBatiment: etageBatiment,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7250,6 +8656,219 @@ typedef $$StopHistoryTableProcessedTableManager =
       StopHistoryData,
       PrefetchHooks Function({bool stopId})
     >;
+typedef $$CoequipiersTableCreateCompanionBuilder =
+    CoequipiersCompanion Function({
+      Value<int> id,
+      required String nom,
+      Value<String?> colorTag,
+      Value<String?> telephone,
+      Value<bool> actif,
+      Value<DateTime> creeLe,
+    });
+typedef $$CoequipiersTableUpdateCompanionBuilder =
+    CoequipiersCompanion Function({
+      Value<int> id,
+      Value<String> nom,
+      Value<String?> colorTag,
+      Value<String?> telephone,
+      Value<bool> actif,
+      Value<DateTime> creeLe,
+    });
+
+class $$CoequipiersTableFilterComposer
+    extends Composer<_$AppDatabase, $CoequipiersTable> {
+  $$CoequipiersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorTag => $composableBuilder(
+    column: $table.colorTag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CoequipiersTableOrderingComposer
+    extends Composer<_$AppDatabase, $CoequipiersTable> {
+  $$CoequipiersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get colorTag => $composableBuilder(
+    column: $table.colorTag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CoequipiersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CoequipiersTable> {
+  $$CoequipiersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nom =>
+      $composableBuilder(column: $table.nom, builder: (column) => column);
+
+  GeneratedColumn<String> get colorTag =>
+      $composableBuilder(column: $table.colorTag, builder: (column) => column);
+
+  GeneratedColumn<String> get telephone =>
+      $composableBuilder(column: $table.telephone, builder: (column) => column);
+
+  GeneratedColumn<bool> get actif =>
+      $composableBuilder(column: $table.actif, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+}
+
+class $$CoequipiersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CoequipiersTable,
+          Coequipier,
+          $$CoequipiersTableFilterComposer,
+          $$CoequipiersTableOrderingComposer,
+          $$CoequipiersTableAnnotationComposer,
+          $$CoequipiersTableCreateCompanionBuilder,
+          $$CoequipiersTableUpdateCompanionBuilder,
+          (
+            Coequipier,
+            BaseReferences<_$AppDatabase, $CoequipiersTable, Coequipier>,
+          ),
+          Coequipier,
+          PrefetchHooks Function()
+        > {
+  $$CoequipiersTableTableManager(_$AppDatabase db, $CoequipiersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CoequipiersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CoequipiersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CoequipiersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> nom = const Value.absent(),
+                Value<String?> colorTag = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => CoequipiersCompanion(
+                id: id,
+                nom: nom,
+                colorTag: colorTag,
+                telephone: telephone,
+                actif: actif,
+                creeLe: creeLe,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String nom,
+                Value<String?> colorTag = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => CoequipiersCompanion.insert(
+                id: id,
+                nom: nom,
+                colorTag: colorTag,
+                telephone: telephone,
+                actif: actif,
+                creeLe: creeLe,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CoequipiersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CoequipiersTable,
+      Coequipier,
+      $$CoequipiersTableFilterComposer,
+      $$CoequipiersTableOrderingComposer,
+      $$CoequipiersTableAnnotationComposer,
+      $$CoequipiersTableCreateCompanionBuilder,
+      $$CoequipiersTableUpdateCompanionBuilder,
+      (
+        Coequipier,
+        BaseReferences<_$AppDatabase, $CoequipiersTable, Coequipier>,
+      ),
+      Coequipier,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7268,4 +8887,6 @@ class $AppDatabaseManager {
       $$SavedDestinationsTableTableManager(_db, _db.savedDestinations);
   $$StopHistoryTableTableManager get stopHistory =>
       $$StopHistoryTableTableManager(_db, _db.stopHistory);
+  $$CoequipiersTableTableManager get coequipiers =>
+      $$CoequipiersTableTableManager(_db, _db.coequipiers);
 }

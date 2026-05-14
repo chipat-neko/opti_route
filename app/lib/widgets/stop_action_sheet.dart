@@ -8,6 +8,8 @@ import '../data/database.dart';
 import '../data/navigation_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
+import 'stop_action_sheet_pickers.dart';
+import 'stop_action_sheet_widgets.dart';
 
 /// Action choisie par le livreur dans la bottom sheet de validation
 /// d'un arret.
@@ -33,6 +35,23 @@ class OpenDetailsAction extends StopAction {
   const OpenDetailsAction();
 }
 
+/// Capture une photo preuve avant ou apres validation (depend du
+/// statut courant du stop). Le caller appelle PreuvePhotoService.capturer
+/// et setPreuvePhoto sur le repo.
+class TakePreuvePhotoAction extends StopAction {
+  const TakePreuvePhotoAction();
+}
+
+/// Deplace l'arret vers une autre tournee. Le caller appelle
+/// `StopsRepository.moveToTournee` + invalide les optims des 2
+/// tournees + relance l'auto-reorder local.
+class MoveToTourneeAction extends StopAction {
+  const MoveToTourneeAction(this.targetTourneeId);
+
+  /// Id de la tournee de destination (different de la tournee courante).
+  final int targetTourneeId;
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -45,7 +64,7 @@ class StopActionSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet<StopAction>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.palette.cream,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.r22),
@@ -112,6 +131,18 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
     _initialNotes = value;
   }
 
+  /// Sauvegarde la fenetre horaire (debut/fin au format "HH:mm",
+  /// null pour effacer). Appele depuis les 2 TimePicker inline.
+  Future<void> _persistFenetre({String? debut, String? fin}) async {
+    await ref.read(stopsRepositoryProvider).update(
+          widget.stop.id,
+          StopsCompanion(
+            fenetreDebut: Value(debut),
+            fenetreFin: Value(fin),
+          ),
+        );
+  }
+
   Future<void> _adjustNbColis(int delta) async {
     final next = (_nbColis + delta).clamp(1, 999);
     if (next == _nbColis) return;
@@ -129,8 +160,23 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
     setState(() => _navAppDefault = v);
   }
 
+  /// Wrapper qui delegue a [showTargetTourneePicker] puis pop le sheet
+  /// principal avec [MoveToTourneeAction]. Place ici plutot que dans
+  /// le picker car ce dernier ne connait pas l'action sealed.
+  Future<void> _onMoveTo(BuildContext context) async {
+    final pickedId = await showTargetTourneePicker(
+      context: context,
+      ref: ref,
+      stop: widget.stop,
+    );
+    if (pickedId == null) return;
+    if (!context.mounted) return;
+    Navigator.of(context).pop(MoveToTourneeAction(pickedId));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final stop = widget.stop;
     final nom = stop.nomClient?.trim() ?? '';
     final hasNom = nom.isNotEmpty;
@@ -158,7 +204,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.x14),
                 decoration: BoxDecoration(
-                  color: AppColors.inkLine,
+                  color: p.inkLine,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -167,10 +213,10 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
             if (hasNom)
               Text(
                 nom,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
+                  color: p.ink,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -180,7 +226,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               adresse,
               style: TextStyle(
                 fontSize: hasNom ? 13 : 16,
-                color: hasNom ? AppColors.textMute : AppColors.ink,
+                color: hasNom ? p.textMute : p.ink,
                 fontWeight: hasNom ? FontWeight.w500 : FontWeight.w700,
               ),
               maxLines: 2,
@@ -198,24 +244,24 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   vertical: AppSpacing.x8,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.creamSoft,
+                  color: p.creamSoft,
                   borderRadius: BorderRadius.circular(AppRadius.r10),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.inventory_2_outlined,
-                        size: 18, color: AppColors.ink),
+                    Icon(Icons.inventory_2_outlined,
+                        size: 18, color: p.ink),
                     const SizedBox(width: AppSpacing.x8),
-                    const Text(
+                    Text(
                       'Colis',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: p.ink,
                       ),
                     ),
                     const Spacer(),
-                    _StepperButton(
+                    StepperButton(
                       icon: Icons.remove,
                       onPressed: _nbColis > 1
                           ? () => _adjustNbColis(-1)
@@ -227,14 +273,14 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       ),
                       child: Text(
                         '$_nbColis',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.ink,
+                          color: p.ink,
                         ),
                       ),
                     ),
-                    _StepperButton(
+                    StepperButton(
                       icon: Icons.add,
                       onPressed: () => _adjustNbColis(1),
                     ),
@@ -259,13 +305,40 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   isDense: true,
                 ),
               ),
+            if (!_pickingRaison) const SizedBox(height: AppSpacing.x10),
+
+            // Edition rapide de la fenetre horaire : utile quand un
+            // client appelle pour decaler son creneau. Tap = ouvre un
+            // TimePicker, sauvegarde direct.
+            if (!_pickingRaison)
+              Row(
+                children: [
+                  Expanded(
+                    child: FenetreInlineField(
+                      label: 'Pas avant',
+                      value: stop.fenetreDebut,
+                      onChanged: (t) =>
+                          _persistFenetre(debut: t, fin: stop.fenetreFin),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x10),
+                  Expanded(
+                    child: FenetreInlineField(
+                      label: 'Avant',
+                      value: stop.fenetreFin,
+                      onChanged: (t) => _persistFenetre(
+                          debut: stop.fenetreDebut, fin: t),
+                    ),
+                  ),
+                ],
+              ),
             if (!_pickingRaison) const SizedBox(height: AppSpacing.x14),
 
             if (!_pickingRaison && stop.lat != null && stop.lng != null) ...[
               Row(
                 children: [
                   Expanded(
-                    child: _NavButton(
+                    child: NavButton(
                       label: 'Maps',
                       icon: Icons.map_outlined,
                       preferred: _navAppDefault == 'maps',
@@ -277,7 +350,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   ),
                   const SizedBox(width: AppSpacing.x10),
                   Expanded(
-                    child: _NavButton(
+                    child: NavButton(
                       label: 'Waze',
                       icon: Icons.navigation_outlined,
                       preferred: _navAppDefault == 'waze',
@@ -293,14 +366,14 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
             ],
 
             if (_pickingRaison)
-              _RaisonEchecPicker(
+              RaisonEchecPicker(
                 onPicked: (raison) =>
                     Navigator.of(context).pop(MarkEchecAction(raison)),
                 onBack: () => setState(() => _pickingRaison = false),
               )
             else ...[
               if (hasStatut)
-                _StatutBanner(
+                StatutBanner(
                   isLivre: isLivre,
                   raison: stop.raisonEchec,
                 ),
@@ -308,7 +381,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.emerald,
-                  foregroundColor: AppColors.paper,
+                  foregroundColor: p.paper,
                   minimumSize: const Size(0, 56),
                 ),
                 onPressed: isLivre
@@ -350,9 +423,79 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 ),
               ],
               const Divider(height: AppSpacing.x28),
+              // Affectation a un coequipier (cache si aucun coequipier
+              // actif en base : evite de polluer l'UI quand Noah bosse seul).
+              Consumer(
+                builder: (context, ref, _) {
+                  final coequipiers = ref
+                          .watch(coequipiersActifsProvider)
+                          .asData
+                          ?.value ??
+                      const [];
+                  if (coequipiers.isEmpty) return const SizedBox.shrink();
+                  final currentId = widget.stop.coequipierId;
+                  final current = currentId == null
+                      ? null
+                      : coequipiers
+                          .where((c) => c.id == currentId)
+                          .firstOrNull;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: p.ink,
+                          alignment: Alignment.centerLeft,
+                        ),
+                        onPressed: () =>
+                            showCoequipierPicker(
+                              context: context,
+                              ref: ref,
+                              stop: widget.stop,
+                              coequipiers: coequipiers,
+                            ),
+                        icon: const Icon(Icons.groups_outlined, size: 18),
+                        label: Text(
+                          current == null
+                              ? 'Affecter a un coequipier'
+                              : 'Affecte : ${current.nom}',
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              // Photo preuve : accessible avant ou apres validation.
+              // Si une photo existe deja, on l'indique discretement.
               TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.ink,
+                  foregroundColor: p.ink,
+                ),
+                onPressed: () => Navigator.of(context)
+                    .pop(const TakePreuvePhotoAction()),
+                icon: Icon(
+                  widget.stop.preuvePhotoPath != null
+                      ? Icons.photo_camera
+                      : Icons.photo_camera_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  widget.stop.preuvePhotoPath != null
+                      ? 'Refaire la photo preuve'
+                      : 'Prendre une photo preuve',
+                ),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: p.ink,
+                ),
+                onPressed: () => _onMoveTo(context),
+                icon: const Icon(Icons.swap_horiz, size: 18),
+                label: const Text('Deplacer vers une autre tournee'),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: p.ink,
                 ),
                 onPressed: () =>
                     Navigator.of(context).pop(const OpenDetailsAction()),
@@ -363,194 +506,6 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatutBanner extends StatelessWidget {
-  const _StatutBanner({required this.isLivre, this.raison});
-
-  final bool isLivre;
-  final String? raison;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = isLivre
-        ? AppColors.emeraldSoft
-        : AppColors.red.withValues(alpha: 0.12);
-    final fg = isLivre ? AppColors.emerald : AppColors.red;
-    final libelle = isLivre ? 'Livre' : 'Echec : ${_humanRaison(raison)}';
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x12,
-        vertical: AppSpacing.x10,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppRadius.r10),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isLivre ? Icons.check_circle : Icons.cancel,
-            color: fg,
-            size: 18,
-          ),
-          const SizedBox(width: AppSpacing.x8),
-          Expanded(
-            child: Text(
-              libelle,
-              style: TextStyle(
-                color: fg,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _humanRaison(String? r) {
-    return switch (r) {
-      'absent' => 'absent',
-      'refuse' => 'refuse',
-      'adresse_fausse' => 'adresse fausse',
-      'autre' => 'autre',
-      _ => 'sans raison',
-    };
-  }
-}
-
-/// Bouton circulaire - / + pour le compteur de colis. Disabled si
-/// `onPressed == null` (typiquement quand on est a 1 et qu'on veut
-/// pas descendre en dessous).
-class _StepperButton extends StatelessWidget {
-  const _StepperButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onPressed == null;
-    return Material(
-      color: disabled ? AppColors.inkLine : AppColors.paper,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onPressed,
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(
-            icon,
-            size: 18,
-            color: disabled ? AppColors.textFaint : AppColors.ink,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Bouton 'Maps' / 'Waze' dans le bottom sheet. Quand `preferred` est
-/// vrai (= cette app a ete choisie comme defaut dans Parametres), on
-/// l'affiche en plein (FilledButton vert) pour la mettre en avant.
-/// Sinon en outlined neutre.
-class _NavButton extends StatelessWidget {
-  const _NavButton({
-    required this.label,
-    required this.icon,
-    required this.preferred,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool preferred;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    if (preferred) {
-      return FilledButton.icon(
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.emerald,
-          foregroundColor: AppColors.paper,
-          minimumSize: const Size(0, 48),
-        ),
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18),
-        label: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      );
-    }
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.ink,
-        minimumSize: const Size(0, 48),
-      ),
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label,
-          style: const TextStyle(fontWeight: FontWeight.w700)),
-    );
-  }
-}
-
-class _RaisonEchecPicker extends StatelessWidget {
-  const _RaisonEchecPicker({required this.onPicked, required this.onBack});
-
-  final ValueChanged<String> onPicked;
-  final VoidCallback onBack;
-
-  static const _options = [
-    ('absent', 'Absent', Icons.person_off_outlined),
-    ('refuse', 'Refuse le colis', Icons.front_hand_outlined),
-    ('adresse_fausse', 'Adresse fausse', Icons.wrong_location_outlined),
-    ('autre', 'Autre', Icons.more_horiz),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Raison de l\'echec',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.ink,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x10),
-        for (final (id, label, icon) in _options) ...[
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.ink,
-              minimumSize: const Size(0, 48),
-              alignment: Alignment.centerLeft,
-            ),
-            onPressed: () => onPicked(id),
-            icon: Icon(icon, size: 18),
-            label: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x8),
-        ],
-        const SizedBox(height: AppSpacing.x6),
-        TextButton.icon(
-          onPressed: onBack,
-          icon: const Icon(Icons.arrow_back, size: 18),
-          label: const Text('Retour'),
-        ),
-      ],
     );
   }
 }

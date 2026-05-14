@@ -23,13 +23,16 @@ class OpenRouteOptimizationService implements OptimizationService {
   static final _endpoint =
       Uri.parse('https://api.openrouteservice.org/optimization');
 
+  /// Construit l'URL Directions selon le profil (driving-car / driving-hgv).
   /// Endpoint Directions /geojson : retourne distance + duree exactes
   /// **et** la geometry sous forme de liste de coords [lng, lat]
   /// (utilisee comme polyline sur la carte). Plus simple a parser que
   /// l'endpoint /json qui renvoie une polyline encodee.
-  static final _directionsEndpoint = Uri.parse(
-    'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
-  );
+  static Uri _directionsEndpointFor(String profil) {
+    return Uri.parse(
+      'https://api.openrouteservice.org/v2/directions/$profil/geojson',
+    );
+  }
 
   final String apiKey;
   final http.Client _client;
@@ -94,6 +97,11 @@ class OpenRouteOptimizationService implements OptimizationService {
         ? [lasts.first.lng!, lasts.first.lat!]
         : [tournee.pointDepartLng, tournee.pointDepartLat];
 
+    // Capacite > 0 -> on declare une dimension "colis" sur le vehicule
+    // et un `delivery` sur chaque job. VROOM refuse alors de surcharger
+    // le camion. Si capacite = 0 (illimite), on omet ces champs.
+    final hasCapacity = tournee.vehiculeCapaciteColis > 0;
+
     final payload = {
       'jobs': [
         for (final s in flexibles)
@@ -102,6 +110,7 @@ class OpenRouteOptimizationService implements OptimizationService {
             'service': s.dureeArretMin * 60,
             'location': [s.lng, s.lat],
             'priority': _mapPriority(s.priorite),
+            if (hasCapacity) 'delivery': [s.nbColis],
             if (s.fenetreDebut != null || s.fenetreFin != null)
               'time_windows': [_toTimeWindow(s.fenetreDebut, s.fenetreFin)],
           }
@@ -109,22 +118,29 @@ class OpenRouteOptimizationService implements OptimizationService {
       'vehicles': [
         {
           'id': 1,
-          'profile': 'driving-car',
+          'profile': tournee.profilOrs,
           'start': vroomStart,
           'end': vroomEnd,
+          if (hasCapacity) 'capacity': [tournee.vehiculeCapaciteColis],
         }
       ],
     };
 
-    final response = await _client.post(
-      _endpoint,
-      headers: {
-        'Authorization': apiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode(payload),
-    );
+    final response = await _client
+        .post(
+          _endpoint,
+          headers: {
+            'Authorization': apiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode(payload),
+        )
+        .timeout(
+          const Duration(seconds: 30),
+          onTimeout: () =>
+              throw const OptimizationException('ORS VROOM timeout (>30s)'),
+        );
 
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw const OptimizationException(
@@ -225,16 +241,25 @@ class OpenRouteOptimizationService implements OptimizationService {
       [tournee.pointDepartLng, tournee.pointDepartLat],
     ];
 
+    final body = <String, dynamic>{'coordinates': coords};
+    if (tournee.eviterPeages) {
+      body['options'] = {
+        'avoid_features': ['tollways'],
+      };
+    }
+
     try {
-      final response = await _client.post(
-        _directionsEndpoint,
-        headers: {
-          'Authorization': apiKey,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'coordinates': coords}),
-      );
+      final response = await _client
+          .post(
+            _directionsEndpointFor(tournee.profilOrs),
+            headers: {
+              'Authorization': apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) {
         return _haversineFallback(coords);
       }

@@ -1,0 +1,95 @@
+name: Deploy site web (Flutter Web -> GitHub Pages)
+
+# Declenchement :
+# - Push sur main : auto a chaque merge (PR mergee, hotfix direct,...).
+# - workflow_dispatch : bouton "Run workflow" dans l'onglet Actions
+#   pour relancer manuellement sans rien pusher.
+# Note YAML : "on" est quote pour eviter qu'il soit parse comme le
+# booleen `True` (norme YAML 1.1) par certains outils de validation.
+"on":
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+# Permissions necessaires pour publier sur GitHub Pages via Actions :
+# - pages: write     -> ecrire le deploiement
+# - id-token: write  -> requis par actions/deploy-pages@v4 (OIDC)
+# - contents: read   -> checkout du repo
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+
+# Empeche deux deploiements concurrents : si un nouveau push arrive
+# pendant qu'un deploy tourne, on laisse le 1er finir et on enchaine.
+# Ne PAS cancel-in-progress sinon GitHub Pages peut se retrouver
+# dans un etat instable.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # Job 1 : compile l'app Flutter en JS via `flutter build web` et
+  # upload le resultat comme artifact GitHub Pages.
+  # ────────────────────────────────────────────────────────────────
+  build:
+    name: Build Flutter Web
+    runs-on: ubuntu-latest
+    # Timeout de securite : un build Flutter Web ne devrait jamais
+    # depasser ~10 min. Si on atteint 15, c'est qu'un truc est coince
+    # (cache foireux, action tierce qui hang) -> on coupe.
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      # base-href "/opti_route/" : le site sera servi sous le
+      # sous-chemin du nom du repo, donc tous les paths absolus
+      # (assets, canvaskit, main.dart.js) doivent commencer par
+      # /opti_route/.
+      - name: Build web (release)
+        run: flutter build web --release --base-href "/opti_route/"
+
+      # Setup Pages : prepare la configuration GitHub Pages (cree
+      # l'environnement si premiere fois, recupere l'URL de deploy).
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # Upload le contenu de build/web/ comme artifact dedie Pages.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/build/web
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 2 : deploie l'artifact upload par le job build sur le site
+  # GitHub Pages du repo (https://chipat-neko.github.io/opti_route/).
+  # ────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy on GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

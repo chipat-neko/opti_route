@@ -78,6 +78,23 @@ android {
             )
         }
     }
+
+    // Split par ABI : genere un APK par architecture CPU. L'APK
+    // monolithique fait 98+ MB (ML Kit + flutter_map + Drift). Limite
+    // Play Store = 100 MB par APK. Avec split, chaque APK pese ~55-65 MB
+    // (le device ne telecharge que l'ABI dont il a besoin).
+    // - armeabi-v7a : vieux smartphones (>2015), ~5% du parc actuel
+    // - arm64-v8a   : tous les smartphones modernes, ~95% du parc
+    // Le universalApk fournit aussi un fat APK pour distribution
+    // hors-Play (sideload Noah / partage direct).
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true
+        }
+    }
 }
 
 flutter {

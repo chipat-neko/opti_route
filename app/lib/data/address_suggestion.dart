@@ -15,7 +15,16 @@ class AddressSuggestion {
     this.country,
     this.poiName,
     this.fromCarnet = false,
+    this.notesCarnet,
   });
+
+  /// Notes pre-definies sur le client dans le carnet local (code
+  /// interphone, instructions speciales). Null si la suggestion ne
+  /// vient pas du carnet ou si le client n'a pas de notes
+  /// pre-definies. Affichees / pre-remplies dans le champ Notes de
+  /// `AjoutArretScreen` quand l'utilisateur selectionne cette
+  /// suggestion.
+  final String? notesCarnet;
 
   /// Vrai si la suggestion vient du carnet d'adresses local
   /// (un client deja livre). L'UI peut afficher un badge "DEJA LIVRE".

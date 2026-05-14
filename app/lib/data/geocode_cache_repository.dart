@@ -86,4 +86,11 @@ class GeocodeCacheRepository {
   Future<int> purgeAll() {
     return _db.delete(_db.geocodeCache).go();
   }
+
+  /// Compte le nombre d'entrees actuellement en cache (toutes, expirees
+  /// ou non). Affiche dans Parametres pour donner une idee de l'usage.
+  Future<int> count() async {
+    final rows = await _db.select(_db.geocodeCache).get();
+    return rows.length;
+  }
 }

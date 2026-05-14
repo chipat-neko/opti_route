@@ -260,6 +260,290 @@ void main() {
       expect(r.routeGeometry!.last, [2.0, 49.0]);
     });
 
+    test('profil driving-hgv : URL Directions et payload VROOM bien transmis',
+        () async {
+      String? directionsPath;
+      String? vroomProfile;
+      final mock = MockClient((req) async {
+        if (req.url.path.contains('/optimization')) {
+          final body = jsonDecode(req.body) as Map<String, dynamic>;
+          vroomProfile = (body['vehicles'] as List).first['profile'] as String?;
+          final jobs = body['jobs'] as List;
+          return http.Response(
+            jsonEncode({
+              'code': 0,
+              'routes': [
+                {
+                  'duration': 0,
+                  'distance': 0,
+                  'steps': [
+                    for (final j in jobs)
+                      {'type': 'job', 'job': (j as Map)['id']},
+                  ],
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        if (req.url.path.contains('/directions')) {
+          directionsPath = req.url.path;
+          return http.Response(
+            jsonEncode({
+              'features': [
+                {
+                  'geometry': {
+                    'type': 'LineString',
+                    'coordinates': [
+                      [1.0, 48.0],
+                      [2.0, 49.0],
+                    ],
+                  },
+                  'properties': {
+                    'summary': {'distance': 100, 'duration': 10},
+                  },
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+
+      // Tournee avec profil camion
+      final tourneeId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 10),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+              profilOrs: const Value('driving-hgv'),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: 'A',
+              lat: const Value(48.5),
+              lng: const Value(1.5),
+            ),
+          );
+      final tournee = await (db.select(db.tournees)
+            ..where((t) => t.id.equals(tourneeId)))
+          .getSingle();
+      final stops = await (db.select(db.stops)
+            ..where((s) => s.tourneeId.equals(tourneeId)))
+          .get();
+
+      final svc = OpenRouteOptimizationService(apiKey: 'k', client: mock);
+      await svc.optimize(tournee: tournee, stops: stops);
+      svc.close();
+
+      expect(vroomProfile, 'driving-hgv');
+      expect(directionsPath, contains('/v2/directions/driving-hgv/geojson'));
+    });
+
+    test('eviterPeages : options.avoid_features ajoute au payload Directions',
+        () async {
+      Map<String, dynamic>? directionsBody;
+      final mock = MockClient((req) async {
+        if (req.url.path.contains('/optimization')) {
+          final body = jsonDecode(req.body) as Map<String, dynamic>;
+          final jobs = body['jobs'] as List;
+          return http.Response(
+            jsonEncode({
+              'code': 0,
+              'routes': [
+                {
+                  'steps': [
+                    for (final j in jobs)
+                      {'type': 'job', 'job': (j as Map)['id']},
+                  ],
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        if (req.url.path.contains('/directions')) {
+          directionsBody = jsonDecode(req.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              'features': [
+                {
+                  'geometry': {'coordinates': []},
+                  'properties': {
+                    'summary': {'distance': 0, 'duration': 0},
+                  },
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+
+      final tourneeId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 10),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+              eviterPeages: const Value(true),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: 'A',
+              lat: const Value(48.5),
+              lng: const Value(1.5),
+            ),
+          );
+      final tournee = await (db.select(db.tournees)
+            ..where((t) => t.id.equals(tourneeId)))
+          .getSingle();
+      final stops = await (db.select(db.stops)
+            ..where((s) => s.tourneeId.equals(tourneeId)))
+          .get();
+
+      final svc = OpenRouteOptimizationService(apiKey: 'k', client: mock);
+      await svc.optimize(tournee: tournee, stops: stops);
+      svc.close();
+
+      expect(directionsBody?['options'], isNotNull);
+      expect(
+        (directionsBody!['options'] as Map)['avoid_features'],
+        ['tollways'],
+      );
+    });
+
+    test('capacite > 0 : vehicle.capacity et job.delivery ajoutes au payload',
+        () async {
+      Map<String, dynamic>? vroomBody;
+      final mock = MockClient((req) async {
+        if (req.url.path.contains('/optimization')) {
+          vroomBody = jsonDecode(req.body) as Map<String, dynamic>;
+          final jobs = vroomBody!['jobs'] as List;
+          return http.Response(
+            jsonEncode({
+              'code': 0,
+              'routes': [
+                {
+                  'steps': [
+                    for (final j in jobs)
+                      {'type': 'job', 'job': (j as Map)['id']},
+                  ],
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'features': [
+              {
+                'geometry': {'coordinates': []},
+                'properties': {
+                  'summary': {'distance': 0, 'duration': 0},
+                },
+              }
+            ],
+          }),
+          200,
+        );
+      });
+
+      final tourneeId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T',
+              date: DateTime(2026, 5, 10),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+              vehiculeCapaciteColis: const Value(50),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: 'A',
+              lat: const Value(48.5),
+              lng: const Value(1.5),
+              nbColis: const Value(3),
+            ),
+          );
+      final tournee = await (db.select(db.tournees)
+            ..where((t) => t.id.equals(tourneeId)))
+          .getSingle();
+      final stops = await (db.select(db.stops)
+            ..where((s) => s.tourneeId.equals(tourneeId)))
+          .get();
+
+      final svc = OpenRouteOptimizationService(apiKey: 'k', client: mock);
+      await svc.optimize(tournee: tournee, stops: stops);
+      svc.close();
+
+      expect(vroomBody, isNotNull);
+      expect((vroomBody!['vehicles'] as List).first['capacity'], [50]);
+      expect((vroomBody!['jobs'] as List).first['delivery'], [3]);
+    });
+
+    test('capacite = 0 : pas de capacity ni delivery (illimite)', () async {
+      Map<String, dynamic>? vroomBody;
+      final mock = MockClient((req) async {
+        if (req.url.path.contains('/optimization')) {
+          vroomBody = jsonDecode(req.body) as Map<String, dynamic>;
+          final jobs = vroomBody!['jobs'] as List;
+          return http.Response(
+            jsonEncode({
+              'code': 0,
+              'routes': [
+                {
+                  'steps': [
+                    for (final j in jobs)
+                      {'type': 'job', 'job': (j as Map)['id']},
+                  ],
+                }
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'features': [
+              {
+                'geometry': {'coordinates': []},
+                'properties': {
+                  'summary': {'distance': 0, 'duration': 0},
+                },
+              }
+            ],
+          }),
+          200,
+        );
+      });
+
+      final (tournee, stops) = await seedTournee([
+        (priorite: 'flexible', ordre: null),
+      ]);
+
+      final svc = OpenRouteOptimizationService(apiKey: 'k', client: mock);
+      await svc.optimize(tournee: tournee, stops: stops);
+      svc.close();
+
+      expect((vroomBody!['vehicles'] as List).first.containsKey('capacity'),
+          isFalse);
+      expect((vroomBody!['jobs'] as List).first.containsKey('delivery'),
+          isFalse);
+    });
+
     test('fallback haversine si /directions echoue', () async {
       final mock = MockClient((req) async {
         if (req.url.path.contains('/optimization')) {

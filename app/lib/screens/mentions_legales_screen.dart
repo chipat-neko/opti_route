@@ -47,11 +47,12 @@ class _MarkdownPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.x18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _renderSimpleMarkdown(content),
+        children: _renderSimpleMarkdown(content, p),
       ),
     );
   }
@@ -59,7 +60,7 @@ class _MarkdownPage extends StatelessWidget {
   /// Rendu minimal du markdown : on ne supporte que les en-tetes
   /// (`#`, `##`, `###`), les paragraphes, les listes `-` et l'italique
   /// `*texte*`. Pas de package markdown -> moins de deps.
-  static List<Widget> _renderSimpleMarkdown(String md) {
+  static List<Widget> _renderSimpleMarkdown(String md, AppPalette p) {
     final widgets = <Widget>[];
     for (final block in md.split('\n\n')) {
       final trimmed = block.trim();
@@ -69,10 +70,10 @@ class _MarkdownPage extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: AppSpacing.x6),
           child: Text(
             trimmed.substring(2),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: AppColors.ink,
+              color: p.ink,
             ),
           ),
         ));
@@ -99,10 +100,10 @@ class _MarkdownPage extends StatelessWidget {
           ),
           child: Text(
             trimmed.substring(4),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: p.ink,
             ),
           ),
         ));
@@ -119,14 +120,14 @@ class _MarkdownPage extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('•  '),
+                const Text('-  '),
                 Expanded(
                   child: Text(
                     _stripInlineFormatting(item),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       height: 1.5,
-                      color: AppColors.ink,
+                      color: p.ink,
                     ),
                   ),
                 ),
@@ -141,7 +142,7 @@ class _MarkdownPage extends StatelessWidget {
             trimmed.substring(1, trimmed.length - 1),
             style: appMonoStyle(
               fontSize: 11,
-              color: AppColors.textMute,
+              color: p.textMute,
             ),
           ),
         ));
@@ -150,10 +151,10 @@ class _MarkdownPage extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: AppSpacing.x10),
           child: Text(
             _stripInlineFormatting(trimmed),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               height: 1.5,
-              color: AppColors.ink,
+              color: p.ink,
             ),
           ),
         ));
@@ -173,7 +174,7 @@ class _MarkdownPage extends StatelessWidget {
   }
 }
 
-// ─── Contenus ──────────────────────────────────────────────────────
+// --- Contenus ------------------------------------------------------
 
 const _privacyText = '''
 # Politique de confidentialite
@@ -184,7 +185,7 @@ opti_route est une application d'optimisation de tournees de livraison a usage p
 
 ## Donnees stockees localement
 
-Tout ce que tu saisis ou que l'app calcule reste sur la memoire de ton telephone, dans une base SQLite locale. Aucune donnee n'est envoyee a un serveur opti_route — il n'y a d'ailleurs pas de serveur opti_route.
+Tout ce que tu saisis ou que l'app calcule reste sur la memoire de ton telephone, dans une base SQLite locale. Aucune donnee n'est envoyee a un serveur opti_route  -  il n'y a d'ailleurs pas de serveur opti_route.
 
 Concretement, sont stockes sur ton appareil :
 

@@ -184,6 +184,9 @@ class SavedDestinationsRepository {
     String? rue,
     String? codePostal,
     String? ville,
+    String? notesCarnet,
+    String? codeAcces,
+    String? etageBatiment,
   }) {
     return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
         .write(SavedDestinationsCompanion(
@@ -202,7 +205,55 @@ class SavedDestinationsRepository {
       ville: ville == null
           ? const Value.absent()
           : Value(ville.isEmpty ? null : ville),
+      notesCarnet: notesCarnet == null
+          ? const Value.absent()
+          : Value(notesCarnet.isEmpty ? null : notesCarnet),
+      codeAcces: codeAcces == null
+          ? const Value.absent()
+          : Value(codeAcces.isEmpty ? null : codeAcces),
+      etageBatiment: etageBatiment == null
+          ? const Value.absent()
+          : Value(etageBatiment.isEmpty ? null : etageBatiment),
     ));
+  }
+
+  /// Met a jour les tags (liste de strings encodee en JSON) d'une
+  /// entree du carnet. [tags] vide ou null -> stocke null.
+  Future<int> setTags(int id, List<String>? tags) {
+    final v = (tags == null || tags.isEmpty)
+        ? null
+        : '[${tags.map((t) => '"${t.replaceAll('"', r'\"')}"').join(',')}]';
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
+        .write(SavedDestinationsCompanion(tagsJson: Value(v)));
+  }
+
+  /// Decode les tags JSON d'une entree. Retourne liste vide si null
+  /// ou si le JSON est malforme.
+  static List<String> parseTags(String? tagsJson) {
+    if (tagsJson == null || tagsJson.isEmpty) return const [];
+    // Parser minimaliste : on attend ["a","b","c"], pas de support
+    // des caracteres echappes complexes (suffit pour tags courts).
+    final trimmed = tagsJson.trim();
+    if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return const [];
+    final inner = trimmed.substring(1, trimmed.length - 1).trim();
+    if (inner.isEmpty) return const [];
+    return inner
+        .split(',')
+        .map((s) {
+          var t = s.trim();
+          if (t.startsWith('"') && t.endsWith('"')) {
+            t = t.substring(1, t.length - 1);
+          }
+          return t.replaceAll(r'\"', '"');
+        })
+        .where((t) => t.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  /// Update le chemin photo (facade/interphone). Null pour retirer.
+  Future<int> setPhotoPath(int id, String? path) {
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
+        .write(SavedDestinationsCompanion(photoPath: Value(path)));
   }
 
   Future<int> count() async {

@@ -4,15 +4,23 @@ Application mobile d'optimisation de tournées pour livreur multi-points.
 
 ## État du projet
 
-🚧 **En développement actif** — Phase 1 (version gratuite, Android uniquement). Voir [docs/plan_free.md](docs/plan_free.md) pour le plan détaillé.
+🚧 **En développement actif** — Phase 1 (version gratuite, Android uniquement). Voir [docs/plan_free.md](docs/plan_free.md) pour le plan détaillé et [docs/user-guide.md](docs/user-guide.md) pour le guide utilisateur.
+
+**~144 tests unitaires**, `flutter analyze` à 0 erreur, prêt pour publication Play Store côté technique (manque keystore + 25 USD compte Google).
 
 ## Objectif
 
 Aider un chauffeur-livreur à organiser sa tournée quotidienne :
-- Saisie d'adresses **manuelle ou par OCR caméra** sur les bordereaux.
-- Définition de **contraintes par client** : priorité (premier/dernier), nombre de colis, fenêtres horaires, notes.
-- **Optimisation automatique** de l'ordre de passage pour minimiser le temps total.
-- **Mode tournée en cours** avec lancement de la navigation externe (Google Maps / Waze).
+- Saisie d'adresses **manuelle, par OCR caméra, ou hors-ligne** (geocodage différé).
+- Cascade géocodage **BAN + SIRENE + Photon** (3 sources gratuites France).
+- Définition de **contraintes par client** : priorité (premier/dernier), nombre de colis, fenêtres horaires, notes, capacité véhicule, profil VL/HGV.
+- **Optimisation automatique** de l'ordre de passage via VROOM/ORS, avec gestion HGV + capacité + évitement péages.
+- **Mode tournée en cours** : GPS live, distance jusqu'au prochain arrêt, lancement Maps/Waze, validation Livré/Échec avec preuve GPS + journal.
+- **Rappels locaux** programmables par tournée (notifs Android).
+- **Carnet d'adresses** auto-rempli, notes pré-définies par client, export CSV ou vCard, filtre par couleur.
+- **Statistiques** 7j/30j/1 an : tournées, arrêts, colis, distance, **coût carburant estimé**, jours les plus chargés, top 5 clients.
+- **Partage** en texte court (WhatsApp/SMS) ou PDF récap.
+- **Mode sombre** complet (conduite de nuit).
 - **CarPlay et Android Auto** prévus en Phase 3.
 
 ## Stack technique

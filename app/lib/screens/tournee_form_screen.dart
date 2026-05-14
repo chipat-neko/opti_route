@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
+import '../data/notifications_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import 'tournee_form/form_widgets.dart';
 
 class TourneeFormScreen extends ConsumerStatefulWidget {
   const TourneeFormScreen({super.key, this.initial});
@@ -25,6 +27,10 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
   late DateTime _date;
   AddressSuggestion? _depart;
   bool _saving = false;
+  late String _profilOrs;
+  late bool _eviterPeages;
+  DateTime? _rappelLe;
+  int? _coequipierDefautId;
 
   bool get _isEdit => widget.initial != null;
 
@@ -36,6 +42,10 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
     _capaciteCtrl =
         TextEditingController(text: (t?.vehiculeCapaciteColis ?? 0).toString());
     _date = t?.date ?? DateTime.now();
+    _profilOrs = t?.profilOrs ?? 'driving-car';
+    _eviterPeages = t?.eviterPeages ?? false;
+    _rappelLe = t?.rappelLe;
+    _coequipierDefautId = t?.coequipierDefautId;
     if (t != null) {
       _depart = AddressSuggestion(
         displayName: t.pointDepartLabel,
@@ -66,6 +76,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final dateFormat = DateFormat('EEEE d MMMM y', 'fr');
 
     return Scaffold(
@@ -113,6 +124,86 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
               keyboardType: TextInputType.number,
               validator: _validatePositiveInt,
             ),
+            const SizedBox(height: AppSpacing.x18),
+            Text(
+              'Profil vehicule',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.x6),
+            Text(
+              'Voiture/VUL pour les livraisons standards. Camion >3.5t '
+              'respecte les restrictions de hauteur/poids et evite les '
+              'centres pietonnises.',
+              style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Wrap(
+              spacing: AppSpacing.x8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Voiture / VUL'),
+                  selected: _profilOrs == 'driving-car',
+                  onSelected: (_) =>
+                      setState(() => _profilOrs = 'driving-car'),
+                ),
+                ChoiceChip(
+                  label: const Text('Camion >3.5t'),
+                  selected: _profilOrs == 'driving-hgv',
+                  onSelected: (_) =>
+                      setState(() => _profilOrs = 'driving-hgv'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x14),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              tileColor: Colors.transparent,
+              title: const Text('Eviter les peages'),
+              subtitle: Text(
+                'Rallonge souvent l\'itineraire ; utile si tu veux pas '
+                'payer de peages sur ton compte perso.',
+                style: TextStyle(fontSize: 12, color: p.textMute),
+              ),
+              value: _eviterPeages,
+              onChanged: (v) => setState(() => _eviterPeages = v),
+            ),
+            const SizedBox(height: AppSpacing.x18),
+            Text(
+              'Rappel (optionnel)',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.x6),
+            Text(
+              'Notification locale au moment choisi. Aucun serveur, '
+              'aucune CB. Le rappel est annule si tu supprimes la '
+              'tournee.',
+              style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            RappelPickerTile(
+              value: _rappelLe,
+              defaultDate: _date,
+              onChanged: (v) => setState(() => _rappelLe = v),
+            ),
+            const SizedBox(height: AppSpacing.x18),
+            // Affecter par defaut a un coequipier. Cache si aucun
+            // coequipier en base (livreur solo : pas pertinent).
+            Consumer(
+              builder: (context, ref, _) {
+                final list = ref
+                        .watch(coequipiersActifsProvider)
+                        .asData
+                        ?.value ??
+                    const <Coequipier>[];
+                if (list.isEmpty) return const SizedBox.shrink();
+                return DefaultCoequipierTile(
+                  coequipiers: list,
+                  value: _coequipierDefautId,
+                  onChanged: (v) =>
+                      setState(() => _coequipierDefautId = v),
+                );
+              },
+            ),
             const SizedBox(height: AppSpacing.x28),
             FilledButton.icon(
               onPressed: _saving ? null : _save,
@@ -132,14 +223,14 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
               const SizedBox(height: AppSpacing.x18),
               const Divider(),
               const SizedBox(height: AppSpacing.x18),
-              _DangerButton(
+              DangerButton(
                 label: 'Supprimer cette tournee',
                 onPressed: _saving ? null : _confirmDelete,
               ),
               const SizedBox(height: AppSpacing.x6),
-              const Text(
+              Text(
                 'Tous les arrets de cette tournee seront supprimes definitivement.',
-                style: TextStyle(fontSize: 12, color: AppColors.textMute),
+                style: TextStyle(fontSize: 12, color: p.textMute),
               ),
             ],
           ],
@@ -178,6 +269,8 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
 
     setState(() => _saving = true);
     try {
+      await NotificationsService.instance
+          .cancelTourneeRappel(widget.initial!.id);
       await ref.read(tourneesRepositoryProvider).delete(widget.initial!.id);
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -234,24 +327,82 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
       pointDepartLabel: Value(_depart!.displayName),
       vehiculeCapaciteColis:
           Value(int.tryParse(_capaciteCtrl.text.trim()) ?? 0),
+      profilOrs: Value(_profilOrs),
+      eviterPeages: Value(_eviterPeages),
+      rappelLe: Value(_rappelLe),
+      coequipierDefautId: Value(_coequipierDefautId),
     );
 
     try {
+      int idForNotif;
       if (_isEdit) {
-        // Le point de depart a-t-il bouge ? Si oui, l'itineraire
-        // optimise n'est plus valide -- on invalide pour reactiver le
-        // bouton "Optimiser". Un simple changement de nom ou de
-        // capacite ne touche pas a la geometrie de la tournee.
+        // Le depart, le profil ou l'evitement de peages ont-ils bouge ?
+        // Tout ca change la geometrie de l'itineraire optimal -> on
+        // invalide pour reactiver le bouton "Optimiser". Un simple
+        // changement de nom / capacite ne touche pas a la geometrie.
         final initial = widget.initial!;
-        final departChanged = initial.pointDepartLat != _depart!.lat ||
-            initial.pointDepartLng != _depart!.lon;
+        final geometryChanged = initial.pointDepartLat != _depart!.lat ||
+            initial.pointDepartLng != _depart!.lon ||
+            initial.profilOrs != _profilOrs ||
+            initial.eviterPeages != _eviterPeages;
         await repo.update(initial.id, companion);
-        if (departChanged) {
+        if (geometryChanged) {
           await repo.invalidateOptimization(initial.id);
+          // Le point de depart a bouge -> l'ordre nearest-neighbor
+          // doit etre recalcule.
+          await ref
+              .read(localReorderServiceProvider)
+              .reorder(initial.id);
         }
+        idForNotif = initial.id;
       } else {
-        await repo.create(companion);
+        idForNotif = await repo.create(companion);
       }
+
+      // (Re-)programme ou annule le rappel local.
+      final nom = _nomCtrl.text.trim();
+      if (_rappelLe != null) {
+        await NotificationsService.instance.scheduleTourneeRappel(
+          tourneeId: idForNotif,
+          nomTournee: nom,
+          when: _rappelLe!,
+        );
+      } else {
+        await NotificationsService.instance
+            .cancelTourneeRappel(idForNotif);
+      }
+
+      // Rappel veille auto : si l'utilisateur a configure une heure
+      // dans Parametres, on programme une notif a J-1 a cette heure.
+      // Best-effort : ne bloque pas la sauvegarde si echec.
+      try {
+        final paramsRepo = ref.read(parametresRepositoryProvider);
+        final hhmm = await paramsRepo.getVeilleReminderHHmm();
+        if (hhmm != null) {
+          final parts = hhmm.split(':');
+          final hour = int.tryParse(parts[0]) ?? 21;
+          final minute = parts.length > 1
+              ? (int.tryParse(parts[1]) ?? 0)
+              : 0;
+          final veille = DateTime(
+            _date.year,
+            _date.month,
+            _date.day,
+          ).subtract(const Duration(days: 1)).copyWith(
+                hour: hour,
+                minute: minute,
+              );
+          await NotificationsService.instance.scheduleVeilleReminder(
+            tourneeId: idForNotif,
+            nomTournee: nom,
+            when: veille,
+          );
+        } else {
+          await NotificationsService.instance
+              .cancelVeilleReminder(idForNotif);
+        }
+      } catch (_) {/* best-effort */}
+
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
@@ -264,29 +415,6 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
   }
 }
 
-class _DangerButton extends StatelessWidget {
-  const _DangerButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.red,
-          side: const BorderSide(color: AppColors.red, width: 1.5),
-          minimumSize: const Size(0, 52),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(AppRadius.r14)),
-          ),
-        ),
-        icon: const Icon(Icons.delete_outline),
-        label: Text(label),
-      ),
-    );
-  }
-}
+/// ListTile cliquable qui ouvre 2 selecteurs (date + heure) pour
+/// programmer une notification locale de rappel sur la tournee. Si
+/// [value] est null, affiche "Aucun" ; sinon affiche le jour + heure

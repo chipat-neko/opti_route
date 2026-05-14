@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toutes les features — opti_route</title>
+<meta name="description" content="Liste complete et detaillee des fonctionnalites de l'app opti_route : optimisation, OCR, gestion d'equipe, statistiques, securite.">
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="guide-csv.html">Guide CSV</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-64) 0;">
+
+  <span class="eyebrow">Catalogue complet</span>
+  <h1>Toutes les features.</h1>
+  <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-40); max-width: 680px;">
+    Detail de chaque fonctionnalite de l'app opti_route. Mise a jour
+    a chaque release. 462 tests automatises garantissent leur stabilite.
+  </p>
+
+  <!-- TABLE DES MATIERES -->
+  <div style="background: var(--bg-soft); border-radius: var(--radius-18); padding: var(--space-22); margin-bottom: var(--space-40);">
+    <h3 style="margin-bottom: var(--space-12); font-size: 0.85rem; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.1em;">
+      Sommaire
+    </h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-8);">
+      <a href="#optimisation">Optimisation</a>
+      <a href="#ocr">Scan bordereaux</a>
+      <a href="#equipe">Mode equipe</a>
+      <a href="#carnet">Carnet local</a>
+      <a href="#suivi">Suivi temps reel</a>
+      <a href="#stats">Statistiques</a>
+      <a href="#export">Exports & partage</a>
+      <a href="#theme">Themes & accessibilite</a>
+      <a href="#securite">Securite & vie privee</a>
+    </div>
+  </div>
+
+  <!-- OPTIMISATION -->
+  <section id="optimisation" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">01 — Calcul itineraire</span>
+    <h2 style="margin-bottom: var(--space-22);">Optimisation VROOM</h2>
+    <p style="margin-bottom: var(--space-18); max-width: 760px;">
+      Calcul d'ordre optimal des arrets via <strong>OpenRouteService</strong>
+      (algorithme VROOM open-source). 500 optimisations gratuites par jour
+      sur le quota dev free.
+    </p>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>Profil <strong>driving-car</strong> (VL) ou <strong>driving-hgv</strong> (camion lourd, restrictions PL)</li>
+      <li>Contrainte capacite vehicule (refuse les arrets qui depassent)</li>
+      <li>Fenetres horaires <strong>obligatoires</strong> ou <strong>preferees</strong></li>
+      <li>Priorites <strong>EN 1ER</strong>, <strong>EN DERNIER</strong>, <strong>A EVITER</strong></li>
+      <li>Evitement peages (toggle)</li>
+      <li>Trace GeoJSON polyline affichee sur la carte</li>
+      <li>Calcul ETA prorata + chrono live avec pause/reprise</li>
+      <li>Fallback haversine si /directions echoue (pas de plantage)</li>
+    </ul>
+  </section>
+
+  <!-- OCR -->
+  <section id="ocr" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">02 — Saisie rapide</span>
+    <h2 style="margin-bottom: var(--space-22);">Scan bordereaux OCR</h2>
+    <p style="margin-bottom: var(--space-18); max-width: 760px;">
+      OCR <strong>on-device</strong> via Google ML Kit (script latin).
+      Pas de cloud, pas d'upload. Auto-detection du format de bordereau
+      pour appliquer le bon parser.
+    </p>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>Parser <strong>MESEXP</strong> (format Noah, ~85% taux carte verte)</li>
+      <li>Parser <strong>Colissimo / La Poste</strong> (tracking 6A/6L/8L...)</li>
+      <li>Parser <strong>Chronopost</strong> (tracking XR/XE...FR)</li>
+      <li>Auto-detection format puis fallback parser generique</li>
+      <li>Extraction : nom destinataire, rue, CP, ville, tel, nb colis</li>
+      <li>Confiance high / low / none affichee dans une carte coloree</li>
+      <li>Indice de confiance pour decider de pre-remplir ou demander confirmation</li>
+    </ul>
+  </section>
+
+  <!-- EQUIPE -->
+  <section id="equipe" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">03 — Multi-personnes (Phase 1 local)</span>
+    <h2 style="margin-bottom: var(--space-22);">Mode chef d'equipe</h2>
+    <p style="margin-bottom: var(--space-18); max-width: 760px;">
+      Active dans <strong>Parametres &rarr; Entreprise & equipe</strong>.
+      100% local au telephone du chef. Pour la vraie sync multi-appareils
+      (chaque coequipier sur son propre phone), roadmap <em>Phase 2 CB</em>
+      avec backend Firebase ou Supabase.
+    </p>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>Mon equipe : CRUD coequipiers (nom, telephone, couleur avatar, archivage non-destructif)</li>
+      <li>Affecter un arret a un coequipier depuis la bottom sheet</li>
+      <li>Affecter tous les nouveaux arrets d'une tournee a Lucas (champ "par defaut")</li>
+      <li>Bulk : "Affecter le reste a..." (tous les arrets non affectes)</li>
+      <li>Filtre par coequipier dans la liste d'arrets (chips couleur)</li>
+      <li>Tableau de bord agrege : breakdown par personne, badge EN PAUSE temps reel</li>
+      <li>Partage WhatsApp cible : ouvre directement la conv de Lucas avec ses arrets</li>
+      <li>PDF individuel par coequipier (FICHE DE Lucas + filtres stops + footer SIRET)</li>
+      <li>Stats par coequipier (livres / echecs / colis / taux%)</li>
+    </ul>
+  </section>
+
+  <!-- CARNET -->
+  <section id="carnet" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">04 — Memoire metier</span>
+    <h2 style="margin-bottom: var(--space-22);">Carnet d'adresses local enrichi</h2>
+    <p style="margin-bottom: var(--space-18); max-width: 760px;">
+      Auto-alimentation a chaque arret valide. Cherche par nom, ville,
+      adresse, tag. Filtre par couleur, favori, ou tag custom.
+    </p>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>Tags multiples (separes par virgules)</li>
+      <li>Code interphone / portail (champ dedie)</li>
+      <li>Batiment / etage / appartement</li>
+      <li>Photo facade (path local prive)</li>
+      <li>Notes pre-definies (pre-remplies au prochain arret)</li>
+      <li>Couleur avatar (lime/emerald/amber/red/cream/ink)</li>
+      <li>Etoile favori (remonte en haut)</li>
+      <li>Stats par client : nb livraisons, taux reussite, top raisons d'echec</li>
+      <li>Import / export CSV (RFC 4180) + vCard 3.0 (compatibles Contacts Android)</li>
+    </ul>
+  </section>
+
+  <!-- SUIVI -->
+  <section id="suivi" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">05 — Mode terrain</span>
+    <h2 style="margin-bottom: var(--space-22);">Suivi temps reel de tournee</h2>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>Chrono "Demarree il y a Xh Ymin" en haut</li>
+      <li>Pause / Reprise courte (pause dejeuner) avec cumul des secondes pausees</li>
+      <li>Badge EN PAUSE amber visible dans le bandeau</li>
+      <li>Badge ETA "≈14:32" sur chaque arret a livrer</li>
+      <li>Prochain arret avec distance vol d'oiseau</li>
+      <li>Tri par distance GPS au lieu de l'ordre optimise</li>
+      <li>Recherche par nom / rue / notes</li>
+      <li>Filtre par statut (a livrer / livres / echecs)</li>
+      <li>Drag-and-drop pour reorganiser manuellement</li>
+      <li>Photo preuve (avant ou apres validation)</li>
+      <li>Annuler le dernier statut (1 tap, fenetre de grace)</li>
+      <li>Position GPS enregistree au moment du "Marquer livre / echec" (preuve passage)</li>
+      <li>Notification post-tournee : recap livres / echecs / duree</li>
+    </ul>
+  </section>
+
+  <!-- STATS -->
+  <section id="stats" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">06 — Donnees & analyses</span>
+    <h2 style="margin-bottom: var(--space-22);">Statistiques cumulatives</h2>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>3 fenetres : 7 jours / 30 jours / 365 jours</li>
+      <li>Carte motivation lime : colis livres annee + km + tournees + streak</li>
+      <li>Badge taux reussite annuel coloré (≥95% emerald, ≥85% lime, sinon amber)</li>
+      <li>Top 5 clients (avec couleur avatar du carnet)</li>
+      <li>Top 5 raisons d'echec globales (barres relatives)</li>
+      <li>Heures travaillees par jour de la semaine</li>
+      <li>Colis livres par jour de la semaine (carte 7 jours)</li>
+      <li>Stats par coequipier (mode chef)</li>
+      <li>Cout carburant cumule (params EUR/L + L/100km configurables)</li>
+      <li>Comparatif M-1 / M-12 (evolution)</li>
+      <li>Export CSV au standard RFC 4180 (compatible Excel / Sheets / dashboard web)</li>
+    </ul>
+  </section>
+
+  <!-- EXPORT -->
+  <section id="export" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">07 — Sortie de donnees</span>
+    <h2 style="margin-bottom: var(--space-22);">Exports & partage</h2>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>PDF recap tournee (avec footer SIRET + slogan entreprise)</li>
+      <li>PDF par coequipier (pill "FICHE DE Lucas" en header)</li>
+      <li>Texte court pour WhatsApp / SMS / mail (formate liste numerotee)</li>
+      <li>Partage cible coequipier via lien wa.me (numero pre-rempli)</li>
+      <li>CSV stats (365 jours, formate Excel-ready)</li>
+      <li>CSV carnet (sauvegarde / migration)</li>
+      <li>vCard 3.0 du carnet (import direct dans Contacts Android)</li>
+      <li>Tableau de bord web (uploader le CSV pour visualiser sur grand ecran)</li>
+    </ul>
+  </section>
+
+  <!-- THEME -->
+  <section id="theme" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">08 — Personnalisation</span>
+    <h2 style="margin-bottom: var(--space-22);">Themes & accessibilite</h2>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>4 palettes : Lime (defaut) / Ocean (bleus) / Terracotta (terre) / Mono (NB)</li>
+      <li>Mode clair / sombre / auto (suit le systeme)</li>
+      <li>Mode XL : polices x1.15 pour la conduite</li>
+      <li>Contraste eleve (lecture en plein soleil)</li>
+      <li>Toggle rappel veille auto (notif "prepare tes colis" la veille a 21h)</li>
+      <li>App de navigation par defaut : Google Maps ou Waze</li>
+      <li>Cle ORS configurable (gratuit 500/jour)</li>
+    </ul>
+  </section>
+
+  <!-- SECURITE -->
+  <section id="securite" style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">09 — Donnees</span>
+    <h2 style="margin-bottom: var(--space-22);">Securite & vie privee</h2>
+    <ul style="margin-left: var(--space-22); line-height: 1.8;">
+      <li>Toutes les donnees restent sur le telephone (SQLite via Drift)</li>
+      <li>Aucun serveur opti_route (sauf APIs publiques BAN / SIRENE / Photon / ORS)</li>
+      <li>Photos preuves dans le repertoire prive de l'app (jamais expose)</li>
+      <li>Pas de tracking analytique, pas de cookies, pas de pub</li>
+      <li>Code source ouvert (audit public possible)</li>
+      <li>Permissions Android minimales (camera, GPS, notifs, internet ORS uniquement)</li>
+      <li><strong>Verrouillage PIN + biometrie</strong> (empreinte / face) au demarrage, optionnel</li>
+      <li><strong>Sauvegarde complete</strong> (.zip portable avec DB + photos preuves), restore par swap differe au boot</li>
+      <li><strong>Auto-backup local</strong> periodique (hebdo / mensuel) avec rotation des 5 derniers</li>
+      <li>Export CSV + vCard du carnet d'adresses pour migration ou archivage</li>
+    </ul>
+  </section>
+
+  <div class="cta">
+    <h2>Pret a tester ?</h2>
+    <p>L'APK est disponible sur le repo GitHub. Pas de Play Store en Phase 1.</p>
+    <a href="https://github.com/chipat-neko/opti_route" class="btn btn-secondary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      Voir sur GitHub
+    </a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route</a> · 100% prive · <span class="mono">© CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -170,6 +170,7 @@ class _AddressAutocompleteFieldState
       city: d.ville,
       poiName: d.nomClient,
       fromCarnet: true,
+      notesCarnet: d.notesCarnet,
     );
   }
 
@@ -186,6 +187,7 @@ class _AddressAutocompleteFieldState
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final isValid = _selected != null;
 
     return Column(
@@ -198,7 +200,7 @@ class _AddressAutocompleteFieldState
             hintText: widget.hintText,
             prefixIcon: Icon(
               Icons.place_outlined,
-              color: isValid ? AppColors.emerald : AppColors.ink,
+              color: isValid ? AppColors.emerald : p.ink,
             ),
             suffixIcon: _buildSuffix(isValid),
             errorText: _errorMessage,
@@ -219,9 +221,9 @@ class _AddressAutocompleteFieldState
           const SizedBox(height: AppSpacing.x8),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.paper,
+              color: p.paper,
               borderRadius: BorderRadius.circular(AppRadius.r14),
-              border: Border.all(color: AppColors.divider),
+              border: Border.all(color: p.divider),
             ),
             child: Column(
               children: [
@@ -275,7 +277,7 @@ class _AddressAutocompleteFieldState
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.ink,
+                foregroundColor: p.ink,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.x10,
                   vertical: 4,
@@ -334,6 +336,7 @@ class _SuggestionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final isPoi = suggestion.isPoi;
     final hasNumber = suggestion.houseNumber != null &&
         suggestion.houseNumber!.isNotEmpty;
@@ -341,12 +344,12 @@ class _SuggestionTile extends StatelessWidget {
     final fromCarnet = suggestion.fromCarnet;
     final iconBg = fromCarnet
         ? AppColors.lime
-        : (isPoi ? AppColors.emeraldSoft : (hasNumber ? AppColors.lime : AppColors.creamSoft));
+        : (isPoi ? AppColors.emeraldSoft : (hasNumber ? AppColors.lime : p.creamSoft));
     final iconColor = fromCarnet
-        ? AppColors.ink
+        ? p.ink
         : (isPoi
             ? AppColors.emerald
-            : (hasNumber ? AppColors.ink : AppColors.textMute));
+            : (hasNumber ? p.ink : p.textMute));
     final iconData = fromCarnet
         ? Icons.bookmark
         : (isPoi ? Icons.storefront_outlined : Icons.place_outlined);
@@ -381,10 +384,10 @@ class _SuggestionTile extends StatelessWidget {
                 children: [
                   Text(
                     suggestion.primaryLabel,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: AppColors.ink,
+                      color: p.ink,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -396,7 +399,7 @@ class _SuggestionTile extends StatelessWidget {
                         secondary,
                         style: appMonoStyle(
                           fontSize: 11,
-                          color: AppColors.textMute,
+                          color: p.textMute,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -408,7 +411,7 @@ class _SuggestionTile extends StatelessWidget {
                       child: _Badge(
                         label: 'DEJA LIVRE',
                         bg: AppColors.lime,
-                        fg: AppColors.ink,
+                        fg: p.ink,
                       ),
                     )
                   else if (isPoi)
@@ -432,10 +435,10 @@ class _SuggestionTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.north_west,
               size: 16,
-              color: AppColors.textFaint,
+              color: p.textFaint,
             ),
           ],
         ),

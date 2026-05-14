@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>opti_route — App de tournees pour livreurs et chefs d'equipe</title>
+<meta name="description" content="opti_route : application Android d'optimisation de tournees de livraison, 100% locale, sans abonnement. Gestion d'equipe pour chef de tournees.">
+<meta name="theme-color" content="#0E1410">
+<meta name="author" content="CALOTE Noah">
+<meta name="keywords" content="livreur, livraison, tournee, optimisation, GPS, scan bordereau, chef d'equipe, OpenRouteService, Android, gratuit">
+
+<!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="opti_route — Tournees de livraison pro, gratuit en Phase 1">
+<meta property="og:description" content="Optimisation VROOM + scan bordereaux + gestion d'equipe locale + tableau de bord web. 100% prive, sans abonnement.">
+<meta property="og:image" content="assets/og-cover.svg">
+<meta property="og:url" content="https://chipat-neko.github.io/opti_route/website/">
+<meta property="og:locale" content="fr_FR">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="opti_route">
+<meta name="twitter:description" content="Tournees de livraison + gestion d'equipe, 100% gratuit Phase 1.">
+<meta name="twitter:image" content="assets/og-cover.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://chipat-neko.github.io/opti_route/website/">
+
+<!-- Schema.org JSON-LD pour rich snippets Google -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "opti_route",
+  "description": "Application Android d'optimisation de tournees de livraison, 100% locale, sans abonnement. Optimisation VROOM, scan bordereaux OCR, gestion d'equipe, statistiques annuelles, facturation indicative.",
+  "url": "https://chipat-neko.github.io/opti_route/website/",
+  "image": "https://chipat-neko.github.io/opti_route/website/assets/og-cover.svg",
+  "applicationCategory": "BusinessApplication",
+  "applicationSubCategory": "DeliveryOptimization",
+  "operatingSystem": "Android 5.0+",
+  "inLanguage": "fr-FR",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "EUR",
+    "availability": "https://schema.org/InStock"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "CALOTE Noah"
+  },
+  "softwareVersion": "1.1.0",
+  "datePublished": "2026-04-09",
+  "license": "https://github.com/chipat-neko/opti_route"
+}
+</script>
+</head>
+<body>
+
+<!-- =========== HEADER =========== -->
+<header class="site-header">
+  <div class="container nav">
+    <a href="#hero" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="features.html">Features</a>
+      <a href="entreprise.html">Entreprise</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="dashboard.html">Dashboard</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- =========== HERO =========== -->
+<section class="hero" id="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">Phase 1 — 100% gratuit</span>
+      <h1>L'app de tournees pensee pour <span class="lime">les livreurs et les chefs d'equipe</span>.</h1>
+      <p class="hero-sub">
+        Optimise tes itineraires, suis tes coequipiers en temps reel, scanne tes bordereaux,
+        et garde toutes tes donnees sur ton telephone. Sans abonnement, sans serveur, sans CB.
+      </p>
+      <div class="hero-ctas">
+        <a href="#features" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          Decouvrir
+        </a>
+        <a href="dashboard.html" class="btn btn-ghost">Acceder au tableau de bord</a>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <span class="hero-meta-value">459</span>
+          <span class="hero-meta-label">Tests automatises</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-value">0&nbsp;€</span>
+          <span class="hero-meta-label">Phase 1 — Gratuit</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-value">100%</span>
+          <span class="hero-meta-label">Local & prive</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mock dashboard chef -->
+    <div class="hero-mock">
+      <div class="hero-mock-header">
+        <span>Aujourd'hui — 3 tournees</span>
+        <span style="color: var(--emerald);">EN COURS</span>
+      </div>
+      <div class="hero-mock-stat">
+        <div class="avatar" style="background: var(--lime);">M</div>
+        <div>
+          <div class="hero-mock-stat-name">Moi</div>
+          <div class="hero-mock-stat-meta">8/12 livres · 3 colis</div>
+        </div>
+        <div class="hero-mock-stat-pct" style="color: var(--emerald);">67%</div>
+      </div>
+      <div class="hero-mock-stat">
+        <div class="avatar" style="background: var(--amber);">L</div>
+        <div>
+          <div class="hero-mock-stat-name">Lucas</div>
+          <div class="hero-mock-stat-meta">15/18 livres · 0 echec</div>
+        </div>
+        <div class="hero-mock-stat-pct" style="color: var(--emerald);">83%</div>
+      </div>
+      <div class="hero-mock-stat">
+        <div class="avatar" style="background: var(--emerald-soft); color: var(--emerald-dark);">P</div>
+        <div>
+          <div class="hero-mock-stat-name">Papa</div>
+          <div class="hero-mock-stat-meta">10/10 livres · 0 echec</div>
+        </div>
+        <div class="hero-mock-stat-pct" style="color: var(--emerald);">100%</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== FEATURES =========== -->
+<section id="features" class="features">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Pourquoi opti_route</span>
+      <h2>Toutes les fonctions d'un GPS de livraison pro, gratuit.</h2>
+      <p>Construit avec un livreur reel pour les besoins reels. Pas de feature commerciale gadget.</p>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
+        </div>
+        <h3>Optimisation VROOM</h3>
+        <p>Itineraire optimal calcule via OpenRouteService (500/jour gratuit). Profil voiture ou camion, contraintes capacite et fenetres horaires.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        </div>
+        <h3>Scan bordereaux</h3>
+        <p>OCR on-device (Google ML Kit). Detection auto MESEXP, Colissimo, Chronopost. Extraction nom + adresse + CP + ville + telephone.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Gestion equipe</h3>
+        <p>Affecte tes arrets a tes coequipiers. Vue agregee pour le chef. Partage WhatsApp/SMS cible par personne. PDF individuel par coequipier.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3>Suivi temps reel</h3>
+        <p>ETA par arret, chrono avec pause/reprise, badge "EN COURS" sur le drawer, notifications post-tournee, recap automatique.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <h3>Photo preuve</h3>
+        <p>Capture photo signature ou colis depose a la validation. Stockage local prive. Sert en cas de litige client.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </div>
+        <h3>4 palettes & mode sombre</h3>
+        <p>Lime, Ocean, Terracotta, Mono. Mode XL pour la conduite, contraste eleve pour le plein soleil. Adapte a chaque chauffeur.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <h3>Carnet local enrichi</h3>
+        <p>Tags multiples, codes interphone, etage / batiment, photo facade, historique livraisons par client. Import/export CSV + vCard.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3>100% prive</h3>
+        <p>Toutes les donnees restent sur ton telephone. Aucun serveur, aucune CB requise. Le SIRET et le RGPD t'appartiennent.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </div>
+        <h3>Export PDF / CSV</h3>
+        <p>PDF recap avec ton SIRET, slogan, footer entreprise. CSV stats pour Excel. Partage natif vers email, Drive, etc.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== MODE EQUIPE =========== -->
+<section id="equipe">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Mode chef d'equipe</span>
+      <h2>Reparti tes tournees, suis l'avancement, partage les fiches.</h2>
+      <p>Active le toggle "Mode chef" dans Parametres. Tu gagnes un tableau de bord agrege, l'affectation en masse et l'export PDF par personne.</p>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Tableau de bord</h3>
+        <p>Vue agregee toutes les tournees du jour : avancement par personne, total arrets, livres / restants, badge "EN PAUSE" temps reel.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <h3>Affectation en masse</h3>
+        <p>"Affecter le reste a Lucas" en un tap. Tournee : champ "Affecter par defaut" qui pre-rempli tous les nouveaux arrets crees.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3>PDF individuel</h3>
+        <p>Un PDF par coequipier, avec "FICHE DE Lucas" en pill lime, ses arrets uniquement, ton SIRET en footer. Partage groupe en un tap.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </div>
+        <h3>Partage cible WhatsApp</h3>
+        <p>Bouton "Partager a Lucas" qui ouvre WhatsApp pre-rempli avec ses arrets, son numero pre-selectionne. Fallback SMS auto.</p>
+      </div>
+    </div>
+
+    <div class="cta">
+      <h2>Suivi chef d'equipe sur le web</h2>
+      <p>Exporte ton CSV depuis Statistiques sur ton phone, puis ouvre le tableau de bord web pour voir tes tournees en grand, partager des resumes, faire ta compta.</p>
+      <a href="dashboard.html" class="btn btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Ouvrir le tableau de bord web
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- =========== HOW IT WORKS =========== -->
+<section id="how" class="features">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Comment ca marche</span>
+      <h2>4 etapes pour commencer en moins de 5 minutes.</h2>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Installe l'APK</h3>
+        <p>Telecharge l'app sur ton Android. Pas de Play Store requis en phase 1 (gratuit / sandboxing prive).</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Configure ORS</h3>
+        <p>Cle API OpenRouteService gratuite (500 optimisations/jour). 30 secondes sur openrouteservice.org/dev.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Cree ta tournee</h3>
+        <p>Scan bordereaux ou tape les adresses. L'app optimise l'ordre, calcule le trajet, propose Maps/Waze.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Suis ton equipe</h3>
+        <p>Active "Mode chef d'equipe" dans Parametres. Ajoute tes aidants. Affecte. Partage. Exporte sur le web.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== FOOTER =========== -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="10" r="3"/>
+              <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+            </svg>
+          </span>
+          opti_route
+        </div>
+        <p style="margin-top: var(--space-12); font-size: 0.9rem;">
+          App de tournees de livraison pour livreurs et chefs d'equipe.<br>
+          100% local, 100% prive, 100% gratuit en Phase 1.
+        </p>
+      </div>
+      <div>
+        <h4>Produit</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#equipe">Mode equipe</a></li>
+          <li><a href="dashboard.html">Tableau de bord web</a></li>
+          <li><a href="#how">Comment ca marche</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Ressources</h4>
+        <ul>
+          <li><a href="install-apk.html">Installer l'APK</a></li>
+          <li><a href="gallery.html">Galerie d'ecrans</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="https://github.com/chipat-neko/opti_route">Code source</a></li>
+          <li><a href="https://openrouteservice.org/dev">Cle ORS gratuite</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-copy">
+      Phase 1 gratuit · Pas de CB · Donnees locales ·
+      <a href="mentions-legales.html">Mentions legales</a> ·
+      <span class="mono">© CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

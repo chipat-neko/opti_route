@@ -26,4 +26,13 @@ docs/_*.tmp
 # Logs locaux
 *.log
 
+# Outils dev temporaires de la session 2026-05-11 (scripts powershell)
+inject_palette.ps1
+refactor_dark.ps1
+strip_const.ps1
+
+# Photos de test / screenshots locaux (gros volumes, non versionnes)
+bordereaux_test/
+screenshots_v8/
+
 # Le sous-projet app/ a son propre .gitignore (Flutter)

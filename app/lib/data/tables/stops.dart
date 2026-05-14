@@ -42,5 +42,16 @@ class Stops extends Table {
   /// Null = pas applicable (priorite flexible / eviter).
   IntColumn get ordrePriorite => integer().nullable()();
 
+  /// Chemin local (filesystem app) de la photo preuve de livraison.
+  /// Null si pas de photo prise. Stockage privé dans
+  /// `app_documents/preuves/<stopId>_<timestamp>.jpg`.
+  TextColumn get preuvePhotoPath => text().nullable()();
+
+  /// Id du coequipier affecte a cet arret (FK vers `coequipiers.id`).
+  /// Null = Noah lui-meme (cas par defaut, pas d'aidant). Pas de
+  /// cascade : si on supprime un coequipier, on le retire de l'UI
+  /// mais on garde la trace dans les arrets pour l'historique.
+  IntColumn get coequipierId => integer().nullable()();
+
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
 }

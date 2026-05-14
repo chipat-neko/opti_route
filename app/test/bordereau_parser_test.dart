@@ -550,5 +550,49 @@ void main() {
       expect(result.codePostal, '75011');
       expect(result.ville, 'Paris');
     });
+
+    test('telephone format avec espaces : extrait normalise', () {
+      // Format frequent sur bordereaux : "06 12 34 56 78" ou "06.12.34.56.78"
+      final result = BordereauParser().parse([
+        'Destinataire',
+        'Jean Test',
+        '1 rue X',
+        '28000 Chartres',
+        'Contact destinataire',
+        '06 12 34 56 78',
+      ]);
+      // Le parser extrait soit le format avec espaces, soit normalise.
+      expect(result.telephone, isNotNull);
+      // Le numero doit contenir les 10 chiffres (espaces ou pas).
+      final digits = result.telephone!.replaceAll(RegExp(r'\D'), '');
+      expect(digits, '0612345678');
+    });
+
+    test('lignes vides + whitespace : ignorees au parsing', () {
+      final result = BordereauParser().parse([
+        '',
+        '   ',
+        'Destinataire',
+        '',
+        'Jean Dupont',
+        '   ',
+        '5 rue Foo',
+        '75011 Paris',
+      ]);
+      expect(result.nomDestinataire, 'Jean Dupont');
+      expect(result.codePostal, '75011');
+    });
+
+    test('CP a la frontiere du long numero : 5 chiffres standalone', () {
+      // Verifie le \b en debut de regex : "0237911586" ne doit pas matcher
+      // "11586" comme CP. On doit avoir "75011" en standalone qui matche.
+      final result = BordereauParser().parse([
+        '0237911586 THEODORE CHARTRES',
+        '5 rue Foo',
+        '75011 Paris',
+      ]);
+      // Le CP correct est 75011, pas 11586 extrait de "0237911586"
+      expect(result.codePostal, '75011');
+    });
   });
 }

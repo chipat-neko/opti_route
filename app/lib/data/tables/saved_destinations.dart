@@ -45,4 +45,28 @@ class SavedDestinations extends Table {
   /// 'red', 'amber', 'cream', 'ink'). Null = couleur par defaut
   /// (lime ou amber selon isFavori).
   TextColumn get colorTag => text().nullable()();
+
+  /// Notes pre-definies par client : code interphone, instructions
+  /// fragiles, heures preferees, etc. Affichees automatiquement comme
+  /// notes du prochain arret cree pour ce client (pre-remplies dans le
+  /// champ Notes de `AjoutArretScreen`). L'utilisateur peut les
+  /// surcharger pour cet arret precis sans modifier le carnet.
+  TextColumn get notesCarnet => text().nullable()();
+
+  /// Liste de tags libres sous forme JSON (ex: '["pro","fragile"]').
+  /// Null = aucun tag. L'UI filtre par tag dans la liste du carnet.
+  TextColumn get tagsJson => text().nullable()();
+
+  /// Chemin local d'une photo de la facade / interphone (aide visuelle
+  /// a la livraison). Null si pas de photo. Stockee en
+  /// `app_documents/carnet/<id>_<ts>.jpg`.
+  TextColumn get photoPath => text().nullable()();
+
+  /// Code d'acces (interphone, portail) — courant et explicite.
+  /// Affiche en gros dans la fiche client. Optionnel.
+  TextColumn get codeAcces => text().nullable()();
+
+  /// Etage / batiment / appartement, separe du code pour pouvoir
+  /// l'afficher en gros lui aussi. Ex: "Bat C, 3e etage, app. 12".
+  TextColumn get etageBatiment => text().nullable()();
 }

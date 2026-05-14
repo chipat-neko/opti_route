@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'tables/coequipiers.dart';
 import 'tables/geocode_cache.dart';
 import 'tables/parametres.dart';
 import 'tables/saved_destinations.dart';
@@ -12,6 +13,7 @@ import 'tables/tournees.dart';
 // Re-export des tables pour que les modules historiques qui faisaient
 // `import 'database.dart'` puissent continuer a utiliser
 // `TourneesCompanion`, `Stop`, etc. sans changer leurs imports.
+export 'tables/coequipiers.dart';
 export 'tables/geocode_cache.dart';
 export 'tables/parametres.dart';
 export 'tables/saved_destinations.dart';
@@ -31,6 +33,7 @@ part 'database.g.dart';
     GeocodeCache,
     SavedDestinations,
     StopHistory,
+    Coequipiers,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -38,7 +41,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'opti_route'));
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -89,6 +92,36 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 14) {
             await m.createTable(stopHistory);
+          }
+          if (from < 15) {
+            await m.addColumn(tournees, tournees.profilOrs);
+            await m.addColumn(tournees, tournees.eviterPeages);
+          }
+          if (from < 16) {
+            await m.addColumn(tournees, tournees.rappelLe);
+          }
+          if (from < 17) {
+            await m.addColumn(
+                savedDestinations, savedDestinations.notesCarnet);
+          }
+          if (from < 18) {
+            await m.addColumn(stops, stops.preuvePhotoPath);
+            await m.addColumn(tournees, tournees.pauseeLe);
+            await m.addColumn(tournees, tournees.pauseeSeconds);
+          }
+          if (from < 19) {
+            await m.addColumn(savedDestinations, savedDestinations.tagsJson);
+            await m.addColumn(savedDestinations, savedDestinations.photoPath);
+            await m.addColumn(savedDestinations, savedDestinations.codeAcces);
+            await m.addColumn(
+                savedDestinations, savedDestinations.etageBatiment);
+          }
+          if (from < 20) {
+            await m.createTable(coequipiers);
+            await m.addColumn(stops, stops.coequipierId);
+          }
+          if (from < 21) {
+            await m.addColumn(tournees, tournees.coequipierDefautId);
           }
         },
         beforeOpen: (details) async {

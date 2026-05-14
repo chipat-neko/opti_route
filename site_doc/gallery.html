@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galerie — opti_route</title>
+<meta name="description" content="Apercu des principaux ecrans de l'app opti_route : tournees, mode terrain, carte, carnet, stats, facturation, scan bordereaux.">
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--space-22);
+    margin-top: var(--space-28);
+  }
+  .shot {
+    background: var(--paper);
+    border-radius: var(--radius-18);
+    border: 1px solid var(--divider);
+    overflow: hidden;
+    transition: transform 240ms ease, border 240ms ease, box-shadow 240ms ease;
+  }
+  .shot:hover {
+    transform: translateY(-4px);
+    border-color: var(--lime);
+    box-shadow: 0 12px 32px rgba(11, 18, 14, 0.10);
+  }
+  .shot-frame {
+    background: #0E1410;
+    padding: var(--space-12) var(--space-14);
+    aspect-ratio: 9 / 18;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .shot-frame svg {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-10);
+    background: #F5EFE2;
+  }
+  body.dark .shot-frame svg { background: #1B201D; }
+  .shot-cap {
+    padding: var(--space-14) var(--space-18) var(--space-18);
+  }
+  .shot-cap h3 {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .shot-cap p {
+    font-size: 0.85rem;
+    color: var(--text-mute);
+    line-height: 1.5;
+  }
+  .shot-cap .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(184, 242, 74, 0.18);
+    color: var(--emerald);
+    margin-bottom: var(--space-8);
+  }
+
+  .gallery-note {
+    text-align: center;
+    background: rgba(184, 242, 74, 0.08);
+    border-radius: var(--radius-14);
+    padding: var(--space-18) var(--space-22);
+    margin-top: var(--space-32);
+    font-size: 0.92rem;
+    color: var(--text-mute);
+    line-height: 1.6;
+  }
+
+  /* Couleurs reutilisees dans les SVG */
+  :root {
+    --shot-paper: #F5EFE2;
+    --shot-ink: #0E1410;
+    --shot-mute: #7E8C82;
+    --shot-divider: #D9D2C2;
+    --shot-lime: #B8F24A;
+    --shot-emerald: #15803D;
+    --shot-red: #DC2626;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="features.html">Features</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="dashboard.html">Dashboard</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-64) 0;">
+
+  <span class="eyebrow">Galerie</span>
+  <h1>Les ecrans en un coup d'oeil.</h1>
+  <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-22); max-width: 700px;">
+    Apercus stylises des principaux ecrans de l'app. Les vraies captures
+    seront ajoutees au fil des publications sur le Play Store (Phase 2).
+  </p>
+
+  <div class="gallery-grid">
+
+    <!-- 1. Liste tournees (home) -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="14" width="80" height="14" rx="3" fill="#0E1410"/>
+          <rect x="160" y="12" width="24" height="24" rx="6" fill="#B8F24A"/>
+          <text x="170" y="29" font-family="monospace" font-size="14" font-weight="800" fill="#0E1410">+</text>
+          <!-- Card 1 -->
+          <rect x="12" y="48" width="176" height="64" rx="10" fill="white" stroke="#D9D2C2"/>
+          <circle cx="28" cy="68" r="8" fill="#15803D"/>
+          <rect x="44" y="58" width="100" height="9" rx="2" fill="#0E1410"/>
+          <rect x="44" y="74" width="80" height="6" rx="2" fill="#7E8C82"/>
+          <rect x="44" y="86" width="60" height="6" rx="2" fill="#7E8C82"/>
+          <rect x="150" y="56" width="32" height="14" rx="7" fill="#15803D"/>
+          <text x="166" y="66" text-anchor="middle" font-family="monospace" font-size="7" fill="white" font-weight="800">12/12</text>
+          <!-- Card 2 (en cours) -->
+          <rect x="12" y="120" width="176" height="64" rx="10" fill="white" stroke="#B8F24A" stroke-width="2"/>
+          <circle cx="28" cy="140" r="8" fill="#B8F24A"/>
+          <rect x="44" y="130" width="110" height="9" rx="2" fill="#0E1410"/>
+          <rect x="44" y="146" width="80" height="6" rx="2" fill="#7E8C82"/>
+          <rect x="44" y="158" width="70" height="6" rx="2" fill="#7E8C82"/>
+          <rect x="44" y="170" width="80" height="6" rx="3" fill="#E5E0D2"/>
+          <rect x="44" y="170" width="45" height="6" rx="3" fill="#B8F24A"/>
+          <!-- Card 3 -->
+          <rect x="12" y="192" width="176" height="64" rx="10" fill="white" stroke="#D9D2C2"/>
+          <circle cx="28" cy="212" r="8" fill="#7E8C82"/>
+          <rect x="44" y="202" width="90" height="9" rx="2" fill="#0E1410"/>
+          <rect x="44" y="218" width="70" height="6" rx="2" fill="#7E8C82"/>
+          <rect x="44" y="230" width="50" height="6" rx="2" fill="#7E8C82"/>
+          <!-- Bottom nav -->
+          <rect x="0" y="360" width="200" height="40" fill="white"/>
+          <line x1="0" y1="360" x2="200" y2="360" stroke="#D9D2C2"/>
+          <circle cx="40" cy="380" r="4" fill="#B8F24A"/>
+          <circle cx="100" cy="380" r="3" fill="#7E8C82"/>
+          <circle cx="160" cy="380" r="3" fill="#7E8C82"/>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Accueil</span>
+        <h3>Liste des tournees</h3>
+        <p>Toutes les tournees (planifiees, en cours, terminees) en un coup d'oeil.</p>
+      </div>
+    </article>
+
+    <!-- 2. Tournee du jour (mode terrain) -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="14" width="100" height="14" rx="3" fill="#0E1410"/>
+          <!-- Progress banner -->
+          <rect x="12" y="36" width="176" height="36" rx="10" fill="#B8F24A"/>
+          <text x="22" y="52" font-family="sans-serif" font-size="9" fill="#0E1410" font-weight="800">4 / 12 ARRETS</text>
+          <text x="22" y="64" font-family="sans-serif" font-size="8" fill="#0E1410">23 colis livres</text>
+          <rect x="115" y="46" width="60" height="6" rx="3" fill="rgba(14,20,16,0.2)"/>
+          <rect x="115" y="46" width="20" height="6" rx="3" fill="#0E1410"/>
+          <!-- Prochain arret card -->
+          <rect x="12" y="82" width="176" height="80" rx="10" fill="#0E1410"/>
+          <text x="22" y="98" font-family="monospace" font-size="8" fill="#B8F24A" font-weight="800">PROCHAIN ARRET</text>
+          <rect x="22" y="108" width="120" height="10" rx="2" fill="white"/>
+          <rect x="22" y="124" width="100" height="7" rx="2" fill="#9CA3AF"/>
+          <rect x="22" y="138" width="70" height="14" rx="7" fill="#B8F24A"/>
+          <text x="57" y="148" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#0E1410" font-weight="800">Y SUIS</text>
+          <!-- Stops list -->
+          <rect x="12" y="172" width="176" height="40" rx="8" fill="white" stroke="#D9D2C2"/>
+          <circle cx="25" cy="192" r="6" fill="#15803D"/>
+          <rect x="38" y="184" width="90" height="7" rx="2" fill="#0E1410"/>
+          <rect x="38" y="196" width="60" height="5" rx="2" fill="#7E8C82"/>
+          <rect x="12" y="220" width="176" height="40" rx="8" fill="white" stroke="#D9D2C2"/>
+          <circle cx="25" cy="240" r="6" fill="#15803D"/>
+          <rect x="38" y="232" width="90" height="7" rx="2" fill="#0E1410"/>
+          <rect x="38" y="244" width="60" height="5" rx="2" fill="#7E8C82"/>
+          <rect x="12" y="268" width="176" height="40" rx="8" fill="white" stroke="#D9D2C2"/>
+          <circle cx="25" cy="288" r="6" fill="#7E8C82"/>
+          <rect x="38" y="280" width="90" height="7" rx="2" fill="#0E1410"/>
+          <rect x="38" y="292" width="60" height="5" rx="2" fill="#7E8C82"/>
+          <rect x="12" y="316" width="176" height="40" rx="8" fill="white" stroke="#D9D2C2"/>
+          <circle cx="25" cy="336" r="6" fill="#7E8C82"/>
+          <rect x="38" y="328" width="80" height="7" rx="2" fill="#0E1410"/>
+          <rect x="38" y="340" width="60" height="5" rx="2" fill="#7E8C82"/>
+          <!-- Bottom bar -->
+          <rect x="0" y="370" width="200" height="30" fill="white"/>
+          <line x1="0" y1="370" x2="200" y2="370" stroke="#D9D2C2"/>
+          <circle cx="100" cy="385" r="8" fill="#B8F24A"/>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Mode terrain</span>
+        <h3>Tournee du jour</h3>
+        <p>Le focus sur le prochain arret, la progression, et les colis livres.</p>
+      </div>
+    </article>
+
+    <!-- 3. Carte tournee -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="200" height="400" fill="#E9E4D4"/>
+          <!-- Streets -->
+          <path d="M 0 80 Q 100 60 200 100" stroke="#D9D2C2" stroke-width="6" fill="none"/>
+          <path d="M 0 200 L 200 220" stroke="#D9D2C2" stroke-width="6" fill="none"/>
+          <path d="M 80 0 L 100 400" stroke="#D9D2C2" stroke-width="6" fill="none"/>
+          <path d="M 150 0 L 130 400" stroke="#D9D2C2" stroke-width="6" fill="none"/>
+          <!-- Route -->
+          <path d="M 30 100 Q 60 80 90 120 T 140 200 T 100 300" stroke="#B8F24A" stroke-width="4" fill="none"/>
+          <!-- Pins -->
+          <circle cx="30" cy="100" r="10" fill="#0E1410"/>
+          <text x="30" y="104" text-anchor="middle" font-family="monospace" font-size="9" font-weight="800" fill="white">1</text>
+          <circle cx="90" cy="120" r="10" fill="#15803D"/>
+          <text x="90" y="124" text-anchor="middle" font-family="monospace" font-size="9" font-weight="800" fill="white">2</text>
+          <circle cx="140" cy="200" r="10" fill="#B8F24A" stroke="#0E1410" stroke-width="2"/>
+          <text x="140" y="204" text-anchor="middle" font-family="monospace" font-size="9" font-weight="800" fill="#0E1410">3</text>
+          <circle cx="100" cy="300" r="10" fill="#7E8C82"/>
+          <text x="100" y="304" text-anchor="middle" font-family="monospace" font-size="9" font-weight="800" fill="white">4</text>
+          <!-- Top bar -->
+          <rect x="0" y="0" width="200" height="36" fill="white"/>
+          <line x1="0" y1="36" x2="200" y2="36" stroke="#D9D2C2"/>
+          <rect x="12" y="12" width="90" height="12" rx="3" fill="#0E1410"/>
+          <!-- Bottom info card -->
+          <rect x="12" y="340" width="176" height="50" rx="10" fill="white"/>
+          <rect x="22" y="350" width="80" height="9" rx="2" fill="#0E1410"/>
+          <rect x="22" y="365" width="120" height="7" rx="2" fill="#7E8C82"/>
+          <rect x="22" y="378" width="60" height="6" rx="2" fill="#15803D"/>
+          <rect x="150" y="352" width="28" height="28" rx="14" fill="#B8F24A"/>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Carte</span>
+        <h3>Vue cartographique</h3>
+        <p>OpenStreetMap + tile cache pour rouler en mode hors ligne.</p>
+      </div>
+    </article>
+
+    <!-- 4. Carnet -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="14" width="80" height="14" rx="3" fill="#0E1410"/>
+          <!-- Search bar -->
+          <rect x="12" y="38" width="176" height="32" rx="16" fill="white" stroke="#D9D2C2"/>
+          <circle cx="28" cy="54" r="5" fill="none" stroke="#7E8C82" stroke-width="2"/>
+          <rect x="42" y="51" width="80" height="6" rx="2" fill="#7E8C82"/>
+          <!-- Contact rows -->
+          <g id="contact-row">
+            <rect x="12" y="82" width="176" height="48" rx="10" fill="white" stroke="#D9D2C2"/>
+            <circle cx="32" cy="106" r="14" fill="#B8F24A"/>
+            <text x="32" y="111" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#0E1410">M</text>
+            <rect x="56" y="94" width="100" height="9" rx="2" fill="#0E1410"/>
+            <rect x="56" y="108" width="80" height="6" rx="2" fill="#7E8C82"/>
+            <rect x="56" y="118" width="60" height="6" rx="2" fill="#7E8C82"/>
+          </g>
+          <g transform="translate(0, 56)">
+            <rect x="12" y="82" width="176" height="48" rx="10" fill="white" stroke="#D9D2C2"/>
+            <circle cx="32" cy="106" r="14" fill="#F2A14A"/>
+            <text x="32" y="111" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#0E1410">L</text>
+            <rect x="56" y="94" width="100" height="9" rx="2" fill="#0E1410"/>
+            <rect x="56" y="108" width="80" height="6" rx="2" fill="#7E8C82"/>
+            <rect x="56" y="118" width="60" height="6" rx="2" fill="#7E8C82"/>
+          </g>
+          <g transform="translate(0, 112)">
+            <rect x="12" y="82" width="176" height="48" rx="10" fill="white" stroke="#D9D2C2"/>
+            <circle cx="32" cy="106" r="14" fill="#15803D"/>
+            <text x="32" y="111" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="white">D</text>
+            <rect x="56" y="94" width="100" height="9" rx="2" fill="#0E1410"/>
+            <rect x="56" y="108" width="80" height="6" rx="2" fill="#7E8C82"/>
+            <rect x="56" y="118" width="60" height="6" rx="2" fill="#7E8C82"/>
+          </g>
+          <g transform="translate(0, 168)">
+            <rect x="12" y="82" width="176" height="48" rx="10" fill="white" stroke="#D9D2C2"/>
+            <circle cx="32" cy="106" r="14" fill="#7E8C82"/>
+            <text x="32" y="111" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="white">R</text>
+            <rect x="56" y="94" width="100" height="9" rx="2" fill="#0E1410"/>
+            <rect x="56" y="108" width="80" height="6" rx="2" fill="#7E8C82"/>
+            <rect x="56" y="118" width="60" height="6" rx="2" fill="#7E8C82"/>
+          </g>
+          <!-- FAB -->
+          <circle cx="170" cy="370" r="20" fill="#0E1410"/>
+          <text x="170" y="376" text-anchor="middle" font-family="monospace" font-size="18" font-weight="800" fill="#B8F24A">+</text>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Carnet</span>
+        <h3>Repertoire clients</h3>
+        <p>Recherche, edition, codes interphones et notes par destinataire.</p>
+      </div>
+    </article>
+
+    <!-- 5. Stats -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="14" width="80" height="14" rx="3" fill="#0E1410"/>
+          <!-- Stat cards -->
+          <rect x="12" y="38" width="84" height="68" rx="10" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="48" width="40" height="6" rx="2" fill="#7E8C82"/>
+          <text x="22" y="80" font-family="monospace" font-size="22" font-weight="800" fill="#15803D">128</text>
+          <rect x="22" y="88" width="50" height="6" rx="2" fill="#7E8C82"/>
+
+          <rect x="104" y="38" width="84" height="68" rx="10" fill="white" stroke="#D9D2C2"/>
+          <rect x="114" y="48" width="40" height="6" rx="2" fill="#7E8C82"/>
+          <text x="114" y="80" font-family="monospace" font-size="22" font-weight="800" fill="#0E1410">847</text>
+          <rect x="114" y="88" width="50" height="6" rx="2" fill="#7E8C82"/>
+
+          <!-- Chart card -->
+          <rect x="12" y="116" width="176" height="140" rx="10" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="126" width="80" height="7" rx="2" fill="#0E1410"/>
+          <!-- Bars -->
+          <rect x="24" y="220" width="14" height="20" rx="2" fill="#B8F24A"/>
+          <rect x="44" y="200" width="14" height="40" rx="2" fill="#B8F24A"/>
+          <rect x="64" y="170" width="14" height="70" rx="2" fill="#B8F24A"/>
+          <rect x="84" y="150" width="14" height="90" rx="2" fill="#15803D"/>
+          <rect x="104" y="180" width="14" height="60" rx="2" fill="#B8F24A"/>
+          <rect x="124" y="190" width="14" height="50" rx="2" fill="#B8F24A"/>
+          <rect x="144" y="160" width="14" height="80" rx="2" fill="#B8F24A"/>
+          <rect x="164" y="200" width="14" height="40" rx="2" fill="#B8F24A"/>
+
+          <!-- Revenue card -->
+          <rect x="12" y="266" width="176" height="60" rx="10" fill="#0E1410"/>
+          <rect x="22" y="276" width="50" height="6" rx="2" fill="#7E8C82"/>
+          <text x="22" y="306" font-family="monospace" font-size="20" font-weight="800" fill="#B8F24A">2,485</text>
+          <text x="115" y="306" font-family="monospace" font-size="14" font-weight="800" fill="white">EUR</text>
+
+          <!-- Export button -->
+          <rect x="12" y="340" width="176" height="40" rx="10" fill="white" stroke="#D9D2C2"/>
+          <rect x="60" y="355" width="80" height="10" rx="3" fill="#0E1410"/>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Statistiques</span>
+        <h3>Pilotage chiffres</h3>
+        <p>Revenus, km, colis livres, distance moyenne. Export CSV inclus.</p>
+      </div>
+    </article>
+
+    <!-- 6. Facturation -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="14" width="80" height="14" rx="3" fill="#0E1410"/>
+          <!-- Warning banner -->
+          <rect x="12" y="36" width="176" height="36" rx="8" fill="rgba(245,158,11,0.18)" stroke="rgba(245,158,11,0.4)"/>
+          <circle cx="24" cy="54" r="6" fill="#f59e0b"/>
+          <rect x="36" y="48" width="120" height="5" rx="2" fill="#0E1410"/>
+          <rect x="36" y="58" width="100" height="5" rx="2" fill="#0E1410"/>
+          <!-- Period -->
+          <rect x="12" y="84" width="176" height="40" rx="8" fill="white" stroke="#D9D2C2"/>
+          <circle cx="28" cy="104" r="6" fill="none" stroke="#0E1410" stroke-width="2"/>
+          <rect x="42" y="100" width="100" height="8" rx="2" fill="#0E1410"/>
+          <!-- Tarifs -->
+          <rect x="12" y="134" width="176" height="34" rx="8" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="146" width="70" height="8" rx="2" fill="#0E1410"/>
+          <rect x="150" y="148" width="30" height="6" rx="2" fill="#7E8C82"/>
+          <rect x="12" y="176" width="176" height="34" rx="8" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="188" width="70" height="8" rx="2" fill="#0E1410"/>
+          <rect x="150" y="190" width="30" height="6" rx="2" fill="#7E8C82"/>
+          <rect x="12" y="218" width="176" height="34" rx="8" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="230" width="70" height="8" rx="2" fill="#0E1410"/>
+          <rect x="150" y="232" width="30" height="6" rx="2" fill="#7E8C82"/>
+          <!-- Bouton calcul -->
+          <rect x="12" y="262" width="176" height="44" rx="10" fill="#0E1410"/>
+          <text x="100" y="289" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#B8F24A" font-weight="800">CALCULER LE RECAP</text>
+          <!-- Resultat -->
+          <rect x="12" y="320" width="176" height="68" rx="10" fill="white" stroke="#15803D"/>
+          <rect x="22" y="330" width="60" height="6" rx="2" fill="#7E8C82"/>
+          <text x="22" y="356" font-family="monospace" font-size="14" font-weight="800" fill="#0E1410">TOTAL HT</text>
+          <text x="178" y="356" text-anchor="end" font-family="monospace" font-size="14" font-weight="800" fill="#15803D">485 EUR</text>
+          <rect x="22" y="370" width="60" height="5" rx="2" fill="#7E8C82"/>
+          <rect x="120" y="370" width="58" height="5" rx="2" fill="#15803D"/>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Facturation</span>
+        <h3>Recap mensuel</h3>
+        <p>Tarif par arret / colis / km, cout carburant, marge brute estimee.</p>
+      </div>
+    </article>
+
+    <!-- 7. Scan bordereau -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="200" height="400" fill="#0E1410"/>
+          <!-- Camera view -->
+          <rect x="20" y="50" width="160" height="220" rx="6" fill="#1a1a1a"/>
+          <!-- Document mock -->
+          <rect x="40" y="70" width="120" height="180" fill="white"/>
+          <rect x="50" y="80" width="50" height="6" rx="2" fill="#0E1410"/>
+          <rect x="50" y="92" width="100" height="3" rx="1" fill="#7E8C82"/>
+          <rect x="50" y="100" width="100" height="3" rx="1" fill="#7E8C82"/>
+          <rect x="50" y="112" width="100" height="3" rx="1" fill="#7E8C82"/>
+          <rect x="50" y="120" width="80" height="3" rx="1" fill="#7E8C82"/>
+          <rect x="50" y="135" width="100" height="3" rx="1" fill="#7E8C82"/>
+          <rect x="50" y="143" width="100" height="3" rx="1" fill="#7E8C82"/>
+          <rect x="50" y="155" width="100" height="3" rx="1" fill="#7E8C82"/>
+          <rect x="50" y="163" width="100" height="3" rx="1" fill="#7E8C82"/>
+          <!-- Bracket corners -->
+          <path d="M 30 60 L 30 80 M 30 60 L 50 60" stroke="#B8F24A" stroke-width="3" fill="none"/>
+          <path d="M 170 60 L 170 80 M 170 60 L 150 60" stroke="#B8F24A" stroke-width="3" fill="none"/>
+          <path d="M 30 260 L 30 240 M 30 260 L 50 260" stroke="#B8F24A" stroke-width="3" fill="none"/>
+          <path d="M 170 260 L 170 240 M 170 260 L 150 260" stroke="#B8F24A" stroke-width="3" fill="none"/>
+          <!-- Toolbar -->
+          <rect x="0" y="0" width="200" height="40" fill="rgba(0,0,0,0.5)"/>
+          <rect x="20" y="14" width="50" height="12" rx="3" fill="white"/>
+          <!-- Bottom shutter -->
+          <circle cx="100" cy="340" r="28" fill="none" stroke="white" stroke-width="3"/>
+          <circle cx="100" cy="340" r="22" fill="#B8F24A"/>
+          <!-- Pill format -->
+          <rect x="60" y="285" width="80" height="20" rx="10" fill="rgba(184,242,74,0.2)" stroke="#B8F24A"/>
+          <text x="100" y="298" text-anchor="middle" font-family="monospace" font-size="8" fill="#B8F24A" font-weight="800">MESEXP</text>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">OCR</span>
+        <h3>Scan bordereau</h3>
+        <p>OCR MESEXP / Colissimo / Chronopost, geocodage et import auto.</p>
+      </div>
+    </article>
+
+    <!-- 8. Mode chef d'equipe -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="14" width="100" height="14" rx="3" fill="#0E1410"/>
+          <!-- Banner mode chef -->
+          <rect x="12" y="38" width="176" height="32" rx="10" fill="rgba(184,242,74,0.25)" stroke="#B8F24A"/>
+          <circle cx="26" cy="54" r="8" fill="#15803D"/>
+          <rect x="40" y="48" width="80" height="6" rx="2" fill="#0E1410"/>
+          <rect x="40" y="58" width="100" height="5" rx="2" fill="#7E8C82"/>
+          <!-- Coequipiers row -->
+          <text x="12" y="92" font-family="monospace" font-size="7" font-weight="800" fill="#7E8C82" letter-spacing="0.6">COEQUIPIERS · 4</text>
+          <g transform="translate(12, 100)">
+            <circle cx="14" cy="14" r="14" fill="#B8F24A"/>
+            <text x="14" y="18" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#0E1410">L</text>
+            <circle cx="42" cy="14" r="14" fill="#F2A14A"/>
+            <text x="42" y="18" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#0E1410">M</text>
+            <circle cx="70" cy="14" r="14" fill="#A05D8E"/>
+            <text x="70" y="18" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="white">D</text>
+            <circle cx="98" cy="14" r="14" fill="#15803D"/>
+            <text x="98" y="18" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="white">A</text>
+          </g>
+          <!-- Tournees per coequipier -->
+          <rect x="12" y="148" width="176" height="48" rx="10" fill="white" stroke="#D9D2C2"/>
+          <circle cx="28" cy="172" r="10" fill="#B8F24A"/>
+          <text x="28" y="176" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#0E1410">L</text>
+          <rect x="46" y="160" width="60" height="8" rx="2" fill="#0E1410"/>
+          <rect x="46" y="174" width="80" height="5" rx="2" fill="#7E8C82"/>
+          <rect x="46" y="184" width="40" height="5" rx="2" fill="#15803D"/>
+          <rect x="150" y="160" width="32" height="14" rx="7" fill="#15803D"/>
+          <text x="166" y="170" text-anchor="middle" font-family="monospace" font-size="6" font-weight="800" fill="white">8/10</text>
+
+          <rect x="12" y="204" width="176" height="48" rx="10" fill="white" stroke="#D9D2C2"/>
+          <circle cx="28" cy="228" r="10" fill="#F2A14A"/>
+          <text x="28" y="232" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#0E1410">M</text>
+          <rect x="46" y="216" width="60" height="8" rx="2" fill="#0E1410"/>
+          <rect x="46" y="230" width="80" height="5" rx="2" fill="#7E8C82"/>
+          <rect x="46" y="240" width="40" height="5" rx="2" fill="#F2A14A"/>
+          <rect x="150" y="216" width="32" height="14" rx="7" fill="#F2A14A"/>
+          <text x="166" y="226" text-anchor="middle" font-family="monospace" font-size="6" font-weight="800" fill="white">5/12</text>
+
+          <rect x="12" y="260" width="176" height="48" rx="10" fill="white" stroke="#D9D2C2"/>
+          <circle cx="28" cy="284" r="10" fill="#A05D8E"/>
+          <text x="28" y="288" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="white">D</text>
+          <rect x="46" y="272" width="60" height="8" rx="2" fill="#0E1410"/>
+          <rect x="46" y="286" width="80" height="5" rx="2" fill="#7E8C82"/>
+          <rect x="46" y="296" width="40" height="5" rx="2" fill="#15803D"/>
+          <rect x="150" y="272" width="32" height="14" rx="7" fill="#15803D"/>
+          <text x="166" y="282" text-anchor="middle" font-family="monospace" font-size="6" font-weight="800" fill="white">12/12</text>
+
+          <!-- Button partager -->
+          <rect x="12" y="330" width="176" height="44" rx="10" fill="#0E1410"/>
+          <text x="100" y="357" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#B8F24A" font-weight="800">PARTAGER LES TOURNEES</text>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Equipe</span>
+        <h3>Mode chef d'equipe</h3>
+        <p>Affectation des arrets aux coequipiers + PDF / WhatsApp cible.</p>
+      </div>
+    </article>
+
+    <!-- 9. LockScreen biometrique -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="200" height="400" fill="#F5EFE2"/>
+          <!-- App icon hero -->
+          <rect x="70" y="70" width="60" height="60" rx="14" fill="#0E1410"/>
+          <rect x="86" y="86" width="28" height="28" rx="6" fill="#B8F24A"/>
+          <circle cx="100" cy="100" r="4" fill="#0E1410"/>
+          <!-- Title -->
+          <text x="100" y="160" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="800" fill="#0E1410">opti_route</text>
+          <text x="100" y="178" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#7E8C82">Deverrouille pour continuer</text>
+          <!-- PIN dots -->
+          <circle cx="80" cy="220" r="9" fill="none" stroke="#0E1410" stroke-width="2"/>
+          <circle cx="100" cy="220" r="9" fill="#0E1410"/>
+          <circle cx="120" cy="220" r="9" fill="#0E1410"/>
+          <circle cx="140" cy="220" r="9" fill="none" stroke="#0E1410" stroke-width="2"/>
+          <!-- Keypad -->
+          <g font-family="sans-serif" font-size="14" font-weight="700" text-anchor="middle">
+            <circle cx="70" cy="270" r="20" fill="white" stroke="#D9D2C2"/>
+            <text x="70" y="276" fill="#0E1410">1</text>
+            <circle cx="100" cy="270" r="20" fill="white" stroke="#D9D2C2"/>
+            <text x="100" y="276" fill="#0E1410">2</text>
+            <circle cx="130" cy="270" r="20" fill="white" stroke="#D9D2C2"/>
+            <text x="130" y="276" fill="#0E1410">3</text>
+            <circle cx="70" cy="310" r="20" fill="white" stroke="#D9D2C2"/>
+            <text x="70" y="316" fill="#0E1410">4</text>
+            <circle cx="100" cy="310" r="20" fill="white" stroke="#D9D2C2"/>
+            <text x="100" y="316" fill="#0E1410">5</text>
+            <circle cx="130" cy="310" r="20" fill="white" stroke="#D9D2C2"/>
+            <text x="130" y="316" fill="#0E1410">6</text>
+          </g>
+          <!-- Biometric hint -->
+          <circle cx="100" cy="370" r="14" fill="none" stroke="#15803D" stroke-width="2"/>
+          <path d="M 92 367 C 92 363, 108 363, 108 367 M 92 372 C 92 376, 108 376, 108 372" stroke="#15803D" stroke-width="1.5" fill="none"/>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Securite</span>
+        <h3>Verrouillage PIN + biometrie</h3>
+        <p>Cadenas optionnel au cold start. Empreinte ou face avec fallback PIN 4-6 chiffres.</p>
+      </div>
+    </article>
+
+    <!-- 10. Mes backups -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="200" height="400" fill="#F5EFE2"/>
+          <!-- AppBar -->
+          <rect x="0" y="0" width="200" height="40" fill="#F5EFE2"/>
+          <text x="12" y="25" font-family="sans-serif" font-size="13" font-weight="800" fill="#0E1410">Mes backups</text>
+          <!-- Tile 1 -->
+          <rect x="12" y="50" width="176" height="78" rx="14" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="62" width="10" height="10" rx="2" fill="#0E1410"/>
+          <text x="38" y="72" font-family="sans-serif" font-size="9" font-weight="700" fill="#0E1410">14 mai 2026 a 16:30</text>
+          <text x="160" y="72" text-anchor="end" font-family="monospace" font-size="9" font-weight="800" fill="#7E8C82">5.2 MB</text>
+          <text x="22" y="86" font-family="monospace" font-size="7" fill="#7E8C82">opti_route_auto_2026-05-14.zip</text>
+          <rect x="22" y="96" width="50" height="24" rx="6" fill="white" stroke="#0E1410"/>
+          <text x="47" y="111" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#0E1410">Partager</text>
+          <rect x="76" y="96" width="60" height="24" rx="6" fill="white" stroke="#0E1410"/>
+          <text x="106" y="111" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#0E1410">Restaurer</text>
+          <rect x="140" y="96" width="40" height="24" rx="6" fill="white" stroke="#DC2626"/>
+          <text x="160" y="111" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#DC2626">Suppr.</text>
+          <!-- Tile 2 -->
+          <rect x="12" y="140" width="176" height="78" rx="14" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="152" width="10" height="10" rx="2" fill="#0E1410"/>
+          <text x="38" y="162" font-family="sans-serif" font-size="9" font-weight="700" fill="#0E1410">7 mai 2026 a 09:12</text>
+          <text x="160" y="162" text-anchor="end" font-family="monospace" font-size="9" font-weight="800" fill="#7E8C82">4.8 MB</text>
+          <text x="22" y="176" font-family="monospace" font-size="7" fill="#7E8C82">opti_route_auto_2026-05-07.zip</text>
+          <rect x="22" y="186" width="50" height="24" rx="6" fill="white" stroke="#0E1410"/>
+          <text x="47" y="201" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#0E1410">Partager</text>
+          <rect x="76" y="186" width="60" height="24" rx="6" fill="white" stroke="#0E1410"/>
+          <text x="106" y="201" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#0E1410">Restaurer</text>
+          <rect x="140" y="186" width="40" height="24" rx="6" fill="white" stroke="#DC2626"/>
+          <text x="160" y="201" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#DC2626">Suppr.</text>
+          <!-- Tile 3 -->
+          <rect x="12" y="230" width="176" height="78" rx="14" fill="white" stroke="#D9D2C2"/>
+          <rect x="22" y="242" width="10" height="10" rx="2" fill="#0E1410"/>
+          <text x="38" y="252" font-family="sans-serif" font-size="9" font-weight="700" fill="#0E1410">30 avr 2026 a 21:05</text>
+          <text x="160" y="252" text-anchor="end" font-family="monospace" font-size="9" font-weight="800" fill="#7E8C82">4.5 MB</text>
+          <text x="22" y="266" font-family="monospace" font-size="7" fill="#7E8C82">opti_route_auto_2026-04-30.zip</text>
+          <rect x="22" y="276" width="50" height="24" rx="6" fill="white" stroke="#0E1410"/>
+          <text x="47" y="291" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#0E1410">Partager</text>
+          <rect x="76" y="276" width="60" height="24" rx="6" fill="white" stroke="#0E1410"/>
+          <text x="106" y="291" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#0E1410">Restaurer</text>
+          <rect x="140" y="276" width="40" height="24" rx="6" fill="white" stroke="#DC2626"/>
+          <text x="160" y="291" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#DC2626">Suppr.</text>
+          <!-- FAB -->
+          <rect x="40" y="340" width="120" height="44" rx="22" fill="#B8F24A"/>
+          <circle cx="62" cy="362" r="6" fill="#0E1410"/>
+          <rect x="59" y="359" width="6" height="6" rx="1" fill="#B8F24A"/>
+          <text x="100" y="367" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="800" fill="#0E1410">Backup maintenant</text>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">Sauvegarde</span>
+        <h3>Mes backups</h3>
+        <p>.zip portables avec rotation des 5 derniers. Restaurer, partager via Drive, ou en creer un a la demande.</p>
+      </div>
+    </article>
+
+    <!-- 11. Stats OCR baseline -->
+    <article class="shot">
+      <div class="shot-frame">
+        <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="200" height="400" fill="#F5EFE2"/>
+          <text x="12" y="25" font-family="sans-serif" font-size="13" font-weight="800" fill="#0E1410">Stats OCR</text>
+          <text x="12" y="42" font-family="sans-serif" font-size="9" fill="#7E8C82">142 scans enregistres</text>
+          <!-- Confidence breakdown -->
+          <text x="12" y="68" font-family="monospace" font-size="7" font-weight="800" fill="#7E8C82" letter-spacing="0.6">CARTE VERTE (HIGH)</text>
+          <rect x="12" y="74" width="176" height="14" rx="7" fill="#D9D2C2"/>
+          <rect x="12" y="74" width="154" height="14" rx="7" fill="#15803D"/>
+          <text x="180" y="84" text-anchor="end" font-family="monospace" font-size="8" font-weight="800" fill="white">87%</text>
+
+          <text x="12" y="108" font-family="monospace" font-size="7" font-weight="800" fill="#7E8C82" letter-spacing="0.6">CARTE ORANGE (LOW)</text>
+          <rect x="12" y="114" width="176" height="14" rx="7" fill="#D9D2C2"/>
+          <rect x="12" y="114" width="20" height="14" rx="7" fill="#F2A14A"/>
+          <text x="40" y="124" font-family="monospace" font-size="8" font-weight="800" fill="#0E1410">11%</text>
+
+          <text x="12" y="148" font-family="monospace" font-size="7" font-weight="800" fill="#7E8C82" letter-spacing="0.6">ECHEC (NONE)</text>
+          <rect x="12" y="154" width="176" height="14" rx="7" fill="#D9D2C2"/>
+          <rect x="12" y="154" width="4" height="14" rx="2" fill="#DC2626"/>
+          <text x="24" y="164" font-family="monospace" font-size="8" font-weight="800" fill="#0E1410">2%</text>
+
+          <!-- Par parser -->
+          <text x="12" y="192" font-family="monospace" font-size="7" font-weight="800" fill="#7E8C82" letter-spacing="0.6">PAR PARSER</text>
+          <rect x="12" y="200" width="176" height="40" rx="10" fill="white" stroke="#D9D2C2"/>
+          <text x="22" y="216" font-family="monospace" font-size="9" font-weight="700" fill="#0E1410">MESEXP</text>
+          <text x="180" y="216" text-anchor="end" font-family="monospace" font-size="9" font-weight="800" fill="#15803D">68 / 91%</text>
+          <text x="22" y="232" font-family="monospace" font-size="9" font-weight="700" fill="#0E1410">COLISSIMO</text>
+          <text x="180" y="232" text-anchor="end" font-family="monospace" font-size="9" font-weight="800" fill="#15803D">52 / 85%</text>
+
+          <rect x="12" y="248" width="176" height="20" rx="10" fill="white" stroke="#D9D2C2"/>
+          <text x="22" y="262" font-family="monospace" font-size="9" font-weight="700" fill="#0E1410">CHRONOPOST</text>
+          <text x="180" y="262" text-anchor="end" font-family="monospace" font-size="9" font-weight="800" fill="#15803D">22 / 82%</text>
+
+          <!-- BAN validation -->
+          <text x="12" y="290" font-family="monospace" font-size="7" font-weight="800" fill="#7E8C82" letter-spacing="0.6">VALIDATION BAN</text>
+          <rect x="12" y="298" width="176" height="14" rx="7" fill="#D9D2C2"/>
+          <rect x="12" y="298" width="124" height="14" rx="7" fill="#0E1410"/>
+          <text x="180" y="308" text-anchor="end" font-family="monospace" font-size="8" font-weight="800" fill="white">70%</text>
+
+          <!-- Export CSV -->
+          <rect x="12" y="340" width="176" height="44" rx="10" fill="#0E1410"/>
+          <text x="100" y="366" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="800" fill="#B8F24A">EXPORTER EN CSV</text>
+        </svg>
+      </div>
+      <div class="shot-cap">
+        <span class="tag">OCR Stats</span>
+        <h3>Stats OCR baseline</h3>
+        <p>Mesure du taux de carte verte sur les scans reels. Export CSV pour analyser les categories d'echec et prioriser la Phase B.</p>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="gallery-note">
+    Les apercus ci-dessus sont des reproductions stylisees. Telecharge l'APK
+    pour voir l'app en vrai sur ton phone, ou consulte la <a href="features.html">page features</a>
+    pour le detail de chaque ecran.
+  </div>
+
+  <div class="cta">
+    <h2>Pret a tester en vrai ?</h2>
+    <p>Le sideload Android prend 2 minutes, et l'app demarre sur un onboarding pas a pas.</p>
+    <a href="install-apk.html" class="btn btn-primary">Installer l'APK</a>
+    <a href="features.html" class="btn btn-secondary" style="margin-left: var(--space-10);">Voir les features</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route</a> &middot; Phase 1 gratuit &middot;
+      <a href="mentions-legales.html">Mentions legales</a> &middot;
+      <span class="mono">&copy; CALOTE Noah, 2026</span>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
