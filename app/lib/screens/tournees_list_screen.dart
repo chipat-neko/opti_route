@@ -445,17 +445,42 @@ class _TourneeRow extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x8),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.lime,
+                  // Tournee deja marquee template -> CTA visible
+                  // (lime, plus engageant). Sinon -> simple copie
+                  // ponctuelle (paper, plus neutre).
+                  backgroundColor:
+                      tournee.isTemplate ? AppColors.lime : p.paper,
                   foregroundColor: p.ink,
                   minimumSize: const Size(0, 52),
                   alignment: Alignment.centerLeft,
                 ),
                 onPressed: () async {
+                  // Date picker : demande au user pour quelle date il
+                  // veut creer la nouvelle tournee. Par defaut, le
+                  // lendemain de la tournee source (cas le plus
+                  // frequent : "je refais la meme demain").
+                  final defaultDate = DateTime.now().isAfter(tournee.date)
+                      ? DateTime.now().add(const Duration(days: 1))
+                      : tournee.date.add(const Duration(days: 7));
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: defaultDate,
+                    firstDate: DateTime.now()
+                        .subtract(const Duration(days: 30)),
+                    lastDate: DateTime.now()
+                        .add(const Duration(days: 365)),
+                    locale: const Locale('fr', 'FR'),
+                    helpText: tournee.isTemplate
+                        ? 'Date de la nouvelle tournee'
+                        : 'Date de la copie',
+                  );
+                  if (pickedDate == null) return;
+                  if (!context.mounted) return;
                   Navigator.of(sheetContext).pop();
                   try {
                     final newId = await ref
                         .read(tourneesRepositoryProvider)
-                        .duplicate(tournee.id);
+                        .duplicate(tournee.id, targetDate: pickedDate);
                     if (!context.mounted) return;
                     final newTournee = await ref
                         .read(tourneesRepositoryProvider)
@@ -483,10 +508,14 @@ class _TourneeRow extends ConsumerWidget {
                     );
                   }
                 },
-                icon: const Icon(Icons.content_copy_outlined),
-                label: const Text(
-                  'Dupliquer comme template',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                icon: Icon(tournee.isTemplate
+                    ? Icons.add_box_outlined
+                    : Icons.content_copy_outlined),
+                label: Text(
+                  tournee.isTemplate
+                      ? 'Creer une tournee depuis ce template'
+                      : 'Dupliquer cette tournee',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(height: AppSpacing.x8),
