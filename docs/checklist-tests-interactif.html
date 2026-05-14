@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist tests opti_route — interactive</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F5EFE2;
+    color: #0E1410;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+  }
+  .topbar {
+    position: sticky;
+    top: 0;
+    background: #0E1410;
+    color: #B8F24A;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+  .topbar h1 {
+    font-size: 15px;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 200px;
+  }
+  .stats {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .stats .ok { color: #B8F24A; }
+  .stats .ko { color: #F87171; }
+  .stats .todo { color: #D9D2C2; }
+  .btn {
+    background: #B8F24A;
+    color: #0E1410;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 800;
+    font-size: 11px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: transform 80ms ease;
+  }
+  .btn-outline {
+    background: transparent;
+    color: #F5EFE2;
+    border: 1.5px solid #F5EFE2;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 24px 0 12px;
+    letter-spacing: -0.5px;
+  }
+  h2.section {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 36px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #0E1410;
+    letter-spacing: -0.3px;
+  }
+  h3.subsection {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 24px 0 10px;
+    color: #2a3030;
+  }
+  h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 16px 0 6px;
+    color: #444;
+  }
+  .meta { color: #555; font-size: 13px; margin: 8px 0; }
+  hr {
+    border: none;
+    border-top: 1px solid #D9D2C2;
+    margin: 28px 0;
+  }
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 10px 14px;
+    margin: 6px 0;
+    border-radius: 10px;
+    background: white;
+    border: 1px solid #E8E0CC;
+    transition: background 120ms ease;
+  }
+  .item:hover { background: #FAF6EC; }
+  .sub-item {
+    margin: 4px 0 4px 56px;
+    font-size: 13px;
+    color: #444;
+    list-style: disc;
+  }
+  .status {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 2px solid #0E1410;
+    background: white;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 100ms ease;
+    color: white;
+  }
+  .status[data-state="none"] { background: white; }
+  .status[data-state="ok"] {
+    background: #16A34A;
+    border-color: #15803D;
+  }
+  .status[data-state="ok"]::before { content: "V"; }
+  .status[data-state="ko"] {
+    background: #DC2626;
+    border-color: #991B1B;
+  }
+  .status[data-state="ko"]::before { content: "X"; }
+  .item.done .text {
+    color: #16A34A;
+    text-decoration: line-through;
+    text-decoration-color: rgba(22, 163, 74, 0.4);
+  }
+  .item.failed .text {
+    color: #DC2626;
+    font-weight: 600;
+  }
+  .text {
+    font-size: 14px;
+    line-height: 1.5;
+    padding-top: 5px;
+    flex: 1;
+  }
+  code {
+    background: #F5EFE2;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+  }
+  pre {
+    background: #0E1410;
+    color: #B8F24A;
+    padding: 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+  }
+  /* Print : cacher topbar + boutons, fond blanc */
+  @media print {
+    .topbar { position: static; box-shadow: none; }
+    .btn { display: none; }
+    .stats { color: #0E1410; }
+    .stats .ok { color: #15803D; }
+    .stats .ko { color: #991B1B; }
+    .item {
+      break-inside: avoid;
+      background: white !important;
+      border-color: #999;
+    }
+    body { background: white; }
+    h2.section { break-before: auto; }
+  }
+  /* Modal export */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-bg.visible { display: flex; }
+  .modal {
+    background: white;
+    max-width: 760px;
+    width: 100%;
+    max-height: 80vh;
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .modal h3 { margin: 0; font-size: 18px; }
+  .modal p { margin: 0; font-size: 13px; color: #666; }
+  .modal textarea {
+    flex: 1;
+    min-height: 320px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 12px;
+    border: 1px solid #D9D2C2;
+    border-radius: 6px;
+    background: #FAF6EC;
+    resize: vertical;
+    white-space: pre;
+  }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal .btn { background: #0E1410; color: #B8F24A; }
+  .modal .btn-outline {
+    background: white;
+    color: #0E1410;
+    border: 1.5px solid #0E1410;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Checklist opti_route v2.6 - interactive</h1>
+  <div class="stats">
+    <span class="todo" id="st-todo">116</span> a tester ·
+    <span class="ok" id="st-ok">0</span> V ·
+    <span class="ko" id="st-ko">0</span> X
+  </div>
+  <button class="btn" onclick="exportKO()" title="Copier le resume des items en erreur">Exporter X</button>
+  <button class="btn btn-outline" onclick="window.print()" title="Imprimer en PDF via Ctrl+P">PDF</button>
+  <button class="btn btn-outline" onclick="resetAll()" title="Effacer toutes les marques">Reset</button>
+</div>
+
+<main>
+<h1>Checklist de tests — opti_route v2.5.0+2023 — 2026-05-14</h1>
+<p class="meta">Liste exhaustive de tout ce qu&#x27;il faut tester avant de merger la PR #94 et livrer la version sur le Xiaomi de Noah.</p>
+<hr/>
+<h2 class="section">🧪 1. App Android (APK release sur Xiaomi)</h2>
+<h3 class="subsection">1.1 Démarrage et sécurité</h3>
+<div class="item" data-id="1"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Cold start propre</strong> : tape sur l'icone → splash cream → HomeScreen</span></div>
+<p class="meta">apparait sans loop infini ni crash (regression `libsqlite3.so`)</p>
+<div class="item" data-id="2"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>LockScreen biometrique</strong> : Paramètres → Sécurité → activer PIN</span></div>
+<p class="meta">4 chiffres → activer biométrie → swipe-out de l&#x27;app → rouvrir → LockScreen apparait → empreinte/face deverrouille → HomeScreen</p>
+<div class="item" data-id="3"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>LockScreen fallback PIN</strong> : si bio échoue 3×, bouton "Utiliser</span></div>
+<p class="meta">le PIN&quot; → saisie 4-6 chiffres → deverrouille</p>
+<div class="item" data-id="4"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Auto-lock après inactivité</strong> : si configuré, vérifier que</span></div>
+<p class="meta">l&#x27;app reverrouille après 5 min (ou la durée configurée)</p>
+<h3 class="subsection">1.2 Notifications</h3>
+<div class="item" data-id="5"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Test notif 2 min</strong> : Paramètres → Notifications → "Test : notif</span></div>
+<p class="meta">dans 2 min&quot; → verrouiller écran → attendre 2 min → notif apparait avec vibration + son</p>
+<div class="item" data-id="6"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Rappel veille de tournée</strong> : créer une tournée pour demain →</span></div>
+<p class="meta">Paramètres &gt; Notifications activer &quot;Rappel veille&quot; → vérifier que la notif arrive à l&#x27;heure paramétrée la veille</p>
+<div class="item" data-id="7"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Notif fin de tournée</strong> : marquer une tournée comme terminée →</span></div>
+<p class="meta">notif récap (X livrés, Y échecs, Z minutes)</p>
+<div class="item" data-id="8"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Notif arrêts oubliés</strong> : pause une tournée avec stops à_livrer →</span></div>
+<p class="meta">notif &quot;N arrêts oubliés&quot;</p>
+<div class="item" data-id="9"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Notif backup auto réussi</strong> : configurer auto-backup hebdo →</span></div>
+<p class="meta">forcer un backup via FAB &quot;Backup maintenant&quot; → notif &quot;Sauvegarde auto reussie · X MB&quot; avec importance low (pas de vibration)</p>
+<div class="item" data-id="10"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Mode &quot;ne pas déranger&quot;</strong> : configurer quiet hours 22h-06h →</span></div>
+<p class="meta">forcer backup à 23h → la notif ne doit PAS apparaître pendant le créneau</p>
+<h3 class="subsection">1.3 Tournées et arrêts</h3>
+<div class="item" data-id="11"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Création tournée</strong> : "+" depuis liste → nom + date + point de</span></div>
+<p class="meta">depart → sauvegarder</p>
+<div class="item" data-id="12"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Ajout arrêt avec autocomplete</strong> : tape une rue → choisir une</span></div>
+<p class="meta">suggestion BAN → vérifier coords lat/lng pré-remplies (invisibles côté UI selon `feedback_geocoding_ui.md`)</p>
+<div class="item" data-id="13"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Ajout arrêt mode hors-ligne</strong> : couper le wifi/4G → saisir une</span></div>
+<p class="meta">adresse → bouton &quot;Continuer hors-ligne&quot; → bandeau jaune &quot;GPS manquant&quot;</p>
+<div class="item" data-id="14"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Re-géocodage auto au retour connectivité</strong> : remettre le wifi →</span></div>
+<p class="meta">le bandeau jaune disparait, les coords sont remplies automatiquement</p>
+<div class="item" data-id="15"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Scan bordereau MESEXP</strong> : photographier un bordereau type</span></div>
+<p class="meta">MESEXP → carte verte &quot;Detection auto&quot; → &quot;Utiliser ces infos&quot; → arrêt pré-rempli</p>
+<div class="item" data-id="16"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Scan bordereau Colissimo</strong> : photographier une étiquette</span></div>
+<p class="meta">Colissimo (tracking 6A/6L) → détection automatique</p>
+<div class="item" data-id="17"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Scan bordereau Chronopost</strong> : photographier une étiquette</span></div>
+<p class="meta">Chronopost (tracking XR/XE...FR) → détection automatique</p>
+<div class="item" data-id="18"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>OCR rotations auto</strong> : photographier un bordereau **à</span></div>
+<p class="meta">l&#x27;envers** → l&#x27;app détecte le score qualité bas → retente avec 90/180/270 → carte verte</p>
+<div class="item" data-id="19"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Validation BAN post-OCR</strong> : scanner un bordereau avec une</span></div>
+<p class="meta">ville mal orthographiée → BAN corrige → chip &quot;Adresse validée BAN&quot;</p>
+<h3 class="subsection">1.4 Optimisation tournée</h3>
+<div class="item" data-id="20"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Optimisation simple</strong> : tournée avec 3+ arrêts → bouton</span></div>
+<p class="meta">&quot;Optimiser&quot; → ordre des stops change → distance/durée affichées</p>
+<div class="item" data-id="21"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Optimisation respecte priorités</strong> : marquer un stop "En 1er" +</span></div>
+<p class="meta">un autre &quot;En dernier&quot; → optimiser → ces 2 stops sont en bonne position</p>
+<div class="item" data-id="22"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Bouton optimiser grisé sans clé ORS</strong> : effacer la clé ORS dans</span></div>
+<p class="meta">Paramètres → bouton devient grisé avec tooltip explicatif</p>
+<div class="item" data-id="23"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Quota ORS</strong> : si on dépasse 500 optimisations/jour → message</span></div>
+<p class="meta">d&#x27;erreur explicite</p>
+<h3 class="subsection">1.5 Mode tournée en cours</h3>
+<div class="item" data-id="24"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Démarrer tournée</strong> : "Démarrer" → statut = en_cours → GPS live</span></div>
+<p class="meta">active → ProchainArretCard affiche le 1er stop</p>
+<div class="item" data-id="25"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Naviguer vers un stop</strong> : tap "Maps" / "Waze" → deep link vers</span></div>
+<p class="meta">l&#x27;app de navigation système</p>
+<div class="item" data-id="26"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Marquer livré</strong> : tap sur un stop → bottom sheet → "Livre" →</span></div>
+<p class="meta">sheet ferme → stop barré dans la liste</p>
+<div class="item" data-id="27"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Marquer échec</strong> : tap → "Echec" → choisir raison</span></div>
+<p class="meta">(absent/refuse/adresse_fausse/autre) → stop barré orange</p>
+<div class="item" data-id="28"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Photo preuve</strong> : action "Prendre photo preuve" → camera →</span></div>
+<p class="meta">photo sauve dans `app_documents/preuves/`</p>
+<div class="item" data-id="29"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Déplacer stop entre tournées</strong> : long press un stop → "Deplacer</span></div>
+<p class="meta">vers...&quot; → choisir tournée cible → stop déplacé + invalidations des 2 tournées</p>
+<div class="item" data-id="30"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Affecter stop à coéquipier</strong> : si mode chef activé → bottom</span></div>
+<p class="meta">sheet → &quot;Affecter à...&quot; → choisir coéquipier → badge couleur</p>
+<div class="item" data-id="31"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Pause tournée</strong> : menu Plus → "Pause courte" → chrono arrêté</span></div>
+<div class="item" data-id="32"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Reprise tournée</strong> : menu Plus → "Reprendre" → chrono reprend</span></div>
+<div class="item" data-id="33"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Terminer tournée</strong> : "Arrêter" → notif récap → statut = terminee</span></div>
+<div class="item" data-id="34"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Annuler dernier statut</strong> : menu Plus → "Annuler dernier statut" →</span></div>
+<p class="meta">le dernier livré/échec repasse en à_livrer</p>
+<div class="item" data-id="35"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Tout marquer livré</strong> : menu Plus → "Tout marquer livré" →</span></div>
+<p class="meta">confirmation → tous les a_livrer passent en livré</p>
+<h3 class="subsection">1.6 Carnet d&#x27;adresses</h3>
+<div class="item" data-id="36"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Auto-remplissage</strong> : valider un arrêt → vérifier qu'il apparait</span></div>
+<p class="meta">dans le carnet avec useCount = 1</p>
+<div class="item" data-id="37"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Recherche</strong> : barre de recherche → tape un nom → résultats</span></div>
+<p class="meta">filtrés</p>
+<div class="item" data-id="38"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Filtre par couleur</strong> : tap un chip couleur (lime/emerald/amber/</span></div>
+<p class="meta">red) → seules les entrées avec cette couleur affichées</p>
+<div class="item" data-id="39"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Filtre par tag</strong> : tap un chip tag libre → filtrage</span></div>
+<div class="item" data-id="40"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Toggle favori</strong> : tap sur la pastille (étoile) → bascule favori</span></div>
+<div class="item" data-id="41"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Suppression swipe</strong> : swipe à gauche sur une entrée → confirmation</span></div>
+<p class="meta">→ suppression</p>
+<div class="item" data-id="42"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Import CSV</strong> : icone import → choisir un .csv → fusion intelligent</span></div>
+<div class="item" data-id="43"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Export CSV</strong> : icone export → "CSV" → share natif (Drive/mail)</span></div>
+<div class="item" data-id="44"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Export vCard</strong> : icone export → "vCard" → fichier .vcf importable</span></div>
+<p class="meta">dans Contacts Android</p>
+<h3 class="subsection">1.7 Sauvegarde / Restauration</h3>
+<div class="item" data-id="45"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Créer backup manuel</strong> : Paramètres → Données → "Creer une</span></div>
+<p class="meta">sauvegarde&quot; → share natif avec le .zip</p>
+<div class="item" data-id="46"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Restaurer backup</strong> : "Restaurer depuis un .zip" → confirmation</span></div>
+<p class="meta">forte → choisir fichier → dialog &quot;Redémarre l&#x27;app&quot; → killer l&#x27;app + relancer → données restaurées (vérifier nombre de tournées)</p>
+<div class="item" data-id="47"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Auto-backup hebdo</strong> : configurer "hebdo" → fermer/rouvrir l'app</span></div>
+<p class="meta">→ vérifier qu&#x27;un .zip apparait dans le dossier `/Android/data/com.optiroute.opti_route/files/auto_backups/`</p>
+<div class="item" data-id="48"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Page &quot;Mes backups&quot;</strong> : Paramètres → "Mes backups" → liste des</span></div>
+<p class="meta">.zip avec date + taille</p>
+<div class="item" data-id="49"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>FAB &quot;Backup maintenant&quot;</strong> : dans "Mes backups" → FAB → loader →</span></div>
+<p class="meta">nouvel item apparait en haut + snackbar &quot;Backup cree&quot; + notif</p>
+<div class="item" data-id="50"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Partager backup depuis liste</strong> : tap "Partager" sur un item →</span></div>
+<p class="meta">share natif</p>
+<div class="item" data-id="51"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Restaurer depuis liste</strong> : tap "Restaurer" → confirmation forte</span></div>
+<p class="meta">→ dialog &quot;Redémarre&quot;</p>
+<div class="item" data-id="52"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Supprimer backup</strong> : tap "Supprimer" → confirmation → entrée</span></div>
+<p class="meta">disparait</p>
+<h3 class="subsection">1.8 Stats OCR (nouveau v2.5)</h3>
+<div class="item" data-id="53"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Stats vides initialement</strong> : si jamais scanné, "Aucun scan</span></div>
+<p class="meta">enregistré&quot; + pas de menu trailing</p>
+<div class="item" data-id="54"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Stats s&#x27;accumulent</strong> : scanner 3 bordereaux → revenir</span></div>
+<p class="meta">Paramètres → &quot;Stats OCR&quot; affiche &quot;3 scans enregistrés&quot;</p>
+<div class="item" data-id="55"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Exporter CSV</strong> : menu 3 points → "Exporter en CSV" → share</span></div>
+<p class="meta">natif avec le fichier `ocr_stats.csv` ouvrable dans Excel/Sheets</p>
+<div class="item" data-id="56"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Format CSV</strong> : ouvrir le CSV → header `timestamp,parser,</span></div>
+<p class="meta">confidence,rotation_deg,attempts,ban_validated,validation_score, duration_ms` + 3 lignes de données</p>
+<div class="item" data-id="57"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Reset stats</strong> : menu 3 points → "Reset" → confirmation forte →</span></div>
+<p class="meta">compteur revient à 0</p>
+<h3 class="subsection">1.9 Statistiques</h3>
+<div class="item" data-id="58"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Tournées du mois</strong> : Stats → vérifier graphique mensuel</span></div>
+<div class="item" data-id="59"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Top 5 clients</strong> : carte "Top clients" → 5 noms ordonnés par</span></div>
+<p class="meta">useCount</p>
+<div class="item" data-id="60"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Récap facturation</strong> (mode chef) : tarif km + tarif colis +</span></div>
+<p class="meta">cout carburant → marge brute calculée</p>
+<div class="item" data-id="61"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Export facturation PDF</strong> : bouton "Exporter" → PDF généré</span></div>
+<h3 class="subsection">1.10 Paramètres</h3>
+<div class="item" data-id="62"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Thème clair/sombre</strong> : toggle → change instantanément</span></div>
+<div class="item" data-id="63"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Palette de couleur</strong> : 4 presets (lime / ocean / terracotta /</span></div>
+<p class="meta">charbon) → change instantanément</p>
+<div class="item" data-id="64"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Densité UI Large</strong> : toggle → texte scaled x1.15</span></div>
+<div class="item" data-id="65"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Contraste élevé</strong> : toggle → text plus contrasté</span></div>
+<div class="item" data-id="66"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Mode chef équipe</strong> : toggle → débloque les menus Coéquipiers +</span></div>
+<p class="meta">Facturation</p>
+<div class="item" data-id="67"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Cache géocodage purge</strong> : Cache → "Vider le cache de geocodage"</span></div>
+<p class="meta">→ reset</p>
+<div class="item" data-id="68"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Cache tuiles purge</strong> : "Vider le cache des cartes" → reset</span></div>
+<div class="item" data-id="69"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Nettoyer tournées &gt; 1 an</strong> : si applicable → confirmation +</span></div>
+<p class="meta">suppression</p>
+<h3 class="subsection">1.11 Refactors massifs session (regression)</h3>
+<p class="meta">Smoke tests rapides sur les 7 écrans refactorés :</p>
+<div class="item" data-id="70"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text">[<code>tournee_du_jour_screen</code>](app/lib/screens/tournee_du_jour_screen.dart)</span></div>
+<p class="meta">: ouvrir une tournée, vérifier que l&#x27;écran rend correctement (Body + PlusMenu + FABs + tous les sous-widgets)</p>
+<div class="item" data-id="71"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text">[<code>onboarding_screen</code>](app/lib/screens/onboarding_screen.dart) :</span></div>
+<p class="meta">effacer les données app → relancer → walkthrough 5 pages</p>
+<div class="item" data-id="72"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text">[<code>tournees_list_screen</code>](app/lib/screens/tournees_list_screen.dart)</span></div>
+<p class="meta">: liste avec templates / en cours / terminées, swipe pour supprimer, long press pour menu</p>
+<div class="item" data-id="73"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text">[<code>scan_bordereau_screen</code>](app/lib/screens/scan_bordereau_screen.dart)</span></div>
+<p class="meta">: scanner un bordereau, vérifier carte verte/orange + sélection manuelle des lignes</p>
+<div class="item" data-id="74"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text">[<code>parametres_screen</code>](app/lib/screens/parametres_screen.dart) :</span></div>
+<p class="meta">scroll complet, toutes les sections rendent</p>
+<div class="item" data-id="75"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text">[<code>ajout_arret_screen</code>](app/lib/screens/ajout_arret_screen.dart) :</span></div>
+<p class="meta">champs adresse, priorité, fenêtre horaire, colis, durée</p>
+<div class="item" data-id="76"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text">[<code>carnet_adresses_screen</code>](app/lib/screens/carnet_adresses_screen.dart)</span></div>
+<p class="meta">: filtres, recherche, tile, swipe delete</p>
+<hr/>
+<h2 class="section">🌐 2. Site vitrine `site_doc/`</h2>
+<p class="meta">Test sur navigateur de bureau (Chrome/Firefox/Edge) ET mobile (Chrome Android).</p>
+<h3 class="subsection">2.1 Pages principales</h3>
+<div class="item" data-id="77"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>index.html</code></strong> : hero + features cards → tous les liens internes</span></div>
+<p class="meta">cliquables, hover states fonctionnent</p>
+<div class="item" data-id="78"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>features.html</code></strong> : 9 sections (geocodage, optim, scan, carnet,</span></div>
+<p class="meta">tournees, equipe, stats, parametres, **sécurité avec PIN+biométrie + backup zip + auto-backup**) → contenu à jour avec v2.5</p>
+<div class="item" data-id="79"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>changelog.html</code></strong> : v2.3.0+2016 en latest (vert) + historique</span></div>
+<p class="meta">v1.x → lisible, dates correctes</p>
+<div class="item" data-id="80"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>roadmap.html</code></strong> : sections phase 1/2/3 → cohérent avec où on</span></div>
+<p class="meta">en est</p>
+<div class="item" data-id="81"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>dashboard.html</code></strong> : sera testé en 2.4</span></div>
+<div class="item" data-id="82"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>entreprise.html</code></strong> : calculateur ROI → saisir des valeurs,</span></div>
+<p class="meta">vérifier calculs</p>
+<div class="item" data-id="83"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>faq.html</code></strong> : 12+ Q/R, expand/collapse marche</span></div>
+<div class="item" data-id="84"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>gallery.html</code></strong> : <strong>11 shots</strong> (les 3 nouveaux : LockScreen,</span></div>
+<p class="meta">Mes backups, Stats OCR rendent correctement)</p>
+<div class="item" data-id="85"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>guide-csv.html</code></strong> : exemple CSV format, lien vers dashboard</span></div>
+<div class="item" data-id="86"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>install-apk.html</code></strong> : <strong>tailles APK corrigées</strong> (39/12/57 MB)</span></div>
+<div class="item" data-id="87"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>mentions-legales.html</code></strong> : RGPD, conditions</span></div>
+<div class="item" data-id="88"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>404.html</code></strong> : nav vers une URL bidon → page d'erreur stylée</span></div>
+<h3 class="subsection">2.2 Header / Footer (toutes pages)</h3>
+<div class="item" data-id="89"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Navigation desktop</strong> : tous les liens du header marchent</span></div>
+<div class="item" data-id="90"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Navigation mobile</strong> : hamburger menu → menu déroulant</span></div>
+<div class="item" data-id="91"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Toggle dark mode</strong> : bouton soleil/lune → bascule + persistance</span></div>
+<p class="meta">via localStorage</p>
+<div class="item" data-id="92"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Footer</strong> : lien GitHub fonctionne, © CALOTE Noah 2026</span></div>
+<h3 class="subsection">2.3 Accessibilité</h3>
+<div class="item" data-id="93"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Tab navigation</strong> : Tab depuis le début → focus visible sur tous</span></div>
+<p class="meta">les éléments interactifs (cf `:focus-visible` global ajouté il y a quelques sessions)</p>
+<div class="item" data-id="94"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Lecteur d&#x27;écran</strong> : NVDA/TalkBack annonce correctement les</span></div>
+<p class="meta">sections + headings</p>
+<div class="item" data-id="95"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>aria-live</code></strong> : sur dashboard, après upload CSV, l'annonce</span></div>
+<p class="meta">audio remonte</p>
+<div class="item" data-id="96"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Contraste WCAG AA</strong> : pas de texte gris < 4.5:1 sur fond cream</span></div>
+<h3 class="subsection">2.4 Dashboard CSV</h3>
+<div class="item" data-id="97"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Upload CSV</strong> : drag-and-drop ou click → fichier accepté</span></div>
+<div class="item" data-id="98"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Parsing</strong> : nombre de lignes affiché, colonnes détectées</span></div>
+<div class="item" data-id="99"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Charts Chart.js</strong> : barchart + pie chart rendent</span></div>
+<div class="item" data-id="100"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Persistance localStorage</strong> : reload de la page → CSV reste</span></div>
+<p class="meta">chargé, bouton &quot;Recharger le dernier CSV&quot;</p>
+<div class="item" data-id="101"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Format CSV invalide</strong> : upload un fichier non-CSV → erreur</span></div>
+<p class="meta">explicite, pas de crash</p>
+<h3 class="subsection">2.5 Site Flutter Web (`opti_route_web/`)</h3>
+<div class="item" data-id="102"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Compile et démarre</strong> : <code>flutter build web</code> produit</span></div>
+<p class="meta">`app/build/web/` sans erreur (côté CI Linux au merge)</p>
+<div class="item" data-id="103"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Hors-ligne au cold start</strong> : grâce aux fonts bundled,</span></div>
+<p class="meta">l&#x27;écran initial rend sans réseau (les tuiles carte resteront vides sans internet, normal)</p>
+<div class="item" data-id="104"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Toutes les routes</strong> : naviguer dans les écrans principaux,</span></div>
+<p class="meta">pas de crash JS</p>
+<hr/>
+<h2 class="section">🚀 3. CI / Déploiement</h2>
+<h3 class="subsection">3.1 GitHub Actions</h3>
+<div class="item" data-id="105"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Workflow <code>deploy-web.yml</code> se déclenche au merge sur main</strong> :</span></div>
+<p class="meta">vérifier l&#x27;onglet Actions</p>
+<div class="item" data-id="106"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Build Flutter Web</strong> : étape "Build Flutter Web" passe verte</span></div>
+<div class="item" data-id="107"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Tests Flutter</strong> : si on ajoute un step <code>flutter test</code> au</span></div>
+<p class="meta">workflow, **578 verts** attendus (validation des 8 widget_smoke_test reactives au commit `35525be`)</p>
+<div class="item" data-id="108"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Deploy Pages</strong> : étape "Deploy to GitHub Pages" passe verte</span></div>
+<p class="meta">(nécessite Settings → Pages → Source &quot;GitHub Actions&quot; activé préalablement)</p>
+<div class="item" data-id="109"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Site live</strong> : https://chipat-neko.github.io/opti_route/ →</span></div>
+<p class="meta">charge et affiche l&#x27;app Flutter Web</p>
+<h3 class="subsection">3.2 PR #94</h3>
+<div class="item" data-id="110"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Diff lisible</strong> : tous les fichiers de la branche sont visibles</span></div>
+<div class="item" data-id="111"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Pas de conflit</strong> avec main (sera vérifié au merge button)</span></div>
+<div class="item" data-id="112"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong>Description PR</strong> correcte avec les 3 chantiers résumés</span></div>
+<hr/>
+<h2 class="section">📊 4. Tests automatiques côté CLI</h2>
+<div class="item" data-id="113"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>flutter analyze</code></strong> : 0 issue (déjà OK au build, à reverifier</span></div>
+<p class="meta">hors VSCode si possible)</p>
+<div class="item" data-id="114"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>flutter test</code></strong> : <strong>578 verts</strong> attendu (570 actuels + 8</span></div>
+<p class="meta">widget_smoke_test reactives). Bloqué côté Windows par le lock sqlite3.dll de l&#x27;Analyzer VSCode ; faisable hors-VSCode ou via CI Linux</p>
+<div class="item" data-id="115"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>dart fix --dry-run</code></strong> : "Nothing to fix"</span></div>
+<div class="item" data-id="116"><button class="status" data-state="none" onclick="cycle(this)" type="button" aria-label="Statut du test"></button><span class="text"><strong><code>flutter pub outdated</code></strong> : aucun bump direct safe disponible</span></div>
+<p class="meta">(latlong2 0.10 et share_plus 13 restent bloqués upstream)</p>
+<hr/>
+<h2 class="section">✅ 5. Validation finale</h2>
+<p class="meta">Si tous les blocs ci-dessus passent, l&#x27;état est :</p>
+<p class="meta">- ✅ App fonctionnelle en release sur Xiaomi - ✅ Site vitrine à jour - ✅ CI Linux valide les tests - ✅ Site Flutter Web déployé sur GitHub Pages - ✅ Branche `feat/vague-A-mode-terrain` peut être mergée et fermée</p>
+<h2 class="section">🐛 Si un test échoue</h2>
+<p class="meta">1. **Logcat** : `adb logcat -s flutter:V AndroidRuntime:E` pendant le reproductible 2. **Capture l&#x27;erreur** : copier la stack trace dans un commit `fix:` ciblé sur la branche 3. **Re-test** : refaire le test échoué après le fix 4. **Si bloqué** : reverter le commit suspect + ouvrir une issue dans le repo</p>
+</main>
+
+<div class="modal-bg" id="modal" onclick="if(event.target.id==='modal')closeModal()">
+  <div class="modal">
+    <h3>Resume des items en erreur (X)</h3>
+    <p>Copie le contenu ci-dessous et renvoie-le moi (Claude) pour analyse + correction.</p>
+    <textarea id="export-text" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Fermer</button>
+      <button class="btn" onclick="copyToClip()">Copier dans le presse-papiers</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'opti_route_checklist_v2';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch(e) { return {}; }
+}
+
+function saveState() {
+  const state = {};
+  document.querySelectorAll('.item').forEach(item => {
+    const id = item.dataset.id;
+    const s = item.querySelector('.status').dataset.state;
+    if (s !== 'none') state[id] = s;
+  });
+  localStorage.setItem(KEY, JSON.stringify(state));
+  updateStats();
+}
+
+function updateStats() {
+  const items = document.querySelectorAll('.item');
+  let ok = 0, ko = 0;
+  items.forEach(i => {
+    const s = i.querySelector('.status').dataset.state;
+    if (s === 'ok') { ok++; i.classList.add('done'); i.classList.remove('failed'); }
+    else if (s === 'ko') { ko++; i.classList.add('failed'); i.classList.remove('done'); }
+    else { i.classList.remove('done', 'failed'); }
+  });
+  document.getElementById('st-ok').textContent = ok;
+  document.getElementById('st-ko').textContent = ko;
+  document.getElementById('st-todo').textContent = items.length - ok - ko;
+}
+
+function cycle(btn) {
+  const next = { 'none': 'ok', 'ok': 'ko', 'ko': 'none' };
+  btn.dataset.state = next[btn.dataset.state];
+  saveState();
+}
+
+function resetAll() {
+  if (!confirm('Reset toutes les marques V/X ?')) return;
+  localStorage.removeItem(KEY);
+  document.querySelectorAll('.status').forEach(b => b.dataset.state = 'none');
+  updateStats();
+}
+
+function exportKO() {
+  const allNodes = document.querySelectorAll('main h1, main h2.section, main h3.subsection, main .item');
+  const lines = [];
+  let currentSection = '';
+  let currentSub = '';
+  let sectionAdded = false;
+  let subAdded = false;
+
+  allNodes.forEach(node => {
+    if (node.tagName === 'H1') {
+      lines.push('# ' + node.textContent.trim());
+      lines.push('');
+      return;
+    }
+    if (node.tagName === 'H2') {
+      currentSection = node.textContent.trim();
+      sectionAdded = false;
+      subAdded = false;
+      return;
+    }
+    if (node.tagName === 'H3') {
+      currentSub = node.textContent.trim();
+      subAdded = false;
+      return;
+    }
+    const btn = node.querySelector('.status');
+    if (btn && btn.dataset.state === 'ko') {
+      if (!sectionAdded && currentSection) {
+        lines.push('');
+        lines.push('## ' + currentSection);
+        sectionAdded = true;
+      }
+      if (!subAdded && currentSub) {
+        lines.push('');
+        lines.push('### ' + currentSub);
+        subAdded = true;
+      }
+      lines.push('- [X] ' + node.querySelector('.text').textContent.trim());
+    }
+  });
+
+  const ok = document.getElementById('st-ok').textContent;
+  const ko = document.getElementById('st-ko').textContent;
+  const todo = document.getElementById('st-todo').textContent;
+  const total = 116;
+  const date = new Date().toLocaleString('fr-FR');
+
+  let out;
+  if (ko === '0' && todo === '0') {
+    out = `Etat checklist opti_route v2.6 (${date})\n\nTout vert ! ${ok}/${total} items V.`;
+  } else if (ko === '0') {
+    out = `Etat checklist opti_route v2.6 (${date})\n\n${ok}/${total} V · 0 X · ${todo}/${total} a tester encore.`;
+  } else {
+    const header = `Etat checklist opti_route v2.6 (${date})\n${ok}/${total} V · ${ko}/${total} X · ${todo}/${total} a tester\n\nIssues a investiguer :`;
+    out = header + '\n' + lines.join('\n');
+  }
+  document.getElementById('export-text').value = out;
+  document.getElementById('modal').classList.add('visible');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('visible');
+}
+
+function copyToClip() {
+  const ta = document.getElementById('export-text');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try {
+    navigator.clipboard.writeText(ta.value).then(
+      () => alert('Copie dans le presse-papiers !'),
+      () => { document.execCommand('copy'); alert('Copie !'); }
+    );
+  } catch (e) {
+    document.execCommand('copy');
+    alert('Copie !');
+  }
+}
+
+// Restore state on load
+(function() {
+  const state = loadState();
+  document.querySelectorAll('.item').forEach(item => {
+    const s = state[item.dataset.id];
+    if (s) item.querySelector('.status').dataset.state = s;
+  });
+  updateStats();
+})();
+</script>
+
+</body>
+</html>
