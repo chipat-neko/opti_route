@@ -14,6 +14,7 @@ import 'coequipiers_screen.dart';
 import 'mentions_legales_screen.dart';
 import 'parametres/donnees_section.dart';
 import 'parametres/entreprise_form.dart';
+import 'parametres/ocr_stats_tile.dart';
 import 'parametres/parametres_widgets.dart';
 import 'parametres/quiet_hours_tile.dart';
 import 'parametres/securite_section.dart';
@@ -808,6 +809,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const BackupTile(),
           const RestoreTile(),
           const AutoBackupTile(),
+          const OcrStatsTile(),
           // Tile "Mes backups" : ouvre la liste des .zip auto-generes
           // avec actions par entree (Restaurer / Partager / Supprimer).
           ListTile(

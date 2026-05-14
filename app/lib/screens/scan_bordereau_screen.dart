@@ -9,6 +9,7 @@ import '../data/bordereau_parser.dart';
 import '../data/chronopost_bordereau_parser.dart';
 import '../data/colissimo_bordereau_parser.dart';
 import '../data/ocr_service.dart';
+import '../data/ocr_stats_log.dart';
 import '../providers/ocr_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -316,6 +317,9 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       _processing = true;
       _errorMessage = null;
     });
+    // Chrono pour mesurer la duree totale du pipeline (pick + OCR +
+    // parse + validation BAN). Persiste dans le CSV de stats baseline.
+    final scanStarted = DateTime.now();
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(
@@ -354,21 +358,29 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       // Auto-detection format : Chronopost (tracking XR.../XE...FR)
       // puis Colissimo (6A.../6L...), sinon parser MESEXP par defaut.
       BordereauExtraction extraction;
+      final String parserUsed;
       if (ChronopostBordereauParser.looksLikeChronopost(result.lines)) {
         extraction = ChronopostBordereauParser().parse(result.lines);
+        parserUsed = 'chronopost';
       } else if (ColissimoBordereauParser.looksLikeColissimo(result.lines)) {
         extraction = ColissimoBordereauParser().parse(result.lines);
+        parserUsed = 'colissimo';
       } else {
         extraction = BordereauParser().parse(result.lines);
+        parserUsed = 'mesexp';
       }
       // Validation BAN post-OCR : si l'extraction a une adresse, on
       // l'envoie a la BAN pour verifier l'existence + corriger la
       // ville / CP en cas de faute OCR. Best-effort (timeout 15s,
       // erreur reseau silencieuse).
+      bool banValidated = false;
+      double? validationScore;
       try {
         final validation = await ref
             .read(bordereauValidatorProvider)
             .validate(extraction);
+        banValidated = validation.validated;
+        validationScore = validation.validationScore;
         if (validation.validated) {
           extraction = validation.extraction;
           if (validation.correctionsApplied.isNotEmpty) {
@@ -382,6 +394,21 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       } catch (_) {
         // best-effort : on garde l'extraction non validee
       }
+      // Log stats baseline (best-effort, swallow toute erreur I/O).
+      // Sert a mesurer le taux de "carte verte" reel sur les scans
+      // Noah avant de demarrer la Phase B OCR (pre-traitement image).
+      // Format CSV append-only dans <app_docs>/ocr_stats.csv, accessible
+      // depuis Parametres > Stats OCR > Exporter.
+      unawaited(OcrStatsLog.instance.log(
+        parser: parserUsed,
+        confidence: extraction.confidence,
+        rotationDeg: rotated.rotationDegrees,
+        attempts: rotated.attemptedRotations.length,
+        banValidated: banValidated,
+        validationScore: validationScore,
+        durationMs:
+            DateTime.now().difference(scanStarted).inMilliseconds,
+      ));
       if (!mounted) return;
       setState(() {
         _imageFile = file;

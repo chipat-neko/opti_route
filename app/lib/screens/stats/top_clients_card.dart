@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
-import '../carnet_adresses_screen.dart' show carnetStreamProvider;
+import '../carnet_adresses/providers.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Carte "Top 5 clients" — lue directement depuis le carnet.
