@@ -282,11 +282,18 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return const [];
-      return [
-        for (final c in decoded)
-          if (c is List && c.length >= 2)
-            LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()),
-      ];
+      final out = <LatLng>[];
+      for (final c in decoded) {
+        if (c is! List || c.length < 2) continue;
+        // Cast defensif : trace persistee avant le fix 2026-05-15
+        // pouvait contenir des coords null dans des cas edge (ORS
+        // glitch en zone marine). Skip plutot que crasher.
+        final lng = (c[0] as num?)?.toDouble();
+        final lat = (c[1] as num?)?.toDouble();
+        if (lng == null || lat == null) continue;
+        out.add(LatLng(lat, lng));
+      }
+      return out;
     } catch (_) {
       return const [];
     }
