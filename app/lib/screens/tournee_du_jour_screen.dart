@@ -21,15 +21,9 @@ import '../widgets/ordre_priorite_dialog.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
 import 'parametres_screen.dart';
-import 'tournee_du_jour/autres_tournees_banner.dart';
-import 'tournee_du_jour/banners.dart';
+import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/fabs.dart';
-import 'tournee_du_jour/header.dart';
-import 'tournee_du_jour/prochain_arret_card.dart';
-import 'tournee_du_jour/progress_banner.dart';
-import 'tournee_du_jour/stat_row.dart';
-import 'tournee_du_jour/stops_list.dart';
-import 'tournee_du_jour/stops_section.dart';
+import 'tournee_du_jour/plus_menu.dart';
 import 'tournee_form_screen.dart';
 
 class TourneeDuJourScreen extends ConsumerStatefulWidget {
@@ -97,160 +91,14 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               ),
             ),
           ),
-          PopupMenuButton<String>(
-            tooltip: 'Plus',
-            onSelected: (value) {
-              if (value == 'delete') _confirmDeleteTournee();
-              if (value == 'export_pdf') _onExportPdfPressed();
-              if (value == 'export_pdf_co') _onExportPdfPerCoequipierPressed();
-              if (value == 'share_text') _onShareTextPressed();
-              if (value == 'share_to_coequipier') {
-                _onShareToCoequipierPressed();
-              }
-              if (value == 'assign_rest') _onAssignRestPressed();
-              if (value == 'pause_short') _onPauseShortPressed();
-              if (value == 'batch_livre') _onBatchLivrePressed();
-              if (value == 'retry_geocode') _onRetryGeocodePressed();
-              if (value == 'undo_last') _onUndoLastStatusPressed();
-              if (value == 'duplicate_plus7') _onDuplicatePlus7Pressed();
-            },
-            itemBuilder: (_) => [
-              if (widget.tournee.statut == 'en_cours')
-                PopupMenuItem(
-                  value: 'pause_short',
-                  child: ListTile(
-                    leading: Icon(
-                      widget.tournee.pauseeLe == null
-                          ? Icons.pause_circle_outline
-                          : Icons.play_circle_outline,
-                      color: AppColors.amber,
-                    ),
-                    title: Text(
-                      widget.tournee.pauseeLe == null
-                          ? 'Pause courte (pause dejeuner)'
-                          : 'Reprendre la tournee',
-                    ),
-                    subtitle: const Text(
-                      'Met le chrono en pause sans arreter la tournee',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              const PopupMenuItem(
-                value: 'batch_livre',
-                child: ListTile(
-                  leading: Icon(Icons.done_all, color: AppColors.emerald),
-                  title: Text('Tout marquer livre'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: 'undo_last',
-                child: ListTile(
-                  leading: Icon(Icons.undo, color: AppColors.amber),
-                  title: Text('Annuler dernier statut'),
-                  subtitle: Text(
-                    'Le dernier arret valide/echec',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: 'retry_geocode',
-                child: ListTile(
-                  leading: Icon(Icons.gps_fixed),
-                  title: Text('Geolocaliser hors-ligne'),
-                  subtitle: Text(
-                    'Re-tente le GPS pour les arrets sans coords',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: 'duplicate_plus7',
-                child: ListTile(
-                  leading: Icon(Icons.copy_outlined),
-                  title: Text('Refaire dans 7 jours'),
-                  subtitle: Text(
-                    'Duplique a la meme heure semaine prochaine',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: 'share_text',
-                child: ListTile(
-                  leading: Icon(Icons.share_outlined),
-                  title: Text('Partager en texte'),
-                  subtitle: Text(
-                    'WhatsApp, SMS, mail...',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'share_to_coequipier',
-                child: ListTile(
-                  leading: Icon(Icons.groups_outlined),
-                  title: Text('Partager a un coequipier'),
-                  subtitle: Text(
-                    'Envoie seulement ses arrets affectes',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'assign_rest',
-                child: ListTile(
-                  leading: Icon(Icons.assignment_ind_outlined),
-                  title: Text('Affecter le reste a...'),
-                  subtitle: Text(
-                    'Bulk : tous les arrets non affectes a un coequipier',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'export_pdf',
-                child: ListTile(
-                  leading: Icon(Icons.picture_as_pdf_outlined),
-                  title: Text('Exporter en PDF'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'export_pdf_co',
-                child: ListTile(
-                  leading: Icon(Icons.picture_as_pdf),
-                  title: Text('Exporter PDF par coequipier'),
-                  subtitle: Text(
-                    'Fiche individuelle (un PDF par personne)',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: ListTile(
-                  leading: Icon(Icons.delete_outline, color: AppColors.red),
-                  title: Text('Supprimer la tournee'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
+          PlusMenu(
+            tournee: widget.tournee,
+            onAction: _onPlusAction,
           ),
         ],
       ),
       body: stopsAsync.when(
-        data: (stops) => _Body(tournee: widget.tournee, stops: stops),
+        data: (stops) => Body(tournee: widget.tournee, stops: stops),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
@@ -265,6 +113,37 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         onArreter: _onArreterPressed,
       ),
     );
+  }
+
+  /// Dispatch des actions du menu "Plus" vers les bonnes methodes. Le
+  /// menu vit dans [PlusMenu] et remonte juste un enum, le mapping
+  /// vers les `Future<void>` (qui ont besoin du state + ref + context)
+  /// reste ici.
+  void _onPlusAction(PlusAction action) {
+    switch (action) {
+      case PlusAction.pauseShort:
+        _onPauseShortPressed();
+      case PlusAction.batchLivre:
+        _onBatchLivrePressed();
+      case PlusAction.undoLast:
+        _onUndoLastStatusPressed();
+      case PlusAction.retryGeocode:
+        _onRetryGeocodePressed();
+      case PlusAction.duplicatePlus7:
+        _onDuplicatePlus7Pressed();
+      case PlusAction.shareText:
+        _onShareTextPressed();
+      case PlusAction.shareToCoequipier:
+        _onShareToCoequipierPressed();
+      case PlusAction.assignRest:
+        _onAssignRestPressed();
+      case PlusAction.exportPdf:
+        _onExportPdfPressed();
+      case PlusAction.exportPdfCo:
+        _onExportPdfPerCoequipierPressed();
+      case PlusAction.delete:
+        _confirmDeleteTournee();
+    }
   }
 
   Future<void> _confirmDeleteTournee() async {
@@ -1218,60 +1097,3 @@ String _formatDuration(int totalSeconds) {
   return '${h}h${m.toString().padLeft(2, '0')}';
 }
 
-class _Body extends StatelessWidget {
-  const _Body({required this.tournee, required this.stops});
-
-  final Tournee tournee;
-  final List<Stop> stops;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x18,
-        AppSpacing.x8,
-        AppSpacing.x18,
-        AppSpacing.x18,
-      ),
-      children: [
-        Header(tournee: tournee),
-        AutresTourneesDuJourBanner(currentTourneeId: tournee.id),
-        const SizedBox(height: AppSpacing.x16),
-        StatRow(
-          arretsCount: stops.length,
-          colisTotal: stops.fold<int>(0, (sum, s) => sum + s.nbColis),
-          distanceMeters: tournee.distanceTotaleM,
-          durationSeconds: tournee.dureeTotaleS,
-        ),
-        if (tournee.distanceTotaleM != null &&
-            tournee.distanceTotaleM! > 0) ...[
-          const SizedBox(height: AppSpacing.x8),
-          CoutCarburantBanner(distanceMeters: tournee.distanceTotaleM!),
-        ],
-        if (tournee.statut == 'optimisee') ...[
-          const SizedBox(height: AppSpacing.x12),
-          OptimisedBanner(tournee: tournee),
-        ],
-        if (stops.any((s) =>
-            s.statutLivraison == 'livre' || s.statutLivraison == 'echec')) ...[
-          const SizedBox(height: AppSpacing.x12),
-          ProgressBanner(
-            stops: stops,
-            tourneeTerminee: tournee.statut == 'terminee',
-            demareeLe: tournee.demareeLe,
-            isEnPause: tournee.pauseeLe != null,
-          ),
-        ],
-        if (tournee.statut == 'en_cours') ...[
-          const SizedBox(height: AppSpacing.x12),
-          ProchainArretCard(stops: stops),
-        ],
-        const SizedBox(height: AppSpacing.x18),
-        if (stops.isEmpty)
-          const StopsPlaceholder()
-        else
-          StopsSection(stops: stops),
-      ],
-    );
-  }
-}
