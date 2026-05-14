@@ -109,8 +109,11 @@ class PhotonService implements GeocodingService {
     final coords = geometry['coordinates'];
     if (coords is! List || coords.length < 2) return null;
 
-    final lon = (coords[0] as num).toDouble();
-    final lat = (coords[1] as num).toDouble();
+    // Photon retourne parfois des coords null pour des POIs mal indexes :
+    // on convertit defensivement plutot que crasher.
+    final lon = (coords[0] as num?)?.toDouble();
+    final lat = (coords[1] as num?)?.toDouble();
+    if (lon == null || lat == null) return null;
 
     final props = (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
 

@@ -121,19 +121,24 @@ class ParametresRepository {
   /// sur un nouveau jour, on reset a 1 (pas 0+1 -> on commence direct
   /// avec ce nouvel appel).
   Future<void> incrementOrsUsed() async {
-    final today = _todayIso();
-    final storedDate = await _readKey(_kOrsUsedDate);
-    int next;
-    if (storedDate != today) {
-      next = 1;
-    } else {
-      final current = int.tryParse(
-              (await _readKey(_kOrsUsedCount)) ?? '') ??
-          0;
-      next = current + 1;
-    }
-    await _write(_kOrsUsedCount, '$next');
-    await _write(_kOrsUsedDate, today);
+    // Atomique : sans transaction, deux appels concurrents (optim
+    // VROOM + directions paralleles) verraient la meme valeur courante
+    // et perdraient une incrementation.
+    await _db.transaction(() async {
+      final today = _todayIso();
+      final storedDate = await _readKey(_kOrsUsedDate);
+      int next;
+      if (storedDate != today) {
+        next = 1;
+      } else {
+        final current = int.tryParse(
+                (await _readKey(_kOrsUsedCount)) ?? '') ??
+            0;
+        next = current + 1;
+      }
+      await _write(_kOrsUsedCount, '$next');
+      await _write(_kOrsUsedDate, today);
+    });
   }
 
   /// Mode de theme choisi par l'utilisateur :

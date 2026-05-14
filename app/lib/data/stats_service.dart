@@ -299,12 +299,19 @@ class StatsService {
 
     // Streak : tournees terminees consecutives a 100% (aucun echec).
     // Trie les tournees par date desc et compte jusqu'au 1er echec.
+    // Pre-groupe les stops par tourneeId pour eviter une scan O(N*M)
+    // a chaque iteration (50 tournees * 1500 stops = 75k operations
+    // sans groupage, vs 1500 + 50 avec).
+    final stopsByTournee = <int, List<Stop>>{};
+    for (final s in stops) {
+      (stopsByTournee[s.tourneeId] ??= <Stop>[]).add(s);
+    }
     final sorted = [...tournees]
       ..sort((a, b) => b.date.compareTo(a.date));
     var streak = 0;
     for (final t in sorted) {
       if (t.statut != 'terminee') break;
-      final tStops = stops.where((s) => s.tourneeId == t.id).toList();
+      final tStops = stopsByTournee[t.id] ?? const <Stop>[];
       final hasEchec = tStops.any((s) => s.statutLivraison == 'echec');
       if (hasEchec) break;
       streak++;

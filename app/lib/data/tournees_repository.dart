@@ -49,21 +49,30 @@ class TourneesRepository {
   /// en modele reutilisable, qui apparait dans la section "Templates"
   /// de l'historique avec un bouton "Creer une tournee depuis ce
   /// template" (appelle `duplicate`).
+  ///
+  /// Atomique : read + write dans la meme transaction pour eviter
+  /// qu'un double-tap rapide read stale et flippe la valeur 2x.
   Future<int> toggleTemplate(int id) async {
-    final t = await getById(id);
-    if (t == null) return 0;
-    return (_db.update(_db.tournees)..where((row) => row.id.equals(id)))
-        .write(TourneesCompanion(isTemplate: Value(!t.isTemplate)));
+    return _db.transaction(() async {
+      final t = await getById(id);
+      if (t == null) return 0;
+      return (_db.update(_db.tournees)..where((row) => row.id.equals(id)))
+          .write(TourneesCompanion(isTemplate: Value(!t.isTemplate)));
+    });
   }
 
   /// Compte les tournees plus anciennes que [olderThan]. Sert au
   /// bouton "Nettoyer les vieilles tournees" dans Parametres : on
   /// previent l'utilisateur du nombre avant d'effacer.
   Future<int> countOlderThan(DateTime olderThan) async {
-    final list = await (_db.select(_db.tournees)
-          ..where((t) => t.date.isSmallerThanValue(olderThan)))
-        .get();
-    return list.length;
+    // COUNT(*) cote SQLite -- evite de charger toutes les lignes en
+    // RAM pour ensuite faire .length (gaspillage sur historique long).
+    final count = _db.tournees.id.count();
+    final row = await (_db.selectOnly(_db.tournees)
+          ..addColumns([count])
+          ..where(_db.tournees.date.isSmallerThanValue(olderThan)))
+        .getSingle();
+    return row.read(count) ?? 0;
   }
 
   /// Supprime les tournees datees avant [olderThan]. Les stops/sheets
@@ -160,15 +169,22 @@ class TourneesRepository {
 
   /// Reprend une tournee en pause : ajoute la duree pausee au cumul
   /// `pauseeSeconds` et reset `pauseeLe` a null.
+  ///
+  /// Atomique : sans transaction un double-tap "Reprendre" rapide
+  /// ajouterait deux fois la meme duree (deux reads voient le meme
+  /// pauseeLe avant que le 1er write n'ait commit).
   Future<int> reprendreTournee(int id) async {
-    final t = await getById(id);
-    if (t == null || t.pauseeLe == null) return 0;
-    final pausedSeconds = DateTime.now().difference(t.pauseeLe!).inSeconds;
-    return (_db.update(_db.tournees)..where((row) => row.id.equals(id)))
-        .write(TourneesCompanion(
-      pauseeLe: const Value(null),
-      pauseeSeconds: Value(t.pauseeSeconds + pausedSeconds),
-    ));
+    return _db.transaction(() async {
+      final t = await getById(id);
+      if (t == null || t.pauseeLe == null) return 0;
+      final pausedSeconds =
+          DateTime.now().difference(t.pauseeLe!).inSeconds;
+      return (_db.update(_db.tournees)..where((row) => row.id.equals(id)))
+          .write(TourneesCompanion(
+        pauseeLe: const Value(null),
+        pauseeSeconds: Value(t.pauseeSeconds + pausedSeconds),
+      ));
+    });
   }
 
   /// Efface les metadonnees d'optimisation d'une tournee : `optimiseeLe`,

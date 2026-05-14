@@ -80,10 +80,14 @@ class CoequipiersRepository {
 
   /// Toggle actif / archive sans toucher au reste. Sert au bouton
   /// "Archiver" / "Restaurer" dans la liste de Parametres.
+  /// Atomique : read + write dans 1 transaction (eviter qu'un double-
+  /// tap rapide flippe la valeur 2x).
   Future<int> toggleActif(int id) async {
-    final c = await getById(id);
-    if (c == null) return 0;
-    return update(id, actif: !c.actif);
+    return _db.transaction(() async {
+      final c = await getById(id);
+      if (c == null) return 0;
+      return update(id, actif: !c.actif);
+    });
   }
 
   /// Supprime definitivement un coequipier. Les stops qui lui etaient
@@ -92,8 +96,12 @@ class CoequipiersRepository {
     return (_db.delete(_db.coequipiers)..where((c) => c.id.equals(id))).go();
   }
 
+  /// COUNT(*) cote SQLite -- evite de charger toutes les lignes en RAM
+  /// pour ensuite faire .length.
   Future<int> count() async {
-    final all = await _db.select(_db.coequipiers).get();
-    return all.length;
+    final col = _db.coequipiers.id.count();
+    final row =
+        await (_db.selectOnly(_db.coequipiers)..addColumns([col])).getSingle();
+    return row.read(col) ?? 0;
   }
 }

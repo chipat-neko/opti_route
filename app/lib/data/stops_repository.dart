@@ -119,43 +119,50 @@ class StopsRepository {
   ///
   /// [preuvePhotoPath] (optionnel) : chemin local d'une photo preuve
   /// prise par le livreur (cf `PreuvePhotoService.capturer`).
+  ///
+  /// Atomique : le read previous + l'update du stop + le log d'historique
+  /// se font dans la meme transaction SQLite. Sans ca, une concurrence
+  /// sur le meme stop (double-tap rapide) lirait un previous stale et
+  /// loguerait un fromStatus errone (vu lors d'un audit 2026-05-14).
   Future<int> markLivre(
     int id, {
     ({double lat, double lng})? position,
     DateTime? livreLe,
     String? preuvePhotoPath,
   }) async {
-    final previous = await getById(id);
-    final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
-        .write(
-      StopsCompanion(
-        statutLivraison: const Value('livre'),
-        raisonEchec: const Value(null),
-        livreLat:
-            position == null ? const Value(null) : Value(position.lat),
-        livreLng:
-            position == null ? const Value(null) : Value(position.lng),
-        livreLe: Value(livreLe ?? DateTime.now()),
-        preuvePhotoPath: preuvePhotoPath == null
-            ? const Value.absent()
-            : Value(preuvePhotoPath),
-      ),
-    );
-    if (previous != null) {
-      await _logHistory(
-        stopId: id,
-        action: 'mark_livre',
-        fromStatus: previous.statutLivraison,
-        toStatus: 'livre',
+    return _db.transaction(() async {
+      final previous = await getById(id);
+      final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
+          .write(
+        StopsCompanion(
+          statutLivraison: const Value('livre'),
+          raisonEchec: const Value(null),
+          livreLat:
+              position == null ? const Value(null) : Value(position.lat),
+          livreLng:
+              position == null ? const Value(null) : Value(position.lng),
+          livreLe: Value(livreLe ?? DateTime.now()),
+          preuvePhotoPath: preuvePhotoPath == null
+              ? const Value.absent()
+              : Value(preuvePhotoPath),
+        ),
       );
-    }
-    return n;
+      if (previous != null) {
+        await _logHistory(
+          stopId: id,
+          action: 'mark_livre',
+          fromStatus: previous.statutLivraison,
+          toStatus: 'livre',
+        );
+      }
+      return n;
+    });
   }
 
   /// Marque un arret en echec + log dans StopHistory avec la raison.
   ///
   /// [preuvePhotoPath] (optionnel) : photo preuve d'un echec (ex: porte
-  /// fermee, boite aux lettres pleine).
+  /// fermee, boite aux lettres pleine). Atomique (cf [markLivre]).
   Future<int> markEchec(
     int id,
     String raison, {
@@ -163,57 +170,45 @@ class StopsRepository {
     DateTime? livreLe,
     String? preuvePhotoPath,
   }) async {
-    final previous = await getById(id);
-    final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
-        .write(
-      StopsCompanion(
-        statutLivraison: const Value('echec'),
-        raisonEchec: Value(raison),
-        livreLat:
-            position == null ? const Value(null) : Value(position.lat),
-        livreLng:
-            position == null ? const Value(null) : Value(position.lng),
-        livreLe: Value(livreLe ?? DateTime.now()),
-        preuvePhotoPath: preuvePhotoPath == null
-            ? const Value.absent()
-            : Value(preuvePhotoPath),
-      ),
-    );
-    if (previous != null) {
-      await _logHistory(
-        stopId: id,
-        action: 'mark_echec',
-        fromStatus: previous.statutLivraison,
-        toStatus: 'echec',
-        raison: raison,
+    return _db.transaction(() async {
+      final previous = await getById(id);
+      final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
+          .write(
+        StopsCompanion(
+          statutLivraison: const Value('echec'),
+          raisonEchec: Value(raison),
+          livreLat:
+              position == null ? const Value(null) : Value(position.lat),
+          livreLng:
+              position == null ? const Value(null) : Value(position.lng),
+          livreLe: Value(livreLe ?? DateTime.now()),
+          preuvePhotoPath: preuvePhotoPath == null
+              ? const Value.absent()
+              : Value(preuvePhotoPath),
+        ),
       );
-    }
-    return n;
+      if (previous != null) {
+        await _logHistory(
+          stopId: id,
+          action: 'mark_echec',
+          fromStatus: previous.statutLivraison,
+          toStatus: 'echec',
+          raison: raison,
+        );
+      }
+      return n;
+    });
   }
 
-  /// Annule un statut deja pose + log la transition inverse.
+  /// Annule un statut deja pose : repasse 'a_livrer' + reset toutes les
+  /// metadonnees de validation (raisonEchec, coords GPS, livreLe, photo)
+  /// + log la transition inverse. Atomique (cf [markLivre]).
+  ///
+  /// Alias [revertStatus] sert au bouton "Annuler le dernier statut"
+  /// (action loggee = 'revert' au lieu de 'mark_a_livrer'), mais
+  /// l'effet est identique.
   Future<int> markAaLivrer(int id) async {
-    final previous = await getById(id);
-    final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
-        .write(
-      const StopsCompanion(
-        statutLivraison: Value('a_livrer'),
-        raisonEchec: Value(null),
-        livreLat: Value(null),
-        livreLng: Value(null),
-        livreLe: Value(null),
-        preuvePhotoPath: Value(null),
-      ),
-    );
-    if (previous != null) {
-      await _logHistory(
-        stopId: id,
-        action: 'mark_a_livrer',
-        fromStatus: previous.statutLivraison,
-        toStatus: 'a_livrer',
-      );
-    }
-    return n;
+    return _markAaLivrerImpl(id, action: 'mark_a_livrer');
   }
 
   Future<void> _logHistory({
@@ -268,25 +263,45 @@ class StopsRepository {
     return stops.firstWhere((s) => s.id == hist.stopId);
   }
 
-  /// Annule le statut d'un stop : le remet a 'a_livrer' + reset
-  /// raisonEchec + log dans l'historique.
+  /// Annule le statut d'un stop : alias de [markAaLivrer] avec
+  /// `action='revert'` dans le log d'historique. Comportement identique
+  /// (reset complet des metadonnees + photo).
+  ///
+  /// Bug fix audit 2026-05-14 : avant ce refactor, revertStatus oubliait
+  /// de reset preuvePhotoPath, laissant la photo orpheline sur un stop
+  /// repassé en a_livrer (incoherent avec markAaLivrer).
   Future<void> revertStatus(int stopId) async {
-    final stop = await getById(stopId);
-    if (stop == null) return;
-    await (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
-        .write(StopsCompanion(
-      statutLivraison: const Value('a_livrer'),
-      raisonEchec: const Value(null),
-      livreLat: const Value(null),
-      livreLng: const Value(null),
-      livreLe: const Value(null),
-    ));
-    await _logHistory(
-      stopId: stopId,
-      action: 'revert',
-      fromStatus: stop.statutLivraison,
-      toStatus: 'a_livrer',
-    );
+    await _markAaLivrerImpl(stopId, action: 'revert');
+  }
+
+  /// Implementation partagee entre [markAaLivrer] et [revertStatus].
+  /// La seule difference est le label `action` ecrit dans StopHistory.
+  /// Atomique : read previous + update + log dans 1 transaction (evite
+  /// les races sur le meme stop).
+  Future<int> _markAaLivrerImpl(int id, {required String action}) async {
+    return _db.transaction(() async {
+      final previous = await getById(id);
+      final n = await (_db.update(_db.stops)..where((s) => s.id.equals(id)))
+          .write(
+        const StopsCompanion(
+          statutLivraison: Value('a_livrer'),
+          raisonEchec: Value(null),
+          livreLat: Value(null),
+          livreLng: Value(null),
+          livreLe: Value(null),
+          preuvePhotoPath: Value(null),
+        ),
+      );
+      if (previous != null) {
+        await _logHistory(
+          stopId: id,
+          action: action,
+          fromStatus: previous.statutLivraison,
+          toStatus: 'a_livrer',
+        );
+      }
+      return n;
+    });
   }
 
   /// Applique l'ordre optimise calcule par le solveur : pour chaque
