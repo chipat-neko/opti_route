@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>opti_route vs. concurrents — comparatif</title>
+<meta name="description" content="Comparatif opti_route vs Circuit Route Planner, Routific, Onfleet. Prix, fonctionnalites, mode hors-ligne, RGPD.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="opti_route vs. concurrents — comparatif">
+<meta property="og:description" content="Comparatif opti_route vs Circuit Route Planner, Routific, Onfleet. Prix, fonctionnalites, mode hors-ligne, RGPD.">
+<meta property="og:image" content="assets/og-cover.png">
+<meta property="og:url" content="https://chipat-neko.github.io/opti_route/site/vs.html">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .vs-table {
+    width: 100%;
+    background: var(--paper);
+    border-radius: var(--radius-14);
+    border: 1px solid var(--divider);
+    overflow: hidden;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    margin-bottom: var(--space-22);
+  }
+  .vs-table th, .vs-table td {
+    padding: var(--space-12) var(--space-14);
+    text-align: left;
+    border-bottom: 1px solid var(--divider);
+    vertical-align: top;
+  }
+  .vs-table thead th {
+    background: var(--bg-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 800;
+  }
+  .vs-table thead th.us {
+    color: var(--ink);
+    background: rgba(184, 242, 74, 0.12);
+  }
+  .vs-table tbody tr:last-child td { border-bottom: none; }
+  .vs-table .feat {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .vs-table .yes { color: var(--emerald); font-weight: 700; }
+  .vs-table .no { color: var(--text-mute); }
+  .vs-table .partial { color: var(--amber, #d97706); font-weight: 700; }
+  .vs-disclaimer {
+    font-size: 0.82rem;
+    color: var(--text-mute);
+    line-height: 1.5;
+    background: var(--bg-soft);
+    border-radius: var(--radius-12);
+    padding: var(--space-14) var(--space-18);
+    border-left: 3px solid var(--divider);
+    margin-bottom: var(--space-22);
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="index.html#features">Features</a>
+      <a href="faq.html">FAQ</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <span class="eyebrow">Comparatif</span>
+  <h1>opti_route vs. les autres optimiseurs de tournees.</h1>
+  <p class="sub">
+    Tu utilises deja Circuit, Routific ou Onfleet et tu te demandes pourquoi passer a opti_route&nbsp;? Voici la grille honnete des differences&nbsp;: certaines te font gagner du temps, d'autres pas — a toi de juger ce qui compte pour ton metier.
+  </p>
+
+  <p class="vs-disclaimer">
+    <strong>Comparatif redige le 14 mai 2026.</strong> Les tarifs des concurrents evoluent — verifie les chiffres sur leurs sites avant de migrer. Les fonctionnalites listees sont celles publiquement annoncees au jour de la redaction&nbsp;: pas d'evaluation interne, juste un resume des promesses commerciales croisees avec mon usage personnel de Circuit (essai 14 jours, mai 2025).
+  </p>
+
+  <table class="vs-table">
+    <thead>
+      <tr>
+        <th scope="col">Critere</th>
+        <th scope="col" class="us">opti_route</th>
+        <th scope="col">Circuit</th>
+        <th scope="col">Routific</th>
+        <th scope="col">Onfleet</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="feat">Tarif pour 1 livreur</td>
+        <td class="yes">Gratuit a vie</td>
+        <td>~20 EUR / mois</td>
+        <td>~50 USD / mois (min)</td>
+        <td>~100 USD / mois (min)</td>
+      </tr>
+      <tr>
+        <td class="feat">Tarif equipe de 5</td>
+        <td class="partial">Gratuit (Phase 1) — payant a partir de Phase 2 sync cloud</td>
+        <td>~100 EUR / mois</td>
+        <td>~250 USD / mois</td>
+        <td>~500 USD / mois</td>
+      </tr>
+      <tr>
+        <td class="feat">Donnees clients hors-ligne</td>
+        <td class="yes">100 % local (SQLite chiffre disque Android)</td>
+        <td class="no">Cloud obligatoire</td>
+        <td class="no">Cloud obligatoire</td>
+        <td class="no">Cloud obligatoire</td>
+      </tr>
+      <tr>
+        <td class="feat">RGPD UE — hebergement Europe</td>
+        <td class="yes">Aucun serveur (Phase 1)</td>
+        <td class="partial">AWS US (selon plan)</td>
+        <td class="partial">AWS US</td>
+        <td class="partial">AWS US</td>
+      </tr>
+      <tr>
+        <td class="feat">Scan OCR bordereau auto</td>
+        <td class="yes">Oui — MESEXP, Colissimo, Chronopost</td>
+        <td class="partial">Photo + reconnaissance adresse seulement</td>
+        <td class="no">Saisie ou import CSV</td>
+        <td class="partial">API tiers</td>
+      </tr>
+      <tr>
+        <td class="feat">Carte hors-ligne (4G faible)</td>
+        <td class="yes">Pre-fetch tuiles OSM par bbox</td>
+        <td class="partial">Cache navigateur</td>
+        <td class="no">Connexion requise</td>
+        <td class="partial">Cache app</td>
+      </tr>
+      <tr>
+        <td class="feat">Carnet clients + import</td>
+        <td class="yes">CSV + vCard, fusion intelligent</td>
+        <td class="yes">CSV</td>
+        <td class="yes">CSV</td>
+        <td class="yes">CSV + API</td>
+      </tr>
+      <tr>
+        <td class="feat">Multi-coequipiers / chef d'equipe</td>
+        <td class="partial">Local (Phase 1) — sync temps reel Phase 2</td>
+        <td class="yes">Cloud temps reel</td>
+        <td class="yes">Cloud temps reel</td>
+        <td class="yes">Cloud temps reel</td>
+      </tr>
+      <tr>
+        <td class="feat">Notifications client (SMS / email ETA)</td>
+        <td class="no">Phase 2 (Twilio prevu)</td>
+        <td class="yes">SMS inclus</td>
+        <td class="yes">SMS payant</td>
+        <td class="yes">SMS inclus</td>
+      </tr>
+      <tr>
+        <td class="feat">Optimisation VROOM (algo open-source)</td>
+        <td class="yes">Oui — via API ORS gratuite</td>
+        <td class="partial">Algo proprio</td>
+        <td class="partial">Algo proprio</td>
+        <td class="partial">Algo proprio</td>
+      </tr>
+      <tr>
+        <td class="feat">Export PDF + facturation client</td>
+        <td class="yes">Inclus, mode entreprise</td>
+        <td class="partial">Export basique</td>
+        <td class="no">Pas inclus</td>
+        <td class="yes">Module separe</td>
+      </tr>
+      <tr>
+        <td class="feat">Code source ouvert</td>
+        <td class="partial">Prive aujourd'hui — possiblement ouvert plus tard</td>
+        <td class="no">Ferme</td>
+        <td class="no">Ferme</td>
+        <td class="no">Ferme</td>
+      </tr>
+      <tr>
+        <td class="feat">Interface en francais natif</td>
+        <td class="yes">Oui</td>
+        <td class="yes">Oui</td>
+        <td class="no">Anglais uniquement</td>
+        <td class="no">Anglais uniquement</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top: var(--space-40)">Quand choisir un concurrent plutot qu'opti_route&nbsp;?</h2>
+  <p>
+    On ne va pas mentir : si tu as <strong>besoin de notifications SMS automatiques aux clients aujourd'hui</strong>, opti_route Phase 1 ne le fait pas encore. Circuit ou Onfleet sont mieux equipes pour ce cas. De meme si tu pilotes <strong>plus de 10 livreurs en temps reel</strong> et que le chef doit voir leur position GPS instantanee, l'aspect cloud des concurrents est aujourd'hui plus mature — opti_route arrive avec la Phase 2 sync, mais elle n'est pas encore deployee.
+  </p>
+  <h2>Quand opti_route est le meilleur choix&nbsp;?</h2>
+  <ul>
+    <li><strong>Livreur solo independant</strong> qui veut zero abonnement mensuel</li>
+    <li><strong>Petites equipes (1-5 livreurs)</strong> ou la sync temps reel n'est pas critique</li>
+    <li><strong>Travail en zone faible 4G</strong> (campagne, parking sous-terrain) qui ratent les apps cloud</li>
+    <li><strong>Donnees clients sensibles</strong> qui doivent rester locales (RGPD strict, B2B medical)</li>
+    <li><strong>Workflow scan papier</strong> (bordereaux MESEXP / Colissimo / Chronopost)</li>
+  </ul>
+
+  <div style="display: flex; gap: var(--space-12); flex-wrap: wrap; margin: var(--space-40) 0;">
+    <a class="btn btn-primary" href="install-apk.html">Telecharger l'APK</a>
+    <a class="btn btn-ghost" href="features.html">Voir toutes les features</a>
+    <a class="btn btn-ghost" href="faq.html">FAQ</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      Comparatif honnete · Donnees au 14 mai 2026 · <a href="index.html">Retour accueil</a> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
