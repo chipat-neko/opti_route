@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:opti_route/data/database.dart';
 import 'package:opti_route/providers/database_providers.dart';
@@ -17,15 +18,33 @@ import 'package:opti_route/theme/app_theme.dart';
 ///
 /// Pour les pieces qui dependent d'un stream Drift, on injecte une
 /// DB en memoire via `parametresRepositoryProvider.overrideWith` etc.
-// Tag pour pouvoir skipper l'ensemble du fichier si besoin.
-// Le bug "Timer is still pending" lie a drift + flutter_test est connu
-// (voir widget_test.dart placeholder). Solution durable : runAsync ou
-// dispose manuel des subscriptions Drift avant le tearDown du widget.
-// Pour l'instant on skip pour ne pas planter la CI.
-const _smokeSkip = 'Bug connu drift Timer.zero + flutter_test — voir '
-    'widget_test.dart pour les pistes (tester.runAsync, dispose manuel).';
+///
+/// **Solution Drift Timer.zero** : `tester.runAsync(...)` autour de
+/// pumpWidget donne du vrai temps a Drift pour drainer ses streams,
+/// ce qui resout l'exception "Timer is still pending" historique.
+/// Cf [_pumpScreen] qui implementee ce pattern.
+///
+/// **Bloqueur restant : google_fonts en environnement test**. Le
+/// theme utilise `GoogleFonts.manrope` qui fetch en HTTP au runtime.
+/// En test, `TestWidgetsFlutterBinding` mock HTTP, ce qui leve
+/// "Failed to load font" en post-test (test passe mais la phase de
+/// cleanup echoue). Workaround : `GoogleFonts.config.allowRuntimeFetching = false`
+/// + bundler Manrope-Regular.ttf / Manrope-Bold.ttf / etc. en
+/// `assets/fonts/` et les declarer dans pubspec.yaml. ~5 ttf x ~150 KB
+/// = ~750 KB d'APK supplementaire. Chantier separe, garde skipped
+/// pour le moment.
+const _smokeSkip = 'Bug google_fonts en test : Manrope fetch HTTP. '
+    'Fix : bundler les .ttf en assets + GoogleFonts.config.allowRuntimeFetching = false.';
 
 void main() {
+  setUpAll(() {
+    // Empeche google_fonts de fetcher Manrope/JetBrainsMono via HTTP
+    // (TestWidgetsFlutterBinding bloque HTTP, ca leve une exception
+    // "Failed to load font" post-test). Inutile tant que les .ttf
+    // ne sont pas bundle en assets (cf docstring du fichier).
+    GoogleFonts.config.allowRuntimeFetching = false;
+  });
+
   group('Smoke render — mode clair', skip: _smokeSkip, () {
     testWidgets('HomeScreen rend sans crash', (tester) async {
       await _pumpScreen(tester, const HomeScreen(), brightness: Brightness.light);
@@ -82,29 +101,39 @@ void main() {
 /// Helper qui pompe un screen dans un MaterialApp avec un theme et
 /// une DB Drift en memoire. Necessaire pour que les providers
 /// Riverpod qui touchent la base aient une vraie source.
+///
+/// Encapsule dans `runAsync` pour eviter le bug "Timer is still
+/// pending" : Drift planifie des Timer.zero internes pour drainer
+/// ses streams au close, et le faux temps de flutter_test ne les
+/// laisse jamais s'executer. `runAsync` donne du vrai temps.
 Future<void> _pumpScreen(
   WidgetTester tester,
   Widget screen, {
   required Brightness brightness,
 }) async {
   final db = AppDatabase(NativeDatabase.memory());
-  addTearDown(db.close);
+  addTearDown(() async {
+    // Donne du vrai temps a Drift pour fermer ses streams.
+    await tester.runAsync(() => db.close());
+  });
 
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        appDatabaseProvider.overrideWithValue(db),
-      ],
-      child: MaterialApp(
-        theme: buildAppTheme(),
-        darkTheme: buildAppThemeDark(),
-        themeMode: brightness == Brightness.dark
-            ? ThemeMode.dark
-            : ThemeMode.light,
-        home: screen,
+  await tester.runAsync(() async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          darkTheme: buildAppThemeDark(),
+          themeMode: brightness == Brightness.dark
+              ? ThemeMode.dark
+              : ThemeMode.light,
+          home: screen,
+        ),
       ),
-    ),
-  );
-  // Laisser un frame pour les streams initiaux.
-  await tester.pump(const Duration(milliseconds: 100));
+    );
+    // Laisser un frame pour les streams initiaux.
+    await tester.pump(const Duration(milliseconds: 100));
+  });
 }

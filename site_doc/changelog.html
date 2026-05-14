@@ -134,12 +134,43 @@
     <a href="https://keepachangelog.com/fr/">Keep a Changelog</a>.
   </p>
 
-  <!-- =================== v1.1.0+2 =================== -->
+  <!-- =================== v2.3.0+2016 =================== -->
   <article class="release latest">
+    <div class="release-head">
+      <span class="release-tag">v2.3.0+2016</span>
+      <span class="release-date">2026-05-14</span>
+      <span class="release-pill">Stable</span>
+    </div>
+    <div class="release-title">Sauvegardes, modernisation deps, qualite code</div>
+
+    <div class="changes-group added">
+      <h4>Ajoute</h4>
+      <ul>
+        <li>Sauvegarde complete de l'app dans un <code>.zip</code> portable (DB SQLite + photos preuves + manifest), partageable via Drive / mail / clef USB.</li>
+        <li>Restore depuis un <code>.zip</code> avec <em>deferred swap</em> au prochain boot (evite les conflits Drift open/close).</li>
+        <li>Auto-backup local periodique (jamais / hebdo / mensuel) dans <code>/Android/data/&lt;pkg&gt;/files/auto_backups/</code>, rotation des 5 derniers.</li>
+        <li>Page "Mes backups" : lister, restaurer, partager, supprimer les .zip generes automatiquement.</li>
+        <li>FAB "Backup maintenant" : creer un .zip manuel a la demande sans attendre la prochaine echeance auto.</li>
+        <li>Notification post-backup auto (importance low, respecte le creneau "ne pas deranger").</li>
+        <li>22 tests E2E couvrant BackupService, AutoBackupService et BackupsListService.</li>
+      </ul>
+    </div>
+
+    <div class="changes-group changed">
+      <h4>Modifie</h4>
+      <ul>
+        <li>Modernisation des dependances (7 paquets bumpes) : <code>connectivity_plus 6→7</code>, <code>share_plus 11→12</code>, <code>file_picker 8→11</code>, <code>flutter_local_notifications 18→21</code>, <code>timezone 0.10→0.11</code>, <code>local_auth 2→3</code>, <code>local_auth_android 1→2</code>.</li>
+        <li>Refactor <code>parametres_screen.dart</code> : 1522 → 1107 lignes (-27 %). Sections Donnees et "Ne pas deranger" extraites en fichiers dedies.</li>
+        <li>Suite de tests : 570/570 verts (+8 BackupsListService), 0 issue analyzer.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- =================== v1.1.0+2 =================== -->
+  <article class="release">
     <div class="release-head">
       <span class="release-tag">v1.1.0+2</span>
       <span class="release-date">2026-05-13</span>
-      <span class="release-pill">Stable</span>
     </div>
     <div class="release-title">Mode terrain, securite & accessibilite web</div>
 
