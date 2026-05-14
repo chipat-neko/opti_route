@@ -38,7 +38,29 @@ part 'database.g.dart';
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'opti_route'));
+      : super(
+          executor ??
+              driftDatabase(
+                name: 'opti_route',
+                // **Obligatoire en compile Web** : sans ce param, Drift
+                // throw `ArgumentError('When compiling to the web, the
+                // web parameter needs to be set.')` au boot, ce qui
+                // donne une page blanche sur GitHub Pages.
+                //
+                // Les 2 binaires sont hostes dans `web/` (cf
+                // app/web/sqlite3.wasm + app/web/drift_worker.js,
+                // telecharges depuis les GitHub releases de
+                // simolus3/sqlite3.dart v3.3.1 et simolus3/drift v2.33.0).
+                //
+                // Sur native (Android/iOS), ce param est ignore -- la
+                // DB SQLite vit dans `getApplicationDocumentsDirectory()`
+                // via path_provider + sqlite3_flutter_libs.
+                web: DriftWebOptions(
+                  sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+                  driftWorker: Uri.parse('drift_worker.js'),
+                ),
+              ),
+        );
 
   @override
   int get schemaVersion => 21;
