@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
 import 'database.dart';
+import 'tournee_pdf_widgets.dart';
 
 /// Service de generation de PDF recap d'une tournee. Sortie : fichier
 /// dans le repertoire temporaire + partage via le selecteur natif
@@ -143,7 +144,7 @@ class TourneePdfService {
         : '${(tournee.distanceTotaleM! / 1000).toStringAsFixed(1)} km';
     final dur = tournee.dureeTotaleS == null
         ? '—'
-        : _formatDuration(tournee.dureeTotaleS!);
+        : formatPdfDuration(tournee.dureeTotaleS!);
 
     final hasEntreprise = (entrepriseNom != null && entrepriseNom.isNotEmpty);
 
@@ -278,7 +279,7 @@ class TourneePdfService {
           ),
           pw.SizedBox(height: 14),
           // Stats row
-          _statsTable(
+          buildStatsTable(
             arretsTotal: stops.length,
             livres: livres,
             echecs: echecs,
@@ -299,7 +300,7 @@ class TourneePdfService {
             ),
           ),
           pw.SizedBox(height: 8),
-          _stopsTable(stops),
+          buildStopsTable(stops),
           pw.SizedBox(height: 16),
           pw.Text(
             'Genere par opti_route le ${DateFormat('dd/MM/yyyy a HH:mm', 'fr').format(DateTime.now())}.',
@@ -315,224 +316,4 @@ class TourneePdfService {
 
     return pdf;
   }
-
-  pw.Widget _statsTable({
-    required int arretsTotal,
-    required int livres,
-    required int echecs,
-    required int colisTotal,
-    required int colisLivres,
-    required String km,
-    required String duree,
-    double? coutCarburantEur,
-  }) {
-    pw.Widget cell(String label, String value) {
-      return pw.Container(
-        padding: const pw.EdgeInsets.all(6),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              label.toUpperCase(),
-              style: pw.TextStyle(
-                fontSize: 7,
-                color: PdfColors.grey700,
-                letterSpacing: 0.4,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.SizedBox(height: 2),
-            pw.Text(
-              value,
-              style: pw.TextStyle(
-                fontSize: 14,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey300),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(1),
-        1: pw.FlexColumnWidth(1),
-        2: pw.FlexColumnWidth(1),
-        3: pw.FlexColumnWidth(1),
-      },
-      children: [
-        pw.TableRow(
-          children: [
-            cell('Arrets', '$arretsTotal'),
-            cell('Colis', '$colisLivres / $colisTotal'),
-            cell('Distance', km),
-            cell('Duree', duree),
-          ],
-        ),
-        pw.TableRow(
-          children: [
-            cell('Livres', '$livres'),
-            cell('Echecs', '$echecs'),
-            cell('A livrer', '${arretsTotal - livres - echecs}'),
-            cell('Statut', _statutLabel(_inferStatut(arretsTotal, livres, echecs))),
-          ],
-        ),
-        if (coutCarburantEur != null && coutCarburantEur > 0)
-          pw.TableRow(
-            children: [
-              cell(
-                'Cout carburant',
-                '${coutCarburantEur.toStringAsFixed(2).replaceAll('.', ',')} EUR',
-              ),
-              cell('', ''),
-              cell('', ''),
-              cell('', ''),
-            ],
-          ),
-      ],
-    );
-  }
-
-  pw.Widget _stopsTable(List<Stop> stops) {
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey300),
-      columnWidths: const {
-        0: pw.FixedColumnWidth(28),
-        1: pw.FlexColumnWidth(3),
-        2: pw.FixedColumnWidth(40),
-        3: pw.FixedColumnWidth(60),
-      },
-      children: [
-        pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-          children: [
-            _th('#'),
-            _th('Adresse'),
-            _th('Colis'),
-            _th('Statut'),
-          ],
-        ),
-        for (var i = 0; i < stops.length; i++)
-          _stopRow(i + 1, stops[i]),
-      ],
-    );
-  }
-
-  pw.TableRow _stopRow(int index, Stop stop) {
-    final nom = stop.nomClient?.trim() ?? '';
-    final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
-    final statut = _statutLabel(stop.statutLivraison);
-    final raison = stop.statutLivraison == 'echec' && stop.raisonEchec != null
-        ? ' (${stop.raisonEchec})'
-        : '';
-    final color = _statutColor(stop.statutLivraison);
-
-    return pw.TableRow(
-      children: [
-        _td(
-          pw.Text(
-            '$index',
-            style: pw.TextStyle(
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 10,
-            ),
-            textAlign: pw.TextAlign.center,
-          ),
-        ),
-        _td(
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              if (nom.isNotEmpty)
-                pw.Text(
-                  nom,
-                  style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 10,
-                  ),
-                ),
-              pw.Text(
-                adresse,
-                style: pw.TextStyle(
-                  fontSize: nom.isEmpty ? 10 : 8,
-                  color: nom.isEmpty ? PdfColors.black : PdfColors.grey700,
-                ),
-              ),
-            ],
-          ),
-        ),
-        _td(
-          pw.Text(
-            '${stop.nbColis}',
-            style: const pw.TextStyle(fontSize: 10),
-            textAlign: pw.TextAlign.center,
-          ),
-        ),
-        _td(
-          pw.Text(
-            '$statut$raison',
-            style: pw.TextStyle(
-              fontSize: 9,
-              color: color,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  pw.Widget _th(String text) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(6),
-      child: pw.Text(
-        text.toUpperCase(),
-        style: pw.TextStyle(
-          fontSize: 8,
-          fontWeight: pw.FontWeight.bold,
-          color: PdfColors.grey700,
-        ),
-      ),
-    );
-  }
-
-  pw.Widget _td(pw.Widget child) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: child,
-    );
-  }
-
-  static String _formatDuration(int totalSeconds) {
-    final h = totalSeconds ~/ 3600;
-    final m = (totalSeconds % 3600) ~/ 60;
-    if (h == 0) return '${m}min';
-    return '${h}h${m.toString().padLeft(2, '0')}';
-  }
-
-  static String _statutLabel(String s) => switch (s) {
-        'a_livrer' => 'A livrer',
-        'livre' => 'LIVRE',
-        'echec' => 'ECHEC',
-        'brouillon' => 'Brouillon',
-        'optimisee' => 'Optimisee',
-        'en_cours' => 'En cours',
-        'terminee' => 'Terminee',
-        _ => s,
-      };
-
-  static String _inferStatut(int total, int livres, int echecs) {
-    if (total == 0) return 'brouillon';
-    if (livres + echecs == total) return 'terminee';
-    if (livres + echecs > 0) return 'en_cours';
-    return 'optimisee';
-  }
-
-  static PdfColor _statutColor(String s) => switch (s) {
-        'livre' => PdfColors.green700,
-        'echec' => PdfColors.red700,
-        _ => PdfColors.grey700,
-      };
 }
