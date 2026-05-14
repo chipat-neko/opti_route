@@ -10,6 +10,7 @@ import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import 'ajout_arret/dialogs.dart';
 import 'ajout_arret/form_widgets.dart';
 import 'scan_bordereau_screen.dart';
 
@@ -710,50 +711,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   /// avec un badge "GPS manquant" dans la tournee et peut etre
   /// re-edite plus tard pour declencher le geocodage.
   Future<void> _enterOfflineAddress() async {
-    final ctrl = TextEditingController(text: _offlineAddressText ?? '');
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Saisie hors ligne'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Tape l\'adresse complete a la main. Le GPS sera '
-                'manquant tant que tu n\'auras pas re-edite cet arret '
-                'avec une connexion (re-selection depuis l\'autocomplete).',
-                style: TextStyle(fontSize: 12.5, height: 1.4),
-              ),
-              const SizedBox(height: AppSpacing.x12),
-              TextField(
-                controller: ctrl,
-                autofocus: true,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Adresse',
-                  hintText: '12 rue des Lilas, 28100 Dreux',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Annuler'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(ctrl.text.trim()),
-              child: const Text('Valider'),
-            ),
-          ],
-        );
-      },
-    );
-    if (!mounted) return;
-    if (result == null) return;
+    final result =
+        await showOfflineAddressDialog(context, initial: _offlineAddressText);
+    if (!mounted || result == null) return;
     final trimmed = result.trim();
     if (trimmed.isEmpty) {
       setState(() => _offlineAddressText = null);

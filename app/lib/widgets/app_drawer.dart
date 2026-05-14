@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
@@ -166,6 +167,26 @@ class AppDrawer extends ConsumerWidget {
               },
             ),
             const Spacer(),
+            const Divider(height: 1),
+            // Lien externe vers le site vitrine (presentation, FAQ,
+            // changelog, ROI). Ouvert dans le navigateur systeme via
+            // url_launcher car le webview embarque n'a pas vraiment de
+            // valeur (le user verrait juste l'app dans une app).
+            ListTile(
+              leading: const Icon(Icons.public_outlined),
+              title: const Text('Voir le site'),
+              subtitle: const Text(
+                'Presentation, FAQ, changelog',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(Icons.open_in_new, size: 16),
+              onTap: () {
+                launchUrl(
+                  Uri.parse('https://chipat-neko.github.io/opti_route/site/'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+            ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.tune_outlined),
