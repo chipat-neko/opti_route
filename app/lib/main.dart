@@ -46,6 +46,12 @@ class OptiRouteApp extends ConsumerWidget {
     // Le Provider auto-appelle start() a la 1ere lecture.
     ref.read(offlineGeocodeAutomationProvider);
 
+    // Branche le ParametresRepository sur le NotificationsService
+    // pour qu'il puisse consulter le creneau quiet hours avant chaque
+    // notif immediate (showEndOfRouteSummary, showPendingStopsAlert).
+    NotificationsService.instance
+        .attachParametres(ref.read(parametresRepositoryProvider));
+
     return MaterialApp(
       title: 'opti_route',
       debugShowCheckedModeBanner: false,

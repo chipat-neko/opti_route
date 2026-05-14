@@ -220,6 +220,24 @@ class StopRow extends ConsumerWidget {
             ),
           ),
         );
+      case MoveToTourneeAction(targetTourneeId: final targetId):
+        // Deplace le stop vers la tournee choisie. On invalide
+        // l'optim VROOM des 2 tournees (source + dest), puis on
+        // relance l'auto-reorder local sur les 2.
+        final sourceTourneeId = stop.tourneeId;
+        await repo.moveToTournee(stop.id, targetId);
+        await tourneesRepo.invalidateOptimization(sourceTourneeId);
+        await tourneesRepo.invalidateOptimization(targetId);
+        await ref.read(localReorderServiceProvider).reorder(sourceTourneeId);
+        await ref.read(localReorderServiceProvider).reorder(targetId);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+                '${_primaryLine(stop)} deplace vers une autre tournee'),
+            backgroundColor: AppColors.emerald,
+            duration: const Duration(seconds: 3),
+          ),
+        );
     }
 
     if (statutChange) {

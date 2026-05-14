@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+
+import 'parametres_repository.dart';
 
 /// Service de notifications locales (rappels "tournee a preparer",
 /// "tournee non finie", + tests). 100% local au telephone via
@@ -11,6 +14,32 @@ class NotificationsService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+
+  /// Reference optionnelle au ParametresRepository pour pouvoir
+  /// consulter le creneau quiet hours avant chaque notif immediate.
+  /// Branche au boot via [attachParametres] - sans ca, les notifs
+  /// passent toujours (comportement legacy).
+  ParametresRepository? _params;
+
+  /// Branche le ParametresRepository utilise pour respecter le mode
+  /// "ne pas deranger" (quiet hours). Appele depuis main.dart au boot.
+  void attachParametres(ParametresRepository params) {
+    _params = params;
+  }
+
+  /// Vrai si on est actuellement dans le creneau quiet hours. Retourne
+  /// false si `_params` non branche ou creneau non configure.
+  /// Best-effort : en cas d'exception (Drift KO au boot), retourne
+  /// false pour ne pas bloquer une notif legitime.
+  Future<bool> _isQuietHours() async {
+    if (_params == null) return false;
+    try {
+      return await _params!.isQuietHoursNow();
+    } catch (e) {
+      debugPrint('[NotificationsService] quiet hours check failed: $e');
+      return false;
+    }
+  }
 
   Future<void> init() async {
     if (_initialized) return;
@@ -160,6 +189,11 @@ class NotificationsService {
 
   /// Notification immediate post-tournee : "X livrees / Y echecs / Z min
   /// totales". Affichee a la bascule de la tournee en 'terminee'.
+  ///
+  /// Respecte le mode "ne pas deranger" : si on est actuellement dans
+  /// le creneau quiet hours (defini dans Parametres), la notif est
+  /// silencieusement skip. La tournee est quand meme marquee terminee
+  /// en base, juste la notif n'est pas affichee.
   Future<void> showEndOfRouteSummary({
     required int tourneeId,
     required String nomTournee,
@@ -168,6 +202,11 @@ class NotificationsService {
     required int dureeTotaleMin,
   }) async {
     await init();
+    if (await _isQuietHours()) {
+      debugPrint(
+          '[NotificationsService] quiet hours - skip showEndOfRouteSummary');
+      return;
+    }
     final notifId = _endOfRouteNotifId(tourneeId);
     final body = '$nbLivres livraisons, $nbEchecs echecs, '
         '${_humanDuration(dureeTotaleMin)}';
@@ -189,6 +228,9 @@ class NotificationsService {
 
   /// Notification "arrets oubliés" : declenchee si la tournee est mise
   /// en pause / fermee alors qu'il reste des stops a_livrer.
+  ///
+  /// Respecte le mode "ne pas deranger" : skip silencieux si on est
+  /// dans le creneau quiet hours configure.
   Future<void> showPendingStopsAlert({
     required int tourneeId,
     required String nomTournee,
@@ -196,6 +238,11 @@ class NotificationsService {
   }) async {
     await init();
     if (nbPending == 0) return;
+    if (await _isQuietHours()) {
+      debugPrint(
+          '[NotificationsService] quiet hours - skip showPendingStopsAlert');
+      return;
+    }
     final notifId = _pendingStopsNotifId(tourneeId);
     await _plugin.show(
       notifId,

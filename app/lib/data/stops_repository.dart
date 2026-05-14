@@ -43,6 +43,25 @@ class StopsRepository {
     return (_db.update(_db.stops)..where((s) => s.id.equals(id))).write(entry);
   }
 
+  /// Deplace un arret d'une tournee vers une autre. Reset l'ordre
+  /// optimise (le nouvel ordre dans la tournee de destination sera
+  /// calcule par l'auto-reorder local declenche apres).
+  ///
+  /// Use case : Noah a embarque le mauvais colis dans la mauvaise
+  /// tournee, ou un client appelle "j'ai oublie de te dire, mets-moi
+  /// avec la tournee de demain". Pas besoin de supprimer + recreer.
+  ///
+  /// Note : l'invalidation de l'optimisation VROOM des 2 tournees
+  /// (source + destination) et l'auto-reorder local sont a la charge
+  /// du caller (typiquement le screen qui declenche le move).
+  Future<int> moveToTournee(int stopId, int newTourneeId) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(
+      tourneeId: Value(newTourneeId),
+      ordreOptimise: const Value(null),
+    ));
+  }
+
   /// Affecte un coequipier a un arret. [coequipierId] null = Noah
   /// lui-meme (cas par defaut, pas d'aidant).
   Future<int> setCoequipier(int stopId, int? coequipierId) {

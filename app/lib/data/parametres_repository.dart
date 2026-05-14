@@ -32,6 +32,8 @@ class ParametresRepository {
   static const _kPinHash = 'pin_hash';
   static const _kBiometrieActive = 'biometrie_active';
   static const _kAutoLockMinutes = 'auto_lock_minutes';
+  static const _kQuietHoursStart = 'quiet_hours_start';
+  static const _kQuietHoursEnd = 'quiet_hours_end';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -302,6 +304,78 @@ class ParametresRepository {
   Future<void> setAutoLockMinutes(int minutes) {
     assert(minutes >= 0 && minutes <= 60);
     return _write(_kAutoLockMinutes, minutes.toString());
+  }
+
+  /// Heure de debut du mode "ne pas deranger" au format "HH:mm".
+  /// Null = quiet hours desactives. Pendant le creneau [start, end],
+  /// `NotificationsService` skip les notifs locales (rappel veille,
+  /// fin de tournee, etc.) pour ne pas vibrer pendant la pause-dejeuner
+  /// ou la nuit.
+  ///
+  /// Cas particulier : si `start > end` (ex: 22h → 06h), le creneau
+  /// passe minuit et couvre 22h..23:59 + 00:00..06h.
+  Future<String?> getQuietHoursStart() => _readKey(_kQuietHoursStart);
+  Stream<String?> watchQuietHoursStart() => _watchKey(_kQuietHoursStart);
+  Future<void> setQuietHoursStart(String hhmm) =>
+      _write(_kQuietHoursStart, hhmm);
+  Future<int> clearQuietHoursStart() => _delete(_kQuietHoursStart);
+
+  Future<String?> getQuietHoursEnd() => _readKey(_kQuietHoursEnd);
+  Stream<String?> watchQuietHoursEnd() => _watchKey(_kQuietHoursEnd);
+  Future<void> setQuietHoursEnd(String hhmm) => _write(_kQuietHoursEnd, hhmm);
+  Future<int> clearQuietHoursEnd() => _delete(_kQuietHoursEnd);
+
+  /// Vrai si l'heure [now] (defaut : maintenant) tombe dans le creneau
+  /// quiet hours configure. Retourne false si l'un des 2 champs n'est
+  /// pas defini (quiet hours desactives).
+  ///
+  /// Gere le cas "creneau qui passe minuit" : si start > end (22h →
+  /// 06h), le creneau couvre 22h..minuit + minuit..06h.
+  ///
+  /// Pour les tests : passer [now] explicitement pour figer l'heure.
+  Future<bool> isQuietHoursNow({DateTime? now}) async {
+    final start = await getQuietHoursStart();
+    final end = await getQuietHoursEnd();
+    if (start == null || end == null) return false;
+    return isWithinQuietHours(
+      now: now ?? DateTime.now(),
+      startHHmm: start,
+      endHHmm: end,
+    );
+  }
+
+  /// Version pure / testable de la logique quiet hours. Sans I/O,
+  /// utilise par les tests et par `isQuietHoursNow`.
+  ///
+  /// Retourne false si l'un des 2 formats HH:mm est invalide.
+  /// `start == end` est traite comme "creneau vide" (jamais quiet).
+  static bool isWithinQuietHours({
+    required DateTime now,
+    required String startHHmm,
+    required String endHHmm,
+  }) {
+    final s = _parseMinutes(startHHmm);
+    final e = _parseMinutes(endHHmm);
+    if (s == null || e == null) return false;
+    if (s == e) return false; // creneau vide
+    final m = now.hour * 60 + now.minute;
+    if (s < e) {
+      // Creneau dans la meme journee : [s, e)
+      return m >= s && m < e;
+    } else {
+      // Creneau qui passe minuit (ex: 22h -> 06h) : [s, 24h) U [0, e)
+      return m >= s || m < e;
+    }
+  }
+
+  static int? _parseMinutes(String hhmm) {
+    final parts = hhmm.split(':');
+    if (parts.length != 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
   }
 
   /// Estime le cout carburant d'une distance (en metres) selon les

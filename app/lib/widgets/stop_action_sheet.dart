@@ -1,8 +1,9 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../data/database.dart';
 import '../data/navigation_service.dart';
@@ -39,6 +40,16 @@ class OpenDetailsAction extends StopAction {
 /// et setPreuvePhoto sur le repo.
 class TakePreuvePhotoAction extends StopAction {
   const TakePreuvePhotoAction();
+}
+
+/// Deplace l'arret vers une autre tournee. Le caller appelle
+/// `StopsRepository.moveToTournee` + invalide les optims des 2
+/// tournees + relance l'auto-reorder local.
+class MoveToTourneeAction extends StopAction {
+  const MoveToTourneeAction(this.targetTourneeId);
+
+  /// Id de la tournee de destination (different de la tournee courante).
+  final int targetTourneeId;
 }
 
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
@@ -566,6 +577,14 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 style: TextButton.styleFrom(
                   foregroundColor: p.ink,
                 ),
+                onPressed: () => _pickTargetTournee(context),
+                icon: const Icon(Icons.swap_horiz, size: 18),
+                label: const Text('Deplacer vers une autre tournee'),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: p.ink,
+                ),
                 onPressed: () =>
                     Navigator.of(context).pop(const OpenDetailsAction()),
                 icon: const Icon(Icons.edit_outlined, size: 18),
@@ -576,5 +595,102 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
         ),
       ),
     );
+  }
+
+  /// Ouvre une bottom sheet listant toutes les tournees **autres** que
+  /// la tournee courante du stop, ordonnees par date desc (les plus
+  /// recentes en haut, plus probable de bouger un stop vers la
+  /// tournee du jour qu'une de l'an dernier).
+  ///
+  /// Tap sur une tournee -> pop le sheet courant avec
+  /// MoveToTourneeAction(targetId). Le caller (StopRow._onTap) execute
+  /// le deplacement + invalide les optims + auto-reorder.
+  Future<void> _pickTargetTournee(BuildContext context) async {
+    final p = context.palette;
+    final db = ref.read(appDatabaseProvider);
+    // Charge toutes les tournees != tournee courante, tri date desc.
+    final tournees = await (db.select(db.tournees)
+          ..where((t) => t.id.isNotValue(widget.stop.tourneeId))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .get();
+    if (!context.mounted) return;
+    if (tournees.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucune autre tournee disponible.')),
+      );
+      return;
+    }
+
+    final df = DateFormat('d MMM yyyy', 'fr');
+    final pickedId = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: p.cream,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x18,
+            AppSpacing.x14,
+            AppSpacing.x18,
+            AppSpacing.x18,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x14),
+                  decoration: BoxDecoration(
+                    color: p.inkLine,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Deplacer vers une tournee',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: tournees.length,
+                  itemBuilder: (_, i) {
+                    final t = tournees[i];
+                    return ListTile(
+                      leading: const Icon(Icons.local_shipping_outlined),
+                      title: Text(
+                        t.nom,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(df.format(t.date)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(sheetCtx).pop(t.id),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (pickedId == null) return;
+    if (!context.mounted) return;
+    // Pop le sheet principal avec l'action - le caller traitera le move.
+    Navigator.of(context).pop(MoveToTourneeAction(pickedId));
   }
 }
