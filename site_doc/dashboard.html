@@ -123,20 +123,30 @@
       <canvas id="chartKm"></canvas>
     </div>
 
-    <!-- Tableau brut -->
+    <!-- Recherche + tableau brut -->
+    <div class="table-toolbar">
+      <label class="table-search" for="tableSearch">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="tableSearch" type="search" placeholder="Filtrer (nom, date, statut)..." aria-label="Filtrer les tournees affichees">
+      </label>
+      <span class="table-count" id="tableCount" aria-live="polite"></span>
+    </div>
     <div class="dashboard-table-wrap">
       <table class="dashboard-table" id="dataTable">
-        <caption class="sr-only">Tournees du CSV charge</caption>
+        <caption class="sr-only">Tournees du CSV charge (clique une colonne pour trier)</caption>
         <thead>
           <tr>
-            <th scope="col">Date</th>
-            <th scope="col">Nom</th>
-            <th scope="col">Statut</th>
-            <th scope="col">Arrets</th>
-            <th scope="col">Colis livres</th>
-            <th scope="col">Km</th>
-            <th scope="col">Duree (min)</th>
-            <th scope="col">Pause (min)</th>
+            <th scope="col" data-sort-key="date" aria-sort="none"><button type="button" class="th-sort">Date <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="nom" aria-sort="none"><button type="button" class="th-sort">Nom <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="statut" aria-sort="none"><button type="button" class="th-sort">Statut <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="arrets" aria-sort="none"><button type="button" class="th-sort">Arrets <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="colisLivres" aria-sort="none"><button type="button" class="th-sort">Colis livres <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="km" aria-sort="none"><button type="button" class="th-sort">Km <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="dureeMin" aria-sort="none"><button type="button" class="th-sort">Duree (min) <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="pauseMin" aria-sort="none"><button type="button" class="th-sort">Pause (min) <span class="th-arrow" aria-hidden="true"></span></button></th>
           </tr>
         </thead>
         <tbody></tbody>

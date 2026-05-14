@@ -587,6 +587,85 @@ section {
   font-weight: 700;
 }
 
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+  flex-wrap: wrap;
+}
+.table-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--paper);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-12);
+  padding: 6px 12px;
+  flex: 1;
+  min-width: 240px;
+  max-width: 420px;
+  color: var(--text-mute);
+}
+.table-search input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  flex: 1;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  padding: 4px 0;
+}
+.table-search:focus-within {
+  border-color: var(--emerald);
+}
+.table-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-mute);
+}
+
+/* En-tete triable : tout le th est cliquable. Le bouton sert juste a
+   garder la semantique (keyboard focus, role button). */
+.dashboard-table th[data-sort-key] {
+  cursor: pointer;
+  user-select: none;
+}
+.dashboard-table th .th-sort {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  width: 100%;
+}
+.dashboard-table th .th-sort:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
+  border-radius: var(--radius-6);
+}
+.dashboard-table th .th-arrow::before {
+  content: '\2195'; /* fleche neutre haut-bas */
+  opacity: 0.35;
+  font-size: 0.9em;
+}
+.dashboard-table th[aria-sort="ascending"] .th-arrow::before {
+  content: '\2191';
+  opacity: 1;
+  color: var(--emerald);
+}
+.dashboard-table th[aria-sort="descending"] .th-arrow::before {
+  content: '\2193';
+  opacity: 1;
+  color: var(--emerald);
+}
+
 .dashboard-table-wrap {
   background: var(--paper);
   border-radius: var(--radius-18);

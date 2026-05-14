@@ -242,8 +242,80 @@
     return s.length > n ? s.slice(0, n - 1) + '…' : s;
   }
 
+  // ---------- Etat tableau : source + tri + filtre ----------
+  // `allTournees` est la source de verite (parsed depuis CSV).
+  // Le tableau affiche le resultat de `filterFn(sortFn(allTournees))`.
+  // Les stats agregees + les charts restent toujours sur `allTournees`
+  // (sinon "Tournees totales" descendrait quand l'utilisateur filtre).
+  let allTournees = [];
+  let sortKey = 'date';
+  let sortDir = 'desc'; // 'asc' ou 'desc'
+  let filterQuery = '';
+
+  function applySortFilter() {
+    let rows = allTournees.slice();
+    if (filterQuery) {
+      const q = filterQuery.toLowerCase();
+      rows = rows.filter((t) =>
+        String(t.nom || '').toLowerCase().includes(q) ||
+        String(t.date || '').toLowerCase().includes(q) ||
+        String(t.statut || '').toLowerCase().includes(q)
+      );
+    }
+    rows.sort((a, b) => {
+      const va = a[sortKey];
+      const vb = b[sortKey];
+      // Tri numerique si les 2 valeurs sont numeriques, sinon alpha.
+      let cmp;
+      if (typeof va === 'number' && typeof vb === 'number') {
+        cmp = va - vb;
+      } else {
+        cmp = String(va || '').localeCompare(String(vb || ''));
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return rows;
+  }
+
+  function renderTable() {
+    const rows = applySortFilter();
+    const tbody = document.querySelector('#dataTable tbody');
+    tbody.innerHTML = '';
+    for (const t of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${escapeHtml(t.date)}</td>
+        <td>${escapeHtml(t.nom)}</td>
+        <td><span class="badge ${statutBadgeClass(t.statut)}">${escapeHtml(t.statut)}</span></td>
+        <td class="num">${t.arrets}</td>
+        <td class="num">${t.colisLivres}</td>
+        <td class="num">${t.km.toFixed(1)}</td>
+        <td class="num">${t.dureeMin}</td>
+        <td class="num">${t.pauseMin}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    // Reflete l'etat de tri courant sur les en-tetes (aria-sort + classe).
+    document.querySelectorAll('#dataTable thead th').forEach((th) => {
+      const key = th.getAttribute('data-sort-key');
+      if (!key) return;
+      th.setAttribute('aria-sort',
+        key === sortKey ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+    });
+    // Compteur "X / Y tournees affichees" (visible quand un filtre est actif).
+    const counter = document.getElementById('tableCount');
+    if (counter) {
+      if (filterQuery && rows.length !== allTournees.length) {
+        counter.textContent = `${rows.length} / ${allTournees.length} tournees affichees`;
+      } else {
+        counter.textContent = '';
+      }
+    }
+  }
+
   // ---------- Render stat cards + tableau ----------
   function renderResults(tournees) {
+    allTournees = tournees;
     const totalTournees = tournees.length;
     const totalArrets = tournees.reduce((s, t) => s + t.arrets, 0);
     const totalColis = tournees.reduce((s, t) => s + t.colisLivres, 0);
@@ -259,28 +331,34 @@
     document.getElementById('bannerSummary').textContent =
       `${totalTournees} tournee${totalTournees > 1 ? 's' : ''}`;
 
-    // Tableau
-    const tbody = document.querySelector('#dataTable tbody');
-    tbody.innerHTML = '';
-    for (const t of tournees) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="mono">${escapeHtml(t.date)}</td>
-        <td>${escapeHtml(t.nom)}</td>
-        <td><span class="badge ${statutBadgeClass(t.statut)}">${escapeHtml(t.statut)}</span></td>
-        <td class="num">${t.arrets}</td>
-        <td class="num">${t.colisLivres}</td>
-        <td class="num">${t.km.toFixed(1)}</td>
-        <td class="num">${t.dureeMin}</td>
-        <td class="num">${t.pauseMin}</td>
-      `;
-      tbody.appendChild(tr);
-    }
-
+    renderTable();
     renderCharts(tournees);
 
     document.getElementById('uploadZone').classList.add('hidden');
     document.getElementById('results').classList.remove('hidden');
+  }
+
+  // ---------- Wiring tri / filtre (une fois au load) ----------
+  document.querySelectorAll('#dataTable thead th[data-sort-key]').forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort-key');
+      if (sortKey === key) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortKey = key;
+        // Defaut sensible : asc pour les textes, desc pour les nombres.
+        const sample = allTournees[0]?.[key];
+        sortDir = typeof sample === 'number' ? 'desc' : 'asc';
+      }
+      renderTable();
+    });
+  });
+  const searchInput = document.getElementById('tableSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      filterQuery = e.target.value.trim();
+      renderTable();
+    });
   }
 
   function escapeHtml(s) {
