@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,9 +30,26 @@ Future<void> main() async {
   // (cf BackupService.prepareRestore), il sera swap a la place de la
   // DB courante. Sans ce check ici, Drift ouvre l'ancienne DB et le
   // swap ne se fait plus jamais.
-  await BackupService.applyPendingRestoreIfAny();
+  //
+  // Skip en Web : path_provider.getApplicationDocumentsDirectory()
+  // n'est pas implemente sur la plateforme web. Sans ce guard, le
+  // build Flutter Web crashe au boot avec UnimplementedError et l'app
+  // reste sur une page blanche (regression observee sur le 1er deploy
+  // GitHub Pages 2026-05-14). La feature backup/restore zip n'a de
+  // toute facon pas de sens en web (pas de stockage local pour la DB).
+  if (!kIsWeb) {
+    try {
+      await BackupService.applyPendingRestoreIfAny();
+    } catch (e) {
+      // Best-effort : si l'I/O echoue on continue plutot que de bloquer
+      // le boot complet. Le pire cas est qu'un restore manuel n'est
+      // pas applique - l'utilisateur peut re-tenter via Parametres.
+      debugPrint('[main] applyPendingRestoreIfAny failed: $e');
+    }
+  }
   // Init notifications locales (best-effort, ne pas bloquer le boot
-  // si echec).
+  // si echec). En web : flutter_local_notifications fonctionne mais
+  // sans permission notif systeme l'init ne fait rien.
   unawaited(NotificationsService.instance.init());
   runApp(const ProviderScope(child: OptiRouteApp()));
 }
