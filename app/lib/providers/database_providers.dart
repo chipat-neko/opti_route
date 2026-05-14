@@ -42,6 +42,7 @@ final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
 /// fichier .json qu'il importe via "Importer un template".
 final templateShareServiceProvider = Provider<TemplateShareService>((ref) {
   return TemplateShareService(
+    db: ref.watch(appDatabaseProvider),
     tournees: ref.watch(tourneesRepositoryProvider),
     stops: ref.watch(stopsRepositoryProvider),
   );
@@ -58,8 +59,14 @@ final unifiedSearchServiceProvider = Provider<UnifiedSearchService>((ref) {
 /// Recherche live pour une query donnee. Family pour pouvoir watcher
 /// plusieurs queries en parallele si jamais (typiquement 1 a la fois
 /// dans l'UI). FutureProvider car le service fait du I/O Drift.
-final unifiedSearchProvider =
-    FutureProvider.family<List<SearchHit>, String>((ref, query) async {
+///
+/// **autoDispose** : chaque query string genere une nouvelle instance
+/// de provider. Sans autoDispose, les anciennes (a chaque touche tape)
+/// resteraient en cache memoire jusqu'a la mort de l'app. Avec
+/// autoDispose, des qu'aucun widget ne watch plus la query "abc", elle
+/// est garbage collected.
+final unifiedSearchProvider = FutureProvider.autoDispose
+    .family<List<SearchHit>, String>((ref, query) async {
   return ref.watch(unifiedSearchServiceProvider).search(query);
 });
 

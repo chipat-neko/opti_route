@@ -16,7 +16,7 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     tournees = TourneesRepository(db);
     stops = StopsRepository(db);
-    svc = TemplateShareService(tournees: tournees, stops: stops);
+    svc = TemplateShareService(db: db, tournees: tournees, stops: stops);
   });
 
   tearDown(() async {

@@ -29,9 +29,12 @@ import 'tournees_repository.dart';
 /// pour faciliter l'evolution future.
 class TemplateShareService {
   TemplateShareService({
+    required this.db,
     required this.tournees,
     required this.stops,
   });
+
+  final AppDatabase db;
 
   final TourneesRepository tournees;
   final StopsRepository stops;
@@ -128,43 +131,49 @@ class TemplateShareService {
       throw const TemplateShareException('Point de depart manquant');
     }
 
-    // Cree la tournee comme template, date du jour (l'user choisira
-    // une vraie date au "Cloner depuis template").
-    final newId = await tournees.create(TourneesCompanion.insert(
-      nom: '[Import] $nom',
-      date: DateTime.now(),
-      pointDepartLat: pointLat,
-      pointDepartLng: pointLng,
-      pointDepartLabel: pointLabel,
-      isTemplate: const Value(true),
-      vehiculeCapaciteColis:
-          Value((tourneeData['vehiculeCapaciteColis'] as num?)?.toInt() ?? 0),
-      profilOrs:
-          Value(tourneeData['profilOrs'] as String? ?? 'driving-car'),
-      eviterPeages:
-          Value(tourneeData['eviterPeages'] as bool? ?? false),
-    ));
-
-    // Cree les stops un par un, sans coords (re-geocodage delegue).
-    for (final raw in stopsData) {
-      if (raw is! Map<String, dynamic>) continue;
-      await stops.create(StopsCompanion.insert(
-        tourneeId: newId,
-        adresseBrute: (raw['adresseBrute'] as String?) ?? '',
-        nomClient: Value(raw['nomClient'] as String?),
-        nbColis: Value((raw['nbColis'] as num?)?.toInt() ?? 1),
-        priorite: Value((raw['priorite'] as String?) ?? 'flexible'),
-        ordrePriorite:
-            Value((raw['ordrePriorite'] as num?)?.toInt()),
-        fenetreDebut: Value(raw['fenetreDebut'] as String?),
-        fenetreFin: Value(raw['fenetreFin'] as String?),
-        dureeArretMin:
-            Value((raw['dureeArretMin'] as num?)?.toInt() ?? 3),
-        notes: Value(raw['notes'] as String?),
+    // Cree tournee + stops atomiquement : si une ligne stop foire en
+    // milieu d'import, on rollback pour pas se retrouver avec une
+    // tournee orpheline a moitie remplie. Plus rapide aussi (1 batch
+    // INSERT au lieu de N round-trips SQLite).
+    return db.transaction(() async {
+      final newId = await tournees.create(TourneesCompanion.insert(
+        nom: '[Import] $nom',
+        date: DateTime.now(),
+        pointDepartLat: pointLat,
+        pointDepartLng: pointLng,
+        pointDepartLabel: pointLabel,
+        isTemplate: const Value(true),
+        vehiculeCapaciteColis: Value(
+            (tourneeData['vehiculeCapaciteColis'] as num?)?.toInt() ?? 0),
+        profilOrs:
+            Value(tourneeData['profilOrs'] as String? ?? 'driving-car'),
+        eviterPeages:
+            Value(tourneeData['eviterPeages'] as bool? ?? false),
       ));
-    }
 
-    return newId;
+      final companions = <StopsCompanion>[];
+      for (final raw in stopsData) {
+        if (raw is! Map<String, dynamic>) continue;
+        companions.add(StopsCompanion.insert(
+          tourneeId: newId,
+          adresseBrute: (raw['adresseBrute'] as String?) ?? '',
+          nomClient: Value(raw['nomClient'] as String?),
+          nbColis: Value((raw['nbColis'] as num?)?.toInt() ?? 1),
+          priorite: Value((raw['priorite'] as String?) ?? 'flexible'),
+          ordrePriorite:
+              Value((raw['ordrePriorite'] as num?)?.toInt()),
+          fenetreDebut: Value(raw['fenetreDebut'] as String?),
+          fenetreFin: Value(raw['fenetreFin'] as String?),
+          dureeArretMin:
+              Value((raw['dureeArretMin'] as num?)?.toInt() ?? 3),
+          notes: Value(raw['notes'] as String?),
+        ));
+      }
+      if (companions.isNotEmpty) {
+        await db.batch((b) => b.insertAll(db.stops, companions));
+      }
+      return newId;
+    });
   }
 
   /// Construit la structure JSON exportable. Pure (pas d'I/O), facile

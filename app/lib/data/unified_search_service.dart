@@ -102,9 +102,17 @@ class UnifiedSearchService {
 
     final hits = <SearchHit>[];
 
+    // Fetch global partage entre categories 1 et 2 -- evite 2 SELECTs
+    // identiques. La category 1 filtre par nom, la category 2 utilise
+    // la map pour la jointure stops -> tournee parente.
+    List<Tournee> tournees = const [];
+    try {
+      tournees = await _db.select(_db.tournees).get();
+    } catch (_) {/* best-effort */}
+    final tourneesMap = {for (final t in tournees) t.id: t};
+
     // 1. Tournees
     try {
-      final tournees = await _db.select(_db.tournees).get();
       final tourneeHits = <SearchHitTournee>[];
       for (final t in tournees) {
         final score = _scoreFields(q, [t.nom]);
@@ -120,15 +128,7 @@ class UnifiedSearchService {
     try {
       final stops = await _db.select(_db.stops).get();
       final stopHits = <SearchHitStop>[];
-      // Index tournees pour la jointure rapide
-      final tourneesMap = <int, Tournee>{};
       for (final s in stops) {
-        if (!tourneesMap.containsKey(s.tourneeId)) {
-          final t = await (_db.select(_db.tournees)
-                ..where((tt) => tt.id.equals(s.tourneeId)))
-              .getSingleOrNull();
-          if (t != null) tourneesMap[s.tourneeId] = t;
-        }
         final tournee = tourneesMap[s.tourneeId];
         if (tournee == null) continue;
         final score = _scoreFields(q, [

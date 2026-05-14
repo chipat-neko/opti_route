@@ -269,7 +269,10 @@ class OpenRouteOptimizationService implements OptimizationService {
       if (features is! List || features.isEmpty) {
         return _haversineFallback(coords);
       }
-      final feature = features.first as Map<String, dynamic>;
+      final feature = features.first;
+      if (feature is! Map<String, dynamic>) {
+        return _haversineFallback(coords);
+      }
       final props =
           (feature['properties'] as Map?)?.cast<String, dynamic>();
       final summary =
@@ -281,11 +284,18 @@ class OpenRouteOptimizationService implements OptimizationService {
       final geom = (feature['geometry'] as Map?)?.cast<String, dynamic>();
       final coordsList = geom?['coordinates'];
       if (coordsList is List) {
-        geometry = [
-          for (final c in coordsList)
-            if (c is List && c.length >= 2)
-              [(c[0] as num).toDouble(), (c[1] as num).toDouble()],
-        ];
+        geometry = <List<double>>[];
+        for (final c in coordsList) {
+          if (c is! List || c.length < 2) continue;
+          // ORS peut renvoyer des coords null sur edges flakey : skip
+          // au lieu de crasher (le try/catch fallback haversine
+          // s'enclencherait quand meme, mais autant collecter ce
+          // qu'on a de propre).
+          final lng = (c[0] as num?)?.toDouble();
+          final lat = (c[1] as num?)?.toDouble();
+          if (lng == null || lat == null) continue;
+          geometry.add([lng, lat]);
+        }
       }
       return _RouteTotals(
         distance: distance,
