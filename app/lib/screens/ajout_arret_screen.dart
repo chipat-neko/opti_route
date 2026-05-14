@@ -8,9 +8,9 @@ import '../data/database.dart';
 import '../data/geo_utils.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
-import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import 'ajout_arret/form_widgets.dart';
 import 'scan_bordereau_screen.dart';
 
 /// Ajout (potentiellement multiple) d'arrets a une tournee, avec
@@ -178,7 +178,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
             ),
             if (_offlineAddressText != null) ...[
               const SizedBox(height: AppSpacing.x6),
-              _OfflineAddressBanner(
+              OfflineAddressBanner(
                 text: _offlineAddressText!,
                 onClear: () =>
                     setState(() => _offlineAddressText = null),
@@ -212,7 +212,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Client / Enseigne (optionnel)'),
+            const SectionTitle('Client / Enseigne (optionnel)'),
             const SizedBox(height: AppSpacing.x10),
             TextFormField(
               controller: _nomClientCtrl,
@@ -238,14 +238,14 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Priorite'),
+            const SectionTitle('Priorite'),
             const SizedBox(height: AppSpacing.x10),
-            _PriorityChips(
+            PriorityChips(
               value: _priorite,
               onChanged: (v) => setState(() => _priorite = v),
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Colis'),
+            const SectionTitle('Colis'),
             const SizedBox(height: AppSpacing.x10),
             Row(
               children: [
@@ -274,12 +274,12 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.x22),
-            const _SectionTitle('Fenetre horaire (optionnel)'),
+            const SectionTitle('Fenetre horaire (optionnel)'),
             const SizedBox(height: AppSpacing.x10),
             Row(
               children: [
                 Expanded(
-                  child: _TimePickerField(
+                  child: TimePickerField(
                     label: 'Pas avant',
                     value: _fenetreDebut,
                     onChanged: (t) => setState(() => _fenetreDebut = t),
@@ -287,7 +287,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                 ),
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(
-                  child: _TimePickerField(
+                  child: TimePickerField(
                     label: 'Avant',
                     value: _fenetreFin,
                     onChanged: (t) => setState(() => _fenetreFin = t),
@@ -763,190 +763,5 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       _offlineAddressText = trimmed;
       _address = null;
     });
-  }
-}
-
-/// Bandeau orange/amber affiche sous le champ Adresse quand
-/// `_offlineAddressText` est rempli. Indique clairement que cet arret
-/// n'a pas de coordonnees GPS et offre un bouton pour effacer la saisie
-/// hors-ligne et revenir a l'autocomplete normal.
-class _OfflineAddressBanner extends StatelessWidget {
-  const _OfflineAddressBanner({required this.text, required this.onClear});
-
-  final String text;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x12,
-        AppSpacing.x10,
-        AppSpacing.x6,
-        AppSpacing.x10,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.amber.withValues(alpha: 0.20),
-        borderRadius: BorderRadius.circular(AppRadius.r10),
-        border: Border.all(color: AppColors.amber, width: 1),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.signal_cellular_off_outlined,
-            size: 18,
-            color: AppColors.ink,
-          ),
-          const SizedBox(width: AppSpacing.x8),
-          Expanded(
-            child: Text(
-              'Hors ligne · GPS manquant\n$text',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.ink,
-                height: 1.3,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 18),
-            color: AppColors.ink,
-            onPressed: onClear,
-            tooltip: 'Effacer la saisie hors ligne',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Text(
-      label.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.6,
-        color: p.textMute,
-      ),
-    );
-  }
-}
-
-class _PriorityChips extends StatelessWidget {
-  const _PriorityChips({required this.value, required this.onChanged});
-
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  static const _options = [
-    ('obligatoire_premier', 'En premier', AppColors.lime),
-    ('flexible', 'Flexible', AppColors.creamSoft),
-    ('obligatoire_dernier', 'En dernier', AppColors.lime),
-    ('eviter_si_possible', 'Eviter', AppColors.amber),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Wrap(
-      spacing: AppSpacing.x8,
-      runSpacing: AppSpacing.x8,
-      children: [
-        for (final (id, label, accent) in _options)
-          ChoiceChip(
-            label: Text(label),
-            selected: value == id,
-            onSelected: (sel) {
-              if (sel) onChanged(id);
-            },
-            selectedColor: accent,
-            backgroundColor: p.paper,
-            side: BorderSide(
-              color: value == id ? accent : p.inkLine,
-            ),
-            labelStyle: TextStyle(
-              color: p.ink,
-              fontWeight: value == id ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _TimePickerField extends StatelessWidget {
-  const _TimePickerField({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final TimeOfDay? value;
-  final ValueChanged<TimeOfDay?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final display = value == null
-        ? ' - '
-        : '${value!.hour.toString().padLeft(2, '0')}:${value!.minute.toString().padLeft(2, '0')}';
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppRadius.r14),
-      onTap: () async {
-        final picked = await showTimePicker(
-          context: context,
-          initialTime: value ?? const TimeOfDay(hour: 9, minute: 0),
-        );
-        if (picked != null) onChanged(picked);
-      },
-      onLongPress: value == null ? null : () => onChanged(null),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x14,
-          vertical: AppSpacing.x12,
-        ),
-        decoration: BoxDecoration(
-          color: p.paper,
-          borderRadius: BorderRadius.circular(AppRadius.r14),
-          border: Border.all(color: p.inkLine),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.access_time, size: 18, color: p.ink),
-            const SizedBox(width: AppSpacing.x8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: p.textMute,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    display,
-                    style: appMonoStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
