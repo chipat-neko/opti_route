@@ -219,5 +219,115 @@ void main() {
       expect(newStops.first.statutLivraison, 'a_livrer');
       expect(newStops.first.livreLat, isNull);
     });
+
+    test('scenario : deplacer un stop d\'une tournee a une autre + reorder',
+        () async {
+      // Setup : 2 tournees avec des stops
+      final t1 = await tournees.create(TourneesCompanion.insert(
+        nom: 'Tournee source',
+        date: DateTime(2026, 5, 14),
+        pointDepartLat: 48.0,
+        pointDepartLng: 1.0,
+        pointDepartLabel: 'Depot',
+      ));
+      final t2 = await tournees.create(TourneesCompanion.insert(
+        nom: 'Tournee dest',
+        date: DateTime(2026, 5, 14),
+        pointDepartLat: 48.0,
+        pointDepartLng: 1.0,
+        pointDepartLabel: 'Depot',
+      ));
+
+      // Stop dans t1 avec ordreOptimise = 5 (deja optimise)
+      final movedStop = await stops.create(StopsCompanion.insert(
+        tourneeId: t1,
+        adresseBrute: 'Stop a deplacer',
+        lat: const Value(48.5),
+        lng: const Value(1.5),
+        ordreOptimise: const Value(5),
+      ));
+      // Autre stop dans t1 (controle : doit rester)
+      final remainingStop = await stops.create(StopsCompanion.insert(
+        tourneeId: t1,
+        adresseBrute: 'Stop qui reste',
+      ));
+      // Stop deja dans t2 (pour verifier que le move ne le casse pas)
+      final t2ExistingStop = await stops.create(StopsCompanion.insert(
+        tourneeId: t2,
+        adresseBrute: 'Stop deja la',
+      ));
+
+      // Action : deplace movedStop de t1 vers t2
+      await stops.moveToTournee(movedStop, t2);
+
+      // 1. Le stop appartient maintenant a t2
+      final t2Stops = await stops.getByTournee(t2);
+      expect(t2Stops.map((s) => s.id), containsAll([t2ExistingStop, movedStop]));
+      expect(t2Stops, hasLength(2));
+
+      // 2. Il n'est plus dans t1
+      final t1Stops = await stops.getByTournee(t1);
+      expect(t1Stops.map((s) => s.id), [remainingStop]);
+
+      // 3. Son ordreOptimise a ete reset (sera recalcule par auto-reorder)
+      final movedFresh = await stops.getById(movedStop);
+      expect(movedFresh!.ordreOptimise, isNull);
+
+      // 4. Les autres stops sont intacts (pas d'effet de bord)
+      final remainingFresh = await stops.getById(remainingStop);
+      expect(remainingFresh!.tourneeId, t1);
+      final t2ExistingFresh = await stops.getById(t2ExistingStop);
+      expect(t2ExistingFresh!.tourneeId, t2);
+    });
+
+    test(
+        'scenario hors-ligne : stops sans coords sont detectables + '
+        'retry batch fonctionne', () async {
+      final tId = await tournees.create(TourneesCompanion.insert(
+        nom: 'Tournee offline',
+        date: DateTime(2026, 5, 14),
+        pointDepartLat: 48.0,
+        pointDepartLng: 1.0,
+        pointDepartLabel: 'Depot',
+      ));
+
+      // 3 stops dont 2 sans coords (mode offline)
+      await stops.create(StopsCompanion.insert(
+        tourneeId: tId,
+        adresseBrute: 'Avec GPS',
+        lat: const Value(48.5),
+        lng: const Value(1.5),
+      ));
+      final offline1 = await stops.create(StopsCompanion.insert(
+        tourneeId: tId,
+        adresseBrute: 'Sans GPS 1',
+      ));
+      final offline2 = await stops.create(StopsCompanion.insert(
+        tourneeId: tId,
+        adresseBrute: 'Sans GPS 2',
+      ));
+
+      // 1. Detection : 2 stops sans coords
+      final all = await stops.getByTournee(tId);
+      final missing = all.where((s) => s.lat == null).toList();
+      expect(missing.map((s) => s.id), containsAll([offline1, offline2]));
+
+      // 2. Simule un retry batch : on update les coords manuellement
+      //    (le vrai service appellerait le geocoder, on teste juste la
+      //     mecanique cote DB)
+      await stops.updateCoords(
+        stopId: offline1,
+        lat: 48.7,
+        lng: 1.3,
+        adresseNormalisee: '12 RUE X, 75001 PARIS',
+      );
+
+      // 3. Apres retry, plus qu'un en attente
+      final afterRetry = await stops.getByTournee(tId);
+      final stillMissing =
+          afterRetry.where((s) => s.lat == null).toList();
+      expect(stillMissing, hasLength(1));
+      expect(stillMissing.first.id, offline2);
+    });
   });
 }
