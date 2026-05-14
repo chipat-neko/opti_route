@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,11 @@ void main() {
     // deja, mais les tests court-circuitent main() donc on le refait
     // ici par defense). Les .ttf sont bundle en `assets/fonts/`.
     GoogleFonts.config.allowRuntimeFetching = false;
+    // Chaque test cree sa propre AppDatabase(NativeDatabase.memory()).
+    // Drift loggue un WARNING pour chaque instance >1 (race conditions
+    // possibles). Ici les DBs sont isolees en memoire, on coupe le
+    // warning pour ne pas polluer le log de test.
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   });
 
   group('Smoke render — mode clair', () {
@@ -96,38 +102,48 @@ void main() {
 /// une DB Drift en memoire. Necessaire pour que les providers
 /// Riverpod qui touchent la base aient une vraie source.
 ///
-/// Encapsule dans `runAsync` pour eviter le bug "Timer is still
-/// pending" : Drift planifie des Timer.zero internes pour drainer
-/// ses streams au close, et le faux temps de flutter_test ne les
-/// laisse jamais s'executer. `runAsync` donne du vrai temps.
+/// Encapsule **tout** dans **un seul** `runAsync` : pump + close.
+/// La separation pump-en-runAsync / close-en-tearDown-runAsync a cause
+/// des "Reentrant call to runAsync() denied" en CI : si close()
+/// hangeait (Drift streams non draines), la runAsync de tearDown
+/// restait active et bloquait le test suivant qui appelait runAsync.
+/// En fermant la DB dans le meme runAsync que le pump, on garantit
+/// l'isolation par test : 1 runAsync entre, 1 sort.
+///
+/// Le wrap reste necessaire pour donner du vrai temps a Drift de
+/// drainer ses Timer.zero internes au close (sans ca : exception
+/// "Timer is still pending" historique).
 Future<void> _pumpScreen(
   WidgetTester tester,
   Widget screen, {
   required Brightness brightness,
 }) async {
-  final db = AppDatabase(NativeDatabase.memory());
-  addTearDown(() async {
-    // Donne du vrai temps a Drift pour fermer ses streams.
-    await tester.runAsync(() => db.close());
-  });
-
   await tester.runAsync(() async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(db),
-        ],
-        child: MaterialApp(
-          theme: buildAppTheme(),
-          darkTheme: buildAppThemeDark(),
-          themeMode: brightness == Brightness.dark
-              ? ThemeMode.dark
-              : ThemeMode.light,
-          home: screen,
+    final db = AppDatabase(NativeDatabase.memory());
+    try {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+          ],
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            darkTheme: buildAppThemeDark(),
+            themeMode: brightness == Brightness.dark
+                ? ThemeMode.dark
+                : ThemeMode.light,
+            home: screen,
+          ),
         ),
-      ),
-    );
-    // Laisser un frame pour les streams initiaux.
-    await tester.pump(const Duration(milliseconds: 100));
+      );
+      // Laisser un frame pour les streams initiaux.
+      await tester.pump(const Duration(milliseconds: 100));
+    } finally {
+      // Vide l'arbre AVANT de fermer la DB : dispose les Riverpod
+      // StreamProviders qui pourraient encore ecouter les tables Drift,
+      // sinon db.close() attend ces subscribers indefiniment.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await db.close();
+    }
   });
 }
