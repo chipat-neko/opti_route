@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.8.0+2010
+version: 1.9.0+2011
 
 environment:
   sdk: ^3.11.5
@@ -66,6 +66,9 @@ dependencies:
   # declencher automatiquement le re-geocodage des arrets ajoutes en
   # mode hors-ligne (cf OfflineGeocodeAutomation).
   connectivity_plus: ^6.1.0
+  # Archive : creation / lecture de zip pour le backup complet
+  # (DB SQLite + photos preuves) en un seul fichier partageable.
+  archive: ^4.0.7
 
 dev_dependencies:
   flutter_test:

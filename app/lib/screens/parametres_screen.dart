@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/backup_service.dart';
 import '../data/notifications_service.dart';
 import '../data/parametres_repository.dart';
 import '../providers/database_providers.dart';
@@ -789,6 +790,23 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
+          const ParametresSectionTitle('Donnees'),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Sauvegarde complete de l\'app dans un zip portable '
+            '(DB SQLite + photos preuves). Conserve sur Drive ou clef '
+            'USB pour retrouver tes donnees en cas de perte du phone.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          const _BackupTile(),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
           const ParametresSectionTitle('A propos'),
           const SizedBox(height: AppSpacing.x10),
           ListTile(
@@ -1204,3 +1222,74 @@ final _quietStartProvider = StreamProvider<String?>((ref) {
 final _quietEndProvider = StreamProvider<String?>((ref) {
   return ref.watch(parametresRepositoryProvider).watchQuietHoursEnd();
 });
+
+/// Tile "Creer une sauvegarde" dans la section Donnees. Genere un
+/// zip avec la DB SQLite + le dossier preuves/ et declenche le share
+/// natif Android. Operation potentiellement longue (selon nb de
+/// photos), donc loading state pendant le travail.
+class _BackupTile extends ConsumerStatefulWidget {
+  const _BackupTile();
+
+  @override
+  ConsumerState<_BackupTile> createState() => _BackupTileState();
+}
+
+class _BackupTileState extends ConsumerState<_BackupTile> {
+  bool _running = false;
+
+  Future<void> _onBackup() async {
+    setState(() => _running = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final path = await BackupService().createBackup();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            path == null
+                ? 'Backup pret (share annule)'
+                : 'Backup partage avec succes',
+          ),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } on BackupException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Backup refuse : ${e.message}'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur backup : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.archive_outlined),
+      title: const Text('Creer une sauvegarde (.zip)'),
+      subtitle: const Text(
+        'DB + photos preuves dans un fichier partageable',
+        style: TextStyle(fontSize: 12),
+      ),
+      trailing: _running
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.ios_share),
+      onTap: _running ? null : _onBackup,
+    );
+  }
+}
