@@ -21,6 +21,17 @@ class TourneesRepository {
         .getSingleOrNull();
   }
 
+  /// Stream d'une tournee unique pour pouvoir watcher ses changements
+  /// de statut / pauseeLe / etc. Indispensable pour que l'ecran
+  /// `TourneeDuJourScreen` re-rende quand on appelle `update()` depuis
+  /// les actions (Demarrer / Pause / Arreter) -- sans ce stream, l'UI
+  /// continue a afficher l'objet `widget.tournee` immuable passe au
+  /// constructeur (bug observe sur la checklist 2026-05-14).
+  Stream<Tournee?> watchById(int id) {
+    return (_db.select(_db.tournees)..where((t) => t.id.equals(id)))
+        .watchSingleOrNull();
+  }
+
   Future<int> create(TourneesCompanion entry) {
     return _db.into(_db.tournees).insert(entry);
   }

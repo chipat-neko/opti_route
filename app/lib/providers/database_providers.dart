@@ -337,6 +337,17 @@ final tourneesStreamProvider = StreamProvider<List<Tournee>>((ref) {
   return ref.watch(tourneesRepositoryProvider).watchAll();
 });
 
+/// Stream d'une tournee unique par id. Sert a [TourneeDuJourScreen]
+/// (et a d'autres ecrans qui veulent re-rendre quand le statut /
+/// pauseeLe / demareeLe change). Sans ce provider, l'objet
+/// `widget.tournee` passe au constructeur reste immuable et l'UI
+/// affiche l'ancien etat apres une action (bug 2026-05-14 sur
+/// Demarrer / Pause / Reprise / Terminer).
+final tourneeByIdProvider =
+    StreamProvider.family<Tournee?, int>((ref, id) {
+  return ref.watch(tourneesRepositoryProvider).watchById(id);
+});
+
 /// Vrai s'il existe au moins une tournee `statut == 'en_cours'` dans
 /// la base, peu importe sa date. Sert a afficher un badge "tournee
 /// active" sur l'icone drawer pour eviter d'oublier qu'on est en

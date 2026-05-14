@@ -43,12 +43,21 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   Widget build(BuildContext context) {
     final stopsAsync = ref.watch(stopsByTourneeProvider(widget.tournee.id));
     final optimizer = ref.watch(optimizationServiceProvider);
+    // Watch la tournee depuis la DB pour que l'UI se rafraichisse
+    // automatiquement quand on appelle `repo.update(statut: ...)`
+    // depuis _onDemarrerPressed / _onPauseShortPressed / _onArreterPressed.
+    // Sans ca, `widget.tournee` reste fige a la valeur du constructeur
+    // et l'UI ne reagit pas aux changements de statut / pauseeLe /
+    // demareeLe (bug observe sur la checklist 2026-05-14).
+    final tournee =
+        ref.watch(tourneeByIdProvider(widget.tournee.id)).asData?.value ??
+            widget.tournee;
     // Bouton grisé tant que `optimiseeLe != null` : la tournée est déjà
     // optimisée et rien n'a changé depuis. Toute modif structurelle
     // (add/edit/delete arret, point de depart change) appelle
     // `invalidateOptimization` qui remet `optimiseeLe = null` et
     // ré-active le bouton.
-    final dejaOptimisee = widget.tournee.optimiseeLe != null;
+    final dejaOptimisee = tournee.optimiseeLe != null;
 
     return Scaffold(
       drawer: const AppDrawer(),
@@ -78,7 +87,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             tooltip: 'Voir sur la carte',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => CarteScreen(tournee: widget.tournee),
+                builder: (_) => CarteScreen(tournee: tournee),
               ),
             ),
           ),
@@ -87,23 +96,23 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             tooltip: 'Modifier la tournee',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => TourneeFormScreen(initial: widget.tournee),
+                builder: (_) => TourneeFormScreen(initial: tournee),
               ),
             ),
           ),
           PlusMenu(
-            tournee: widget.tournee,
+            tournee: tournee,
             onAction: _onPlusAction,
           ),
         ],
       ),
       body: stopsAsync.when(
-        data: (stops) => Body(tournee: widget.tournee, stops: stops),
+        data: (stops) => Body(tournee: tournee, stops: stops),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
       floatingActionButton: Fabs(
-        tournee: widget.tournee,
+        tournee: tournee,
         onAjouter: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => AjoutArretScreen(tourneeId: widget.tournee.id),
