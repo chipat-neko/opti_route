@@ -89,19 +89,23 @@ class SecurityService {
   /// Lance l'authentification biometrique systeme. Retourne true si
   /// l'utilisateur a passe avec succes, false sinon (annule, echec,
   /// indisponible). Ne throw jamais.
+  ///
+  /// Note migration v2 -> v3 : `AuthenticationOptions` wrapper a saute,
+  /// les options passent en params directs. `stickyAuth` est devenu
+  /// `persistAcrossBackgrounding`, `useErrorDialogs` a ete retire (les
+  /// erreurs systeme sont desormais propagees via `LocalAuthException`
+  /// et c'est a l'app de les afficher si besoin). Cote messages,
+  /// `biometricHint` est devenu `signInHint`.
   Future<bool> authenticateBiometric() async {
     try {
       final ok = await _auth.authenticate(
         localizedReason: 'Deverrouiller opti_route',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-          useErrorDialogs: true,
-        ),
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
         authMessages: const <AuthMessages>[
           AndroidAuthMessages(
             signInTitle: 'opti_route',
-            biometricHint: 'Touche le capteur ou montre ton visage',
+            signInHint: 'Touche le capteur ou montre ton visage',
             cancelButton: 'Utiliser le PIN',
           ),
         ],

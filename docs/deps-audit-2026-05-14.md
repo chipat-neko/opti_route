@@ -1,11 +1,12 @@
 # Audit des dependances — 2026-05-14
 
 Verification `flutter pub outdated` apres la session features
-v1.9.0+2011. **Mise a jour 2026-05-14 (apres bumps + Sprint A/B)** :
-5 paquets bumpe avec succes (`connectivity_plus 6 -> 7`,
+v1.9.0+2011. **Mise a jour 2026-05-14 (apres bumps + Sprint A/B/C)** :
+7 paquets bumpe avec succes (`connectivity_plus 6 -> 7`,
 `share_plus 11 -> 12`, `file_picker 8 -> 11`,
-`flutter_local_notifications 18 -> 21`, `timezone 0.10 -> 0.11`),
-les 3 autres restent bloques par interdependances.
+`flutter_local_notifications 18 -> 21`, `timezone 0.10 -> 0.11`,
+`local_auth 2 -> 3`, `local_auth_android 1 -> 2`). Sprint D
+(flutter_map / latlong2) reste bloque upstream.
 
 ## Bumps effectues le 2026-05-14
 
@@ -16,12 +17,14 @@ les 3 autres restent bloques par interdependances.
 | file_picker | 8.3.7 | 11.0.2 | OK — Sprint A, 3 sites adaptes (instance → static : `FilePicker.platform.pickFiles()` → `FilePicker.pickFiles()`). 570 tests verts. |
 | flutter_local_notifications | 18.0.1 | 21.0.0 | OK — Sprint B, migration positional → named (v20 BC). Retrait de `uiLocalNotificationDateInterpretation` (v19 BC). 570 tests verts. ProGuard rules Gson conservees par prudence (Gson bumpe a 2.12 en v19, rules plus obligatoires mais non-nocives). |
 | timezone | 0.10.1 | 0.11.0 | OK — debloque par flutter_local_notifications 21 (qui requiert timezone >=0.10, donc 0.11 compatible). |
+| local_auth | 2.3.0 | 3.0.1 | OK — Sprint C, `AuthenticationOptions` wrapper supprime, params passes directement. `stickyAuth` → `persistAcrossBackgrounding`, `useErrorDialogs` retire. 570 tests verts. |
+| local_auth_android | 1.0.56 | 2.0.8 | OK — Sprint C, `biometricHint` → `signInHint` dans `AndroidAuthMessages`. 1 site adapte (`security_service.dart`). |
 
 ## Bumps tentes mais bloques
 
 | Paquet | De | Vise | Bloqueur |
 |---|---|---|---|
-| latlong2 | 0.9.1 | 0.10.1 | `flutter_map 8` requiert `latlong2 ^0.9` |
+| latlong2 | 0.9.1 | 0.10.1 | **flutter_map 8.3.0 = derniere stable au 2026-05-14**, et requiert toujours `latlong2 ^0.9.1`. Sprint D donc execute mais sans impact : pas d'upgrade dispo. Attendre flutter_map 9.x ou un patch 8.3.x qui releve la contrainte. |
 | share_plus | 12.0.2 | 13.1.0 | `share_plus 13` requiert `win32 ^6` ; **file_picker 11 et meme 12.0.0-beta sont encore sur win32 ^5.9** (audit precedent obsolete). Vraiment debloqable une fois que file_picker migrera vers win32 6. |
 
 ## Bumps reportes (risque eleve, hors session)
@@ -75,13 +78,15 @@ les 3 autres restent bloques par interdependances.
   regressions sont silencieuses (notifs qui ne firent plus en
   release uniquement, marche en debug).
 
-## Etat 2026-05-14 apres bumps + Sprint A/B
+## Etat 2026-05-14 apres bumps + Sprint A/B/C
 
-- Build APK : OK (v2.2.0+2015, 59.7 MB arm64)
+- Build APK : OK (v2.3.0+2016, ~60 MB arm64)
 - Tests : 570/570 verts (8 nouveaux tests BackupsListService)
 - Analyzer : 0 issue
-- 5 deps bumpees : connectivity_plus 7, share_plus 12, **file_picker 11, flutter_local_notifications 21, timezone 0.11**
-- 3 deps reportees aux sprints C/D + share_plus 13 (bloque par file_picker win32 5)
+- 7 deps bumpees : connectivity_plus 7, share_plus 12, file_picker 11, flutter_local_notifications 21, timezone 0.11, **local_auth 3, local_auth_android 2**
+- 2 deps qui resteront bloquees jusqu'a updates upstream :
+  - latlong2 0.10 → bloque par flutter_map (8.3.0 latest reste sur latlong2 ^0.9)
+  - share_plus 13 → bloque par file_picker (toutes versions, y compris 12-beta, restent sur win32 ^5.9)
 
 ### Sprint A (file_picker) — fait le 2026-05-14
 
@@ -109,3 +114,33 @@ ProGuard rules Gson conservees defensivement (cf `proguard-rules.pro:13-24`).
 Smoke test obligatoire device reel : prochaine session, programmer une
 notif rappel + attendre l'echeance pour valider que la chaine v21
 fonctionne en release (regressions silencieuses possibles).
+
+### Sprint C (local_auth + local_auth_android) — fait le 2026-05-14
+
+Migration v2 → v3, breaking changes adresses :
+- `AuthenticationOptions` wrapper supprime de `authenticate()` :
+  les options passent en params directs (`biometricOnly`,
+  `persistAcrossBackgrounding`)
+- `stickyAuth` → `persistAcrossBackgrounding` (renommage)
+- `useErrorDialogs` retire : si on veut un dialog d'erreur, c'est
+  desormais a l'app de l'afficher en catchant `LocalAuthException`
+- `biometricHint` → `signInHint` dans `AndroidAuthMessages`
+  (local_auth_android v2)
+- `BiometricType` enum etend (ajoute `strong` / `weak`) — pas
+  d'impact pour notre code qui ne lit pas le type specifique
+
+1 site adapte : `lib/data/security_service.dart:92-118`.
+Smoke test device reel attendu : activer PIN+biometrie dans
+Parametres, fermer l'app, reouvrir, verifier LockScreen + biometrie.
+
+### Sprint D (flutter_map + latlong2) — bloque upstream
+
+flutter_map 8.3.0 (publie il y a 30 jours) reste la derniere version
+stable et requiert toujours `latlong2 ^0.9.1`. Aucun upgrade
+disponible cote pubspec. Le bump latlong2 0.9 → 0.10 reste donc
+en attente d'une version flutter_map 9.x ou d'un 8.3.x patch qui
+relachera la contrainte.
+
+Pas d'impact fonctionnel : flutter_map 8.3.0 marche, latlong2 0.9.1
+marche. C'est uniquement une dette technique a re-evaluer dans 2-3
+mois.

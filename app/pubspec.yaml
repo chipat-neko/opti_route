@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.2.0+2015
+version: 2.3.0+2016
 
 environment:
   sdk: ^3.11.5
@@ -55,8 +55,8 @@ dependencies:
   file_picker: ^11.0.0
   flutter_local_notifications: ^21.0.0
   timezone: ^0.11.0
-  local_auth: ^2.3.0
-  local_auth_android: ^1.0.46
+  local_auth: ^3.0.0
+  local_auth_android: ^2.0.0
   crypto: ^3.0.5
   # Package `image` pour manipuler les pixels (rotations 90/180/270)
   # lors du re-OCR en cas de bordereau scanne dans le mauvais sens.
