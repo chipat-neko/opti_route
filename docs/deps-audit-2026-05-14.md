@@ -1,64 +1,81 @@
 # Audit des dependances — 2026-05-14
 
 Verification `flutter pub outdated` apres la session features
-v1.9.0+2011. **Aucun bump effectue** dans cette session : tous les
-paquets obsoletes necessitent un major bump (breaking changes
-potentiels), trop risque sans tests dedies.
+v1.9.0+2011. **Mise a jour 2026-05-14 (apres bumps)** : 2 paquets
+bumpe avec succes (`connectivity_plus 6 -> 7`, `share_plus 11 -> 12`),
+les 6 autres sont bloques par interdependances (necessitent un
+sprint multi-bumps coordonne).
 
-## Etat actuel
+## Bumps effectues le 2026-05-14
 
-Tous les paquets directs sont sur des versions stables, sans
-upgrade patch/minor automatique disponible. Les obsolescences sont
-purement des major bumps :
+| Paquet | De | A | Resultat |
+|---|---|---|---|
+| connectivity_plus | 6.1.5 | 7.1.1 | OK — 562 tests verts, 0 issue analyzer, API `onConnectivityChanged(List<ConnectivityResult>)` inchangee |
+| share_plus | 11.1.0 | 12.0.2 | OK — `SharePlus.instance.share(ShareParams(...))` inchange |
 
-| Paquet | Actuel | Latest | Type | Risque |
+## Bumps tentes mais bloques
+
+| Paquet | De | Vise | Bloqueur |
+|---|---|---|---|
+| timezone | 0.10.1 | 0.11.0 | `flutter_local_notifications 18` requiert `timezone ^0.10` |
+| latlong2 | 0.9.1 | 0.10.1 | `flutter_map 8` requiert `latlong2 ^0.9` |
+| share_plus | 11.1.0 | 13.1.0 | `share_plus 13` requiert `win32 ^6` ; `file_picker 8` est sur `win32 5` |
+
+## Bumps reportes (risque eleve, hors session)
+
+| Paquet | Actuel | Latest | Risque | Note |
 |---|---|---|---|---|
-| connectivity_plus | 6.1.5 | 7.1.1 | MAJOR | Moyen — API `onConnectivityChanged` peut-etre changee |
-| file_picker | 8.3.7 | 11.0.2 | MAJOR x3 | **Eleve** — 3 versions de retard, API probablement bougee |
-| flutter_local_notifications | 18.0.1 | 21.0.0 | MAJOR x3 | **Eleve** — ProGuard rules deja sensibles (TypeToken Gson), 3 versions de retard |
-| latlong2 | 0.9.1 | 0.10.1 | MAJOR (pre-1.0) | Faible — utilise seulement par flutter_map |
-| local_auth | 2.3.0 | 3.0.1 | MAJOR | Moyen — `AuthMessages` API peut bouger |
-| local_auth_android | 1.0.56 | 2.0.8 | MAJOR | Va avec local_auth |
-| share_plus | 11.1.0 | 13.1.0 | MAJOR x2 | Moyen — `SharePlus.instance.share()` deja utilise partout |
-| timezone | 0.10.1 | 0.11.0 | MAJOR (pre-1.0) | Faible — setup tz tres stable |
+| file_picker | 8.3.7 | 11.0.2 | **Eleve** | 3 majors de retard, API probablement bougee. Bloque share_plus 13 (win32 6) |
+| flutter_local_notifications | 18.0.1 | 21.0.0 | **Eleve** | 3 majors. ProGuard rules deja sensibles (TypeToken Gson). Bloque timezone 0.11 |
+| latlong2 | 0.9.1 | 0.10.1 | Faible | Bloque par flutter_map 8 |
+| local_auth | 2.3.0 | 3.0.1 | Moyen | `AuthMessages` peut bouger |
+| local_auth_android | 1.0.56 | 2.0.8 | Moyen | Va avec local_auth |
+| timezone | 0.10.1 | 0.11.0 | Faible | Bloque par flutter_local_notifications 18 |
 
-## Recommandations
+## Sprints coordonnes recommandes pour debloquer
 
-### A faire dans un sprint dedie "deps modernisation" (1-2 jours)
+**Sprint A — share/file (couple win32)** *(0.5 jour)* :
+- Bumper `file_picker 8 → 11` (3 majors, lire changelog : API
+  pickFiles peut changer, FileType.custom toujours dispo ?)
+- Adapter `tournees_list_screen.dart`, `carnet_adresses_screen.dart`,
+  `parametres_screen.dart` (3 sites d'usage)
+- Bumper `share_plus 12 → 13` (alignement win32 6)
+- Build + smoke test : import .json template, import .zip restore,
+  share backup
 
-Procedure pour bumper proprement chaque major :
+**Sprint B — flutter_local_notifications + timezone** *(0.5 jour)* :
+- Bumper `flutter_local_notifications 18 → 21` (3 majors, lire
+  changelog tres attentivement, regressions notifs silencieuses en
+  release uniquement). Verifier les regles ProGuard
+  (`proguard-rules.pro`) pour les TypeToken Gson.
+- Bumper `timezone 0.10 → 0.11` (changement de syntaxe init ?)
+- **Smoke test obligatoire sur device reel** : programmer une notif
+  de rappel, attendre l'echeance, verifier la reception.
 
-1. **Bumper 1 paquet a la fois** (pas tout d'un coup)
-2. Lire le **changelog** du paquet sur pub.dev (section "BREAKING")
-3. Adapter le code qui casse a la compilation
-4. Relancer **toute la suite de tests** (`flutter test`)
-5. Build APK + smoke test sur device reel
-6. Commit isole `chore(deps): bump X v8 -> v11`
+**Sprint C — local_auth** *(0.5 jour)* :
+- Bumper `local_auth 2 → 3` + `local_auth_android 1 → 2`
+- Adapter `security_service.dart` (`AuthMessages` peut bouger)
+- Smoke test : configurer un PIN + biometrie, fermer l'app, reouvrir,
+  verifier que le LockScreen apparait et que la biometrie marche.
 
-### Ordre suggere (du moins risque au plus risque)
+**Sprint D — flutter_map** *(0.5 jour)* :
+- Bumper `flutter_map 8 → latest` pour debloquer `latlong2 0.10`
+- Adapter `carte_screen.dart`
+- Smoke test : ouvrir la carte d'une tournee, verifier les tiles +
+  pins.
 
-1. `timezone` 0.10 → 0.11 (1 fichier touche : `notifications_service.dart`)
-2. `latlong2` 0.9 → 0.10 (uniquement flutter_map, isole)
-3. `connectivity_plus` 6 → 7 (1 fichier touche : `offline_geocode_automation.dart`)
-4. `share_plus` 11 → 13 (5+ fichiers touches : backup, share template,
-   stats export, PDF tournee, share text tournee)
-5. `local_auth` 2 → 3 (lock_screen.dart + security_service.dart)
-6. `file_picker` 8 → 11 (carnet_adresses_screen, tournees_list_screen,
-   parametres_screen pour restore) — **changements API les plus
-   probables**
-7. `flutter_local_notifications` 18 → 21 — **a faire en DERNIER**,
-   sensible aux ProGuard rules (cf [[feedback-proguard-local-notifications]])
-
-### A NE PAS faire
+## A NE PAS faire
 
 - `flutter pub upgrade --major-versions` sans verifier chaque diff.
   Risque de TOUT casser en silence.
-- Bumper `flutter_local_notifications` en meme temps que les autres :
-  les regressions sont silencieuses (notifs qui ne firent plus en
-  release uniquement).
+- Bumper `flutter_local_notifications` sans tests device reel : les
+  regressions sont silencieuses (notifs qui ne firent plus en
+  release uniquement, marche en debug).
 
-## Verdict 2026-05-14
+## Etat 2026-05-14 apres bumps
 
-App actuellement stable a v1.9.0+2011, **548 tests verts**, 0 issue
-analyzer. Pas urgent de bumper. A planifier dans un sprint dedie
-quand on a 2 jours libres et un device de test sous la main.
+- Build APK : OK (v2.1.x)
+- Tests : 562/562 verts
+- Analyzer : 0 issue
+- 2 deps bumpees : connectivity_plus 7, share_plus 12
+- 6 deps reportees aux sprints A/B/C/D ci-dessus

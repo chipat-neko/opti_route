@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.1.0+2013
+version: 2.1.1+2014
 
 environment:
   sdk: ^3.11.5
@@ -49,7 +49,7 @@ dependencies:
   image_picker: ^1.2.2
   url_launcher: ^6.3.1
   geolocator: ^14.0.0
-  share_plus: ^11.1.0
+  share_plus: ^12.0.0
   path_provider: ^2.1.5
   pdf: ^3.11.4
   file_picker: ^8.1.7
@@ -65,7 +65,7 @@ dependencies:
   # Connectivity_plus : observe les changements wifi/mobile/none pour
   # declencher automatiquement le re-geocodage des arrets ajoutes en
   # mode hors-ligne (cf OfflineGeocodeAutomation).
-  connectivity_plus: ^6.1.0
+  connectivity_plus: ^7.1.0
   # Archive : creation / lecture de zip pour le backup complet
   # (DB SQLite + photos preuves) en un seul fichier partageable.
   archive: ^4.0.7
