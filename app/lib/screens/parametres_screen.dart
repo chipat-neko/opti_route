@@ -11,6 +11,7 @@ import '../providers/optimization_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import 'backups_list_screen.dart';
 import 'coequipiers_screen.dart';
 import 'mentions_legales_screen.dart';
 import 'parametres/entreprise_form.dart';
@@ -807,6 +808,23 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const _BackupTile(),
           const _RestoreTile(),
           const _AutoBackupTile(),
+          // Tile "Mes backups" : ouvre la liste des .zip auto-generes
+          // avec actions par entree (Restaurer / Partager / Supprimer).
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.folder_open_outlined),
+            title: const Text('Mes backups'),
+            subtitle: const Text(
+              'Voir, partager ou supprimer les .zip auto-generes',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const BackupsListScreen(),
+              ),
+            ),
+          ),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),

@@ -260,6 +260,54 @@ class NotificationsService {
     );
   }
 
+  /// Notification immediate apres un backup auto reussi. Discrete
+  /// (importance low/default au lieu de high : pas besoin de buzzer
+  /// l'user en pleine tournee). Affiche la taille du fichier pour
+  /// donner un signal "ca tourne et c'est de la vraie data".
+  ///
+  /// Respecte le mode "ne pas deranger" (skip silencieux pendant le
+  /// creneau quiet hours).
+  ///
+  /// [sizeBytes] permet a la notif d'afficher "5.2 MB" plutot qu'un
+  /// nombre brut. [filename] = nom du fichier (sans path) pour info.
+  Future<void> showBackupSuccess({
+    required String filename,
+    required int sizeBytes,
+  }) async {
+    await init();
+    if (await _isQuietHours()) {
+      debugPrint(
+          '[NotificationsService] quiet hours - skip showBackupSuccess');
+      return;
+    }
+    final size = _humanSize(sizeBytes);
+    await _plugin.show(
+      _backupSuccessId,
+      'Sauvegarde auto reussie',
+      'Backup de $size cree. Consultable dans Parametres > Mes backups.',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          // Volontairement LOW : on ne veut pas faire vibrer le phone
+          // pour un evenement qui ne demande aucune action urgente.
+          importance: Importance.low,
+          priority: Priority.low,
+        ),
+      ),
+    );
+  }
+
+  /// Format compact de taille fichier : "5.2 MB" / "523 KB" / "42 B".
+  static String _humanSize(int bytes) {
+    const kb = 1024;
+    const mb = kb * 1024;
+    if (bytes >= mb) return '${(bytes / mb).toStringAsFixed(1)} MB';
+    if (bytes >= kb) return '${(bytes / kb).toStringAsFixed(0)} KB';
+    return '$bytes B';
+  }
+
   static String _humanDuration(int min) {
     if (min < 60) return '$min min';
     final h = min ~/ 60;
@@ -273,10 +321,14 @@ class NotificationsService {
   ///   - veille : 10000 - 19999
   ///   - end-of-route : 20000 - 29999
   ///   - pending-stops : 30000 - 39999
+  ///   - backup auto : 40000 (id unique, on n'a qu'un seul backup
+  ///     auto en cours a la fois -- la prochaine notif remplace
+  ///     l'ancienne dans le tray)
   ///   - test : 9999 (reserve historique)
   static int _veilleNotifId(int tourneeId) => 10000 + tourneeId;
   static int _endOfRouteNotifId(int tourneeId) => 20000 + tourneeId;
   static int _pendingStopsNotifId(int tourneeId) => 30000 + tourneeId;
+  static const _backupSuccessId = 40000;
 
   static const _testId = 9999;
   static const _channelId = 'opti_route_reminders';

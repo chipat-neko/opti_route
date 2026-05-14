@@ -4,6 +4,7 @@ import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'notifications_service.dart';
 import 'parametres_repository.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -115,6 +116,23 @@ class AutoBackupService {
 
     // Rotation : supprime les plus vieux si on depasse _maxRetained.
     await _rotate(outDir);
+
+    // Notif post-backup : signal discret (Importance.low) que ca
+    // tourne bien en arriere-plan + taille du fichier pour donner
+    // un signal "c'est de la vraie data, pas juste un evenement
+    // technique". Best-effort : si stat ou notif echoue, on n'a
+    // pas envie de re-throw apres un backup deja reussi.
+    try {
+      final outFile = File(outPath);
+      final size = await outFile.length();
+      final filename = outPath.split(Platform.pathSeparator).last;
+      await NotificationsService.instance.showBackupSuccess(
+        filename: filename,
+        sizeBytes: size,
+      );
+    } catch (e) {
+      debugPrint('[AutoBackup] notif backup-success failed: $e');
+    }
   }
 
   /// Supprime les fichiers .zip les plus vieux au-dela de [_maxRetained].
