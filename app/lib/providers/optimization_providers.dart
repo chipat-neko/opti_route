@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/openroute_optimization_service.dart';
 import '../data/optimization_service.dart';
+import '../data/route_service.dart';
 import 'database_providers.dart';
 
 /// Stream de la cle API OpenRouteService (null si non configuree).
@@ -18,4 +19,14 @@ final optimizationServiceProvider = Provider<OptimizationService?>((ref) {
   final service = OpenRouteOptimizationService(apiKey: apiKey);
   ref.onDispose(service.close);
   return service;
+});
+
+/// Service ORS Directions point-a-point pour la navigation interne
+/// (cf [NavigationScreen]). Null si la cle ORS n'est pas configuree :
+/// le NavigationScreen retombe alors sur une ligne droite haversine
+/// entre la position et la destination.
+final routeServiceProvider = Provider<RouteService?>((ref) {
+  final apiKey = ref.watch(orsApiKeyProvider).asData?.value;
+  if (apiKey == null || apiKey.isEmpty) return null;
+  return RouteService(apiKey: apiKey);
 });
