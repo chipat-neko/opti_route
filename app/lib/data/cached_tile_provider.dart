@@ -94,6 +94,31 @@ class CachedTileProvider extends TileProvider {
     return _transparentPng;
   }
 
+  /// Telecharge une tuile et la sauve en cache (sans la decoder cote
+  /// image). Sert au pre-fetch hors-ligne batch (cf
+  /// [TilePrefetchService]). Retourne true si la tuile est en cache a
+  /// la sortie (deja presente OU download reussi), false si echec.
+  ///
+  /// Differe de [loadBytes] sur 3 points : (1) skip le decode image,
+  /// (2) retourne juste un bool au lieu des bytes, (3) n'utilise pas
+  /// la 1x1 transparente en fallback (echec = false, pas un PNG
+  /// poison cache).
+  Future<bool> prefetchTile(int z, int x, int y) async {
+    final file = await _fileForTile(z, x, y);
+    if (await file.exists()) return true;
+    final url = 'https://tile.openstreetmap.org/$z/$x/$y.png';
+    try {
+      final resp = await _client
+          .get(Uri.parse(url), headers: {'User-Agent': 'opti_route/0.1'})
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+        await _safeWrite(file, resp.bodyBytes);
+        return true;
+      }
+    } catch (_) {/* echec reseau, retourne false */}
+    return false;
+  }
+
   Future<void> _safeWrite(File file, Uint8List bytes) async {
     try {
       await file.parent.create(recursive: true);

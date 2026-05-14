@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../data/database.dart';
 import '../data/location_service.dart';
+import '../data/route_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../providers/tile_provider.dart';
@@ -82,13 +84,28 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   /// si l'utilisateur drag/zoom.
   bool _autoFollow = true;
 
-  /// Polyline routière (qui suit les rues) recuperee via l'API ORS
-  /// Directions une fois qu'on a une 1ere position GPS. Null tant que
+  /// Donnees route ORS (polyline routière + steps d'instructions)
+  /// recuperees une fois qu'on a une 1ere position GPS. Null tant que
   /// l'appel n'a pas reussi -- dans ce cas on affiche la ligne droite
-  /// haversine en fallback. Etape 2 du plan GPS (cf
+  /// haversine en fallback sans TTS. Etape 2+3 du plan GPS (cf
   /// docs/plan-gps-integre.md).
-  List<LatLng>? _routePolyline;
+  RouteData? _routeData;
   bool _routeFetchInFlight = false;
+
+  /// Synthese vocale on-device pour annoncer les instructions
+  /// ("Tournez a droite dans 100m"). Configuree en francais au boot.
+  /// Etape 3 du plan GPS.
+  final FlutterTts _tts = FlutterTts();
+  bool _ttsReady = false;
+
+  /// Index des steps deja annonces (pour ne pas repeter l'instruction
+  /// a chaque tick GPS). Reset jamais : un step annonce reste annonce.
+  final Set<int> _announcedSteps = <int>{};
+
+  /// Seuil de declenchement TTS : on annonce l'instruction quand la
+  /// position courante est a moins de ce nombre de metres du pivot du
+  /// step. 120m laisse le temps au livreur de reagir avant le tournant.
+  static const double _ttsTriggerMeters = 120;
 
   @override
   void initState() {
@@ -116,6 +133,11 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
       }
       setState(() => _permissionState = _PermissionState.granted);
 
+      // Init TTS : voix francaise on-device. Best-effort : si l'engine
+      // TTS n'est pas installe (rare sur Android stock), on garde le
+      // mode silencieux et le PoC continue sans annonces vocales.
+      unawaited(_initTts());
+
       // Fallback one-shot : valeur initiale immediate. Si l'utilisateur
       // est en intérieur ou en mode avion, ca peut throw mais on
       // l'ignore (le stream prendra le relais).
@@ -125,7 +147,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
         // Lance le fetch ORS Directions des qu'on a une 1ere position.
         // Si l'API rate (quota, timeout, no internet), on garde la
         // ligne droite haversine en fallback (degradation gracieuse).
-        unawaited(_fetchRoutePolyline(pos));
+        unawaited(_fetchRouteData(pos));
       } catch (_) {/* swallow, on attend le stream */}
 
       // Timer de timeout : si rien n'a emis apres 30 sec, on affiche
@@ -154,19 +176,38 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   void dispose() {
     _gpsTimeoutTimer?.cancel();
     _mapController.dispose();
+    // Coupe toute annonce en cours et libere l'engine TTS. Best-effort :
+    // si l'engine n'a jamais ete init (pas de TTS systeme), stop()
+    // est un no-op safe.
+    unawaited(_tts.stop());
     super.dispose();
   }
 
-  /// Recupere la polyline routière (qui suit les rues) entre la
-  /// position courante et le stop cible. Etape 2 du plan GPS. Lance
-  /// 1 fois au boot ; si l'API rate, on garde la ligne droite.
+  /// Init de l'engine TTS Android. Pose la langue francaise et un
+  /// debit legerement ralenti (0.5) pour que les instructions soient
+  /// audibles en voiture. Best-effort : si TTS systeme indisponible
+  /// (rare), on log et on continue silencieusement.
+  Future<void> _initTts() async {
+    try {
+      await _tts.setLanguage('fr-FR');
+      await _tts.setSpeechRate(0.5);
+      await _tts.setVolume(1.0);
+      await _tts.setPitch(1.0);
+      if (mounted) setState(() => _ttsReady = true);
+    } catch (_) {/* swallow : pas de TTS dispo, mode silencieux */}
+  }
+
+  /// Recupere la polyline routière + les steps d'instructions entre la
+  /// position courante et le stop cible. Etape 2+3 du plan GPS. Lance
+  /// 1 fois au boot ; si l'API rate, on garde la ligne droite et pas
+  /// de TTS.
   ///
   /// Le profil ORS (voiture / camion) est lu depuis la tournee du stop
   /// pour respecter le choix de l'utilisateur. Si pas de cle ORS
   /// configuree, le provider retourne null et on retombe sur le
   /// fallback ligne droite.
-  Future<void> _fetchRoutePolyline(Position pos) async {
-    if (_routeFetchInFlight || _routePolyline != null) return;
+  Future<void> _fetchRouteData(Position pos) async {
+    if (_routeFetchInFlight || _routeData != null) return;
     _routeFetchInFlight = true;
     try {
       final route = ref.read(routeServiceProvider);
@@ -187,18 +228,63 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
         }
       } catch (_) {/* defaults OK */}
 
-      final polyline = await route.fetchRoute(
+      final data = await route.fetchRoute(
         from: LatLng(pos.latitude, pos.longitude),
         to: LatLng(widget.stop.lat!, widget.stop.lng!),
         profil: profil,
         eviterPeages: eviterPeages,
       );
       if (!mounted) return;
-      if (polyline != null && polyline.isNotEmpty) {
-        setState(() => _routePolyline = polyline);
+      if (data != null && data.polyline.isNotEmpty) {
+        setState(() => _routeData = data);
       }
     } finally {
       _routeFetchInFlight = false;
+    }
+  }
+
+  /// Verifie a chaque tick GPS si l'utilisateur approche d'un step
+  /// non encore annonce. Si oui, declenche le TTS (sauf quiet hours).
+  ///
+  /// Strategie : pour chaque step pas encore dans [_announcedSteps],
+  /// calcule la distance haversine entre la position courante et le
+  /// pivot du step. Si < [_ttsTriggerMeters], on annonce et on marque
+  /// le step. On annonce 1 step par tick max (ordre des index) pour
+  /// eviter le doublonnage en cas de pivots proches.
+  Future<void> _maybeAnnounceStep(Position pos) async {
+    if (!_ttsReady) return;
+    final data = _routeData;
+    if (data == null || data.steps.isEmpty) return;
+
+    for (var i = 0; i < data.steps.length; i++) {
+      if (_announcedSteps.contains(i)) continue;
+      final step = data.steps[i];
+      final text = step.instruction.trim();
+      if (text.isEmpty) {
+        _announcedSteps.add(i); // skip mais marque pour passer au suivant
+        continue;
+      }
+      final distance = LocationService.distanceMeters(
+        fromLat: pos.latitude,
+        fromLng: pos.longitude,
+        toLat: step.pivot.latitude,
+        toLng: step.pivot.longitude,
+      );
+      if (distance > _ttsTriggerMeters) continue;
+
+      _announcedSteps.add(i);
+      // Respecte les quiet hours globales : on annonce visuel only.
+      try {
+        final quiet = await ref
+            .read(parametresRepositoryProvider)
+            .isQuietHoursNow();
+        if (quiet) return;
+      } catch (_) {/* en cas de doute, on annonce */}
+
+      // Annonce en arriere-plan : on n'attend pas la fin du speak
+      // pour eviter de bloquer le stream GPS.
+      unawaited(_tts.speak(text));
+      return; // 1 annonce par tick max
     }
   }
 
@@ -326,6 +412,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
           toLng: widget.stop.lng!,
         );
 
+        // Tick TTS : a chaque nouvelle position, on regarde si on
+        // approche un step. Best-effort, ne bloque pas le build.
+        unawaited(_maybeAnnounceStep(pos));
+
         // Premier centrage automatique sur la position courante.
         if (!_hasCenteredOnce) {
           _hasCenteredOnce = true;
@@ -366,10 +456,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                     // l'affiche en trait plein emerald (qui suit les
                     // rues). Sinon fallback ligne droite pointillee
                     // pour rester visible meme sans cle ORS.
-                    if (_routePolyline != null &&
-                        _routePolyline!.length >= 2)
+                    if (_routeData != null &&
+                        _routeData!.polyline.length >= 2)
                       Polyline(
-                        points: _routePolyline!,
+                        points: _routeData!.polyline,
                         strokeWidth: 5,
                         color: AppColors.emerald,
                       )

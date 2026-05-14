@@ -69,6 +69,11 @@ dependencies:
   # Archive : creation / lecture de zip pour le backup complet
   # (DB SQLite + photos preuves) en un seul fichier partageable.
   archive: ^4.0.7
+  # flutter_tts : synthese vocale on-device pour les instructions de
+  # navigation ("Tournez a droite dans 200 metres") dans le mode
+  # "Suivre dans l'app". Voix systeme Android (gratuite). Etape 3 du
+  # plan GPS turn-by-turn integre.
+  flutter_tts: ^4.2.0
 
 dev_dependencies:
   flutter_test:
