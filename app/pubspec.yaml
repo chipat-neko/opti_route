@@ -84,6 +84,14 @@ dev_dependencies:
   build_runner: ^2.15.0
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.7
+  # Utilises uniquement par les tests pour mocker path_provider
+  # (BackupService et AutoBackupService dependent de
+  # getApplicationDocumentsDirectory + getExternalStorageDirectory).
+  # Ce sont en fait des dependances transitives de path_provider en
+  # runtime, mais on les declare explicitement ici pour pouvoir les
+  # importer dans test/backup_service_test.dart.
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 # App icon : pin lime + trace de route sur fond ink, designee via
 # Claude Design. Sources d'origine versionnees dans
