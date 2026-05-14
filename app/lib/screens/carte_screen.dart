@@ -12,6 +12,8 @@ import '../providers/database_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import 'carte/markers.dart';
+import 'carte/overlays.dart';
 
 /// Affichage carte de la tournee : pin du depart + un pin par arret
 /// (avec coordonnees) + auto-fit sur l'ensemble. Tap sur un pin
@@ -157,9 +159,9 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
               ),
             MarkerLayer(
               markers: [
-                _DepotMarker.build(depot, widget.tournee),
+                buildDepotMarker(depot, widget.tournee),
                 for (var i = 0; i < stopsGeoreferenced.length; i++)
-                  _StopMarker.build(
+                  buildStopMarker(
                     stop: stopsGeoreferenced[i],
                     index: i + 1,
                     onTap: () => _showStopInfo(stopsGeoreferenced[i], i + 1),
@@ -170,7 +172,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
         ),
         if (stopsGeoreferenced.isEmpty &&
             (_showALivrer && _showLivre && _showEchec))
-          const _EmptyOverlay(),
+          const EmptyOverlay(),
         // Row de filtres statut, superposee en haut. SafeArea pour
         // eviter de passer sous le notch.
         Positioned(
@@ -182,21 +184,21 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _MapFilterChip(
+                  MapFilterChip(
                     label: 'A livrer',
                     color: AppColors.lime,
                     selected: _showALivrer,
                     onTap: () => setState(() => _showALivrer = !_showALivrer),
                   ),
                   const SizedBox(width: AppSpacing.x6),
-                  _MapFilterChip(
+                  MapFilterChip(
                     label: 'Livre',
                     color: AppColors.emerald,
                     selected: _showLivre,
                     onTap: () => setState(() => _showLivre = !_showLivre),
                   ),
                   const SizedBox(width: AppSpacing.x6),
-                  _MapFilterChip(
+                  MapFilterChip(
                     label: 'Echec',
                     color: AppColors.red,
                     selected: _showEchec,
@@ -406,12 +408,12 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                 spacing: AppSpacing.x8,
                 runSpacing: AppSpacing.x8,
                 children: [
-                  _InfoChip(
+                  InfoChip(
                     icon: Icons.inventory_2_outlined,
                     label: '${stop.nbColis} colis',
                   ),
                   if (stop.fenetreDebut != null || stop.fenetreFin != null)
-                    _InfoChip(
+                    InfoChip(
                       icon: Icons.access_time,
                       label:
                           '${stop.fenetreDebut ?? ' - '} -> ${stop.fenetreFin ?? ' - '}',
@@ -421,252 +423,6 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyOverlay extends StatelessWidget {
-  const _EmptyOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Positioned(
-      left: AppSpacing.x16,
-      right: AppSpacing.x16,
-      bottom: AppSpacing.x18,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x14),
-        decoration: BoxDecoration(
-          color: p.paper,
-          borderRadius: BorderRadius.circular(AppRadius.r16),
-          boxShadow: AppShadows.card,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, color: p.textMute),
-            SizedBox(width: AppSpacing.x10),
-            Expanded(
-              child: Text(
-                'Aucun arret avec coordonnees a afficher.',
-                style: TextStyle(fontSize: 13, color: p.ink),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DepotMarker {
-  static Marker build(LatLng latLng, Tournee tournee) {
-    return Marker(
-      point: latLng,
-      width: 48,
-      height: 48,
-      alignment: Alignment.center,
-      child: const _PinShell(
-        bg: AppColors.lime,
-        border: AppColors.ink,
-        child: Icon(
-          Icons.warehouse_outlined,
-          size: 22,
-          color: AppColors.ink,
-        ),
-      ),
-    );
-  }
-}
-
-class _StopMarker {
-  static Marker build({
-    required Stop stop,
-    required int index,
-    required VoidCallback onTap,
-  }) {
-    final (bg, fg, label) = _styleForStop(stop, index);
-    return Marker(
-      point: LatLng(stop.lat!, stop.lng!),
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      child: GestureDetector(
-        onTap: onTap,
-        child: _PinShell(
-          bg: bg,
-          border: AppColors.ink,
-          child: Center(
-            child: label is Widget
-                ? label
-                : Text(
-                    label as String,
-                    style: appMonoStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: fg,
-                    ),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static (Color, Color, Object) _styleForStop(Stop stop, int index) {
-    return switch (stop.statutLivraison) {
-      'livre' => (
-          AppColors.emerald,
-          AppColors.paper,
-          const Icon(Icons.check, color: AppColors.paper, size: 18),
-        ),
-      'echec' => (
-          AppColors.red,
-          AppColors.paper,
-          const Text(
-            '!',
-            style: TextStyle(
-              color: AppColors.paper,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-            ),
-          ),
-        ),
-      _ => (AppColors.paper, AppColors.ink, '$index'),
-    };
-  }
-}
-
-class _PinShell extends StatelessWidget {
-  const _PinShell({
-    required this.bg,
-    required this.border,
-    required this.child,
-  });
-
-  final Color bg;
-  final Color border;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        shape: BoxShape.circle,
-        border: Border.all(color: border, width: 1.5),
-        boxShadow: AppShadows.fab,
-      ),
-      child: Center(child: child),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    this.mono = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool mono;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x10,
-        vertical: AppSpacing.x6,
-      ),
-      decoration: BoxDecoration(
-        color: p.creamSoft,
-        borderRadius: BorderRadius.circular(AppRadius.r10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: p.ink),
-          const SizedBox(width: AppSpacing.x6),
-          Text(
-            label,
-            style: mono
-                ? appMonoStyle(fontSize: 12, fontWeight: FontWeight.w700)
-                : TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: p.ink,
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Chip de filtre statut sur la carte. Tap = toggle. Le fond utilise
-/// la couleur du statut (lime/emerald/red), avec un cran d'opacite
-/// quand le filtre est desactive (visuel "cache").
-class _MapFilterChip extends StatelessWidget {
-  const _MapFilterChip({
-    required this.label,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppRadius.r22),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x10,
-          vertical: 5,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? color : p.paper,
-          borderRadius: BorderRadius.circular(AppRadius.r22),
-          border: Border.all(
-            color: selected ? Colors.transparent : color.withValues(alpha: 0.5),
-            width: 1.5,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 4,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!selected)
-              Icon(Icons.visibility_off_outlined, size: 14, color: color)
-            else
-              const Icon(Icons.check, size: 14, color: AppColors.ink),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: selected ? AppColors.ink : color,
-              ),
-            ),
-          ],
         ),
       ),
     );

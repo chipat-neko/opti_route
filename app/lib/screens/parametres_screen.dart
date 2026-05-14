@@ -12,11 +12,11 @@ import '../theme/app_tokens.dart';
 import 'backups_list_screen.dart';
 import 'coequipiers_screen.dart';
 import 'mentions_legales_screen.dart';
+import 'parametres/apparence_accessibilite_section.dart';
 import 'parametres/donnees_section.dart';
 import 'parametres/entreprise_form.dart';
 import 'parametres/ocr_stats_tile.dart';
 import 'parametres/parametres_widgets.dart';
-import 'parametres/quiet_hours_tile.dart';
 import 'parametres/securite_section.dart';
 
 class ParametresScreen extends ConsumerStatefulWidget {
@@ -516,195 +516,11 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const ParametresSectionTitle('Apparence'),
-          const SizedBox(height: AppSpacing.x10),
-          Text(
-            'Mode sombre pour la conduite de nuit. "Auto" suit les '
-            'reglages Android.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: p.textMute,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x10),
-          Consumer(
-            builder: (context, ref, _) {
-              final mode = ref.watch(themeModeProvider).asData?.value ??
-                  ThemeMode.system;
-              return Wrap(
-                spacing: AppSpacing.x8,
-                children: [
-                  ThemeChip(
-                    label: 'Auto',
-                    value: ThemeMode.system,
-                    groupValue: mode,
-                  ),
-                  ThemeChip(
-                    label: 'Clair',
-                    value: ThemeMode.light,
-                    groupValue: mode,
-                  ),
-                  ThemeChip(
-                    label: 'Sombre',
-                    value: ThemeMode.dark,
-                    groupValue: mode,
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.x18),
-          Text(
-            'Palette de couleurs',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: p.ink,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x4),
-          Text(
-            'Change l\'ambiance des surfaces. Les couleurs metier '
-            '(vert = livre, rouge = echec) restent identiques.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: p.textMute,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x10),
-          Consumer(
-            builder: (context, ref, _) {
-              final preset = ref.watch(themePresetProvider).asData?.value ??
-                  AppThemePreset.lime;
-              return Column(
-                children: [
-                  for (final p in AppThemePreset.all)
-                    PaletteTile(
-                      preset: p,
-                      selected: p.name == preset.name,
-                    ),
-                ],
-              );
-            },
-          ),
+          const ApparenceSection(),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
-          const ParametresSectionTitle('Accessibilite & confort'),
-          const SizedBox(height: AppSpacing.x10),
-          Text(
-            'Adapte l\'interface pour la conduite ou les conditions '
-            'difficiles (soleil, vibrations).',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: p.textMute,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          Consumer(
-            builder: (context, ref, _) {
-              final repo = ref.watch(parametresRepositoryProvider);
-              final densite = ref.watch(densiteUiProvider).asData?.value ??
-                  'normal';
-              return SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: densite == 'large',
-                title: const Text('Mode XL (conduite)'),
-                subtitle: const Text(
-                  'Polices +15%, cibles tactiles agrandies',
-                  style: TextStyle(fontSize: 12),
-                ),
-                onChanged: (v) async {
-                  await repo.setDensiteUi(v ? 'large' : 'normal');
-                },
-              );
-            },
-          ),
-          Consumer(
-            builder: (context, ref, _) {
-              final repo = ref.watch(parametresRepositoryProvider);
-              final contraste = ref
-                      .watch(contrasteEleveProvider)
-                      .asData
-                      ?.value ??
-                  false;
-              return SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: contraste,
-                title: const Text('Contraste eleve'),
-                subtitle: const Text(
-                  'Bordures et textes renforces pour lire en plein soleil',
-                  style: TextStyle(fontSize: 12),
-                ),
-                onChanged: (v) async {
-                  await repo.setContrasteEleve(v);
-                },
-              );
-            },
-          ),
-          Consumer(
-            builder: (context, ref, _) {
-              final repo = ref.watch(parametresRepositoryProvider);
-              final hhmm = ref
-                  .watch(veilleReminderHHmmProvider)
-                  .asData
-                  ?.value;
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.bedtime_outlined),
-                title: const Text('Rappel veille auto'),
-                subtitle: Text(
-                  hhmm == null
-                      ? 'Desactive — programme un rappel la veille de '
-                          'chaque tournee'
-                      : 'Active a $hhmm la veille de chaque tournee',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                trailing: hhmm == null
-                    ? const Icon(Icons.add)
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(hhmm,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              )),
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () =>
-                                repo.clearVeilleReminderHHmm(),
-                          ),
-                        ],
-                      ),
-                onTap: () async {
-                  final initial = hhmm == null
-                      ? const TimeOfDay(hour: 21, minute: 0)
-                      : TimeOfDay(
-                          hour: int.parse(hhmm.split(':')[0]),
-                          minute: int.parse(hhmm.split(':')[1]),
-                        );
-                  final picked = await showTimePicker(
-                    context: context,
-                    initialTime: initial,
-                  );
-                  if (picked != null) {
-                    final h = picked.hour.toString().padLeft(2, '0');
-                    final m = picked.minute.toString().padLeft(2, '0');
-                    await repo.setVeilleReminderHHmm('$h:$m');
-                  }
-                },
-              );
-            },
-          ),
-          // Mode "Ne pas deranger" : 2 TimePickers cote a cote pour
-          // configurer le creneau silencieux. Pendant ce creneau, les
-          // notifs immediates (fin de tournee, arrets oublies) sont
-          // silencieusement skip. Les rappels planifies par l'user
-          // (veille de tournee) restent prioritaires car explicites.
-          const QuietHoursTile(),
+          const AccessibiliteSection(),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),

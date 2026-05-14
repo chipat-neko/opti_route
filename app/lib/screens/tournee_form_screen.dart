@@ -9,6 +9,7 @@ import '../data/notifications_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import 'tournee_form/form_widgets.dart';
 
 class TourneeFormScreen extends ConsumerStatefulWidget {
   const TourneeFormScreen({super.key, this.initial});
@@ -179,7 +180,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
               style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
             ),
             const SizedBox(height: AppSpacing.x8),
-            _RappelPickerTile(
+            RappelPickerTile(
               value: _rappelLe,
               defaultDate: _date,
               onChanged: (v) => setState(() => _rappelLe = v),
@@ -195,7 +196,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
                         ?.value ??
                     const <Coequipier>[];
                 if (list.isEmpty) return const SizedBox.shrink();
-                return _DefaultCoequipierTile(
+                return DefaultCoequipierTile(
                   coequipiers: list,
                   value: _coequipierDefautId,
                   onChanged: (v) =>
@@ -222,7 +223,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
               const SizedBox(height: AppSpacing.x18),
               const Divider(),
               const SizedBox(height: AppSpacing.x18),
-              _DangerButton(
+              DangerButton(
                 label: 'Supprimer cette tournee',
                 onPressed: _saving ? null : _confirmDelete,
               ),
@@ -417,244 +418,3 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
 /// ListTile cliquable qui ouvre 2 selecteurs (date + heure) pour
 /// programmer une notification locale de rappel sur la tournee. Si
 /// [value] est null, affiche "Aucun" ; sinon affiche le jour + heure
-/// avec un X pour effacer.
-class _RappelPickerTile extends StatelessWidget {
-  const _RappelPickerTile({
-    required this.value,
-    required this.defaultDate,
-    required this.onChanged,
-  });
-
-  final DateTime? value;
-  /// Date de la tournee : sert de valeur par defaut pour le selecteur
-  /// si l'utilisateur n'a pas encore choisi de date de rappel.
-  final DateTime defaultDate;
-  final ValueChanged<DateTime?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final v = value;
-    return Material(
-      color: p.creamSoft,
-      borderRadius: BorderRadius.circular(AppRadius.r12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        onTap: () => _pick(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x14,
-            vertical: AppSpacing.x12,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.alarm_outlined, color: p.ink),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(
-                child: Text(
-                  v == null
-                      ? 'Programmer un rappel'
-                      : _formatDateTime(v),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: p.ink,
-                  ),
-                ),
-              ),
-              if (v != null)
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  tooltip: 'Effacer le rappel',
-                  color: p.textMute,
-                  onPressed: () => onChanged(null),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pick(BuildContext context) async {
-    final now = DateTime.now();
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: value ?? defaultDate,
-      firstDate: now.subtract(const Duration(minutes: 1)),
-      lastDate: now.add(const Duration(days: 365)),
-    );
-    if (pickedDate == null || !context.mounted) return;
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: value != null
-          ? TimeOfDay(hour: value!.hour, minute: value!.minute)
-          : const TimeOfDay(hour: 7, minute: 0),
-    );
-    if (pickedTime == null) return;
-    onChanged(DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    ));
-  }
-
-  static String _formatDateTime(DateTime dt) {
-    final date = DateFormat('EEE d MMM', 'fr').format(dt);
-    final hh = dt.hour.toString().padLeft(2, '0');
-    final mm = dt.minute.toString().padLeft(2, '0');
-    return '$date a $hh:$mm';
-  }
-}
-
-class _DangerButton extends StatelessWidget {
-  const _DangerButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.red,
-          side: const BorderSide(color: AppColors.red, width: 1.5),
-          minimumSize: const Size(0, 52),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(AppRadius.r14)),
-          ),
-        ),
-        icon: const Icon(Icons.delete_outline),
-        label: Text(label),
-      ),
-    );
-  }
-}
-
-/// Tile "Affecter par defaut a" : ouvre un picker de coequipier qui
-/// pre-remplira `coequipierId` pour tous les NOUVEAUX stops crees dans
-/// cette tournee. Modifiable apres coup au cas par cas dans la bottom
-/// sheet d'un stop. Null = Moi.
-class _DefaultCoequipierTile extends StatelessWidget {
-  const _DefaultCoequipierTile({
-    required this.coequipiers,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final List<Coequipier> coequipiers;
-  final int? value;
-  final ValueChanged<int?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final selected = value == null
-        ? null
-        : coequipiers.where((c) => c.id == value).firstOrNull;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.assignment_ind_outlined),
-      title: const Text('Affecter par defaut a'),
-      subtitle: Text(
-        selected == null
-            ? 'Moi (defaut)'
-            : 'Tous les nouveaux arrets : ${selected.nom}',
-        style: const TextStyle(fontSize: 12),
-      ),
-      trailing: value == null
-          ? const Icon(Icons.add)
-          : IconButton(
-              icon: const Icon(Icons.clear, size: 20),
-              onPressed: () => onChanged(null),
-              tooltip: 'Retirer l\'affectation par defaut',
-            ),
-      onTap: () async {
-        final picked = await showModalBottomSheet<int?>(
-          context: context,
-          backgroundColor: p.cream,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppRadius.r22),
-            ),
-          ),
-          builder: (_) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.x18,
-                vertical: AppSpacing.x14,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Affecter par defaut a',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: p.ink,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.x12),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const CircleAvatar(
-                      backgroundColor: AppColors.lime,
-                      child: Icon(Icons.person, color: AppColors.ink),
-                    ),
-                    title: const Text('Moi (defaut)'),
-                    trailing: value == null
-                        ? const Icon(Icons.check, color: AppColors.emerald)
-                        : null,
-                    onTap: () => Navigator.of(context).pop(null),
-                  ),
-                  const Divider(),
-                  for (final c in coequipiers)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        backgroundColor: colorFromTag(
-                          c.colorTag,
-                          defaultColor: AppColors.creamSoft,
-                        ),
-                        child: Text(
-                          _initialsFor(c.nom),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                      ),
-                      title: Text(c.nom),
-                      trailing: c.id == value
-                          ? const Icon(Icons.check, color: AppColors.emerald)
-                          : null,
-                      onTap: () => Navigator.of(context).pop(c.id),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-        // Modal ferme avec selection : on accepte aussi `null` (= Moi).
-        // Modal ferme sans choix (back) : retourne null aussi mais on
-        // ne distingue pas. C'est OK car la valeur null = etat par defaut.
-        if (picked != value) onChanged(picked);
-      },
-    );
-  }
-
-  static String _initialsFor(String nom) {
-    final parts = nom.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
-        .toUpperCase();
-  }
-}
