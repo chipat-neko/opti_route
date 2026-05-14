@@ -43,7 +43,10 @@ class StatsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
-    final async = ref.watch(statsProvider(days));
+    // Utilise le bundle aggregée (1 paire de queries Drift partagée
+    // entre les 3 cards 7/30/365 jours) au lieu de statsProvider(days)
+    // qui refait 2 queries par card.
+    final async = ref.watch(statsFromBundleProvider(days));
     final coutAsync = ref.watch(coutCarburantCumuleProvider(days));
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),

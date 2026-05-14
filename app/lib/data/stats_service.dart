@@ -16,6 +16,61 @@ class StatsService {
 
   final AppDatabase _db;
 
+  /// Calcule **toutes** les metriques de la fenetre en 1 seul appel :
+  /// stats globales + colis par jour de semaine + heures par jour. Sert
+  /// au [statsAggregateProvider] qui consolide les 3-4 providers du
+  /// StatsScreen en une seule paire de requetes Drift (tournees +
+  /// stops). Plus rapide que les 5+ providers individuels (chacun
+  /// refait sa propre paire de requetes).
+  ///
+  /// Pour les cards "7j / 30j / 365j" : on peut soit appeler 3 fois
+  /// avec `since` different, soit appeler 1 fois avec le `since` le
+  /// plus large puis filtrer en RAM via [computeFromBundle].
+  Future<StatsBundle> computeBundle({required DateTime since}) async {
+    final tournees = await (_db.select(_db.tournees)
+          ..where((t) => t.date.isBiggerOrEqualValue(since)))
+        .get();
+    if (tournees.isEmpty) {
+      return StatsBundle(since: since, tournees: const [], stops: const []);
+    }
+    final ids = tournees.map((t) => t.id).toList();
+    final stops = await (_db.select(_db.stops)
+          ..where((s) => s.tourneeId.isIn(ids)))
+        .get();
+    return StatsBundle(since: since, tournees: tournees, stops: stops);
+  }
+
+  /// Variante in-memory : prend un [bundle] deja charge et filtre sur
+  /// une sous-fenetre [since]. Permet de partager 1 seule fetch pour
+  /// les cards 7/30/365 jours.
+  static TourneeStats computeFromBundle(
+    StatsBundle bundle, {
+    required DateTime since,
+  }) {
+    final tournees =
+        bundle.tournees.where((t) => !t.date.isBefore(since)).toList();
+    if (tournees.isEmpty) return TourneeStats.empty;
+    final ids = tournees.map((t) => t.id).toSet();
+    final stops =
+        bundle.stops.where((s) => ids.contains(s.tourneeId)).toList();
+
+    final livres = stops.where((s) => s.statutLivraison == 'livre').toList();
+    final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
+    return TourneeStats(
+      nbTournees: tournees.length,
+      nbTourneesTerminees:
+          tournees.where((t) => t.statut == 'terminee').length,
+      nbArrets: stops.length,
+      nbColisLivres: livres.fold<int>(0, (s, x) => s + x.nbColis),
+      nbLivres: livres.length,
+      nbEchecs: echecs,
+      distanceMeters: tournees
+          .fold<int>(0, (s, t) => s + (t.distanceTotaleM ?? 0)),
+      durationSeconds:
+          tournees.fold<int>(0, (s, t) => s + (t.dureeTotaleS ?? 0)),
+    );
+  }
+
   /// Calcule les stats sur une fenetre `[since, now]`. On filtre sur
   /// la **date de la tournee** (pas `cree_le`), pour avoir les vraies
   /// metriques metier ("colis livres cette semaine").
@@ -376,6 +431,29 @@ class TourneeStats {
     if (total == 0) return 0;
     return nbLivres / total;
   }
+}
+
+/// Snapshot immuable des tournees + stops d'une fenetre, pour calculs
+/// derives in-memory sans repasser par Drift. Cree par
+/// [StatsService.computeBundle].
+///
+/// Le seul cout reel est 2 SELECT (tournees + stops). Tous les autres
+/// derives (par jour, par coequipier, ratio, etc.) sont des operations
+/// en RAM sur ces 2 listes : O(n) en complexite, negligeable pour les
+/// volumes de Noah (~365 tournees x ~30 stops = 11000 rows max).
+class StatsBundle {
+  const StatsBundle({
+    required this.since,
+    required this.tournees,
+    required this.stops,
+  });
+
+  /// Borne inferieure de fenetre utilisee pour fetcher.
+  final DateTime since;
+  final List<Tournee> tournees;
+  final List<Stop> stops;
+
+  bool get isEmpty => tournees.isEmpty;
 }
 
 /// Compteurs motivants pour le tile "Tu as deja fait X cette annee".

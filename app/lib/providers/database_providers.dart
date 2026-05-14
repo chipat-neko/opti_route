@@ -303,6 +303,29 @@ final statsProvider =
   return ref.read(statsServiceProvider).compute(since: since);
 });
 
+/// Snapshot tournees+stops sur la fenetre la plus large (365j). Sert de
+/// source partagee aux cards "7j / 30j / 365j" du StatsScreen pour
+/// n'executer **qu'une** paire de requetes Drift au lieu de 6 (2 par
+/// card x 3 cards). Les TourneeStats par fenetre sont derives in-memory
+/// via [StatsService.computeFromBundle].
+final statsBundleProvider = FutureProvider<StatsBundle>((ref) async {
+  ref.watch(tourneesStreamProvider);
+  final since = DateTime.now().subtract(const Duration(days: 365));
+  return ref.read(statsServiceProvider).computeBundle(since: since);
+});
+
+/// TourneeStats pour la fenetre [days], **derive** du
+/// [statsBundleProvider] (filtrage in-memory). Remplace le calcul a
+/// part par card -- 0 query Drift supplementaire.
+final statsFromBundleProvider =
+    Provider.family<AsyncValue<TourneeStats>, int>((ref, days) {
+  final bundle = ref.watch(statsBundleProvider);
+  return bundle.whenData((b) => StatsService.computeFromBundle(
+        b,
+        since: DateTime.now().subtract(Duration(days: days)),
+      ));
+});
+
 /// Colis livres par jour de la semaine (ISO 8601 : 1=lundi -> 7=dimanche)
 /// sur la fenetre [days]. Vide si aucune tournee.
 final colisParJourProvider =
