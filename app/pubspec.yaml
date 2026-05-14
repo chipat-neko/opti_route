@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.4.0+2006
+version: 1.5.0+2007
 
 environment:
   sdk: ^3.11.5
@@ -62,6 +62,10 @@ dependencies:
   # lors du re-OCR en cas de bordereau scanne dans le mauvais sens.
   # Pas de plugin natif : 100 % Dart, marche aussi en web.
   image: ^4.5.4
+  # Connectivity_plus : observe les changements wifi/mobile/none pour
+  # declencher automatiquement le re-geocodage des arrets ajoutes en
+  # mode hors-ligne (cf OfflineGeocodeAutomation).
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:

@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/drawer_badge_icon.dart';
+import '../widgets/offline_geocode_banner.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
 
@@ -35,6 +36,9 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
       ),
       body: Column(
         children: [
+          // Bandeau "N arrets sans GPS" : auto-hide si 0. Permet de
+          // re-essayer le geocodage hors-ligne via un CTA tap.
+          const OfflineGeocodeBanner(),
           // Champ recherche, visible des qu'on a >= 3 tournees pour
           // ne pas polluer les nouveaux utilisateurs.
           tourneesAsync.maybeWhen(

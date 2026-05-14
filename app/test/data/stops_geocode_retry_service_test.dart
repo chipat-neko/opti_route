@@ -54,6 +54,7 @@ void main() {
       final svc = StopsGeocodeRetryService(
         repo: repo,
         geocoder: _StubGeocoder.allResolveTo(48.7, 1.3),
+        db: db,
       );
       final res = await svc.retryFor(id);
       expect(res.totalCandidats, 0);
@@ -70,6 +71,7 @@ void main() {
       final svc = StopsGeocodeRetryService(
         repo: repo,
         geocoder: _StubGeocoder.allResolveTo(48.7372, 1.3661),
+        db: db,
       );
       final res = await svc.retryFor(id);
       expect(res.totalCandidats, 1);
@@ -91,6 +93,7 @@ void main() {
       final svc = StopsGeocodeRetryService(
         repo: repo,
         geocoder: _StubGeocoder.alwaysEmpty(),
+        db: db,
       );
       final res = await svc.retryFor(id);
       expect(res.totalCandidats, 1);
@@ -124,6 +127,7 @@ void main() {
       final svc = StopsGeocodeRetryService(
         repo: repo,
         geocoder: _StubFiltered(matcher: (q) => q.contains('OK')),
+        db: db,
       );
       final r = await svc.retryFor(id);
       expect(r.totalCandidats, 2);
@@ -139,11 +143,111 @@ void main() {
       final svc = StopsGeocodeRetryService(
         repo: repo,
         geocoder: _StubGeocoder.alwaysThrow(),
+        db: db,
       );
       final res = await svc.retryFor(id);
       expect(res.totalCandidats, 2);
       expect(res.resolved, isEmpty);
       expect(res.unresolved, hasLength(2));
+    });
+  });
+
+  group('StopsGeocodeRetryService.retryAllPending + countPending', () {
+    late AppDatabase db;
+    late StopsRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = StopsRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<int> seedTournee(
+      List<({String adr, bool hasCoords})> specs, {
+      int? tourneeIdSuffix,
+    }) async {
+      final id = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T${tourneeIdSuffix ?? ""}',
+              date: DateTime(2026, 5, 14),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+      for (final s in specs) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: id,
+                adresseBrute: s.adr,
+                lat: s.hasCoords ? const Value(48.5) : const Value.absent(),
+                lng: s.hasCoords ? const Value(1.5) : const Value.absent(),
+              ),
+            );
+      }
+      return id;
+    }
+
+    test('countPending : nombre total de stops sans coords toutes tournees',
+        () async {
+      await seedTournee([
+        (adr: 'A', hasCoords: true),
+        (adr: 'B', hasCoords: false),
+      ], tourneeIdSuffix: 1);
+      await seedTournee([
+        (adr: 'C', hasCoords: false),
+        (adr: 'D', hasCoords: false),
+        (adr: 'E', hasCoords: true),
+      ], tourneeIdSuffix: 2);
+
+      final svc = StopsGeocodeRetryService(
+        repo: repo,
+        geocoder: _StubGeocoder.allResolveTo(48.7, 1.3),
+        db: db,
+      );
+      expect(await svc.countPending(), 3);
+    });
+
+    test('retryAllPending : traite TOUS les stops sans coords', () async {
+      await seedTournee([
+        (adr: 'Tournee 1 - manquant', hasCoords: false),
+      ], tourneeIdSuffix: 1);
+      await seedTournee([
+        (adr: 'Tournee 2 - manquant', hasCoords: false),
+        (adr: 'Tournee 2 - OK', hasCoords: true),
+      ], tourneeIdSuffix: 2);
+
+      final svc = StopsGeocodeRetryService(
+        repo: repo,
+        geocoder: _StubGeocoder.allResolveTo(48.7, 1.3),
+        db: db,
+      );
+      final result = await svc.retryAllPending();
+      expect(result.totalCandidats, 2,
+          reason: '2 stops sans coords trouves entre les 2 tournees');
+      expect(result.resolved, hasLength(2));
+      // Apres retry, plus rien en attente.
+      expect(await svc.countPending(), 0);
+    });
+
+    test('retryAllPending : 0 candidats si tout est deja geocode',
+        () async {
+      await seedTournee([
+        (adr: 'A', hasCoords: true),
+        (adr: 'B', hasCoords: true),
+      ]);
+      final svc = StopsGeocodeRetryService(
+        repo: repo,
+        geocoder: _StubGeocoder.alwaysThrow(), // pas appele
+        db: db,
+      );
+      final result = await svc.retryAllPending();
+      expect(result.totalCandidats, 0);
+      expect(result.resolved, isEmpty);
+      expect(result.unresolved, isEmpty);
     });
   });
 }

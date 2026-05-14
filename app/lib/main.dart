@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'data/notifications_service.dart';
 import 'providers/database_providers.dart';
+import 'providers/geocoding_providers.dart';
 import 'screens/app_lock_gate.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -39,6 +40,11 @@ class OptiRouteApp extends ConsumerWidget {
     final densite =
         ref.watch(densiteUiProvider).asData?.value ?? 'normal';
     final textScaleBoost = densite == 'large' ? 1.15 : 1.0;
+
+    // Demarre l'automate de re-geocodage hors-ligne. `ref.read` (et
+    // pas `watch`) car on ne veut pas rebuilder a chaque tentative.
+    // Le Provider auto-appelle start() a la 1ere lecture.
+    ref.read(offlineGeocodeAutomationProvider);
 
     return MaterialApp(
       title: 'opti_route',
