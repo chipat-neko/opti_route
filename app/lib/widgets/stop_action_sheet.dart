@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../data/navigation_service.dart';
 import '../providers/database_providers.dart';
+import '../screens/navigation_screen.dart';
 import '../theme/app_tokens.dart';
 import 'stop_action_sheet_pickers.dart';
 import 'stop_action_sheet_widgets.dart';
@@ -361,6 +362,38 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              // PoC GPS turn-by-turn integre (cf docs/plan-gps-integre.md).
+              // Push le NavigationScreen plein ecran qui montre la
+              // position GPS live + une ligne droite vers le stop.
+              // Pas un vrai turn-by-turn (Etape 2 : ORS directions).
+              // Si l'utilisateur tape "J'y suis" sur le FAB, le pop
+              // remonte `true` -> on relance la bottom sheet StopAction
+              // pour qu'il marque livre / echec sans repasser par la liste.
+              SizedBox(
+                width: double.infinity,
+                child: NavButton(
+                  label: 'Suivre dans l\'app',
+                  icon: Icons.gps_fixed,
+                  preferred: false,
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    final arrived = await navigator.push<bool>(
+                      MaterialPageRoute<bool>(
+                        builder: (_) => NavigationScreen(stop: widget.stop),
+                      ),
+                    );
+                    // Si l'utilisateur a tape "J'y suis", on ferme la
+                    // bottom sheet courante avec OpenDetailsAction pour
+                    // que le caller (StopRow._onTap) rouvre la sheet
+                    // immediatement -- pratique pour valider livre
+                    // direct apres etre arrive.
+                    if (arrived == true && mounted) {
+                      navigator.pop(const OpenDetailsAction());
+                    }
+                  },
+                ),
               ),
               const SizedBox(height: AppSpacing.x14),
             ],
