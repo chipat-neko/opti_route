@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,6 +12,8 @@ import '../data/ocr_service.dart';
 import '../providers/ocr_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import 'scan_bordereau/debug_section.dart';
+import 'scan_bordereau/detection_cards.dart';
 
 /// Ecran de scan de bordereau de livraison.
 ///
@@ -184,14 +185,14 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                 ),
               if (hasAutoExtraction) ...[
                 const SizedBox(height: AppSpacing.x14),
-                _AutoDetectionCard(
+                AutoDetectionCard(
                   extraction: extraction,
                   onUse: () => _confirmExtraction(extraction),
                 ),
               ] else if (extraction != null &&
                   extraction.confidence == ExtractionConfidence.low) ...[
                 const SizedBox(height: AppSpacing.x14),
-                _UncertainDetectionCard(extraction: extraction),
+                UncertainDetectionCard(extraction: extraction),
               ],
               const SizedBox(height: AppSpacing.x14),
               Row(
@@ -243,7 +244,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
               for (var i = 0; i < lines.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-                  child: _LineTile(
+                  child: LineTile(
                     text: lines[i],
                     selected: _selectedLineIndices.contains(i),
                     looksLikeAddress:
@@ -252,7 +253,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                   ),
                 ),
               const SizedBox(height: AppSpacing.x18),
-              _DebugRawTextSection(lines: lines),
+              DebugRawTextSection(lines: lines),
             ],
           ),
         ),
@@ -440,411 +441,5 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
   /// Confirmation depuis la detection auto : on retourne tout.
   void _confirmExtraction(BordereauExtraction extraction) {
     Navigator.of(context).pop(extraction);
-  }
-}
-
-/// Carte orange quand le parser a trouve quelque chose mais n'est
-/// pas confiant : il y a des champs detectes mais soit incomplets,
-/// soit ambigus. On invite l'utilisateur a verifier manuellement
-/// au lieu de pre-remplir automatiquement.
-class _UncertainDetectionCard extends StatelessWidget {
-  const _UncertainDetectionCard({required this.extraction});
-
-  final BordereauExtraction extraction;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x14),
-      decoration: BoxDecoration(
-        color: AppColors.amber.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(AppRadius.r14),
-        border: Border.all(color: AppColors.amber, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.warning_amber_outlined,
-                color: p.ink,
-                size: 18,
-              ),
-              const SizedBox(width: AppSpacing.x8),
-              Text(
-                'DETECTION INCERTAINE',
-                style: appMonoStyle(
-                  fontSize: 11,
-                  color: p.ink,
-                  letterSpacing: 0.6,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.x8),
-          Text(
-            'Le bordereau ne suit pas un format que je reconnais '
-            'parfaitement. Verifie les bonnes lignes manuellement '
-            'ci-dessous pour eviter une mauvaise adresse.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: p.ink,
-              height: 1.4,
-            ),
-          ),
-          if (extraction.codePostal != null ||
-              extraction.ville != null ||
-              extraction.nbColis != null) ...[
-            const SizedBox(height: AppSpacing.x10),
-            Text(
-              'Champs detectes (a verifier) :',
-              style: appMonoStyle(
-                fontSize: 10,
-                color: p.ink.withValues(alpha: 0.7),
-                letterSpacing: 0.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            if (extraction.codePostal != null || extraction.ville != null)
-              _ExtractedRow(
-                label: 'VILLE?',
-                value: [
-                  if (extraction.codePostal != null) extraction.codePostal!,
-                  if (extraction.ville != null) extraction.ville!,
-                ].join(' '),
-              ),
-            if (extraction.nbColis != null)
-              _ExtractedRow(
-                label: 'COLIS?',
-                value: '${extraction.nbColis}',
-                mono: true,
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Carte affichee en haut quand le parser a reussi a extraire au
-/// moins un champ. Permet a l'utilisateur de tout valider en 1 tap.
-class _AutoDetectionCard extends StatelessWidget {
-  const _AutoDetectionCard({
-    required this.extraction,
-    required this.onUse,
-  });
-
-  final BordereauExtraction extraction;
-  final VoidCallback onUse;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x14),
-      decoration: BoxDecoration(
-        color: AppColors.lime,
-        borderRadius: BorderRadius.circular(AppRadius.r14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: AppColors.ink, size: 18),
-              const SizedBox(width: AppSpacing.x8),
-              Text(
-                'DETECTION AUTOMATIQUE',
-                style: appMonoStyle(
-                  fontSize: 11,
-                  color: AppColors.ink,
-                  letterSpacing: 0.6,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.x10),
-          if (extraction.nomDestinataire != null)
-            _ExtractedRow(
-              label: 'CLIENT',
-              value: extraction.nomDestinataire!,
-              bold: true,
-            ),
-          if (extraction.rue != null)
-            _ExtractedRow(label: 'RUE', value: extraction.rue!),
-          if (extraction.codePostal != null || extraction.ville != null)
-            _ExtractedRow(
-              label: 'VILLE',
-              value: [
-                if (extraction.codePostal != null) extraction.codePostal!,
-                if (extraction.ville != null) extraction.ville!,
-              ].join(' '),
-            ),
-          if (extraction.nbColis != null)
-            _ExtractedRow(
-              label: 'COLIS',
-              value: '${extraction.nbColis}',
-              mono: true,
-            ),
-          if (extraction.telephone != null)
-            _ExtractedRow(
-              label: 'TEL',
-              value: extraction.telephone!,
-              mono: true,
-            ),
-          const SizedBox(height: AppSpacing.x12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onUse,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.ink,
-                foregroundColor: AppColors.lime,
-                minimumSize: const Size(0, 48),
-              ),
-              icon: const Icon(Icons.check),
-              label: const Text('Utiliser ces infos'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExtractedRow extends StatelessWidget {
-  const _ExtractedRow({
-    required this.label,
-    required this.value,
-    this.bold = false,
-    this.mono = false,
-  });
-
-  final String label;
-  final String value;
-  final bool bold;
-  final bool mono;
-
-  @override
-  Widget build(BuildContext context) {
-    // _ExtractedRow est toujours rendu sur fond accent fixe (lime ou amber)
-    // donc texte ink fixe pour rester lisible dans les 2 modes.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 56,
-            child: Text(
-              label,
-              style: appMonoStyle(
-                fontSize: 10,
-                color: AppColors.ink.withValues(alpha: 0.6),
-                letterSpacing: 0.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.x8),
-          Expanded(
-            child: Text(
-              value,
-              style: mono
-                  ? appMonoStyle(
-                      fontSize: 13,
-                      color: AppColors.ink,
-                      fontWeight:
-                          bold ? FontWeight.w800 : FontWeight.w700,
-                    )
-                  : const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.ink,
-                      fontWeight: FontWeight.w600,
-                      height: 1.3,
-                    ).copyWith(
-                      fontWeight:
-                          bold ? FontWeight.w800 : FontWeight.w600,
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Section repliable affichant tout le texte OCR ligne par ligne avec
-/// numero, et un bouton pour copier dans le presse-papiers. Utile
-/// pour debugger le parser quand l'extraction auto se trompe  -  Noah
-/// peut copier le texte et me l'envoyer pour que j'ajuste les
-/// heuristiques aux vraies donnees ML Kit.
-class _DebugRawTextSection extends StatefulWidget {
-  const _DebugRawTextSection({required this.lines});
-  final List<String> lines;
-
-  @override
-  State<_DebugRawTextSection> createState() => _DebugRawTextSectionState();
-}
-
-class _DebugRawTextSectionState extends State<_DebugRawTextSection> {
-  bool _expanded = false;
-
-  String get _numbered =>
-      widget.lines.asMap().entries.map((e) => '${e.key.toString().padLeft(2, "0")}: ${e.value}').join('\n');
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      decoration: BoxDecoration(
-        color: p.creamSoft,
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.r12),
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.x14),
-              child: Row(
-                children: [
-                  Icon(Icons.bug_report_outlined, size: 18, color: p.ink),
-                  const SizedBox(width: AppSpacing.x8),
-                  Expanded(
-                    child: Text(
-                      _expanded ? 'Texte brut OCR' : 'Voir le texte brut OCR',
-                      style: appMonoStyle(
-                        fontSize: 11,
-                        color: p.ink,
-                        letterSpacing: 0.6,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: p.ink,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_expanded) ...[
-            Divider(height: 1, color: p.inkLine),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.x14,
-                AppSpacing.x10,
-                AppSpacing.x14,
-                AppSpacing.x10,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 320),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        _numbered,
-                        style: appMonoStyle(
-                          fontSize: 11,
-                          color: p.ink,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.x10),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: _numbered));
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Texte OCR copie dans le presse-papiers',
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.content_copy, size: 16),
-                    label: const Text('Copier le texte brut'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _LineTile extends StatelessWidget {
-  const _LineTile({
-    required this.text,
-    required this.selected,
-    required this.looksLikeAddress,
-    required this.onTap,
-  });
-
-  final String text;
-  final bool selected;
-  final bool looksLikeAddress;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final bg = selected
-        ? AppColors.lime.withValues(alpha: 0.4)
-        : (looksLikeAddress ? AppColors.amber.withValues(alpha: 0.15) : p.paper);
-    final borderColor = selected
-        ? p.ink
-        : (looksLikeAddress ? AppColors.amber : p.inkLine);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.r12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x14,
-          vertical: AppSpacing.x12,
-        ),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.r12),
-          border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              selected ? Icons.check_box : Icons.check_box_outline_blank,
-              size: 20,
-              color: selected ? p.ink : p.textMute,
-            ),
-            const SizedBox(width: AppSpacing.x10),
-            Expanded(
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: looksLikeAddress ? FontWeight.w700 : FontWeight.w500,
-                  color: p.ink,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
