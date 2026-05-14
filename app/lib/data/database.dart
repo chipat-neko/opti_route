@@ -63,12 +63,15 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
+          // Indexes utiles aux requetes frequentes -- cf migration v22
+          // ci-dessous pour les motifs et les gains de perf attendus.
+          await _createPerfIndexes();
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
@@ -145,9 +148,39 @@ class AppDatabase extends _$AppDatabase {
           if (from < 21) {
             await m.addColumn(tournees, tournees.coequipierDefautId);
           }
+          if (from < 22) {
+            await _createPerfIndexes();
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
+
+  /// Indexes pour les requetes frequentes (SQLite ne cree pas d'index
+  /// auto sur les colonnes FK cote referencing). Idempotent grace au
+  /// IF NOT EXISTS -- appele a la fois en onCreate (nouveau install)
+  /// et en migration v22 (upgrade depuis une version anterieure).
+  ///
+  /// Gains attendus :
+  /// - getByTournee : ~100x sur >1000 stops
+  /// - stats par coequipier : ~10x si plusieurs livreurs
+  /// - retry geocode hors-ligne : ~3x quand DB > 1000 stops
+  /// - stats window queries (tournees.date >= since) : ~5x sur DB historique
+  Future<void> _createPerfIndexes() async {
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_stops_tournee_id ON stops(tournee_id)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_stops_coequipier_id ON stops(coequipier_id)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_stops_statut_livraison ON stops(statut_livraison)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_stops_lat_null ON stops(lat) WHERE lat IS NULL');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_tournees_date ON tournees(date)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_stop_history_stop_id ON stop_history(stop_id)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_geocode_cache_expire_le ON geocode_cache(expire_le)');
+  }
 }
