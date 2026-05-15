@@ -4,16 +4,20 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
+import 'image_preprocess_service.dart';
+
 /// Service OCR base sur Google ML Kit (on-device, gratuit, fonctionne
 /// hors ligne apres telechargement du modele).
 ///
 /// Le modele latin (couvre francais, anglais, espagnol, etc.) est
 /// d'environ 10 Mo et telecharge a la 1ere utilisation.
 class OcrService {
-  OcrService()
-      : _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+  OcrService({ImagePreprocessService? preprocessor})
+      : _recognizer = TextRecognizer(script: TextRecognitionScript.latin),
+        _preprocessor = preprocessor ?? ImagePreprocessService();
 
   final TextRecognizer _recognizer;
+  final ImagePreprocessService _preprocessor;
 
   /// Reconnait le texte dans une image et retourne :
   ///   - `fullText` : tout le texte detecte concatene
@@ -36,76 +40,99 @@ class OcrService {
     );
   }
 
-  /// Variante "robuste" qui essaie plusieurs orientations si le 1er
-  /// OCR donne un resultat pauvre.
+  /// Variante "robuste" qui pre-traite l'image puis essaie plusieurs
+  /// orientations si le 1er OCR donne un resultat pauvre.
   ///
-  /// Strategie :
-  /// 1. OCR de l'image originale (rotation 0)
-  /// 2. Si le score qualite (cf [_qualityScore]) est >= [qualityThreshold],
-  ///    on garde et on sort -> 1 seul appel ML Kit (cas normal).
-  /// 3. Sinon, on regenere l'image tournee a 90/180/270 et on relance
-  ///    l'OCR. On garde le resultat avec le meilleur score qualite.
+  /// **Strategie Phase B** (cf docs/plan-ocr-85pct.md) :
+  /// 1. Pre-traitement image : bake EXIF orientation + boost contraste
+  ///    + auto-crop bordereau (cf [ImagePreprocessService.enhance]).
+  ///    1 seul appel, cout ~50-200ms cote CPU. Couvre le 80 % des cas
+  ///    "OCR ratait juste a cause de l'orientation EXIF / contraste".
+  /// 2. OCR de l'image enhancee. Si le score qualite est >=
+  ///    [qualityThreshold], on garde et on sort.
+  /// 3. Sinon, on retombe sur les rotations 90/180/270 classiques
+  ///    (Phase A) au cas ou le pre-traitement EXIF n'a pas suffi.
   ///
-  /// Use case : le livreur a scanne un bordereau a l'envers ou couche
-  /// sans s'en rendre compte. ML Kit reconnait quelques caracteres
-  /// epars (~5 lignes) mais rate la structure. On detecte le pb via
-  /// le score et on retente automatiquement.
+  /// Use case : livreur scanne un bordereau a l'envers (-> bake EXIF
+  /// remet droit en 1 passe) OU bordereau dans l'ombre d'une voiture
+  /// (-> contraste boost rend le texte lisible).
   ///
-  /// Cout : 1 OCR si l'image est bien orientee (cas 99 %), jusqu'a 4
-  /// OCR dans le cas degrade. Chaque OCR ML Kit prend ~300-800 ms sur
-  /// un phone moyen, donc le pire cas reste sous les 3 s.
+  /// Cout : 1 enhance + 1 OCR si l'image est bien orientee (cas 99 %),
+  /// jusqu'a 1 enhance + 4 OCR dans le pire cas (~3s sur phone moyen).
   Future<OcrRotatedResult> extractFromFileWithRotations(
     File image, {
     int qualityThreshold = 8,
   }) async {
-    // Etape 1 : OCR de base, image telle quelle.
-    final base = await extractFromFile(image);
-    final baseScore = _qualityScore(base);
-    if (baseScore >= qualityThreshold) {
-      return OcrRotatedResult(
-        result: base,
-        rotationDegrees: 0,
-        qualityScore: baseScore,
-        attemptedRotations: const [0],
-      );
-    }
+    // Etape 0 : pre-traitement image. Best-effort : si ca rate
+    // (format exotique, image corrompue), on utilise l'image originale.
+    File workingImage = image;
+    File? preprocessedFile;
+    try {
+      preprocessedFile = await _preprocessor.enhance(image);
+      workingImage = preprocessedFile;
+    } catch (_) {/* fallback sur l'image originale */}
 
-    // Etape 2 : essai des 3 autres rotations.
-    final attempted = <int>[0];
-    OcrResult bestResult = base;
-    int bestScore = baseScore;
-    int bestRotation = 0;
+    try {
+      // Etape 1 : OCR de l'image (eventuellement pre-traitee).
+      final base = await extractFromFile(workingImage);
+      final baseScore = _qualityScore(base);
+      if (baseScore >= qualityThreshold) {
+        return OcrRotatedResult(
+          result: base,
+          rotationDegrees: 0,
+          qualityScore: baseScore,
+          attemptedRotations: const [0],
+        );
+      }
 
-    for (final degrees in [90, 180, 270]) {
-      try {
-        final rotatedFile = await _rotateImageToTempFile(image, degrees);
-        if (rotatedFile == null) continue;
-        final rotated = await extractFromFile(rotatedFile);
-        final score = _qualityScore(rotated);
-        attempted.add(degrees);
-        if (score > bestScore) {
-          bestResult = rotated;
-          bestScore = score;
-          bestRotation = degrees;
+      // Etape 2 : essai des 3 autres rotations sur l'image pre-traitee
+      // (qui a deja l'EXIF bake correctement -- inutile de re-baker).
+      final attempted = <int>[0];
+      OcrResult bestResult = base;
+      int bestScore = baseScore;
+      int bestRotation = 0;
+
+      for (final degrees in [90, 180, 270]) {
+        try {
+          final rotatedFile = await _rotateImageToTempFile(
+            workingImage,
+            degrees,
+          );
+          if (rotatedFile == null) continue;
+          final rotated = await extractFromFile(rotatedFile);
+          final score = _qualityScore(rotated);
+          attempted.add(degrees);
+          if (score > bestScore) {
+            bestResult = rotated;
+            bestScore = score;
+            bestRotation = degrees;
+          }
+          // Nettoyage best-effort du fichier temporaire (ne bloque pas
+          // si l'OS le refuse, ca finira par etre purge).
+          unawaited(rotatedFile.delete().catchError((_) => rotatedFile));
+          // Si on trouve un excellent score apres 1 rotation, pas besoin
+          // de continuer (court-circuit pour economiser des cycles).
+          if (bestScore >= qualityThreshold) break;
+        } catch (_) {
+          // On n'arrete pas tout pour une rotation qui foire, on tente
+          // la suivante.
         }
-        // Nettoyage best-effort du fichier temporaire (ne bloque pas
-        // si l'OS le refuse, ca finira par etre purge).
-        unawaited(rotatedFile.delete().catchError((_) => rotatedFile));
-        // Si on trouve un excellent score apres 1 rotation, pas besoin
-        // de continuer (court-circuit pour economiser des cycles).
-        if (bestScore >= qualityThreshold) break;
-      } catch (_) {
-        // On n'arrete pas tout pour une rotation qui foire, on tente
-        // la suivante.
+      }
+
+      return OcrRotatedResult(
+        result: bestResult,
+        rotationDegrees: bestRotation,
+        qualityScore: bestScore,
+        attemptedRotations: attempted,
+      );
+    } finally {
+      // Nettoie le fichier pre-traite (different de l'image originale
+      // que le caller veut garder).
+      if (preprocessedFile != null && preprocessedFile.path != image.path) {
+        unawaited(
+            preprocessedFile.delete().catchError((_) => preprocessedFile!));
       }
     }
-
-    return OcrRotatedResult(
-      result: bestResult,
-      rotationDegrees: bestRotation,
-      qualityScore: bestScore,
-      attemptedRotations: attempted,
-    );
   }
 
   /// Score heuristique evaluant la qualite d'un resultat OCR. Plus
