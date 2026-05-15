@@ -23,14 +23,20 @@ Identique à l'app (`app/lib/theme/app_tokens.dart`) :
 ## Structure
 
 ```
-docs/website/
+site_doc/
 ├── index.html        — Landing page (hero + features + équipe + how + footer)
 ├── dashboard.html    — Viewer CSV interactif (upload + stats + graphes + tableau)
-├── styles.css        — Tokens + composants (réutilisé sur les 2 pages)
+├── vs.html           — Comparatif vs Circuit / Routific / Onfleet
+├── faq.html / roadmap.html / features.html / entreprise.html
+├── changelog.html / install-apk.html / gallery.html / guide-csv.html
+├── mentions-legales.html / 404.html
+├── styles.css        — Tokens + composants (partagés)
 ├── script.js         — Theme toggle commun
-├── dashboard.js      — Parser CSV + Chart.js + interactions dashboard
+├── dashboard.js      — Parser CSV + Chart.js + tri/filtre tableau
+├── robots.txt + sitemap.xml
 └── assets/
-    └── favicon.svg   — Logo pin + route lime
+    ├── favicon.svg   — Logo pin + route lime
+    └── og-cover.png  — Open Graph preview (1200×630)
 ```
 
 ## Dashboard : format CSV attendu
@@ -49,13 +55,17 @@ C'est exactement le format produit par
 
 ## Déploiement GitHub Pages
 
-1. Aller dans le repo GitHub → **Settings** → **Pages**.
-2. Source : **Deploy from a branch**.
-3. Branche : `main` (ou la branche courante), dossier : `/docs`.
-4. Save. L'URL sera `https://chipat-neko.github.io/opti_route/website/`.
+Le déploiement est automatisé via [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml) :
+à chaque push sur `main` qui touche `site_doc/**` ou `app/**`, le workflow
+build l'app Flutter Web ET copie `site_doc/` dans `app/build/web/site/`,
+puis publie le tout sur GitHub Pages.
 
-Le site est statique : aucune build step, juste les fichiers tels
-quels. Toute modification sur `main` est déployée automatiquement.
+- **App Flutter Web** : `https://chipat-neko.github.io/opti_route/`
+- **Site vitrine**     : `https://chipat-neko.github.io/opti_route/site/`
+
+Le site vitrine est statique : aucune build step, juste une copie. Les
+liens internes sont en chemins relatifs (`<a href="features.html">`)
+donc fonctionnent depuis le sous-chemin `/site/`.
 
 ## Tester en local
 
