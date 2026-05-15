@@ -59,6 +59,12 @@ class _AddressAutocompleteFieldState
   String? _errorMessage;
   AddressSuggestion? _selected;
 
+  /// Query la plus recente envoyee en recherche. Sert a ignorer les
+  /// resultats out-of-order : si l'utilisateur tape "A" puis "B" alors
+  /// que la recherche "A" est encore en flight, on rejette "A" quand
+  /// il finit (sinon on overwrite les resultats "B" avec du stale).
+  String _activeQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -93,6 +99,7 @@ class _AddressAutocompleteFieldState
   }
 
   Future<void> _runSearch(String query) async {
+    _activeQuery = query;
     if (query.trim().length < 2) {
       if (!mounted) return;
       setState(() {
@@ -107,6 +114,7 @@ class _AddressAutocompleteFieldState
     // l'API distante viendra completer ensuite.
     final carnetRepo = ref.read(savedDestinationsRepositoryProvider);
     final localResults = await carnetRepo.search(query, limit: 5);
+    if (_activeQuery != query) return; // user a tape, on jette ce stale
     final localSuggestions = localResults.map(_carnetToSuggestion).toList();
 
     if (!mounted) return;
@@ -124,6 +132,7 @@ class _AddressAutocompleteFieldState
       final service = ref.read(geocodingServiceProvider);
       final remote = await service.search(query);
       if (!mounted) return;
+      if (_activeQuery != query) return; // user a tape, abandon
       // Dedup : on retire les resultats distants dont les coords sont
       // tres proches (< ~11m) d'une suggestion locale.
       final dedupedRemote = remote.where((r) {
@@ -143,6 +152,7 @@ class _AddressAutocompleteFieldState
       });
     } on GeocodingException catch (e) {
       if (!mounted) return;
+      if (_activeQuery != query) return;
       setState(() {
         // On garde les suggestions locales meme si l'API distante echoue.
         _errorMessage = localSuggestions.isEmpty ? e.message : null;
@@ -150,6 +160,7 @@ class _AddressAutocompleteFieldState
       });
     } catch (_) {
       if (!mounted) return;
+      if (_activeQuery != query) return;
       setState(() {
         _errorMessage =
             localSuggestions.isEmpty ? 'Erreur reseau, reessaie' : null;

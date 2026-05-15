@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show countAll;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/ban_geocoding_service.dart';
@@ -29,17 +30,31 @@ final banGeocodingServiceProvider = Provider<BanGeocodingService>((ref) {
 /// - Photon (OSM) : enseignes / marques commerciales (Citroen,
 ///   Carrefour, McDo...) que SIRENE ne connait pas par leur enseigne.
 ///
-/// Aucune cle API requise, aucune CB.
+/// Aucune cle API requise, aucune CB. **Reutilise l'instance BAN
+/// existante** (cf banGeocodingServiceProvider) plutot que d'en
+/// instancier une 2e -- evite de dupliquer le connection pool HTTP
+/// et de surcharger la BAN avec 2x les User-Agents.
 final geocodingServiceProvider = Provider<GeocodingService>((ref) {
   final cache = ref.watch(geocodeCacheRepositoryProvider);
+  final ban = ref.watch(banGeocodingServiceProvider);
+
+  final entreprises = RechercheEntreprisesService(cache: cache);
+  final photon = PhotonService(cache: cache);
 
   final service = FranceGeocodingService(
-    ban: BanGeocodingService(cache: cache),
-    entreprises: RechercheEntreprisesService(cache: cache),
-    photon: PhotonService(cache: cache),
+    ban: ban,
+    entreprises: entreprises,
+    photon: photon,
   );
 
-  ref.onDispose(service.close);
+  // Note : `service.close()` fermerait aussi `ban`, qui est partage
+  // avec banGeocodingServiceProvider. Pour eviter le double-close, on
+  // ne libere ici QUE entreprises + photon ; ban est dispose par son
+  // propre Provider quand l'app se termine.
+  ref.onDispose(() {
+    entreprises.close();
+    photon.close();
+  });
   return service;
 });
 
@@ -77,8 +92,15 @@ final offlineGeocodeAutomationProvider =
 /// Compteur live du nombre d'arrets en attente de geocodage (lat null).
 /// Watche par les badges UI pour afficher "N arrets sans GPS".
 /// Stream Drift -> mise a jour instantanee a chaque add/edit/delete.
+///
+/// COUNT(*) cote SQLite plutot que .map(.length) sur la liste des
+/// stops : evite de charger toutes les rows en RAM a chaque tick
+/// (sur 5000 stops sans GPS, ca devient sensible).
 final pendingGeocodeCountProvider = StreamProvider<int>((ref) {
   final db = ref.watch(appDatabaseProvider);
-  final query = db.select(db.stops)..where((s) => s.lat.isNull());
-  return query.watch().map((stops) => stops.length);
+  final col = countAll();
+  final query = db.selectOnly(db.stops)
+    ..addColumns([col])
+    ..where(db.stops.lat.isNull());
+  return query.watchSingle().map((row) => row.read(col) ?? 0);
 });
