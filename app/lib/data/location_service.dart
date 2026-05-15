@@ -51,12 +51,21 @@ abstract class LocationService {
 
   /// Position courante one-shot (utile a l'ouverture de l'ecran avant
   /// que le stream n'ait emis sa 1ere valeur).
-  static Future<Position> currentPosition() {
+  ///
+  /// Geolocator.getCurrentPosition n'a PAS de timeout par defaut --
+  /// si le GPS hardware ne repond pas (zone intérieure, mode avion
+  /// silencieux), l'appel peut bloquer indefiniment. On force donc un
+  /// timeout cote Dart : meilleur d'echouer apres [timeout] que de
+  /// laisser l'UI sur un loader infini.
+  static Future<Position> currentPosition({
+    Duration timeout = const Duration(seconds: 10),
+  }) {
     return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
+      locationSettings: LocationSettings(
         accuracy: LocationAccuracy.high,
+        timeLimit: timeout,
       ),
-    );
+    ).timeout(timeout);
   }
 
   /// Distance vol d'oiseau (en metres) entre deux points lat/lng.

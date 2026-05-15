@@ -190,6 +190,26 @@ void main() {
       expect(revert.toStatus, 'a_livrer');
     });
 
+    test('revertStatus efface aussi preuvePhotoPath + coords + livreLe',
+        () async {
+      // Regression : avant le fix 2026-05-14, revertStatus oubliait
+      // preuvePhotoPath -> la photo restait orpheline sur un stop
+      // repassé en a_livrer (incoherent avec markAaLivrer).
+      final (_, sId) = await seedTourneeWithStop();
+      await repo.markLivre(
+        sId,
+        position: (lat: 48.0, lng: 1.0),
+        preuvePhotoPath: '/p/photo.jpg',
+      );
+      await repo.revertStatus(sId);
+      final s = await repo.getById(sId);
+      expect(s!.preuvePhotoPath, isNull,
+          reason: 'revertStatus doit reset la photo');
+      expect(s.livreLat, isNull);
+      expect(s.livreLng, isNull);
+      expect(s.livreLe, isNull);
+    });
+
     test('getHistory : log les 3 transitions livre/echec/revert',
         () async {
       final (_, sId) = await seedTourneeWithStop();

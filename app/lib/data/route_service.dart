@@ -75,17 +75,23 @@ class RouteService {
       if (raw is! Map<String, dynamic>) return null;
       final features = raw['features'];
       if (features is! List || features.isEmpty) return null;
-      final feature = features.first as Map<String, dynamic>;
+      final feature = features.first;
+      if (feature is! Map<String, dynamic>) return null;
 
-      // Geometry : liste de coords [lng, lat] -> liste de LatLng
+      // Geometry : liste de coords [lng, lat] -> liste de LatLng.
+      // On skip defensivement les coords mal formees (null, string,
+      // tuple < 2) plutot que crasher.
       final geom = (feature['geometry'] as Map?)?.cast<String, dynamic>();
       final coords = geom?['coordinates'];
       if (coords is! List) return null;
-      final polyline = <LatLng>[
-        for (final c in coords)
-          if (c is List && c.length >= 2)
-            LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()),
-      ];
+      final polyline = <LatLng>[];
+      for (final c in coords) {
+        if (c is! List || c.length < 2) continue;
+        final lng = (c[0] as num?)?.toDouble();
+        final lat = (c[1] as num?)?.toDouble();
+        if (lng == null || lat == null) continue;
+        polyline.add(LatLng(lat, lng));
+      }
       if (polyline.length < 2) return null;
 
       // Steps : structure ORS = properties.segments[0].steps[]
@@ -95,14 +101,19 @@ class RouteService {
       final segments = props?['segments'];
       final steps = <RouteStep>[];
       if (segments is List && segments.isNotEmpty) {
-        final segment = segments.first as Map<String, dynamic>;
+        final segment = segments.first;
+        if (segment is! Map<String, dynamic>) {
+          return RouteData(polyline: polyline, steps: steps);
+        }
         final rawSteps = segment['steps'];
         if (rawSteps is List) {
           for (final s in rawSteps) {
             if (s is! Map) continue;
             final wp = s['way_points'];
             if (wp is! List || wp.length < 2) continue;
-            final endIdx = (wp[1] as num).toInt();
+            final endIdxRaw = (wp[1] as num?)?.toInt();
+            if (endIdxRaw == null) continue;
+            final endIdx = endIdxRaw;
             // Coord du POINT DE FIN du step = c'est la le pivot ou
             // l'utilisateur doit manoeuvrer. ORS exprime un step comme
             // "de point A a point B", l'instruction concerne ce qui

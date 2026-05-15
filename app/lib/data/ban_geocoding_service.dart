@@ -112,7 +112,8 @@ class BanGeocodingService implements GeocodingService {
     if (raw is! Map<String, dynamic>) return null;
     final features = raw['features'];
     if (features is! List || features.isEmpty) return null;
-    final first = features.first as Map<String, dynamic>;
+    final first = features.first;
+    if (first is! Map<String, dynamic>) return null;
     return _toSuggestion(first);
   }
 
@@ -122,8 +123,11 @@ class BanGeocodingService implements GeocodingService {
     final coords = geometry['coordinates'];
     if (coords is! List || coords.length < 2) return null;
 
-    final lon = (coords[0] as num).toDouble();
-    final lat = (coords[1] as num).toDouble();
+    // BAN renvoie parfois `[null, null]` ou des strings sur certains
+    // POI mal indexes : on convertit defensivement plutot que crasher.
+    final lon = (coords[0] as num?)?.toDouble();
+    final lat = (coords[1] as num?)?.toDouble();
+    if (lon == null || lat == null) return null;
 
     final props =
         (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};

@@ -66,6 +66,11 @@ class SavedDestinationsRepository {
 
   /// Cherche une entree existante par nomClient (case-insensitive) ou,
   /// a defaut, par proximite GPS (~11 metres a 4 decimales).
+  ///
+  /// Si plusieurs clients homonymes existent (cas reel : "MARTIN" dans
+  /// deux villes differentes), on prefere celui dont les coords sont
+  /// les plus proches du stop courant. Avant le fix 2026-05-14, on
+  /// utilisait `getSingleOrNull` qui throw en cas d'homonymes.
   Future<SavedDestination?> _findExisting({
     String? nomClient,
     required double lat,
@@ -75,8 +80,17 @@ class SavedDestinationsRepository {
       final byName = await (_db.select(_db.savedDestinations)
             ..where((d) =>
                 d.nomClient.lower().equals(nomClient.toLowerCase())))
-          .getSingleOrNull();
-      if (byName != null) return byName;
+          .get();
+      if (byName.isNotEmpty) {
+        if (byName.length == 1) return byName.first;
+        // Homonymes : on prend celui dont les coords sont les plus proches.
+        byName.sort((a, b) {
+          final da = (a.lat - lat).abs() + (a.lng - lng).abs();
+          final db = (b.lat - lat).abs() + (b.lng - lng).abs();
+          return da.compareTo(db);
+        });
+        return byName.first;
+      }
     }
     // Fallback : meme coords arrondies a 4 decimales.
     final all = await _db.select(_db.savedDestinations).get();
@@ -156,11 +170,17 @@ class SavedDestinationsRepository {
   }
 
   /// Toggle l'etoile "favori" sur une entree du carnet.
+  /// Atomique : un double-tap rapide ne pourra pas flipper la valeur
+  /// deux fois (sinon le 2eme tap voit la valeur stale).
   Future<int> toggleFavori(int id) async {
-    final entry = await getById(id);
-    if (entry == null) return 0;
-    return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
-        .write(SavedDestinationsCompanion(isFavori: Value(!entry.isFavori)));
+    return _db.transaction(() async {
+      final entry = await getById(id);
+      if (entry == null) return 0;
+      return (_db.update(_db.savedDestinations)
+            ..where((d) => d.id.equals(id)))
+          .write(
+              SavedDestinationsCompanion(isFavori: Value(!entry.isFavori)));
+    });
   }
 
   Future<int> delete(int id) {
@@ -256,8 +276,13 @@ class SavedDestinationsRepository {
         .write(SavedDestinationsCompanion(photoPath: Value(path)));
   }
 
+  /// COUNT(*) cote SQLite (vs .length apres avoir chargé toutes les
+  /// lignes). Sur un carnet de 1000+ entrées, la difference est nette.
   Future<int> count() async {
-    final rows = await _db.select(_db.savedDestinations).get();
-    return rows.length;
+    final col = _db.savedDestinations.id.count();
+    final row = await (_db.selectOnly(_db.savedDestinations)
+          ..addColumns([col]))
+        .getSingle();
+    return row.read(col) ?? 0;
   }
 }

@@ -138,9 +138,21 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
       // mode silencieux et le PoC continue sans annonces vocales.
       unawaited(_initTts());
 
+      // Timer de timeout : si rien n'a emis apres 30 sec, on affiche
+      // un message explicite au lieu du loader infini. On l'arme AVANT
+      // le currentPosition() pour qu'il tourne meme si currentPosition
+      // hange (audit 2026-05-14 : l'ancien code attendait la fin du
+      // currentPosition pour armer le timer -> potentiel deadlock).
+      _gpsTimeoutTimer = Timer(const Duration(seconds: 30), () {
+        if (mounted && !_hasCenteredOnce) {
+          setState(() => _gpsTimedOut = true);
+        }
+      });
+
       // Fallback one-shot : valeur initiale immediate. Si l'utilisateur
-      // est en intérieur ou en mode avion, ca peut throw mais on
-      // l'ignore (le stream prendra le relais).
+      // est en intérieur ou en mode avion, ca peut throw (timeout 10s
+      // dans LocationService) mais on l'ignore (le stream prendra le
+      // relais et/ou le timer 30s ci-dessus affichera l'erreur UI).
       try {
         final pos = await LocationService.currentPosition();
         if (mounted) setState(() => _fallbackPosition = pos);
@@ -149,14 +161,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
         // ligne droite haversine en fallback (degradation gracieuse).
         unawaited(_fetchRouteData(pos));
       } catch (_) {/* swallow, on attend le stream */}
-
-      // Timer de timeout : si rien n'a emis apres 30 sec, on affiche
-      // un message explicite au lieu du loader infini.
-      _gpsTimeoutTimer = Timer(const Duration(seconds: 30), () {
-        if (mounted && !_hasCenteredOnce) {
-          setState(() => _gpsTimedOut = true);
-        }
-      });
     } on LocationPermissionDenied catch (e) {
       if (!mounted) return;
       setState(() {
