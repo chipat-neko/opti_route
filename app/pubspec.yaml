@@ -74,6 +74,11 @@ dependencies:
   # "Suivre dans l'app". Voix systeme Android (gratuite). Etape 3 du
   # plan GPS turn-by-turn integre.
   flutter_tts: ^4.2.0
+  # supabase_flutter : Phase 2 backend cloud (auth + sync chef-equipiers).
+  # Pour ce jalon 1, seule l'auth email OTP est activee. Free tier UE
+  # (Frankfurt/Paris), 500 MB DB, 50k MAUs -- largement assez pour
+  # commencer.
+  supabase_flutter: ^2.12.0
 
 dev_dependencies:
   flutter_test:

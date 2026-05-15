@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'data/backup_service.dart';
 import 'data/notifications_service.dart';
+import 'data/supabase_service.dart';
 import 'providers/database_providers.dart';
 import 'providers/geocoding_providers.dart';
 import 'screens/app_lock_gate.dart';
@@ -51,6 +52,10 @@ Future<void> main() async {
   // si echec). En web : flutter_local_notifications fonctionne mais
   // sans permission notif systeme l'init ne fait rien.
   unawaited(NotificationsService.instance.init());
+  // Init Supabase (Phase 2 backend cloud, jalon 1 = auth seule).
+  // No-op silencieux si --dart-define SUPABASE_URL pas fourni.
+  // L'app continue de fonctionner en mode local-only.
+  unawaited(SupabaseService.instance.init());
   runApp(const ProviderScope(child: OptiRouteApp()));
 }
 
