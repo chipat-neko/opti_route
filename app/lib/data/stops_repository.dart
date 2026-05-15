@@ -291,13 +291,33 @@ class StopsRepository {
 
   /// Applique l'ordre optimise calcule par le solveur : pour chaque
   /// stop, on ecrit `ordre_optimise = position dans la liste` (1-based).
-  /// Tout est fait dans une transaction pour eviter un etat partiel.
+  /// Batch atomique : un seul echange transactionnel avec SQLite.
   Future<void> applyOptimizedOrder(List<int> orderedStopIds) async {
-    await _db.transaction(() async {
+    if (orderedStopIds.isEmpty) return;
+    await _db.batch((batch) {
       for (var i = 0; i < orderedStopIds.length; i++) {
-        await (_db.update(_db.stops)
-              ..where((s) => s.id.equals(orderedStopIds[i])))
-            .write(StopsCompanion(ordreOptimise: Value(i + 1)));
+        batch.update(
+          _db.stops,
+          StopsCompanion(ordreOptimise: Value(i + 1)),
+          where: (s) => s.id.equals(orderedStopIds[i]),
+        );
+      }
+    });
+  }
+
+  /// Pose `ordrePriorite = position dans [orderedStopIds]` (1-based)
+  /// pour chaque stop. Sert au reorder manuel (drag&drop dans
+  /// TourneeDuJourScreen) afin que la prochaine optimisation reprenne
+  /// cet ordre par defaut. Batch identique a [applyOptimizedOrder].
+  Future<void> applyOrdrePriorite(List<int> orderedStopIds) async {
+    if (orderedStopIds.isEmpty) return;
+    await _db.batch((batch) {
+      for (var i = 0; i < orderedStopIds.length; i++) {
+        batch.update(
+          _db.stops,
+          StopsCompanion(ordrePriorite: Value(i + 1)),
+          where: (s) => s.id.equals(orderedStopIds[i]),
+        );
       }
     });
   }
