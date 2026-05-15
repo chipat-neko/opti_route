@@ -13,6 +13,7 @@ import 'backups_list_screen.dart';
 import 'coequipiers_screen.dart';
 import 'mentions_legales_screen.dart';
 import 'parametres/apparence_accessibilite_section.dart';
+import 'parametres/cloud_section.dart';
 import 'parametres/donnees_section.dart';
 import 'parametres/entreprise_form.dart';
 import 'parametres/ocr_stats_tile.dart';
@@ -588,6 +589,24 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               );
             },
           ),
+          const SizedBox(height: AppSpacing.x28),
+          const Divider(),
+          const SizedBox(height: AppSpacing.x18),
+          const ParametresSectionTitle('Compte cloud'),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Phase 2 (en construction) : connecte un compte pour '
+            'synchroniser entre tes appareils et partager les tournees '
+            'avec tes coequipiers en temps reel. Pour l\'instant le '
+            'mode local-only reste l\'autorite.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          const CloudSection(),
           const SizedBox(height: AppSpacing.x28),
           const Divider(),
           const SizedBox(height: AppSpacing.x18),
