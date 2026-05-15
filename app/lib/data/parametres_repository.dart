@@ -36,6 +36,7 @@ class ParametresRepository {
   static const _kQuietHoursEnd = 'quiet_hours_end';
   static const _kAutoBackupPeriod = 'auto_backup_period';
   static const _kLastAutoBackupAt = 'last_auto_backup_at';
+  static const _kRecentSearches = 'recent_searches_v1';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -423,6 +424,44 @@ class ParametresRepository {
 
   Future<void> setLastAutoBackupAt(DateTime when) =>
       _write(_kLastAutoBackupAt, when.toIso8601String());
+
+  /// Historique des dernieres recherches dans la palette Cmd+K
+  /// (UnifiedSearchScreen). Stocke sous forme de chaine separateur `|`
+  /// (pas JSON pour eviter le quote-hell sur les requetes contenant
+  /// des guillemets). Garde au max [_maxRecentSearches] elements, le
+  /// plus recent en premier, deduplique case-insensitive.
+  static const int _maxRecentSearches = 5;
+  static const String _recentSearchesSep = '|';
+
+  Future<List<String>> getRecentSearches() async {
+    final raw = await _readKey(_kRecentSearches);
+    if (raw == null || raw.isEmpty) return const [];
+    return raw
+        .split(_recentSearchesSep)
+        .where((s) => s.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  /// Ajoute [query] en tete de la liste, dedup case-insensitive,
+  /// truncate a [_maxRecentSearches]. No-op si la query est vide ou
+  /// si l'historique est deja sature avec elle en tete.
+  Future<void> addRecentSearch(String query) async {
+    final clean = query.trim();
+    if (clean.isEmpty) return;
+    final current = await getRecentSearches();
+    final lower = clean.toLowerCase();
+    final filtered = current
+        .where((q) => q.toLowerCase() != lower)
+        .take(_maxRecentSearches - 1)
+        .toList();
+    final next = [clean, ...filtered];
+    // Verifie qu'aucun element ne contient le separateur (impossible
+    // en pratique avec un input clavier mais defensif).
+    if (next.any((q) => q.contains(_recentSearchesSep))) return;
+    await _write(_kRecentSearches, next.join(_recentSearchesSep));
+  }
+
+  Future<void> clearRecentSearches() => _delete(_kRecentSearches);
 
   /// Estime le cout carburant d'une distance (en metres) selon les
   /// parametres courants. Retourne en EUR (double, arrondi a 0.01).

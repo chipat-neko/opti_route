@@ -412,4 +412,67 @@ void main() {
       expect(await repo.getDureeArretDefault(), 5);
     });
   });
+
+  group('ParametresRepository - recent searches (Cmd+K)', () {
+    late AppDatabase db;
+    late ParametresRepository repo;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = ParametresRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('liste vide par defaut', () async {
+      expect(await repo.getRecentSearches(), isEmpty);
+    });
+
+    test('addRecentSearch : insere la plus recente en tete', () async {
+      await repo.addRecentSearch('boulangerie');
+      await repo.addRecentSearch('martin');
+      expect(await repo.getRecentSearches(), ['martin', 'boulangerie']);
+    });
+
+    test('dedup case-insensitive : re-tap la meme query la remonte',
+        () async {
+      await repo.addRecentSearch('Martin');
+      await repo.addRecentSearch('autre');
+      await repo.addRecentSearch('MARTIN');
+      // Une seule occurrence, en tete, casse preservee (derniere ecrite).
+      expect(await repo.getRecentSearches(), ['MARTIN', 'autre']);
+    });
+
+    test('plafond a 5 elements', () async {
+      for (var i = 1; i <= 7; i++) {
+        await repo.addRecentSearch('query$i');
+      }
+      final list = await repo.getRecentSearches();
+      expect(list, hasLength(5));
+      // Plus recente en tete, plus anciennes dropees.
+      expect(list.first, 'query7');
+      expect(list.last, 'query3');
+    });
+
+    test('query vide ou whitespace : ignoree', () async {
+      await repo.addRecentSearch('   ');
+      await repo.addRecentSearch('');
+      expect(await repo.getRecentSearches(), isEmpty);
+    });
+
+    test('query contenant le separateur | : ignoree (defensive)',
+        () async {
+      await repo.addRecentSearch('valide');
+      await repo.addRecentSearch('a|b');
+      expect(await repo.getRecentSearches(), ['valide']);
+    });
+
+    test('clearRecentSearches : reset complet', () async {
+      await repo.addRecentSearch('x');
+      await repo.clearRecentSearches();
+      expect(await repo.getRecentSearches(), isEmpty);
+    });
+  });
 }
