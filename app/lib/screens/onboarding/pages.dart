@@ -485,7 +485,151 @@ class PageChefEquipe extends StatelessWidget {
 }
 
 /// ────────────────────────────────────────────────────────────────
-/// Page 5/5 (derniere) : "Cle OpenRouteService" — saisie de la cle
+/// Page 5/6 : "Nouveautes" — features ajoutees recemment qui ne sont
+/// pas evidentes au 1er coup d'oeil. Surtout pour les users qui
+/// reinstallent depuis une vieille version. Couvre :
+/// - GPS turn-by-turn integre (TTS) qui evite de switcher Maps/Waze
+/// - Cartes pre-telechargees pour zone faible 4G
+/// - PIN / biometrie pour proteger les donnees clients
+/// - 4 palettes de couleurs (Apparence)
+/// ────────────────────────────────────────────────────────────────
+class PageNouveautes extends StatelessWidget {
+  const PageNouveautes({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x22,
+        vertical: AppSpacing.x28,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.lime,
+              borderRadius: BorderRadius.circular(AppRadius.r22),
+            ),
+            child: Icon(
+              Icons.auto_awesome_outlined,
+              size: 38,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x22),
+          Text(
+            'Nouveautes recentes',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          Text(
+            'Des features qu\'on ne voit pas tout de suite mais qui '
+            'changent le quotidien :',
+            style: TextStyle(
+              fontSize: 14,
+              color: p.textMute,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          ..._features.map(
+            (f) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: AppColors.emeraldSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(f.$1, size: 16, color: AppColors.emerald),
+                  ),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          f.$2,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: p.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          f.$3,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: p.textMute,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Tout est activable / configurable depuis Parametres.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const _features = <(IconData, String, String)>[
+    (
+      Icons.navigation_outlined,
+      'GPS turn-by-turn integre',
+      'Voix francaise "Tournez a droite dans 200m", plus besoin '
+          'd\'ouvrir Maps ou Waze en parallele.',
+    ),
+    (
+      Icons.cloud_download_outlined,
+      'Cartes hors-ligne',
+      'Pre-telecharge les tuiles OSM de ta tournee avant de partir '
+          'en campagne ou en sous-sol.',
+    ),
+    (
+      Icons.lock_outline,
+      'Verrouillage PIN + biometrie',
+      'Protege les donnees clients (carnet, codes interphones) si tu '
+          'perds ou prete ton telephone.',
+    ),
+    (
+      Icons.palette_outlined,
+      '4 palettes de couleurs',
+      'Lime / Ocean / Terracotta / Mono — choisis ce qui t\'energise '
+          'le matin dans Parametres > Apparence.',
+    ),
+  ];
+}
+
+/// ────────────────────────────────────────────────────────────────
+/// Page 6/6 (derniere) : "Cle OpenRouteService" — saisie de la cle
 /// API gratuite ORS. Bouton "Creer un compte gratuit" qui ouvre
 /// https://openrouteservice.org/dev/#/signup dans le navigateur.
 ///

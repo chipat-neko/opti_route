@@ -5,12 +5,14 @@ import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import 'onboarding/pages.dart';
 
-/// Walkthrough du premier lancement. Cinq pages :
+/// Walkthrough du premier lancement. Six pages :
 ///   1. Bienvenue (presentation rapide)
 ///   2. Concept tournee + carnet
 ///   3. Scan bordereau (MESEXP / Colissimo / Chronopost)
-///   4. Mode chef d'equipe + facturation (vagues recentes)
-///   5. Saisie de la cle OpenRouteService (avec lien externe pour la
+///   4. Mode chef d'equipe + facturation
+///   5. Nouveautes recentes (GPS turn-by-turn TTS, cartes hors-ligne,
+///      verrouillage PIN/biometrie, 4 palettes de couleurs)
+///   6. Saisie de la cle OpenRouteService (avec lien externe pour la
 ///      creer gratuitement)
 ///
 /// La cle ORS n'est pas obligatoire : l'app fonctionne sans, mais le
@@ -33,12 +35,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// du walkthrough (cf. `_finish`).
   final _orsKeyCtrl = TextEditingController();
 
-  /// Index de la page courante (0..4). Mis a jour via
+  /// Index de la page courante (0..5). Mis a jour via
   /// `PageView.onPageChanged`. Sert a :
   /// - choisir entre "Passer" (page 0) et "Precedent" (pages 1+)
-  /// - choisir entre "Suivant" (pages 0..3) et "Commencer" (page 4)
+  /// - choisir entre "Suivant" (pages 0..4) et "Commencer" (page 5)
   /// - colorer le bon indicateur "dot" en bas.
   int _currentPage = 0;
+
+  /// Index de la derniere page (zero-based). Cohabite avec [_totalPages]
+  /// pour eviter les magic numbers dispersés (la moitie des bugs UI
+  /// d'onboarding viennent d'un endroit qui passe a 6 pages et un
+  /// autre qui reste a 5).
+  static const int _lastPageIndex = 5;
+  static const int _totalPages = 6;
 
   /// True pendant la persistance finale (le user a tape "Commencer").
   /// Bloque les boutons pour eviter un double-tap qui declencherait
@@ -69,11 +78,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const PageConcept(),
                   const PageScan(),
                   const PageChefEquipe(),
+                  const PageNouveautes(),
                   PageOrsKey(controller: _orsKeyCtrl),
                 ],
               ),
             ),
-            Indicators(currentPage: _currentPage, total: 5),
+            Indicators(currentPage: _currentPage, total: _totalPages),
             const SizedBox(height: AppSpacing.x18),
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -100,7 +110,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   FilledButton.icon(
                     onPressed: _saving
                         ? null
-                        : (_currentPage < 4
+                        : (_currentPage < _lastPageIndex
                             ? () => _pageController.nextPage(
                                   duration:
                                       const Duration(milliseconds: 250),
@@ -117,12 +127,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             ),
                           )
                         : Icon(
-                            _currentPage < 4
+                            _currentPage < _lastPageIndex
                                 ? Icons.arrow_forward
                                 : Icons.check,
                           ),
                     label: Text(
-                      _currentPage < 4 ? 'Suivant' : 'Commencer',
+                      _currentPage < _lastPageIndex ? 'Suivant' : 'Commencer',
                     ),
                   ),
                 ],
