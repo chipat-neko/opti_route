@@ -152,16 +152,43 @@ SELECT id, nom, date FROM tournees WHERE nom = 'Test schema';
 DELETE FROM tournees WHERE nom = 'Test schema';
 ```
 
+## Jalon 2.E — Migrations incrémentales + Storage bucket
+
+Le SQL [`docs/supabase-schema.sql`](supabase-schema.sql) a été enrichi
+avec les sections 7 (migrations incrémentales) et 8 (bucket Storage
+`preuves` + RLS storage.objects). À chaque livraison de jalon qui
+modifie le schema cloud, **ré-exécuter le fichier complet** dans le
+SQL Editor — c'est idempotent (`ADD COLUMN IF NOT EXISTS`,
+`INSERT ... ON CONFLICT DO NOTHING`, `DROP POLICY IF EXISTS`).
+
+Procédure : SQL Editor → coller le fichier complet → Run. Doit afficher
+`Success. No rows returned`.
+
+### Vérifier le bucket Storage
+
+```sql
+SELECT id, name, public FROM storage.buckets WHERE id='preuves';
+```
+Attendu : 1 ligne `preuves / preuves / false`.
+
+```sql
+SELECT policyname, cmd FROM pg_policies
+  WHERE schemaname='storage' AND tablename='objects'
+  AND policyname LIKE '%preuves%'
+  ORDER BY policyname;
+```
+Attendu : 4 lignes (`owner_select_preuves`, `owner_insert_preuves`,
+`owner_update_preuves`, `owner_delete_preuves`).
+
+### Test de l'upload depuis l'app
+
+Une fois le SQL exécuté, build l'app + push une tournée qui a au moins
+un stop avec photo preuve. Vérifier dans le dashboard Supabase →
+**Storage** → bucket `preuves` → tu dois voir un dossier `<ton_uuid>/`
+contenant les `<stop_uuid>.jpg` uploadées.
+
 ## Jalons suivants (à venir)
 
-- **Sous-jalon 2.B** : `CloudSyncService` Dart — push manuel d'une
-  tournée vers le cloud, génération UUID locale, map local_id ↔
-  cloud_id (nouvelle colonne `cloud_id TEXT` dans Drift).
-- **Sous-jalon 2.C** : UI bouton « Pousser au cloud » dans menu Plus
-  d'une tournée + indicateur synced dans la liste.
-- **Sous-jalon 2.D** : auto-sync background + pull initial au sign-in
-  (mode multi-appareils opérationnel).
-- **Sous-jalon 2.E** : photos preuves vers Supabase Storage.
 - **Jalon 3** : sync bi-directionnel chef ↔ coéquipiers via Supabase
   Realtime channels.
 - **Jalon 4** : ETA SMS auto destinataire via Twilio (séparé de

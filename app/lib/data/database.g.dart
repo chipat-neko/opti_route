@@ -1565,6 +1565,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _cloudPhotoPathMeta = const VerificationMeta(
+    'cloudPhotoPath',
+  );
+  @override
+  late final GeneratedColumn<String> cloudPhotoPath = GeneratedColumn<String>(
+    'cloud_photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1591,6 +1602,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     coequipierId,
     creeLe,
     cloudId,
+    cloudPhotoPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1779,6 +1791,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
       );
     }
+    if (data.containsKey('cloud_photo_path')) {
+      context.handle(
+        _cloudPhotoPathMeta,
+        cloudPhotoPath.isAcceptableOrUnknown(
+          data['cloud_photo_path']!,
+          _cloudPhotoPathMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1884,6 +1905,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}cloud_id'],
       ),
+      cloudPhotoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_photo_path'],
+      ),
     );
   }
 
@@ -1945,6 +1970,19 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// UUID v4 attribue par l'app au 1er push Supabase (sous-jalon 2.B).
   /// Null = stop jamais sync. Voir `Tournees.cloudId` pour le pattern.
   final String? cloudId;
+
+  /// Chemin dans le bucket Supabase Storage `preuves` ou la photo
+  /// preuve de livraison est stockee, format `<user_id>/<stop_uuid>.jpg`
+  /// (sous-jalon 2.E). Null = photo jamais uploadee au cloud OU pas de
+  /// photo locale (`preuvePhotoPath` null). Set au push apres upload
+  /// reussi vers Storage.
+  ///
+  /// Le download lors d'un pull (au 1er sign-in sur un 2e device) sera
+  /// implemente dans un sous-jalon ulterieur — pour le MVP 2.E, on ne
+  /// fait que l'upload. Sur un nouveau device, Noah devra re-prendre
+  /// les photos preuves (le metier-critique = adresses + statuts,
+  /// les photos sont un confort).
+  final String? cloudPhotoPath;
   const Stop({
     required this.id,
     required this.tourneeId,
@@ -1970,6 +2008,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.coequipierId,
     required this.creeLe,
     this.cloudId,
+    this.cloudPhotoPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2030,6 +2069,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || cloudId != null) {
       map['cloud_id'] = Variable<String>(cloudId);
     }
+    if (!nullToAbsent || cloudPhotoPath != null) {
+      map['cloud_photo_path'] = Variable<String>(cloudPhotoPath);
+    }
     return map;
   }
 
@@ -2087,6 +2129,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       cloudId: cloudId == null && nullToAbsent
           ? const Value.absent()
           : Value(cloudId),
+      cloudPhotoPath: cloudPhotoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudPhotoPath),
     );
   }
 
@@ -2122,6 +2167,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       coequipierId: serializer.fromJson<int?>(json['coequipierId']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       cloudId: serializer.fromJson<String?>(json['cloudId']),
+      cloudPhotoPath: serializer.fromJson<String?>(json['cloudPhotoPath']),
     );
   }
   @override
@@ -2152,6 +2198,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'coequipierId': serializer.toJson<int?>(coequipierId),
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'cloudId': serializer.toJson<String?>(cloudId),
+      'cloudPhotoPath': serializer.toJson<String?>(cloudPhotoPath),
     };
   }
 
@@ -2180,6 +2227,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<int?> coequipierId = const Value.absent(),
     DateTime? creeLe,
     Value<String?> cloudId = const Value.absent(),
+    Value<String?> cloudPhotoPath = const Value.absent(),
   }) => Stop(
     id: id ?? this.id,
     tourneeId: tourneeId ?? this.tourneeId,
@@ -2213,6 +2261,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     coequipierId: coequipierId.present ? coequipierId.value : this.coequipierId,
     creeLe: creeLe ?? this.creeLe,
     cloudId: cloudId.present ? cloudId.value : this.cloudId,
+    cloudPhotoPath: cloudPhotoPath.present
+        ? cloudPhotoPath.value
+        : this.cloudPhotoPath,
   );
   Stop copyWithCompanion(StopsCompanion data) {
     return Stop(
@@ -2262,6 +2313,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           : this.coequipierId,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
       cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      cloudPhotoPath: data.cloudPhotoPath.present
+          ? data.cloudPhotoPath.value
+          : this.cloudPhotoPath,
     );
   }
 
@@ -2291,7 +2345,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('preuvePhotoPath: $preuvePhotoPath, ')
           ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('cloudPhotoPath: $cloudPhotoPath')
           ..write(')'))
         .toString();
   }
@@ -2322,6 +2377,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     coequipierId,
     creeLe,
     cloudId,
+    cloudPhotoPath,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2350,7 +2406,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.preuvePhotoPath == this.preuvePhotoPath &&
           other.coequipierId == this.coequipierId &&
           other.creeLe == this.creeLe &&
-          other.cloudId == this.cloudId);
+          other.cloudId == this.cloudId &&
+          other.cloudPhotoPath == this.cloudPhotoPath);
 }
 
 class StopsCompanion extends UpdateCompanion<Stop> {
@@ -2378,6 +2435,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<int?> coequipierId;
   final Value<DateTime> creeLe;
   final Value<String?> cloudId;
+  final Value<String?> cloudPhotoPath;
   const StopsCompanion({
     this.id = const Value.absent(),
     this.tourneeId = const Value.absent(),
@@ -2403,6 +2461,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.coequipierId = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.cloudPhotoPath = const Value.absent(),
   });
   StopsCompanion.insert({
     this.id = const Value.absent(),
@@ -2429,6 +2488,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.coequipierId = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.cloudPhotoPath = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
   static Insertable<Stop> custom({
@@ -2456,6 +2516,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<int>? coequipierId,
     Expression<DateTime>? creeLe,
     Expression<String>? cloudId,
+    Expression<String>? cloudPhotoPath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2482,6 +2543,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (coequipierId != null) 'coequipier_id': coequipierId,
       if (creeLe != null) 'cree_le': creeLe,
       if (cloudId != null) 'cloud_id': cloudId,
+      if (cloudPhotoPath != null) 'cloud_photo_path': cloudPhotoPath,
     });
   }
 
@@ -2510,6 +2572,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<int?>? coequipierId,
     Value<DateTime>? creeLe,
     Value<String?>? cloudId,
+    Value<String?>? cloudPhotoPath,
   }) {
     return StopsCompanion(
       id: id ?? this.id,
@@ -2536,6 +2599,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       coequipierId: coequipierId ?? this.coequipierId,
       creeLe: creeLe ?? this.creeLe,
       cloudId: cloudId ?? this.cloudId,
+      cloudPhotoPath: cloudPhotoPath ?? this.cloudPhotoPath,
     );
   }
 
@@ -2614,6 +2678,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (cloudId.present) {
       map['cloud_id'] = Variable<String>(cloudId.value);
     }
+    if (cloudPhotoPath.present) {
+      map['cloud_photo_path'] = Variable<String>(cloudPhotoPath.value);
+    }
     return map;
   }
 
@@ -2643,7 +2710,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('preuvePhotoPath: $preuvePhotoPath, ')
           ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('cloudPhotoPath: $cloudPhotoPath')
           ..write(')'))
         .toString();
   }
@@ -6509,6 +6577,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<int?> coequipierId,
       Value<DateTime> creeLe,
       Value<String?> cloudId,
+      Value<String?> cloudPhotoPath,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
     StopsCompanion Function({
@@ -6536,6 +6605,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<int?> coequipierId,
       Value<DateTime> creeLe,
       Value<String?> cloudId,
+      Value<String?> cloudPhotoPath,
     });
 
 final class $$StopsTableReferences
@@ -6717,6 +6787,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get cloudId => $composableBuilder(
     column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudPhotoPath => $composableBuilder(
+    column: $table.cloudPhotoPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6918,6 +6993,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get cloudPhotoPath => $composableBuilder(
+    column: $table.cloudPhotoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TourneesTableOrderingComposer get tourneeId {
     final $$TourneesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7041,6 +7121,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<String> get cloudId =>
       $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get cloudPhotoPath => $composableBuilder(
+    column: $table.cloudPhotoPath,
+    builder: (column) => column,
+  );
 
   $$TourneesTableAnnotationComposer get tourneeId {
     final $$TourneesTableAnnotationComposer composer = $composerBuilder(
@@ -7172,6 +7257,7 @@ class $$StopsTableTableManager
                 Value<int?> coequipierId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<String?> cloudPhotoPath = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
                 tourneeId: tourneeId,
@@ -7197,6 +7283,7 @@ class $$StopsTableTableManager
                 coequipierId: coequipierId,
                 creeLe: creeLe,
                 cloudId: cloudId,
+                cloudPhotoPath: cloudPhotoPath,
               ),
           createCompanionCallback:
               ({
@@ -7224,6 +7311,7 @@ class $$StopsTableTableManager
                 Value<int?> coequipierId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<String?> cloudPhotoPath = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
                 tourneeId: tourneeId,
@@ -7249,6 +7337,7 @@ class $$StopsTableTableManager
                 coequipierId: coequipierId,
                 creeLe: creeLe,
                 cloudId: cloudId,
+                cloudPhotoPath: cloudPhotoPath,
               ),
           withReferenceMapper: (p0) => p0
               .map(

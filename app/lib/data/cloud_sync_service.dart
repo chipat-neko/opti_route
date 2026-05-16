@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -195,6 +198,16 @@ class CloudSyncService {
     Map<int, String> coequipierCloudIds,
   ) async {
     final cloudId = s.cloudId ?? _uuid.v4();
+    // Sous-jalon 2.E : upload de la photo preuve vers Supabase Storage
+    // AVANT l'upsert du row (pour pouvoir mettre le bucketPath dans la
+    // colonne cloud_photo_path). Silencieux en cas d'echec : le push
+    // du row reussit quand meme. Re-tenter au prochain push.
+    final cloudPhotoPath = await _maybeUploadPhoto(
+      client: client,
+      s: s,
+      userId: userId,
+      stopCloudId: cloudId,
+    );
     final row = <String, dynamic>{
       'id': cloudId,
       'user_id': userId,
@@ -218,6 +231,7 @@ class CloudSyncService {
       'ordre_optimise': s.ordreOptimise,
       'ordre_priorite': s.ordrePriorite,
       'preuve_photo_path': s.preuvePhotoPath,
+      'cloud_photo_path': cloudPhotoPath ?? s.cloudPhotoPath,
       'coequipier_id': s.coequipierId == null
           ? null
           : coequipierCloudIds[s.coequipierId!],
@@ -230,11 +244,64 @@ class CloudSyncService {
         'Echec push stop "${s.adresseBrute}" : $e',
       );
     }
-    if (s.cloudId == null) {
+    // Persist en local : cloudId (1er push) et/ou cloudPhotoPath
+    // (nouvel upload Storage reussi).
+    final needsCloudId = s.cloudId == null;
+    final needsCloudPhotoPath =
+        cloudPhotoPath != null && cloudPhotoPath != s.cloudPhotoPath;
+    if (needsCloudId || needsCloudPhotoPath) {
+      final companion = StopsCompanion(
+        cloudId: needsCloudId ? Value(cloudId) : const Value.absent(),
+        cloudPhotoPath: needsCloudPhotoPath
+            ? Value(cloudPhotoPath)
+            : const Value.absent(),
+      );
       await (_db.update(_db.stops)..where((row) => row.id.equals(s.id)))
-          .write(StopsCompanion(cloudId: Value(cloudId)));
+          .write(companion);
     }
     return cloudId;
+  }
+
+  /// Upload la photo preuve d'un stop vers Supabase Storage (bucket
+  /// `preuves`, chemin `<userId>/<stopCloudId>.jpg`). Retourne le
+  /// bucketPath en cas de succes (a stocker dans `cloud_photo_path`
+  /// du row cloud + local), ou null si rien a upload / web / echec.
+  ///
+  /// **Silencieux** : log via debugPrint mais ne throw pas — l'echec
+  /// d'upload ne doit pas bloquer le push principal du row stop. Au
+  /// prochain push, on re-tentera l'upload (idempotent grace a
+  /// `upsert: true` dans FileOptions, qui remplace le fichier
+  /// existant). Cas particuliers gardes silencieux :
+  /// - Pas de photo locale (`preuvePhotoPath` null) : no-op
+  /// - Web (kIsWeb true) : pas de filesystem -> no-op
+  /// - Fichier introuvable (path obsolete, fichier supprime) : no-op
+  /// - Bucket Supabase inexistant ou RLS deny : silent (Noah n'a
+  ///   peut-etre pas encore execute le SQL bucket creation, cf
+  ///   docs/supabase-schema.sql)
+  Future<String?> _maybeUploadPhoto({
+    required SupabaseClient client,
+    required Stop s,
+    required String userId,
+    required String stopCloudId,
+  }) async {
+    final localPath = s.preuvePhotoPath;
+    if (localPath == null) return null;
+    if (kIsWeb) return null;
+    final file = File(localPath);
+    if (!await file.exists()) return null;
+
+    final bucketPath = '$userId/$stopCloudId.jpg';
+    try {
+      await client.storage.from('preuves').upload(
+            bucketPath,
+            file,
+            fileOptions: const FileOptions(upsert: true),
+          );
+      return bucketPath;
+    } on Object catch (e) {
+      debugPrint('[CloudSyncService] Upload photo preuve echec : $e');
+      return null;
+    }
   }
 
   // ─── Pull cloud → local (sous-jalon 2.D-1a) ─────────────────────
@@ -441,6 +508,11 @@ class CloudSyncService {
         ordreOptimise: Value(row['ordre_optimise'] as int?),
         ordrePriorite: Value(row['ordre_priorite'] as int?),
         preuvePhotoPath: Value(row['preuve_photo_path'] as String?),
+        // cloud_photo_path : si le row cloud le porte, on le persiste
+        // localement. Le download du fichier lui-meme (binary) viendra
+        // dans un sous-jalon ulterieur — pour l'instant on conserve
+        // juste la reference Storage.
+        cloudPhotoPath: Value(row['cloud_photo_path'] as String?),
         coequipierId: Value(coequipierLocalId),
         creeLe: Value(DateTime.parse(row['cree_le'] as String)),
         cloudId: Value(cloudId),
