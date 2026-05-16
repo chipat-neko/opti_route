@@ -18,6 +18,11 @@ android/key.properties
 **/release-keystore.jks
 *.keystore
 
+# Credentials Supabase pour --dart-define-from-file (Phase 2 cloud).
+# Le fichier contient l'URL et l'anon key, jamais commit.
+cloud.env.json
+*.env.json
+
 # IntelliJ related
 *.iml
 *.ipr
