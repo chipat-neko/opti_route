@@ -237,7 +237,77 @@ CREATE POLICY "owner_all_saved_destinations" ON public.saved_destinations
 
 
 -- ══════════════════════════════════════════════════════════════════
--- 7. Vérifications post-exécution
+-- ══════════════════════════════════════════════════════════════════
+-- 7. Migrations incrémentales (sous-jalon 2.E)
+-- ══════════════════════════════════════════════════════════════════
+-- Idempotent via `ADD COLUMN IF NOT EXISTS` (Postgres ≥ 9.6).
+-- À ré-exécuter sur les projets Supabase déjà existants pour aligner
+-- le schema avec les nouvelles colonnes ajoutées par les jalons.
+
+-- Sous-jalon 2.E : chemin de la photo preuve dans le bucket Storage
+-- `preuves` (format `<user_id>/<stop_uuid>.jpg`). Null = pas de photo
+-- uploadée. L'upload se fait au push du stop par CloudSyncService.
+ALTER TABLE public.stops
+  ADD COLUMN IF NOT EXISTS cloud_photo_path TEXT;
+
+
+-- ══════════════════════════════════════════════════════════════════
+-- 8. Storage bucket `preuves` (sous-jalon 2.E)
+-- ══════════════════════════════════════════════════════════════════
+-- Bucket privé pour les photos preuves de livraison. Chaque user n'a
+-- accès qu'à son sous-dossier `<user_id>/` via RLS sur storage.objects.
+--
+-- Quota free tier : 1 GB total Storage + 2 GB transfer/mois → largement
+-- assez pour Noah (1 photo ~150 KB × 30 livraisons/j × 30 j = 135 MB/mois).
+
+-- Création du bucket (private, RLS controlée par les policies ci-dessous).
+INSERT INTO storage.buckets (id, name, public)
+  VALUES ('preuves', 'preuves', false)
+  ON CONFLICT (id) DO NOTHING;
+
+-- Policies storage.objects : chaque user lit/écrit/supprime UNIQUEMENT
+-- les fichiers dans son sous-dossier `<auth.uid()>/`. L'extraction du
+-- premier segment du path se fait via storage.foldername(name)[1].
+
+DROP POLICY IF EXISTS "owner_select_preuves" ON storage.objects;
+CREATE POLICY "owner_select_preuves" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'preuves'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "owner_insert_preuves" ON storage.objects;
+CREATE POLICY "owner_insert_preuves" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'preuves'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "owner_update_preuves" ON storage.objects;
+CREATE POLICY "owner_update_preuves" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (
+    bucket_id = 'preuves'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  )
+  WITH CHECK (
+    bucket_id = 'preuves'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "owner_delete_preuves" ON storage.objects;
+CREATE POLICY "owner_delete_preuves" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'preuves'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+
+-- ══════════════════════════════════════════════════════════════════
+-- 9. Vérifications post-exécution
 -- ══════════════════════════════════════════════════════════════════
 -- Ces SELECT sont là pour valider manuellement après exécution. Ils
 -- ne lèvent pas d'erreur si tout est OK.
@@ -247,8 +317,11 @@ CREATE POLICY "owner_all_saved_destinations" ON public.saved_destinations
 --   WHERE schemaname='public'
 --   ORDER BY tablename;
 
--- Liste les policies actives :
+-- Liste les policies actives (incluant storage.objects pour le bucket) :
 -- SELECT schemaname, tablename, policyname, cmd
 --   FROM pg_policies
---   WHERE schemaname='public'
---   ORDER BY tablename;
+--   WHERE schemaname IN ('public','storage')
+--   ORDER BY schemaname, tablename;
+
+-- Vérifie que le bucket preuves existe :
+-- SELECT id, name, public FROM storage.buckets WHERE id='preuves';

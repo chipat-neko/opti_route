@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +160,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(stops, stops.cloudId);
             await m.addColumn(coequipiers, coequipiers.cloudId);
             await m.addColumn(savedDestinations, savedDestinations.cloudId);
+          }
+          if (from < 24) {
+            // Sous-jalon 2.E : photos preuves vers Supabase Storage.
+            // Colonne pour stocker le chemin dans le bucket
+            // `<user_id>/<stop_uuid>.jpg` apres upload reussi.
+            await m.addColumn(stops, stops.cloudPhotoPath);
           }
         },
         beforeOpen: (details) async {

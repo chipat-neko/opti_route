@@ -58,4 +58,17 @@ class Stops extends Table {
   /// UUID v4 attribue par l'app au 1er push Supabase (sous-jalon 2.B).
   /// Null = stop jamais sync. Voir `Tournees.cloudId` pour le pattern.
   TextColumn get cloudId => text().nullable()();
+
+  /// Chemin dans le bucket Supabase Storage `preuves` ou la photo
+  /// preuve de livraison est stockee, format `<user_id>/<stop_uuid>.jpg`
+  /// (sous-jalon 2.E). Null = photo jamais uploadee au cloud OU pas de
+  /// photo locale (`preuvePhotoPath` null). Set au push apres upload
+  /// reussi vers Storage.
+  ///
+  /// Le download lors d'un pull (au 1er sign-in sur un 2e device) sera
+  /// implemente dans un sous-jalon ulterieur — pour le MVP 2.E, on ne
+  /// fait que l'upload. Sur un nouveau device, Noah devra re-prendre
+  /// les photos preuves (le metier-critique = adresses + statuts,
+  /// les photos sont un confort).
+  TextColumn get cloudPhotoPath => text().nullable()();
 }
