@@ -1,48 +1,42 @@
 import 'cloud_sync_service.dart';
-import 'parametres_repository.dart';
 
 /// ════════════════════════════════════════════════════════════════
-/// Pull initial automatique au 1er sign-in d'un user (jalon 2.D-1b).
+/// Auto-pull cloud a chaque sign-in (jalon 2.D-1d).
 /// ════════════════════════════════════════════════════════════════
 ///
 /// Au cold start / sign-in, ce service est appele via un listener qui
-/// watch [cloudUserProvider]. Il check un flag par-user dans Parametres
-/// (`cloud_pull_done_for_<uuid>`) :
-/// - Si le pull initial a deja ete fait pour ce user sur ce telephone
-///   -> no-op (on ne re-pull pas automatiquement aux sign-ins suivants
-///   pour eviter d'ecraser silencieusement des modifs locales offline).
-/// - Sinon -> lance [CloudSyncService.pullAllForCurrentUser] et marque
-///   le flag a true en cas de succes.
+/// watch `cloudUserProvider`. Il delegue tout a
+/// [CloudSyncService.pullAllForCurrentUser].
 ///
-/// **Pourquoi 1 fois uniquement** : sans colonne `updated_at` cote
-/// Drift (sera ajoutee au 2.D-1b.2), on n'a pas de last-write-wins
-/// fin. Re-pull = cloud-wins strict = ecrasement des modifs locales.
-/// Trop dangereux pour l'auto-trigger. Le user peut toujours forcer
-/// un re-pull via le bouton "Re-telecharger depuis le cloud" (avec
-/// dialog warning, jalon 2.D-1a).
+/// **Historique** :
+/// - 2.D-1b : pull initial une fois par user/telephone via un flag
+///   SharedPreferences (`cloud_pull_done_for_<uuid>`). Justifie a
+///   l'epoque parce que le pull etait du cloud-wins strict — un
+///   re-pull aurait ecrase silencieusement les modifs locales offline.
+/// - 2.D-1c : ajout de `updated_at` + last-write-wins fin dans le
+///   pull. Re-puller devient safe (les rows locales plus recentes
+///   sont preservees).
+/// - 2.D-1d (ici) : retrait du flag. On pull a chaque sign-in pour
+///   garantir que le device est a jour des modifs faites sur d'autres
+///   appareils, sans risquer d'ecraser les modifs locales.
 ///
-/// **Use case principal** : install l'app sur un 2e telephone, sign-in
-/// avec le meme email -> auto-pull -> toutes les tournees apparaissent
-/// sans intervention manuelle. Magic moment pour Noah / les futurs
-/// chefs d'equipe.
+/// **Use cases** :
+/// - 1er install : auto-pull -> toutes les tournees apparaissent.
+/// - Sign-in apres une session sur un 2e device : recupere les modifs
+///   faites ailleurs depuis le dernier sign-in.
+/// - Re-sign-in apres logout : idem, recupere tout ce qui a change.
 class CloudAutoPullService {
-  CloudAutoPullService(this._sync, this._params);
+  CloudAutoPullService(this._sync);
 
   final CloudSyncService _sync;
-  final ParametresRepository _params;
 
-  /// Lance le pull si jamais fait pour [userId], no-op sinon.
-  /// Marque le flag `cloud_pull_done_for_<userId>` a true en cas de
-  /// succes — ne le marque PAS en cas d'erreur (pour permettre un
-  /// retry au prochain cold start).
+  /// Lance le pull last-write-wins pour le user courant.
   ///
-  /// Retourne le [CloudPullResult] si pull effectue, null sinon.
   /// Propage [CloudSyncException] en cas d'erreur reseau / RLS / etc.
-  Future<CloudPullResult?> maybeRunInitialPull(String userId) async {
-    final done = await _params.isCloudPullDoneFor(userId);
-    if (done) return null;
-    final result = await _sync.pullAllForCurrentUser();
-    await _params.setCloudPullDoneFor(userId);
-    return result;
+  /// Le [CloudPullResult] renvoye expose les compteurs inserted /
+  /// updated / skipped par table — l'UI s'en sert pour afficher une
+  /// SnackBar resume.
+  Future<CloudPullResult> runAutoPullOnSignIn() {
+    return _sync.pullAllForCurrentUser();
   }
 }

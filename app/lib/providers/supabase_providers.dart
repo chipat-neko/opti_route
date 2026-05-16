@@ -40,26 +40,22 @@ final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
   return CloudSyncService(db, SupabaseService.instance);
 });
 
-/// Service de pull initial auto au 1er sign-in (sous-jalon 2.D-1b).
-/// Encapsule la logique du flag par-user `cloud_pull_done_for_<uuid>`
-/// pour ne declencher le pull qu'une seule fois par user/telephone.
+/// Service d'auto-pull cloud a chaque sign-in (sous-jalon 2.D-1d).
+/// Delegue le pull last-write-wins au CloudSyncService.
 final cloudAutoPullServiceProvider = Provider<CloudAutoPullService>((ref) {
-  return CloudAutoPullService(
-    ref.watch(cloudSyncServiceProvider),
-    ref.watch(parametresRepositoryProvider),
-  );
+  return CloudAutoPullService(ref.watch(cloudSyncServiceProvider));
 });
 
-/// Etat de l'auto-pull initial pour affichage UI :
-/// - `AsyncData(null)` : idle (rien a pull ou deja fait)
+/// Etat de l'auto-pull pour affichage UI :
+/// - `AsyncData(null)` : idle (aucun pull en cours, pas encore fait)
 /// - `AsyncLoading()` : pull en cours
-/// - `AsyncData(result)` : pull termine avec ce resultat (non-null)
+/// - `AsyncData(result)` : pull termine avec ce resultat
 /// - `AsyncError(e, st)` : erreur (CloudSyncException ou autre)
 ///
 /// Modifie par le listener dans OptiRouteApp.build qui declenche le
-/// pull au sign-in via `ref.read(cloudPullStateProvider.notifier).state = ...`.
+/// pull a chaque sign-in via `ref.read(cloudPullStateProvider.notifier).state = ...`.
 /// Watche par `cloud_section.dart` pour afficher un indicateur
-/// "Sync initial en cours..." ou un toast de fin.
+/// "Synchronisation en cours..." ou un toast de fin.
 class CloudPullStateNotifier
     extends Notifier<AsyncValue<CloudPullResult?>> {
   @override

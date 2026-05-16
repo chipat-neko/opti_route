@@ -95,27 +95,25 @@ class OptiRouteApp extends ConsumerWidget {
     NotificationsService.instance
         .attachParametres(ref.read(parametresRepositoryProvider));
 
-    // Auto-pull initial Supabase au 1er sign-in d'un user sur ce
-    // telephone (Phase 2 jalon 2.D-1b). Le service check un flag
-    // par-user dans Parametres et no-op si deja fait — donc safe a
-    // declencher a chaque emission de cloudUserProvider.
+    // Auto-pull Supabase a chaque sign-in d'un user (Phase 2 jalon
+    // 2.D-1d). Safe meme apres un sign-in repete grace au last-write-
+    // wins fin du 2.D-1c : les rows locales plus recentes que le cloud
+    // sont preservees, on n'ecrase plus aveuglement.
     //
-    // Pas de re-pull aux sign-ins suivants : la strategie cloud-wins
-    // ecraserait silencieusement des modifs locales offline. Le
-    // bouton "Re-telecharger depuis le cloud" (jalon 2.D-1a) reste
-    // dispo pour les re-syncs explicites.
+    // Use cases :
+    // - 1er install : recupere toutes les tournees existantes
+    // - Sign-in apres une session sur un 2e device : recupere les
+    //   modifs faites ailleurs depuis le dernier sign-in
+    // - Re-sign-in apres logout : idem
     ref.listen(cloudUserProvider, (prev, next) {
       final user = next.value;
       if (user == null) return;
-      final userId = user.id;
       final notifier = ref.read(cloudPullStateProvider.notifier);
       notifier.set(const AsyncLoading());
       ref
           .read(cloudAutoPullServiceProvider)
-          .maybeRunInitialPull(userId)
+          .runAutoPullOnSignIn()
           .then((result) {
-        // result == null -> deja pull dans le passe (no-op). On
-        // remet l'etat a idle pour ne pas afficher le toast.
         notifier.set(AsyncData(result));
       }, onError: (Object e, StackTrace st) {
         notifier.set(AsyncError(e, st));
