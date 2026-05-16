@@ -8,6 +8,7 @@ import 'tables/saved_destinations.dart';
 import 'tables/sheets.dart';
 import 'tables/stop_history.dart';
 import 'tables/stops.dart';
+import 'tables/tournee_membres.dart';
 import 'tables/tournees.dart';
 
 // Re-export des tables pour que les modules historiques qui faisaient
@@ -20,6 +21,7 @@ export 'tables/saved_destinations.dart';
 export 'tables/sheets.dart';
 export 'tables/stop_history.dart';
 export 'tables/stops.dart';
+export 'tables/tournee_membres.dart';
 export 'tables/tournees.dart';
 
 part 'database.g.dart';
@@ -34,6 +36,7 @@ part 'database.g.dart';
     SavedDestinations,
     StopHistory,
     Coequipiers,
+    TourneeMembres,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -63,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -169,6 +172,13 @@ class AppDatabase extends _$AppDatabase {
             // Colonne pour stocker le chemin dans le bucket
             // `<user_id>/<stop_uuid>.jpg` apres upload reussi.
             await m.addColumn(stops, stops.cloudPhotoPath);
+          }
+          if (from < 26) {
+            // Sous-jalon 3.A : table locale `tournee_membres` qui
+            // cache les adhesions cloud. Sert a l'UI pour distinguer
+            // tournee perso vs partagee, et afficher le badge nombre
+            // de coequipiers / le role owner/member.
+            await m.createTable(tourneeMembres);
           }
           if (from < 25) {
             // Sous-jalon 2.D-1c : colonne `updated_at` sur les 4 tables

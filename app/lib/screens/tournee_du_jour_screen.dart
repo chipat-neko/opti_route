@@ -5,9 +5,11 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../data/cloud_sync_service.dart';
 import '../data/database.dart';
+import '../data/supabase_service.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
 import '../data/notifications_service.dart';
@@ -25,6 +27,7 @@ import '../widgets/drawer_badge_icon.dart';
 import '../widgets/ordre_priorite_dialog.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
+import 'cloud/invitation_code_dialog.dart';
 import 'parametres_screen.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/fabs.dart';
@@ -55,6 +58,10 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       ref
           .read(cloudAutoPushServiceProvider)
           .watchTournee(widget.tournee.id);
+      // Jalon 3.A : si la tournee est partagee (cloudId set + plusieurs
+      // membres), s'abonner au Realtime channel pour recevoir les events
+      // live des autres devices. No-op si tournee perso pure.
+      _maybeSubscribeRealtime();
     });
   }
 
@@ -64,7 +71,24 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     // l'ecran est ferme (le user va peut-etre ouvrir une autre tournee
     // qui declenchera son propre watchTournee).
     ref.read(cloudAutoPushServiceProvider).stop();
+    // Jalon 3.A : desabonne le channel Realtime de cette tournee.
+    ref.read(tourneeRealtimeServiceProvider).unsubscribe();
     super.dispose();
+  }
+
+  /// Subscribe au channel Realtime de la tournee si elle a un cloudId
+  /// (= deja pushee au cloud). Best-effort : si pas configure / pas
+  /// auth / cloudId null, on skip silencieusement.
+  Future<void> _maybeSubscribeRealtime() async {
+    final cloudId = widget.tournee.cloudId;
+    if (cloudId == null) return;
+    final svc = SupabaseService.instance;
+    if (!svc.isConfigured || svc.currentUser == null) return;
+    try {
+      await ref
+          .read(tourneeRealtimeServiceProvider)
+          .subscribeTournee(Supabase.instance.client, cloudId);
+    } on Object {/* best-effort */}
   }
 
   @override
@@ -182,6 +206,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         _onPrefetchTuilesPressed();
       case PlusAction.pushCloud:
         _onPushCloudPressed();
+      case PlusAction.inviteEquipier:
+        _onInviteEquipierPressed();
       case PlusAction.delete:
         _confirmDeleteTournee();
     }
@@ -215,6 +241,32 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         ),
       );
     }
+  }
+
+  /// Jalon 3.A : genere un code 6 chiffres et l'affiche dans un dialog
+  /// avec boutons "Copier" + "Partager via WhatsApp/SMS". Lucas saisit
+  /// ce code dans son app via "Rejoindre une tournee".
+  Future<void> _onInviteEquipierPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final service = ref.read(cloudSyncServiceProvider);
+    String? code;
+    try {
+      code = await service.createInvitation(widget.tournee.id);
+    } on CloudSyncException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => InvitationCodeDialog(code: code!),
+    );
   }
 
   Future<void> _confirmDeleteTournee() async {

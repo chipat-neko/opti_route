@@ -276,6 +276,291 @@ ALTER TABLE public.stops
 
 
 -- ══════════════════════════════════════════════════════════════════
+-- Sous-jalon 3.A : mode équipe live (chef ↔ coéquipiers)
+-- ══════════════════════════════════════════════════════════════════
+-- Permet au chef (owner) de partager UNE tournée à un coéquipier qui
+-- la voit en temps réel et peut modifier les stops (statuts livraison,
+-- notes, etc.). Le tout via Supabase Realtime (Postgres Changes).
+--
+-- Architecture :
+-- - `tournee_membres` : (tournee_id, user_id, role) — qui a accès à
+--   quelle tournée. Role `owner` ou `member`. La RLS des tables
+--   `tournees` / `stops` est élargie pour autoriser tous les membres
+--   (pas juste le owner).
+-- - `tournee_invitations` : codes courts à 6 chiffres générés par le
+--   chef, utilisés par le coéquipier pour rejoindre la tournée.
+-- - Fonction RPC `accept_invitation(code)` qui valide + INSERT membre +
+--   marque le code comme utilisé, dans une seule transaction sécurisée.
+-- - Trigger `tournees_auto_add_owner_membre` : à chaque INSERT dans
+--   tournees, crée auto le row owner dans tournee_membres (sinon le
+--   chef ne pourrait pas voir SA propre tournée à cause de la RLS
+--   modifiée).
+-- - Realtime publication `supabase_realtime` étendue aux nouvelles
+--   tables pour que les clients reçoivent les events en push.
+
+
+-- 3.A.1 — Table `tournee_membres` ─────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.tournee_membres (
+  tournee_id  UUID NOT NULL REFERENCES public.tournees(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role        TEXT NOT NULL CHECK (role IN ('owner', 'member')),
+  joined_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (tournee_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS tournee_membres_user_id_idx
+  ON public.tournee_membres (user_id);
+
+
+-- 3.A.2 — Trigger auto-add owner ──────────────────────────────────
+-- À l'INSERT d'une tournée, ajoute auto le row owner dans
+-- tournee_membres. Sans ce trigger, après le passage en RLS « membre »,
+-- le chef perdrait l'accès à sa propre tournée tant qu'il n'a pas
+-- aussi inséré son row membre manuellement.
+CREATE OR REPLACE FUNCTION public.tournees_auto_add_owner_membre()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.tournee_membres (tournee_id, user_id, role)
+    VALUES (NEW.id, NEW.user_id, 'owner')
+    ON CONFLICT (tournee_id, user_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tournees_auto_add_owner_membre
+  ON public.tournees;
+CREATE TRIGGER tournees_auto_add_owner_membre
+  AFTER INSERT ON public.tournees
+  FOR EACH ROW EXECUTE FUNCTION public.tournees_auto_add_owner_membre();
+
+-- Backfill : pour les tournées créées avant ce trigger (sous-jalons
+-- 2.A → 2.E), ajoute manuellement les rows owner manquants.
+INSERT INTO public.tournee_membres (tournee_id, user_id, role)
+  SELECT id, user_id, 'owner' FROM public.tournees
+  ON CONFLICT (tournee_id, user_id) DO NOTHING;
+
+
+-- 3.A.3 — RLS sur `tournee_membres` ───────────────────────────────
+ALTER TABLE public.tournee_membres ENABLE ROW LEVEL SECURITY;
+
+-- Un user voit SES adhésions ET celles aux tournées où il est déjà
+-- membre (pour voir la liste complète des coéquipiers d'une tournée
+-- partagée — utile à l'UI "Tournée partagée avec X, Y").
+DROP POLICY IF EXISTS "member_select_tournee_membres"
+  ON public.tournee_membres;
+CREATE POLICY "member_select_tournee_membres"
+  ON public.tournee_membres FOR SELECT TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR tournee_id IN (
+      SELECT tm.tournee_id FROM public.tournee_membres tm
+      WHERE tm.user_id = auth.uid()
+    )
+  );
+
+-- INSERT : géré par le trigger auto-owner OU la fonction RPC
+-- accept_invitation (SECURITY DEFINER, contourne la RLS). Aucun INSERT
+-- direct par le client n'est autorisé — donc pas de policy INSERT.
+
+-- UPDATE : aucun cas d'usage (role n'est pas modifiable, joined_at
+-- non plus). Pas de policy UPDATE → tout UPDATE est refusé.
+
+-- DELETE : un user peut quitter une tournée (supprimer son row), et
+-- l'owner peut éjecter un member. Pas l'inverse (un member ne peut
+-- pas éjecter l'owner).
+DROP POLICY IF EXISTS "leave_or_kick_tournee_membres"
+  ON public.tournee_membres;
+CREATE POLICY "leave_or_kick_tournee_membres"
+  ON public.tournee_membres FOR DELETE TO authenticated
+  USING (
+    user_id = auth.uid()  -- je quitte
+    OR (
+      role = 'member'      -- éjection d'un member par l'owner
+      AND EXISTS (
+        SELECT 1 FROM public.tournee_membres me
+        WHERE me.tournee_id = tournee_membres.tournee_id
+        AND me.user_id = auth.uid()
+        AND me.role = 'owner'
+      )
+    )
+  );
+
+
+-- 3.A.4 — RLS élargie sur `tournees` (owner OU member) ────────────
+-- Remplace la policy `owner_all_tournees` de la section 6. Désormais
+-- un user voit/modifie une tournée s'il est dans `tournee_membres`
+-- pour cette tournée (peu importe son role).
+DROP POLICY IF EXISTS "owner_all_tournees" ON public.tournees;
+DROP POLICY IF EXISTS "member_all_tournees" ON public.tournees;
+CREATE POLICY "member_all_tournees" ON public.tournees
+  FOR ALL TO authenticated
+  USING (
+    id IN (
+      SELECT tournee_id FROM public.tournee_membres
+      WHERE user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    -- À l'INSERT : user_id = auth.uid() (on ne crée pas pour autrui).
+    -- À l'UPDATE : tournée déjà visible donc déjà membre, OK.
+    user_id = auth.uid()
+    OR id IN (
+      SELECT tournee_id FROM public.tournee_membres
+      WHERE user_id = auth.uid()
+    )
+  );
+
+
+-- 3.A.5 — RLS élargie sur `stops` (membre de la tournée parente) ──
+-- Remplace `owner_all_stops`. Un user voit/modifie un stop si membre
+-- de la tournée parente.
+DROP POLICY IF EXISTS "owner_all_stops" ON public.stops;
+DROP POLICY IF EXISTS "member_all_stops" ON public.stops;
+CREATE POLICY "member_all_stops" ON public.stops
+  FOR ALL TO authenticated
+  USING (
+    tournee_id IN (
+      SELECT tournee_id FROM public.tournee_membres
+      WHERE user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    tournee_id IN (
+      SELECT tournee_id FROM public.tournee_membres
+      WHERE user_id = auth.uid()
+    )
+  );
+
+
+-- 3.A.6 — Table `tournee_invitations` ─────────────────────────────
+-- Codes courts 6 chiffres générés par le chef pour inviter un
+-- coéquipier. Un code = une tournée, expire après 24h, usage unique.
+CREATE TABLE IF NOT EXISTS public.tournee_invitations (
+  code        TEXT PRIMARY KEY
+              CHECK (code ~ '^[0-9]{6}$'),
+  tournee_id  UUID NOT NULL REFERENCES public.tournees(id) ON DELETE CASCADE,
+  created_by  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at  TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '24 hours'),
+  used_by     UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  used_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS tournee_invitations_tournee_id_idx
+  ON public.tournee_invitations (tournee_id);
+
+ALTER TABLE public.tournee_invitations ENABLE ROW LEVEL SECURITY;
+
+-- L'owner d'une tournée peut créer + voir + révoquer les invitations
+-- de SA tournée. Aucun autre user (même les members) ne peut.
+DROP POLICY IF EXISTS "owner_all_invitations"
+  ON public.tournee_invitations;
+CREATE POLICY "owner_all_invitations"
+  ON public.tournee_invitations FOR ALL TO authenticated
+  USING (
+    created_by = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.tournee_membres
+      WHERE tournee_id = tournee_invitations.tournee_id
+      AND user_id = auth.uid()
+      AND role = 'owner'
+    )
+  )
+  WITH CHECK (
+    created_by = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.tournee_membres
+      WHERE tournee_id = tournee_invitations.tournee_id
+      AND user_id = auth.uid()
+      AND role = 'owner'
+    )
+  );
+
+
+-- 3.A.7 — Fonction RPC `accept_invitation(code)` ──────────────────
+-- Permet à un user de rejoindre une tournée en saisissant un code.
+-- SECURITY DEFINER : contourne la RLS sur tournee_invitations (que le
+-- client appelant ne peut pas SELECT car il n'est ni created_by ni
+-- owner). On lit, vérifie, insère membre, marque utilisé — tout
+-- atomique côté serveur.
+--
+-- Retourne :
+-- - `tournee_id` (UUID) si succès → l'app pull la tournée + stops
+-- - Throw `EXCEPTION` si code invalide / expiré / déjà utilisé / déjà
+--   membre. Le client catch et affiche un toast d'erreur.
+CREATE OR REPLACE FUNCTION public.accept_invitation(p_code TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_tournee_id UUID;
+  v_expires_at TIMESTAMPTZ;
+  v_used_at TIMESTAMPTZ;
+  v_user_id UUID;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'AUTH_REQUIRED';
+  END IF;
+
+  SELECT tournee_id, expires_at, used_at
+    INTO v_tournee_id, v_expires_at, v_used_at
+    FROM public.tournee_invitations
+    WHERE code = p_code;
+
+  IF v_tournee_id IS NULL THEN
+    RAISE EXCEPTION 'CODE_INTROUVABLE';
+  END IF;
+  IF v_expires_at < now() THEN
+    RAISE EXCEPTION 'CODE_EXPIRE';
+  END IF;
+  IF v_used_at IS NOT NULL THEN
+    RAISE EXCEPTION 'CODE_DEJA_UTILISE';
+  END IF;
+
+  -- Insère le membre (idempotent si déjà membre — pas une erreur, juste
+  -- on continue pour marquer le code utilisé et l'app peut pull).
+  INSERT INTO public.tournee_membres (tournee_id, user_id, role)
+    VALUES (v_tournee_id, v_user_id, 'member')
+    ON CONFLICT (tournee_id, user_id) DO NOTHING;
+
+  UPDATE public.tournee_invitations
+    SET used_by = v_user_id, used_at = now()
+    WHERE code = p_code;
+
+  RETURN v_tournee_id;
+END;
+$$;
+
+-- Autoriser l'invocation par les users authentifiés.
+GRANT EXECUTE ON FUNCTION public.accept_invitation(TEXT) TO authenticated;
+
+
+-- 3.A.8 — Realtime publication ────────────────────────────────────
+-- Supabase Realtime utilise la publication PG `supabase_realtime`
+-- pour pousser les CHANGES en WebSocket. On y ajoute nos tables.
+-- Idempotent grâce au DO block qui catch l'erreur "already member".
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.stops;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.tournees;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.tournee_membres;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END
+$$;
+
+
+-- ══════════════════════════════════════════════════════════════════
 -- 8. Storage bucket `preuves` (sous-jalon 2.E)
 -- ══════════════════════════════════════════════════════════════════
 -- Bucket privé pour les photos preuves de livraison. Chaque user n'a

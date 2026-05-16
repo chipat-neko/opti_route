@@ -43,6 +43,7 @@ class CloudSection extends ConsumerWidget {
                 _SignedInTile(user: user),
                 const _InitialPullStatusTile(),
                 const _PullCloudTile(),
+                const _JoinTourneeTile(),
               ],
             ),
       loading: () => const _LoadingTile(),
@@ -347,6 +348,146 @@ class _PullCloudTileState extends ConsumerState<_PullCloudTile> {
             )
           : const Icon(Icons.chevron_right),
       onTap: _pulling ? null : _confirmAndPull,
+    );
+  }
+}
+
+/// Tile "Rejoindre une tournee" (jalon 3.A). Ouvre un dialog de saisie
+/// d'un code 6 chiffres. En cas de succes, appelle `acceptInvitation`
+/// puis declenche un pull complet pour recuperer la tournee + stops
+/// localement.
+class _JoinTourneeTile extends ConsumerStatefulWidget {
+  const _JoinTourneeTile();
+
+  @override
+  ConsumerState<_JoinTourneeTile> createState() => _JoinTourneeTileState();
+}
+
+class _JoinTourneeTileState extends ConsumerState<_JoinTourneeTile> {
+  bool _joining = false;
+
+  Future<void> _promptCodeAndJoin() async {
+    final code = await showDialog<String>(
+      context: context,
+      builder: (_) => const _JoinCodeDialog(),
+    );
+    if (code == null || code.isEmpty || !mounted) return;
+    setState(() => _joining = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final sync = ref.read(cloudSyncServiceProvider);
+    try {
+      await sync.acceptInvitation(code);
+      final pullResult = await sync.pullAllForCurrentUser();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Tournee rejointe ! ${pullResult.summary}',
+          ),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } on CloudSyncException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _joining = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: AppColors.emeraldSoft,
+        foregroundColor: AppColors.emerald,
+        child: const Icon(Icons.group_add_outlined, size: 18),
+      ),
+      title: const Text('Rejoindre une tournee'),
+      subtitle: Text(
+        'Saisis le code a 6 chiffres donne par ton chef',
+        style: TextStyle(fontSize: 12, color: p.textMute),
+      ),
+      trailing: _joining
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.chevron_right),
+      onTap: _joining ? null : _promptCodeAndJoin,
+    );
+  }
+}
+
+class _JoinCodeDialog extends StatefulWidget {
+  const _JoinCodeDialog();
+
+  @override
+  State<_JoinCodeDialog> createState() => _JoinCodeDialogState();
+}
+
+class _JoinCodeDialogState extends State<_JoinCodeDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rejoindre une tournee'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Saisis le code a 6 chiffres que ton chef t\'a envoye.',
+            style: TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 6,
+              fontFamily: 'JetBrainsMono',
+            ),
+            decoration: const InputDecoration(
+              hintText: '000000',
+              counterText: '',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
+          child: const Text('Rejoindre'),
+        ),
+      ],
     );
   }
 }

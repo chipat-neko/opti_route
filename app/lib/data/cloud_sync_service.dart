@@ -401,12 +401,156 @@ class CloudSyncService {
     final tournees = await _pullTournees(client);
     final stops = await _pullStops(client);
     final savedDestinations = await _pullSavedDestinations(client);
+    // Jalon 3.A : adhesions aux tournees partagees (qui voit quoi).
+    // Apres les tournees pour que les rows membres aient bien une
+    // tournee_cloud_id correspondant a un row tournees deja pulle.
+    await _pullTourneeMembres(client);
     return CloudPullResult(
       coequipiers: coequipiers,
       tournees: tournees,
       stops: stops,
       savedDestinations: savedDestinations,
     );
+  }
+
+  // ─── Mode équipe live (jalon 3.A) ───────────────────────────────
+
+  /// Crée une invitation à 6 chiffres pour la tournée locale donnée.
+  /// La tournée doit déjà avoir un `cloudId` (= pushée au moins une
+  /// fois). Retourne le code à afficher / partager à Lucas.
+  ///
+  /// Throws [CloudSyncException] si :
+  /// - Tournée locale introuvable
+  /// - Tournée jamais pushée au cloud (pas de cloudId)
+  /// - User non auth
+  /// - Code généré collisionne (rare : 1 chance sur 900_000 par essai,
+  ///   on retry une seconde fois max)
+  Future<String> createInvitation(int localTourneeId) async {
+    final client = _client();
+    final userId = _requireUserId();
+    final tournee = await (_db.select(_db.tournees)
+          ..where((t) => t.id.equals(localTourneeId)))
+        .getSingleOrNull();
+    if (tournee == null) {
+      throw CloudSyncException(
+        'Tournee introuvable en local (id=$localTourneeId).',
+      );
+    }
+    final cloudId = tournee.cloudId;
+    if (cloudId == null) {
+      throw const CloudSyncException(
+        'Pousse d\'abord cette tournee au cloud (menu Plus > "Pousser '
+        'au cloud") avant d\'inviter un coequipier.',
+      );
+    }
+    // 2 tentatives max pour gérer une (très rare) collision PK.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final code = _generateInvitationCode();
+      try {
+        await client.from('tournee_invitations').insert({
+          'code': code,
+          'tournee_id': cloudId,
+          'created_by': userId,
+        });
+        return code;
+      } on Object catch (e) {
+        if (attempt == 1) {
+          throw CloudSyncException('Echec creation invitation : $e');
+        }
+      }
+    }
+    throw const CloudSyncException('Echec creation invitation (collision).');
+  }
+
+  /// Lucas saisit le code à 6 chiffres → appel RPC `accept_invitation`
+  /// qui valide + insère le row membre + marque le code utilisé.
+  /// Retourne le cloud UUID de la tournée rejointe. Le caller doit
+  /// ensuite déclencher un pull pour récupérer la tournée + stops en
+  /// local.
+  ///
+  /// Throws [CloudSyncException] avec un message FR explicite si :
+  /// - Code inconnu / mal formé
+  /// - Code expiré (> 24h)
+  /// - Code déjà utilisé par quelqu'un d'autre
+  /// - User non auth
+  Future<String> acceptInvitation(String code) async {
+    final client = _client();
+    _requireUserId();
+    final trimmed = code.trim();
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(trimmed)) {
+      throw const CloudSyncException(
+        'Le code doit faire 6 chiffres (ex: 123456).',
+      );
+    }
+    try {
+      final res = await client.rpc(
+        'accept_invitation',
+        params: {'p_code': trimmed},
+      );
+      if (res is String) return res;
+      throw const CloudSyncException(
+        'Reponse cloud invalide a l\'invitation.',
+      );
+    } on PostgrestException catch (e) {
+      throw CloudSyncException(_invitationErrorToFr(e.message));
+    } on Object catch (e) {
+      throw CloudSyncException('Echec acceptation invitation : $e');
+    }
+  }
+
+  /// Pull la table cloud `tournee_membres` et remplace intégralement le
+  /// cache local (`replace-all` plutôt que merge : la liste est append-
+  /// only côté cloud, et un DELETE cloud doit se refléter en local —
+  /// le diff serait plus complexe que de tout réécrire).
+  Future<void> _pullTourneeMembres(SupabaseClient client) async {
+    final List<dynamic> rows;
+    try {
+      rows = await client.from('tournee_membres').select();
+    } on Object catch (e) {
+      throw CloudSyncException('Echec fetch tournee_membres : $e');
+    }
+    await _db.transaction(() async {
+      await _db.delete(_db.tourneeMembres).go();
+      for (final r in rows) {
+        final row = r as Map<String, dynamic>;
+        await _db.into(_db.tourneeMembres).insert(
+              TourneeMembresCompanion.insert(
+                tourneeCloudId: row['tournee_id'] as String,
+                userCloudId: row['user_id'] as String,
+                role: row['role'] as String,
+                joinedAt: Value(
+                  DateTime.parse(row['joined_at'] as String).toLocal(),
+                ),
+              ),
+            );
+      }
+    });
+  }
+
+  String _generateInvitationCode() {
+    // 6 chiffres aléatoires uniformes (000000-999999). Le formatage
+    // garde les leading zeros : 47 → "000047".
+    final n = (DateTime.now().microsecondsSinceEpoch ^
+            DateTime.now().millisecondsSinceEpoch) %
+        1000000;
+    final shuffled = (n * 2654435761) % 1000000; // multiplicateur Knuth
+    return shuffled.toString().padLeft(6, '0');
+  }
+
+  String _invitationErrorToFr(String raw) {
+    if (raw.contains('AUTH_REQUIRED')) {
+      return 'Connecte-toi d\'abord (Parametres > Compte cloud).';
+    }
+    if (raw.contains('CODE_INTROUVABLE')) {
+      return 'Ce code n\'existe pas. Verifie avec ton chef.';
+    }
+    if (raw.contains('CODE_EXPIRE')) {
+      return 'Ce code a expire (plus de 24h). Demande un nouveau code.';
+    }
+    if (raw.contains('CODE_DEJA_UTILISE')) {
+      return 'Ce code a deja ete utilise. Demande un nouveau code.';
+    }
+    return 'Echec acceptation invitation : $raw';
   }
 
   Future<CloudPullStats> _pullCoequipiers(SupabaseClient client) async {
