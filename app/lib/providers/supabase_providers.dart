@@ -100,7 +100,10 @@ final cloudAutoPushServiceProvider = Provider<CloudAutoPushService>((ref) {
 /// chaque ouverture d'ecran.
 final tourneeRealtimeServiceProvider =
     Provider<TourneeRealtimeService>((ref) {
-  final service = TourneeRealtimeService(ref.watch(appDatabaseProvider));
+  final service = TourneeRealtimeService(
+    ref.watch(appDatabaseProvider),
+    ref.watch(cloudAutoPushServiceProvider),
+  );
   ref.onDispose(service.unsubscribe);
   return service;
 });

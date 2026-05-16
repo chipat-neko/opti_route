@@ -52,6 +52,14 @@ class CloudAutoPushService {
   Timer? _debounce;
   int? _currentTourneeId;
 
+  /// Date jusqu'a laquelle l'auto-push doit etre supprime, set par
+  /// [suppress]. Sert a casser la boucle Realtime ↔ auto-push : quand
+  /// le Realtime applique un event dans Drift local, l'auto-push voit
+  /// un "changement" et veut re-push -> mais c'est exactement ce qu'on
+  /// vient de recevoir, donc re-push = boucle. [suppress] est appele
+  /// par le TourneeRealtimeService apres chaque write.
+  DateTime? _suppressUntil;
+
   /// Demarre le watch sur [tourneeId]. Si un watch est deja actif
   /// (sur la meme tournee ou une autre), il est remplace.
   ///
@@ -89,6 +97,16 @@ class CloudAutoPushService {
     _currentTourneeId = null;
   }
 
+  /// Suppresse les auto-push pendant [duration]. Appele par le
+  /// TourneeRealtimeService apres avoir applique un event Postgres
+  /// Changes en local : sans suppression, le watch Drift verrait
+  /// le changement comme une modif user et re-push -> boucle infinie
+  /// avec le device source de l'event (qui re-recevrait, re-applique,
+  /// re-push, ad libitum). 10s suffit largement (debounce push = 5s).
+  void suppress(Duration duration) {
+    _suppressUntil = DateTime.now().add(duration);
+  }
+
   /// Replanifie un push debounced. Annule le timer precedent (si
   /// pas encore tire) et en demarre un nouveau de 5 secondes.
   void _scheduleDebouncedPush(int tourneeId) {
@@ -99,6 +117,10 @@ class CloudAutoPushService {
       // deconnecte entre le schedule et l'expiration du timer.
       if (_currentTourneeId != tourneeId) return;
       if (_supabase.currentUser == null) return;
+      // Skip si on est dans la fenetre de suppression (write Realtime
+      // recent). Cf [suppress].
+      final until = _suppressUntil;
+      if (until != null && DateTime.now().isBefore(until)) return;
       try {
         await _sync.pushTournee(tourneeId);
       } on Object {

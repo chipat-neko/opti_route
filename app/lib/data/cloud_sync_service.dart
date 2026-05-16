@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' show Random;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
@@ -124,25 +125,30 @@ class CloudSyncService {
     String userId,
   ) async {
     final cloudId = c.cloudId ?? _uuid.v4();
+    final isFirstPush = c.cloudId == null;
     final row = <String, dynamic>{
       'id': cloudId,
-      'user_id': userId,
+      // user_id : envoye SEULEMENT au 1er push (INSERT). Pour les UPDATE
+      // ulterieurs, ne PAS le renvoyer — sinon un member d'une tournee
+      // partagee qui re-push un row pourrait ecraser le user_id original
+      // par le sien et voler la propriete. Cf fix bugs jalons 2.D-1c->3.A.
+      if (isFirstPush) 'user_id': userId,
       'nom': c.nom,
       'color_tag': c.colorTag,
       'telephone': c.telephone,
       'actif': c.actif,
-      // Pas de `cree_le` cote cloud pour les coequipiers : la table
-      // Postgres n'a que `created_at` (gere auto par defaut). Volontaire.
-      // updated_at : timestamp local source de la derniere modif. Sert
-      // au pull last-write-wins cote autres devices (sous-jalon 2.D-1c).
       'updated_at': c.updatedAt.toUtc().toIso8601String(),
     };
     try {
-      await client.from('coequipiers').upsert(row);
+      if (isFirstPush) {
+        await client.from('coequipiers').insert(row);
+      } else {
+        await client.from('coequipiers').update(row).eq('id', cloudId);
+      }
     } on Object catch (e) {
       throw CloudSyncException('Echec push coequipier "${c.nom}" : $e');
     }
-    if (c.cloudId == null) {
+    if (isFirstPush) {
       await (_db.update(_db.coequipiers)..where((row) => row.id.equals(c.id)))
           .write(CoequipiersCompanion(cloudId: Value(cloudId)));
     }
@@ -156,9 +162,11 @@ class CloudSyncService {
     Map<int, String> coequipierCloudIds,
   ) async {
     final cloudId = t.cloudId ?? _uuid.v4();
+    final isFirstPush = t.cloudId == null;
     final row = <String, dynamic>{
       'id': cloudId,
-      'user_id': userId,
+      // user_id : envoye SEULEMENT au 1er push. Cf _pushCoequipier.
+      if (isFirstPush) 'user_id': userId,
       'nom': t.nom,
       'date': t.date.toIso8601String(),
       'point_depart_lat': t.pointDepartLat,
@@ -180,15 +188,21 @@ class CloudSyncService {
       'coequipier_defaut_id': t.coequipierDefautId == null
           ? null
           : coequipierCloudIds[t.coequipierDefautId!],
-      'cree_le': t.creeLe.toIso8601String(),
+      // cree_le envoye seulement au 1er push (cote cloud DEFAULT now()
+      // peut donner une date legerement differente sinon).
+      if (isFirstPush) 'cree_le': t.creeLe.toIso8601String(),
       'updated_at': t.updatedAt.toUtc().toIso8601String(),
     };
     try {
-      await client.from('tournees').upsert(row);
+      if (isFirstPush) {
+        await client.from('tournees').insert(row);
+      } else {
+        await client.from('tournees').update(row).eq('id', cloudId);
+      }
     } on Object catch (e) {
       throw CloudSyncException('Echec push tournee "${t.nom}" : $e');
     }
-    if (t.cloudId == null) {
+    if (isFirstPush) {
       await (_db.update(_db.tournees)..where((row) => row.id.equals(t.id)))
           .write(TourneesCompanion(cloudId: Value(cloudId)));
     }
@@ -213,9 +227,11 @@ class CloudSyncService {
       userId: userId,
       stopCloudId: cloudId,
     );
+    final isFirstPush = s.cloudId == null;
     final row = <String, dynamic>{
       'id': cloudId,
-      'user_id': userId,
+      // user_id : envoye SEULEMENT au 1er push. Cf _pushCoequipier.
+      if (isFirstPush) 'user_id': userId,
       'tournee_id': tourneeCloudId,
       'adresse_brute': s.adresseBrute,
       'adresse_normalisee': s.adresseNormalisee,
@@ -240,11 +256,15 @@ class CloudSyncService {
       'coequipier_id': s.coequipierId == null
           ? null
           : coequipierCloudIds[s.coequipierId!],
-      'cree_le': s.creeLe.toIso8601String(),
+      if (isFirstPush) 'cree_le': s.creeLe.toIso8601String(),
       'updated_at': s.updatedAt.toUtc().toIso8601String(),
     };
     try {
-      await client.from('stops').upsert(row);
+      if (isFirstPush) {
+        await client.from('stops').insert(row);
+      } else {
+        await client.from('stops').update(row).eq('id', cloudId);
+      }
     } on Object catch (e) {
       throw CloudSyncException(
         'Echec push stop "${s.adresseBrute}" : $e',
@@ -252,7 +272,7 @@ class CloudSyncService {
     }
     // Persist en local : cloudId (1er push) et/ou cloudPhotoPath
     // (nouvel upload Storage reussi).
-    final needsCloudId = s.cloudId == null;
+    final needsCloudId = isFirstPush;
     final needsCloudPhotoPath =
         cloudPhotoPath != null && cloudPhotoPath != s.cloudPhotoPath;
     if (needsCloudId || needsCloudPhotoPath) {
@@ -527,14 +547,18 @@ class CloudSyncService {
     });
   }
 
+  static final _invitationRandom = Random.secure();
+
   String _generateInvitationCode() {
-    // 6 chiffres aléatoires uniformes (000000-999999). Le formatage
-    // garde les leading zeros : 47 → "000047".
-    final n = (DateTime.now().microsecondsSinceEpoch ^
-            DateTime.now().millisecondsSinceEpoch) %
-        1000000;
-    final shuffled = (n * 2654435761) % 1000000; // multiplicateur Knuth
-    return shuffled.toString().padLeft(6, '0');
+    // 6 chiffres aleatoires uniformes (000000-999999) via Random.secure
+    // (CSPRNG). Le formatage garde les leading zeros : 47 -> "000047".
+    //
+    // Cf fix bugs jalons 2.D-1c->3.A : l'ancienne implementation basee
+    // sur DateTime.now() XOR DateTime.now() renvoyait quasi-toujours 0
+    // (les 2 timestamps sont presque identiques), et le retry collision
+    // generait le meme code (microsecondes d'ecart).
+    final n = _invitationRandom.nextInt(1000000);
+    return n.toString().padLeft(6, '0');
   }
 
   String _invitationErrorToFr(String raw) {
