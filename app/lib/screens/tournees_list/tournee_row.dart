@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../data/cloud_sync_service.dart';
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
+import '../../providers/supabase_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 import '../tournee_du_jour_screen.dart';
@@ -118,6 +120,19 @@ class TourneeRow extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  // Indicateur sync cloud : icone discrete emerald
+                  // visible uniquement si la tournee a deja ete poussee
+                  // au moins une fois (cloud_id != null). Indique a
+                  // l'utilisateur que cette tournee est sauvegardee
+                  // hors du telephone.
+                  if (tournee.cloudId != null) ...[
+                    const Icon(
+                      Icons.cloud_done_outlined,
+                      size: 16,
+                      color: AppColors.emerald,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Icon(
                     Icons.chevron_right,
                     color: p.textFaint,
@@ -179,6 +194,37 @@ class TourneeRow extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppSpacing.x14),
+              // Bouton "Pousser au cloud" : visible uniquement si la
+              // build a les credentials Supabase. Libelle adaptatif
+              // selon si la tournee est deja sync (cloudId != null) ou
+              // non. Icone emerald pour matcher l'indicateur de la card.
+              if (ref.watch(cloudConfiguredProvider)) ...[
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: p.paper,
+                    foregroundColor: p.ink,
+                    minimumSize: const Size(0, 52),
+                    alignment: Alignment.centerLeft,
+                  ),
+                  onPressed: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _pushToCloud(context, ref, messenger);
+                  },
+                  icon: Icon(
+                    tournee.cloudId == null
+                        ? Icons.cloud_upload_outlined
+                        : Icons.cloud_sync_outlined,
+                    color: AppColors.emerald,
+                  ),
+                  label: Text(
+                    tournee.cloudId == null
+                        ? 'Pousser au cloud'
+                        : 'Synchroniser au cloud',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x8),
+              ],
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: p.paper,
@@ -352,6 +398,44 @@ class TourneeRow extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Pousse la tournee + ses stops + coequipiers references vers
+  /// Supabase. Affiche une SnackBar de chargement puis success / error
+  /// avec le message FR de [CloudSyncException]. Pas de Navigator
+  /// interaction ici : on a deja fait .pop() du bottom sheet avant
+  /// l'appel.
+  Future<void> _pushToCloud(
+    BuildContext context,
+    WidgetRef ref,
+    ScaffoldMessengerState messenger,
+  ) async {
+    final service = ref.read(cloudSyncServiceProvider);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Sync en cours...'),
+        duration: Duration(seconds: 10),
+      ),
+    );
+    try {
+      await service.pushTournee(tournee.id);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Tournee synchronisee au cloud'),
+          backgroundColor: AppColors.emerald,
+        ),
+      );
+    } on CloudSyncException catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
   }
 
   static String _formatDuration(int totalSeconds) {
