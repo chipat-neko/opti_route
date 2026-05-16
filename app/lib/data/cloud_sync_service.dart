@@ -132,6 +132,9 @@ class CloudSyncService {
       'actif': c.actif,
       // Pas de `cree_le` cote cloud pour les coequipiers : la table
       // Postgres n'a que `created_at` (gere auto par defaut). Volontaire.
+      // updated_at : timestamp local source de la derniere modif. Sert
+      // au pull last-write-wins cote autres devices (sous-jalon 2.D-1c).
+      'updated_at': c.updatedAt.toUtc().toIso8601String(),
     };
     try {
       await client.from('coequipiers').upsert(row);
@@ -177,6 +180,7 @@ class CloudSyncService {
           ? null
           : coequipierCloudIds[t.coequipierDefautId!],
       'cree_le': t.creeLe.toIso8601String(),
+      'updated_at': t.updatedAt.toUtc().toIso8601String(),
     };
     try {
       await client.from('tournees').upsert(row);
@@ -236,6 +240,7 @@ class CloudSyncService {
           ? null
           : coequipierCloudIds[s.coequipierId!],
       'cree_le': s.creeLe.toIso8601String(),
+      'updated_at': s.updatedAt.toUtc().toIso8601String(),
     };
     try {
       await client.from('stops').upsert(row);
@@ -312,13 +317,19 @@ class CloudSyncService {
   /// - Restauration apres perte/reset du telephone
   /// - "Resync depuis le cloud" manuel si l'utilisateur veut forcer
   ///
-  /// **Strategie de merge (cloud-wins simple)** :
-  /// - Row local sans `cloud_id` matchant : INSERT (jamais d'ecrasement
-  ///   d'une row locale-seulement).
-  /// - Row local avec `cloud_id` matchant : UPDATE (cloud ecrase local).
-  ///   Limitation acceptable du 2.D-1a : les modifs locales offline
-  ///   d'une row deja sync seront perdues. Sera rendu plus fin au
-  ///   2.D-1b avec une colonne updated_at + comparaison fine.
+  /// **Strategie de merge (last-write-wins via updated_at, 2.D-1c)** :
+  /// - Row local sans `cloud_id` matchant : INSERT.
+  /// - Row local avec `cloud_id` matchant :
+  ///   - Si `cloud.updated_at > local.updated_at` -> UPDATE (cloud ecrase
+  ///     local, le timestamp source est preserve dans `updatedAt`).
+  ///   - Sinon (cloud <= local) -> SKIP (local plus recent ou egal, on
+  ///     conserve les modifs locales offline non encore push).
+  ///
+  /// Le `>` strict signifie qu'a egalite, on skip — evite les rewrites
+  /// inutiles. Le trigger SQLite `AFTER UPDATE` n'est pas declenche
+  /// lors du write au pull (on touche explicitement la colonne
+  /// `updated_at` avec le timestamp cloud, donc NEW != OLD est faux
+  /// uniquement quand `cloud.updated_at == local.updated_at`).
   ///
   /// **Ordre des fetch** : coequipiers d'abord (referenced par tournees
   /// et stops), puis tournees (referenced par stops), puis stops, puis
@@ -354,31 +365,42 @@ class CloudSyncService {
     } on Object catch (e) {
       throw CloudSyncException('Echec fetch coequipiers : $e');
     }
-    int inserted = 0, updated = 0;
+    int inserted = 0, updated = 0, skipped = 0;
     for (final r in rows) {
       final row = r as Map<String, dynamic>;
       final cloudId = row['id'] as String;
-      final localId = await (_db.select(_db.coequipiers)
+      final cloudUpdatedAt = _parseCloudUpdatedAt(row['updated_at']);
+      final localRow = await (_db.select(_db.coequipiers)
             ..where((c) => c.cloudId.equals(cloudId)))
-          .map((c) => c.id)
           .getSingleOrNull();
+      if (localRow != null &&
+          !_cloudIsNewer(cloudUpdatedAt, localRow.updatedAt)) {
+        skipped++;
+        continue;
+      }
       final companion = CoequipiersCompanion(
         nom: Value(row['nom'] as String),
         colorTag: Value(row['color_tag'] as String?),
         telephone: Value(row['telephone'] as String?),
         actif: Value(row['actif'] as bool? ?? true),
         cloudId: Value(cloudId),
+        updatedAt: Value(cloudUpdatedAt),
       );
-      if (localId == null) {
+      if (localRow == null) {
         await _db.into(_db.coequipiers).insert(companion);
         inserted++;
       } else {
-        await (_db.update(_db.coequipiers)..where((c) => c.id.equals(localId)))
+        await (_db.update(_db.coequipiers)
+              ..where((c) => c.id.equals(localRow.id)))
             .write(companion);
         updated++;
       }
     }
-    return CloudPullStats(inserted: inserted, updated: updated);
+    return CloudPullStats(
+      inserted: inserted,
+      updated: updated,
+      skipped: skipped,
+    );
   }
 
   Future<CloudPullStats> _pullTournees(SupabaseClient client) async {
@@ -388,10 +410,19 @@ class CloudSyncService {
     } on Object catch (e) {
       throw CloudSyncException('Echec fetch tournees : $e');
     }
-    int inserted = 0, updated = 0;
+    int inserted = 0, updated = 0, skipped = 0;
     for (final r in rows) {
       final row = r as Map<String, dynamic>;
       final cloudId = row['id'] as String;
+      final cloudUpdatedAt = _parseCloudUpdatedAt(row['updated_at']);
+      final localRow = await (_db.select(_db.tournees)
+            ..where((t) => t.cloudId.equals(cloudId)))
+          .getSingleOrNull();
+      if (localRow != null &&
+          !_cloudIsNewer(cloudUpdatedAt, localRow.updatedAt)) {
+        skipped++;
+        continue;
+      }
       final coequipierCloudId = row['coequipier_defaut_id'] as String?;
       // Resoud le coequipier_defaut_id cloud (UUID) -> id local (int).
       // Si pas trouve, on garde null (le coequipier referenced n'a
@@ -403,10 +434,6 @@ class CloudSyncService {
                 ..where((c) => c.cloudId.equals(coequipierCloudId)))
               .map((c) => c.id)
               .getSingleOrNull();
-      final localId = await (_db.select(_db.tournees)
-            ..where((t) => t.cloudId.equals(cloudId)))
-          .map((t) => t.id)
-          .getSingleOrNull();
       final companion = TourneesCompanion(
         nom: Value(row['nom'] as String),
         date: Value(DateTime.parse(row['date'] as String)),
@@ -438,17 +465,23 @@ class CloudSyncService {
         coequipierDefautId: Value(coequipierLocalId),
         creeLe: Value(DateTime.parse(row['cree_le'] as String)),
         cloudId: Value(cloudId),
+        updatedAt: Value(cloudUpdatedAt),
       );
-      if (localId == null) {
+      if (localRow == null) {
         await _db.into(_db.tournees).insert(companion);
         inserted++;
       } else {
-        await (_db.update(_db.tournees)..where((t) => t.id.equals(localId)))
+        await (_db.update(_db.tournees)
+              ..where((t) => t.id.equals(localRow.id)))
             .write(companion);
         updated++;
       }
     }
-    return CloudPullStats(inserted: inserted, updated: updated);
+    return CloudPullStats(
+      inserted: inserted,
+      updated: updated,
+      skipped: skipped,
+    );
   }
 
   Future<CloudPullStats> _pullStops(SupabaseClient client) async {
@@ -458,10 +491,19 @@ class CloudSyncService {
     } on Object catch (e) {
       throw CloudSyncException('Echec fetch stops : $e');
     }
-    int inserted = 0, updated = 0;
+    int inserted = 0, updated = 0, skipped = 0;
     for (final r in rows) {
       final row = r as Map<String, dynamic>;
       final cloudId = row['id'] as String;
+      final cloudUpdatedAt = _parseCloudUpdatedAt(row['updated_at']);
+      final localRow = await (_db.select(_db.stops)
+            ..where((s) => s.cloudId.equals(cloudId)))
+          .getSingleOrNull();
+      if (localRow != null &&
+          !_cloudIsNewer(cloudUpdatedAt, localRow.updatedAt)) {
+        skipped++;
+        continue;
+      }
       final tourneeCloudId = row['tournee_id'] as String;
       final tourneeLocalId = await (_db.select(_db.tournees)
             ..where((t) => t.cloudId.equals(tourneeCloudId)))
@@ -481,10 +523,6 @@ class CloudSyncService {
                 ..where((c) => c.cloudId.equals(coequipierCloudId)))
               .map((c) => c.id)
               .getSingleOrNull();
-      final localId = await (_db.select(_db.stops)
-            ..where((s) => s.cloudId.equals(cloudId)))
-          .map((s) => s.id)
-          .getSingleOrNull();
       final companion = StopsCompanion(
         tourneeId: Value(tourneeLocalId),
         adresseBrute: Value(row['adresse_brute'] as String),
@@ -516,17 +554,22 @@ class CloudSyncService {
         coequipierId: Value(coequipierLocalId),
         creeLe: Value(DateTime.parse(row['cree_le'] as String)),
         cloudId: Value(cloudId),
+        updatedAt: Value(cloudUpdatedAt),
       );
-      if (localId == null) {
+      if (localRow == null) {
         await _db.into(_db.stops).insert(companion);
         inserted++;
       } else {
-        await (_db.update(_db.stops)..where((s) => s.id.equals(localId)))
+        await (_db.update(_db.stops)..where((s) => s.id.equals(localRow.id)))
             .write(companion);
         updated++;
       }
     }
-    return CloudPullStats(inserted: inserted, updated: updated);
+    return CloudPullStats(
+      inserted: inserted,
+      updated: updated,
+      skipped: skipped,
+    );
   }
 
   Future<CloudPullStats> _pullSavedDestinations(SupabaseClient client) async {
@@ -536,14 +579,19 @@ class CloudSyncService {
     } on Object catch (e) {
       throw CloudSyncException('Echec fetch carnet : $e');
     }
-    int inserted = 0, updated = 0;
+    int inserted = 0, updated = 0, skipped = 0;
     for (final r in rows) {
       final row = r as Map<String, dynamic>;
       final cloudId = row['id'] as String;
-      final localId = await (_db.select(_db.savedDestinations)
+      final cloudUpdatedAt = _parseCloudUpdatedAt(row['updated_at']);
+      final localRow = await (_db.select(_db.savedDestinations)
             ..where((s) => s.cloudId.equals(cloudId)))
-          .map((s) => s.id)
           .getSingleOrNull();
+      if (localRow != null &&
+          !_cloudIsNewer(cloudUpdatedAt, localRow.updatedAt)) {
+        skipped++;
+        continue;
+      }
       final companion = SavedDestinationsCompanion(
         nomClient: Value(row['nom_client'] as String?),
         adresseDisplay: Value(row['adresse_display'] as String),
@@ -563,18 +611,56 @@ class CloudSyncService {
         codeAcces: Value(row['code_acces'] as String?),
         etageBatiment: Value(row['etage_batiment'] as String?),
         cloudId: Value(cloudId),
+        updatedAt: Value(cloudUpdatedAt),
       );
-      if (localId == null) {
+      if (localRow == null) {
         await _db.into(_db.savedDestinations).insert(companion);
         inserted++;
       } else {
         await (_db.update(_db.savedDestinations)
-              ..where((s) => s.id.equals(localId)))
+              ..where((s) => s.id.equals(localRow.id)))
             .write(companion);
         updated++;
       }
     }
-    return CloudPullStats(inserted: inserted, updated: updated);
+    return CloudPullStats(
+      inserted: inserted,
+      updated: updated,
+      skipped: skipped,
+    );
+  }
+
+  // ─── Helpers last-write-wins (sous-jalon 2.D-1c) ────────────────
+
+  /// Parse le champ `updated_at` envoye par Postgres dans le format
+  /// timestamptz ISO 8601 (ex: `2026-05-16T14:23:45.123+00:00`).
+  ///
+  /// Fallback `DateTime.fromMillisecondsSinceEpoch(0)` si le champ est
+  /// null (cas anormal : un push 2.D-1c+ doit toujours envoyer
+  /// updated_at, mais le schema cloud autorise NULL pour retro-compat
+  /// avec d'eventuels rows pushes par une vieille version de l'app).
+  /// Un row sans updated_at est traite comme "infiniment ancien" et
+  /// sera ecrase par n'importe quel local non-NULL.
+  DateTime _parseCloudUpdatedAt(Object? raw) {
+    if (raw is String) {
+      return DateTime.parse(raw).toLocal();
+    }
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  /// True si la version cloud est strictement plus recente que la
+  /// version locale (donc on doit ecraser local). False sinon (egalite
+  /// ou local plus recent -> skip pour preserver les modifs locales).
+  ///
+  /// Tolerance de 1 seconde sur l'egalite : Postgres stocke en
+  /// microsecondes, SQLite Drift stocke en secondes (truncate). Sans
+  /// tolerance, un push immediatement suivi d'un pull verrait
+  /// `cloud.updated_at = floor(local.updated_at) <= local.updated_at`
+  /// et skip — c'est OK ici puisqu'on push avec le timestamp local
+  /// brut, mais si Postgres re-touchait la valeur (trigger serveur
+  /// futur), l'arrondi pourrait creer un faux "cloud plus ancien".
+  bool _cloudIsNewer(DateTime cloud, DateTime local) {
+    return cloud.isAfter(local.add(const Duration(seconds: 1)));
   }
 
   // ─── Guards ─────────────────────────────────────────────────────
@@ -637,9 +723,21 @@ class CloudPullResult {
   int get totalChanged =>
       coequipiers.total + tournees.total + stops.total + savedDestinations.total;
 
+  /// Nombre total de rows ignorees par le last-write-wins (cloud plus
+  /// ancien ou egal au local). Sous-jalon 2.D-1c.
+  int get totalSkipped =>
+      coequipiers.skipped +
+      tournees.skipped +
+      stops.skipped +
+      savedDestinations.skipped;
+
   /// Phrase courte pour SnackBar / dialog de fin de pull.
   String get summary {
     if (totalChanged == 0) {
+      if (totalSkipped > 0) {
+        return 'Tout etait deja a jour ($totalSkipped element(s) cloud '
+            'plus ancien(s) que la version locale).';
+      }
       return 'Tout etait deja a jour. Rien a synchroniser.';
     }
     final parts = <String>[];
@@ -649,14 +747,25 @@ class CloudPullResult {
     if (savedDestinations.total > 0) {
       parts.add('${savedDestinations.total} entree(s) carnet');
     }
-    return '$totalChanged element(s) synchronise(s) : ${parts.join(', ')}';
+    final suffix = totalSkipped > 0 ? ' ($totalSkipped ignore(s))' : '';
+    return '$totalChanged element(s) synchronise(s) : '
+        '${parts.join(', ')}$suffix';
   }
 }
 
-/// Compteur interne (inserted + updated) pour une table donnee.
+/// Compteur interne (inserted + updated + skipped) pour une table donnee.
+/// `skipped` = rows cloud ignorees par le last-write-wins (sous-jalon
+/// 2.D-1c) car la version locale est plus recente ou egale. `total`
+/// reste le nombre de changements appliques (insert + update), pas le
+/// nombre de rows lues du cloud.
 class CloudPullStats {
-  const CloudPullStats({required this.inserted, required this.updated});
+  const CloudPullStats({
+    required this.inserted,
+    required this.updated,
+    this.skipped = 0,
+  });
   final int inserted;
   final int updated;
+  final int skipped;
   int get total => inserted + updated;
 }

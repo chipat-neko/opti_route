@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -72,6 +72,9 @@ class AppDatabase extends _$AppDatabase {
           // Indexes utiles aux requetes frequentes -- cf migration v22
           // ci-dessous pour les motifs et les gains de perf attendus.
           await _createPerfIndexes();
+          // Triggers `AFTER UPDATE` qui maintiennent updated_at a jour
+          // automatiquement -- cf migration v25 ci-dessous.
+          await _createUpdatedAtTriggers();
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
@@ -167,6 +170,40 @@ class AppDatabase extends _$AppDatabase {
             // `<user_id>/<stop_uuid>.jpg` apres upload reussi.
             await m.addColumn(stops, stops.cloudPhotoPath);
           }
+          if (from < 25) {
+            // Sous-jalon 2.D-1c : colonne `updated_at` sur les 4 tables
+            // candidates au sync cloud (tournees, stops, coequipiers,
+            // saved_destinations) + triggers `AFTER UPDATE` SQLite qui
+            // touchent automatiquement la colonne a chaque modification.
+            //
+            // Sert au pull last-write-wins : si cloud.updated_at >
+            // local.updated_at on ecrase, sinon on skip.
+            //
+            // Sur upgrade, les rows existants ont updated_at = NULL
+            // (Drift ne peut pas appliquer le DEFAULT a posteriori).
+            // On les backfill manuellement a now() apres l'ADD COLUMN
+            // pour qu'ils participent correctement au last-write-wins
+            // (sinon ils seraient toujours consideres comme "infiniment
+            // anciens" et ecrases au moindre pull).
+            await m.addColumn(tournees, tournees.updatedAt);
+            await m.addColumn(stops, stops.updatedAt);
+            await m.addColumn(coequipiers, coequipiers.updatedAt);
+            await m.addColumn(
+                savedDestinations, savedDestinations.updatedAt);
+            await customStatement(
+                "UPDATE tournees SET updated_at = strftime('%s','now') "
+                'WHERE updated_at IS NULL');
+            await customStatement(
+                "UPDATE stops SET updated_at = strftime('%s','now') "
+                'WHERE updated_at IS NULL');
+            await customStatement(
+                "UPDATE coequipiers SET updated_at = strftime('%s','now') "
+                'WHERE updated_at IS NULL');
+            await customStatement(
+                "UPDATE saved_destinations SET updated_at = "
+                "strftime('%s','now') WHERE updated_at IS NULL");
+            await _createUpdatedAtTriggers();
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -198,5 +235,38 @@ class AppDatabase extends _$AppDatabase {
         'CREATE INDEX IF NOT EXISTS idx_stop_history_stop_id ON stop_history(stop_id)');
     await customStatement(
         'CREATE INDEX IF NOT EXISTS idx_geocode_cache_expire_le ON geocode_cache(expire_le)');
+  }
+
+  /// Triggers SQLite qui maintiennent automatiquement `updated_at` a
+  /// jour a chaque UPDATE (sous-jalon 2.D-1c).
+  ///
+  /// Pattern : `AFTER UPDATE WHEN NEW.updated_at = OLD.updated_at`.
+  /// La clause WHEN evite la boucle infinie : la 2e execution (celle
+  /// du trigger lui-meme) change updated_at donc la condition devient
+  /// fausse et le trigger ne se re-declenche pas.
+  ///
+  /// Si le code Dart touche explicitement `updated_at` (ex: pull
+  /// cloud qui ecrase avec le timestamp serveur), le trigger ne tire
+  /// pas — c'est voulu, on veut preserver le timestamp source.
+  ///
+  /// Appele en onCreate (nouvelle install) et en migration v25
+  /// (upgrade). Idempotent grace au `IF NOT EXISTS`.
+  Future<void> _createUpdatedAtTriggers() async {
+    for (final table in const [
+      'tournees',
+      'stops',
+      'coequipiers',
+      'saved_destinations',
+    ]) {
+      await customStatement(
+        'CREATE TRIGGER IF NOT EXISTS ${table}_touch_updated_at '
+        'AFTER UPDATE ON $table FOR EACH ROW '
+        'WHEN NEW.updated_at = OLD.updated_at '
+        'BEGIN '
+        "UPDATE $table SET updated_at = strftime('%s','now') "
+        'WHERE id = NEW.id; '
+        'END;',
+      );
+    }
   }
 }

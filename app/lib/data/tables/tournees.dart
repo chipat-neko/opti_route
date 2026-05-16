@@ -83,4 +83,16 @@ class Tournees extends Table {
   /// du push : INSERT si null, UPDATE sinon). Format : UUID standard
   /// 36 chars avec tirets, ex `7c9e6679-7425-40de-944b-e07fc1f90ae7`.
   TextColumn get cloudId => text().nullable()();
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Set automatiquement par un trigger SQLite `AFTER UPDATE WHEN
+  /// NEW.updated_at = OLD.updated_at` qui se declenche a chaque UPDATE
+  /// si le code Dart n'a pas explicitement touche a la colonne.
+  /// Default `currentDateAndTime` au INSERT.
+  ///
+  /// Sert au pull cloud (last-write-wins) : si cloud.updated_at >
+  /// local.updated_at, le cloud ecrase ; sinon on skip (local plus
+  /// recent ou egal). Plus safe que le cloud-wins strict du 2.D-1a.
+  DateTimeColumn get updatedAt =>
+      dateTime().withDefault(currentDateAndTime)();
 }

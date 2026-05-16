@@ -37,4 +37,9 @@ class Coequipiers extends Table {
   /// Null = coequipier jamais sync. Voir `Tournees.cloudId` pour le
   /// pattern.
   TextColumn get cloudId => text().nullable()();
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Voir `Tournees.updatedAt` pour le pattern complet.
+  DateTimeColumn get updatedAt =>
+      dateTime().withDefault(currentDateAndTime)();
 }
