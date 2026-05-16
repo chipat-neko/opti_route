@@ -41,11 +41,55 @@ class CloudSection extends ConsumerWidget {
           : Column(
               children: [
                 _SignedInTile(user: user),
+                const _InitialPullStatusTile(),
                 const _PullCloudTile(),
               ],
             ),
       loading: () => const _LoadingTile(),
       error: (e, _) => _ErrorTile(message: '$e', palette: p),
+    );
+  }
+}
+
+/// Tile transitoire affichee pendant l'auto-pull initial au 1er
+/// sign-in (sous-jalon 2.D-1b). Visible uniquement quand
+/// [cloudPullStateProvider] est en `AsyncLoading` ou `AsyncError`.
+/// En `AsyncData` (idle ou termine), le widget renvoie un
+/// SizedBox.shrink() pour ne pas polluer la section.
+class _InitialPullStatusTile extends ConsumerWidget {
+  const _InitialPullStatusTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(cloudPullStateProvider);
+    final p = context.palette;
+    return state.when(
+      data: (_) => const SizedBox.shrink(),
+      loading: () => ListTile(
+        leading: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        title: const Text('Synchronisation initiale...'),
+        subtitle: Text(
+          'Recuperation de tes tournees et de ton carnet depuis le cloud',
+          style: TextStyle(fontSize: 11, color: p.textMute),
+        ),
+      ),
+      error: (e, _) => ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.red,
+          foregroundColor: Colors.white,
+          child: Icon(Icons.cloud_off_outlined, size: 18),
+        ),
+        title: const Text('Sync initiale echouee'),
+        subtitle: Text(
+          '$e\nTu peux retenter via "Re-telecharger depuis le cloud".',
+          style: TextStyle(fontSize: 11, color: p.textMute),
+        ),
+        isThreeLine: true,
+      ),
     );
   }
 }
