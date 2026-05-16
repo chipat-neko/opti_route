@@ -5,6 +5,7 @@ import '../data/cloud_auto_pull_service.dart';
 import '../data/cloud_auto_push_service.dart';
 import '../data/cloud_sync_service.dart';
 import '../data/supabase_service.dart';
+import '../data/tournee_realtime_service.dart';
 import 'database_providers.dart';
 
 /// Stream de l'utilisateur Supabase connecte (null si pas connecte ou
@@ -87,5 +88,19 @@ final cloudAutoPushServiceProvider = Provider<CloudAutoPushService>((ref) {
   // Cleanup propre si jamais le Provider est dispose (theoriquement
   // pas avant la fin de l'app vu qu'il n'est pas autoDispose).
   ref.onDispose(service.stop);
+  return service;
+});
+
+/// Service Realtime pour les tournees partagees (jalon 3.A). Subscribe
+/// au channel `tournee:<cloudUuid>` quand un ecran de tournee partagee
+/// s'ouvre, merge les events Postgres Changes dans la DB Drift locale.
+///
+/// Singleton : un seul channel actif a la fois (la tournee partagee
+/// actuellement consultee). Pas autoDispose pour eviter de re-init
+/// chaque ouverture d'ecran.
+final tourneeRealtimeServiceProvider =
+    Provider<TourneeRealtimeService>((ref) {
+  final service = TourneeRealtimeService(ref.watch(appDatabaseProvider));
+  ref.onDispose(service.unsubscribe);
   return service;
 });

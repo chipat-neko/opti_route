@@ -30,6 +30,7 @@ enum PlusAction {
   exportPdfCo,
   prefetchTuiles,
   pushCloud,
+  inviteEquipier,
   delete,
 }
 
@@ -207,6 +208,24 @@ class PlusMenu extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
           ),
         ),
+        // Jalon 3.A : invitation coequipier sur tournee deja push au
+        // cloud. On masque l'option pour les tournees pas encore push
+        // (cloudId == null) car l'invitation a besoin d'une tournee
+        // cloud existante a partager.
+        if (tournee.cloudId != null)
+          const PopupMenuItem(
+            value: PlusAction.inviteEquipier,
+            child: ListTile(
+              leading: Icon(Icons.group_add_outlined,
+                  color: AppColors.emerald),
+              title: Text('Inviter un coequipier'),
+              subtitle: Text(
+                'Genere un code 6 chiffres a partager',
+                style: TextStyle(fontSize: 11),
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
         const PopupMenuItem(
           value: PlusAction.delete,
           child: ListTile(

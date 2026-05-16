@@ -219,10 +219,59 @@ ré-exécuter le SQL.
    SnackBar doit afficher `... (N ignoré(s))` si d'autres rows cloud
    étaient plus vieilles que les rows locales.
 
+## Jalon 3.A — Mode équipe live (chef ↔ coéquipiers)
+
+Le SQL ajoute deux nouvelles tables (`tournee_membres`,
+`tournee_invitations`), une fonction RPC `accept_invitation`, élargit
+les policies RLS de `tournees` / `stops` pour autoriser les membres
+(plus juste l'owner), et étend la publication Realtime à `stops` +
+`tournees` + `tournee_membres`.
+
+Action requise : ré-exécuter le SQL complet (idempotent).
+
+### Vérifier les tables et la RPC
+
+```sql
+SELECT tablename FROM pg_tables
+  WHERE schemaname='public'
+  AND tablename IN ('tournee_membres','tournee_invitations')
+  ORDER BY tablename;
+```
+Attendu : 2 lignes.
+
+```sql
+SELECT proname FROM pg_proc
+  WHERE proname='accept_invitation' AND pronamespace='public'::regnamespace;
+```
+Attendu : 1 ligne.
+
+### Vérifier la publication Realtime
+
+```sql
+SELECT tablename FROM pg_publication_tables
+  WHERE pubname='supabase_realtime'
+  AND schemaname='public'
+  ORDER BY tablename;
+```
+Attendu : doit inclure `stops`, `tournees`, `tournee_membres`.
+
+### Test end-to-end (2 devices ou 2 comptes)
+
+1. **Device A (chef)** : crée une tournée, push au cloud, menu Plus →
+   « Inviter un coéquipier » → code 6 chiffres affiché.
+2. Copier/partager le code à Device B.
+3. **Device B (coéquipier)** : Paramètres → « Rejoindre une tournée »
+   → saisir le code → SnackBar « Tournée rejointe ! ... ».
+4. Sur Device B, ouvrir la tournée → les stops apparaissent.
+5. **Test live** : sur Device B, modifier le statut d'un stop (livré).
+   En quelques secondes, le statut change aussi sur Device A
+   (Realtime).
+6. Inverse : Device A modifie un stop → Device B se met à jour.
+
 ## Jalons suivants (à venir)
 
-- **Jalon 3** : sync bi-directionnel chef ↔ coéquipiers via Supabase
-  Realtime channels.
-- **Jalon 4** : ETA SMS auto destinataire via Twilio (séparé de
-  Supabase, ~$0.0075 / SMS).
+- **Jalon 3.B** : badge UI « Tournée partagée » + liste des membres
+  dans le détail tournée.
+- **Jalon 3.C** : sync de la position GPS live du livreur sur la
+  carte du chef.
 - **Jalon 5** : backup cloud chiffré.

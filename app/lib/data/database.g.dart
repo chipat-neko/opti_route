@@ -6081,6 +6081,376 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
   }
 }
 
+class $TourneeMembresTable extends TourneeMembres
+    with TableInfo<$TourneeMembresTable, TourneeMembre> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TourneeMembresTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _tourneeCloudIdMeta = const VerificationMeta(
+    'tourneeCloudId',
+  );
+  @override
+  late final GeneratedColumn<String> tourneeCloudId = GeneratedColumn<String>(
+    'tournee_cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userCloudIdMeta = const VerificationMeta(
+    'userCloudId',
+  );
+  @override
+  late final GeneratedColumn<String> userCloudId = GeneratedColumn<String>(
+    'user_cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _joinedAtMeta = const VerificationMeta(
+    'joinedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> joinedAt = GeneratedColumn<DateTime>(
+    'joined_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    tourneeCloudId,
+    userCloudId,
+    role,
+    joinedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tournee_membres';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TourneeMembre> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('tournee_cloud_id')) {
+      context.handle(
+        _tourneeCloudIdMeta,
+        tourneeCloudId.isAcceptableOrUnknown(
+          data['tournee_cloud_id']!,
+          _tourneeCloudIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_tourneeCloudIdMeta);
+    }
+    if (data.containsKey('user_cloud_id')) {
+      context.handle(
+        _userCloudIdMeta,
+        userCloudId.isAcceptableOrUnknown(
+          data['user_cloud_id']!,
+          _userCloudIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_userCloudIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('joined_at')) {
+      context.handle(
+        _joinedAtMeta,
+        joinedAt.isAcceptableOrUnknown(data['joined_at']!, _joinedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TourneeMembre map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TourneeMembre(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      tourneeCloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tournee_cloud_id'],
+      )!,
+      userCloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_cloud_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      joinedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}joined_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TourneeMembresTable createAlias(String alias) {
+    return $TourneeMembresTable(attachedDatabase, alias);
+  }
+}
+
+class TourneeMembre extends DataClass implements Insertable<TourneeMembre> {
+  final int id;
+
+  /// UUID cloud de la tournée (= `tournees.cloud_id` de la table Tournees).
+  /// Ne pas confondre avec le `tourneeId` int local (PK Drift). On stocke
+  /// directement l'UUID pour décorréler du local id (un membre peut
+  /// exister dans le cache avant que la tournée elle-même soit pull).
+  final String tourneeCloudId;
+
+  /// UUID Supabase du user (= `auth.users.id`). Sert à matcher avec
+  /// le current user au cold start ("est-ce que JE suis membre de cette
+  /// tournée ?").
+  final String userCloudId;
+
+  /// `owner` ou `member`. CHECK constraint au niveau DB (cf migration).
+  final String role;
+  final DateTime joinedAt;
+  const TourneeMembre({
+    required this.id,
+    required this.tourneeCloudId,
+    required this.userCloudId,
+    required this.role,
+    required this.joinedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['tournee_cloud_id'] = Variable<String>(tourneeCloudId);
+    map['user_cloud_id'] = Variable<String>(userCloudId);
+    map['role'] = Variable<String>(role);
+    map['joined_at'] = Variable<DateTime>(joinedAt);
+    return map;
+  }
+
+  TourneeMembresCompanion toCompanion(bool nullToAbsent) {
+    return TourneeMembresCompanion(
+      id: Value(id),
+      tourneeCloudId: Value(tourneeCloudId),
+      userCloudId: Value(userCloudId),
+      role: Value(role),
+      joinedAt: Value(joinedAt),
+    );
+  }
+
+  factory TourneeMembre.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TourneeMembre(
+      id: serializer.fromJson<int>(json['id']),
+      tourneeCloudId: serializer.fromJson<String>(json['tourneeCloudId']),
+      userCloudId: serializer.fromJson<String>(json['userCloudId']),
+      role: serializer.fromJson<String>(json['role']),
+      joinedAt: serializer.fromJson<DateTime>(json['joinedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'tourneeCloudId': serializer.toJson<String>(tourneeCloudId),
+      'userCloudId': serializer.toJson<String>(userCloudId),
+      'role': serializer.toJson<String>(role),
+      'joinedAt': serializer.toJson<DateTime>(joinedAt),
+    };
+  }
+
+  TourneeMembre copyWith({
+    int? id,
+    String? tourneeCloudId,
+    String? userCloudId,
+    String? role,
+    DateTime? joinedAt,
+  }) => TourneeMembre(
+    id: id ?? this.id,
+    tourneeCloudId: tourneeCloudId ?? this.tourneeCloudId,
+    userCloudId: userCloudId ?? this.userCloudId,
+    role: role ?? this.role,
+    joinedAt: joinedAt ?? this.joinedAt,
+  );
+  TourneeMembre copyWithCompanion(TourneeMembresCompanion data) {
+    return TourneeMembre(
+      id: data.id.present ? data.id.value : this.id,
+      tourneeCloudId: data.tourneeCloudId.present
+          ? data.tourneeCloudId.value
+          : this.tourneeCloudId,
+      userCloudId: data.userCloudId.present
+          ? data.userCloudId.value
+          : this.userCloudId,
+      role: data.role.present ? data.role.value : this.role,
+      joinedAt: data.joinedAt.present ? data.joinedAt.value : this.joinedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TourneeMembre(')
+          ..write('id: $id, ')
+          ..write('tourneeCloudId: $tourneeCloudId, ')
+          ..write('userCloudId: $userCloudId, ')
+          ..write('role: $role, ')
+          ..write('joinedAt: $joinedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, tourneeCloudId, userCloudId, role, joinedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TourneeMembre &&
+          other.id == this.id &&
+          other.tourneeCloudId == this.tourneeCloudId &&
+          other.userCloudId == this.userCloudId &&
+          other.role == this.role &&
+          other.joinedAt == this.joinedAt);
+}
+
+class TourneeMembresCompanion extends UpdateCompanion<TourneeMembre> {
+  final Value<int> id;
+  final Value<String> tourneeCloudId;
+  final Value<String> userCloudId;
+  final Value<String> role;
+  final Value<DateTime> joinedAt;
+  const TourneeMembresCompanion({
+    this.id = const Value.absent(),
+    this.tourneeCloudId = const Value.absent(),
+    this.userCloudId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.joinedAt = const Value.absent(),
+  });
+  TourneeMembresCompanion.insert({
+    this.id = const Value.absent(),
+    required String tourneeCloudId,
+    required String userCloudId,
+    required String role,
+    this.joinedAt = const Value.absent(),
+  }) : tourneeCloudId = Value(tourneeCloudId),
+       userCloudId = Value(userCloudId),
+       role = Value(role);
+  static Insertable<TourneeMembre> custom({
+    Expression<int>? id,
+    Expression<String>? tourneeCloudId,
+    Expression<String>? userCloudId,
+    Expression<String>? role,
+    Expression<DateTime>? joinedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (tourneeCloudId != null) 'tournee_cloud_id': tourneeCloudId,
+      if (userCloudId != null) 'user_cloud_id': userCloudId,
+      if (role != null) 'role': role,
+      if (joinedAt != null) 'joined_at': joinedAt,
+    });
+  }
+
+  TourneeMembresCompanion copyWith({
+    Value<int>? id,
+    Value<String>? tourneeCloudId,
+    Value<String>? userCloudId,
+    Value<String>? role,
+    Value<DateTime>? joinedAt,
+  }) {
+    return TourneeMembresCompanion(
+      id: id ?? this.id,
+      tourneeCloudId: tourneeCloudId ?? this.tourneeCloudId,
+      userCloudId: userCloudId ?? this.userCloudId,
+      role: role ?? this.role,
+      joinedAt: joinedAt ?? this.joinedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (tourneeCloudId.present) {
+      map['tournee_cloud_id'] = Variable<String>(tourneeCloudId.value);
+    }
+    if (userCloudId.present) {
+      map['user_cloud_id'] = Variable<String>(userCloudId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (joinedAt.present) {
+      map['joined_at'] = Variable<DateTime>(joinedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TourneeMembresCompanion(')
+          ..write('id: $id, ')
+          ..write('tourneeCloudId: $tourneeCloudId, ')
+          ..write('userCloudId: $userCloudId, ')
+          ..write('role: $role, ')
+          ..write('joinedAt: $joinedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6093,6 +6463,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $SavedDestinationsTable(this);
   late final $StopHistoryTable stopHistory = $StopHistoryTable(this);
   late final $CoequipiersTable coequipiers = $CoequipiersTable(this);
+  late final $TourneeMembresTable tourneeMembres = $TourneeMembresTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6106,6 +6477,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     savedDestinations,
     stopHistory,
     coequipiers,
+    tourneeMembres,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -9540,6 +9912,206 @@ typedef $$CoequipiersTableProcessedTableManager =
       Coequipier,
       PrefetchHooks Function()
     >;
+typedef $$TourneeMembresTableCreateCompanionBuilder =
+    TourneeMembresCompanion Function({
+      Value<int> id,
+      required String tourneeCloudId,
+      required String userCloudId,
+      required String role,
+      Value<DateTime> joinedAt,
+    });
+typedef $$TourneeMembresTableUpdateCompanionBuilder =
+    TourneeMembresCompanion Function({
+      Value<int> id,
+      Value<String> tourneeCloudId,
+      Value<String> userCloudId,
+      Value<String> role,
+      Value<DateTime> joinedAt,
+    });
+
+class $$TourneeMembresTableFilterComposer
+    extends Composer<_$AppDatabase, $TourneeMembresTable> {
+  $$TourneeMembresTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tourneeCloudId => $composableBuilder(
+    column: $table.tourneeCloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userCloudId => $composableBuilder(
+    column: $table.userCloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get joinedAt => $composableBuilder(
+    column: $table.joinedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TourneeMembresTableOrderingComposer
+    extends Composer<_$AppDatabase, $TourneeMembresTable> {
+  $$TourneeMembresTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tourneeCloudId => $composableBuilder(
+    column: $table.tourneeCloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userCloudId => $composableBuilder(
+    column: $table.userCloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get joinedAt => $composableBuilder(
+    column: $table.joinedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TourneeMembresTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TourneeMembresTable> {
+  $$TourneeMembresTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get tourneeCloudId => $composableBuilder(
+    column: $table.tourneeCloudId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get userCloudId => $composableBuilder(
+    column: $table.userCloudId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get joinedAt =>
+      $composableBuilder(column: $table.joinedAt, builder: (column) => column);
+}
+
+class $$TourneeMembresTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TourneeMembresTable,
+          TourneeMembre,
+          $$TourneeMembresTableFilterComposer,
+          $$TourneeMembresTableOrderingComposer,
+          $$TourneeMembresTableAnnotationComposer,
+          $$TourneeMembresTableCreateCompanionBuilder,
+          $$TourneeMembresTableUpdateCompanionBuilder,
+          (
+            TourneeMembre,
+            BaseReferences<_$AppDatabase, $TourneeMembresTable, TourneeMembre>,
+          ),
+          TourneeMembre,
+          PrefetchHooks Function()
+        > {
+  $$TourneeMembresTableTableManager(
+    _$AppDatabase db,
+    $TourneeMembresTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TourneeMembresTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TourneeMembresTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TourneeMembresTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> tourneeCloudId = const Value.absent(),
+                Value<String> userCloudId = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<DateTime> joinedAt = const Value.absent(),
+              }) => TourneeMembresCompanion(
+                id: id,
+                tourneeCloudId: tourneeCloudId,
+                userCloudId: userCloudId,
+                role: role,
+                joinedAt: joinedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String tourneeCloudId,
+                required String userCloudId,
+                required String role,
+                Value<DateTime> joinedAt = const Value.absent(),
+              }) => TourneeMembresCompanion.insert(
+                id: id,
+                tourneeCloudId: tourneeCloudId,
+                userCloudId: userCloudId,
+                role: role,
+                joinedAt: joinedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TourneeMembresTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TourneeMembresTable,
+      TourneeMembre,
+      $$TourneeMembresTableFilterComposer,
+      $$TourneeMembresTableOrderingComposer,
+      $$TourneeMembresTableAnnotationComposer,
+      $$TourneeMembresTableCreateCompanionBuilder,
+      $$TourneeMembresTableUpdateCompanionBuilder,
+      (
+        TourneeMembre,
+        BaseReferences<_$AppDatabase, $TourneeMembresTable, TourneeMembre>,
+      ),
+      TourneeMembre,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9560,4 +10132,6 @@ class $AppDatabaseManager {
       $$StopHistoryTableTableManager(_db, _db.stopHistory);
   $$CoequipiersTableTableManager get coequipiers =>
       $$CoequipiersTableTableManager(_db, _db.coequipiers);
+  $$TourneeMembresTableTableManager get tourneeMembres =>
+      $$TourneeMembresTableTableManager(_db, _db.tourneeMembres);
 }
