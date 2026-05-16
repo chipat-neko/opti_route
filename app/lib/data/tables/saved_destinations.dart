@@ -69,4 +69,9 @@ class SavedDestinations extends Table {
   /// Etage / batiment / appartement, separe du code pour pouvoir
   /// l'afficher en gros lui aussi. Ex: "Bat C, 3e etage, app. 12".
   TextColumn get etageBatiment => text().nullable()();
+
+  /// UUID v4 attribue par l'app au 1er push Supabase (sous-jalon 2.B).
+  /// Null = entree carnet jamais sync. Voir `Tournees.cloudId` pour le
+  /// pattern.
+  TextColumn get cloudId => text().nullable()();
 }

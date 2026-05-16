@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../data/cloud_sync_service.dart';
 import '../data/database.dart';
 import '../data/location_service.dart';
 import '../data/navigation_service.dart';
@@ -16,6 +17,7 @@ import '../data/tournee_text_share_service.dart';
 import '../providers/geocoding_providers.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
+import '../providers/supabase_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
@@ -155,8 +157,40 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         _onExportPdfPerCoequipierPressed();
       case PlusAction.prefetchTuiles:
         _onPrefetchTuilesPressed();
+      case PlusAction.pushCloud:
+        _onPushCloudPressed();
       case PlusAction.delete:
         _confirmDeleteTournee();
+    }
+  }
+
+  Future<void> _onPushCloudPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final service = ref.read(cloudSyncServiceProvider);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Sync en cours...'),
+        duration: Duration(seconds: 10),
+      ),
+    );
+    try {
+      await service.pushTournee(widget.tournee.id);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Tournee synchronisee au cloud'),
+          backgroundColor: AppColors.emerald,
+        ),
+      );
+    } on CloudSyncException catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
     }
   }
 

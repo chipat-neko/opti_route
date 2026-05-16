@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -150,6 +150,16 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 22) {
             await _createPerfIndexes();
+          }
+          if (from < 23) {
+            // Sous-jalon 2.B : ajout de cloud_id (UUID v4 stocke en TEXT
+            // nullable) sur les 4 tables candidates au sync Supabase.
+            // Null = jamais sync ; set = a deja ete push au moins une
+            // fois (sert d'idempotence pour les re-push : INSERT/UPDATE).
+            await m.addColumn(tournees, tournees.cloudId);
+            await m.addColumn(stops, stops.cloudId);
+            await m.addColumn(coequipiers, coequipiers.cloudId);
+            await m.addColumn(savedDestinations, savedDestinations.cloudId);
           }
         },
         beforeOpen: (details) async {

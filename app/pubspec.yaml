@@ -79,6 +79,12 @@ dependencies:
   # (Frankfurt/Paris), 500 MB DB, 50k MAUs -- largement assez pour
   # commencer.
   supabase_flutter: ^2.12.0
+  # uuid : generation cote app de UUIDs v4 servant de cle primaire dans
+  # le schema cloud Supabase (sous-jalon 2.B). Indispensable pour
+  # generer l'id LOCALEMENT avant l'INSERT cloud, puis le persister
+  # dans la colonne `cloud_id` Drift -- ca rend le re-push idempotent
+  # et permet a 2 phones de generer en parallele sans collision.
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:

@@ -32,4 +32,9 @@ class Coequipiers extends Table {
   BoolColumn get actif => boolean().withDefault(const Constant(true))();
 
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
+
+  /// UUID v4 attribue par l'app au 1er push Supabase (sous-jalon 2.B).
+  /// Null = coequipier jamais sync. Voir `Tournees.cloudId` pour le
+  /// pattern.
+  TextColumn get cloudId => text().nullable()();
 }
