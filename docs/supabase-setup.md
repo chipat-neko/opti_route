@@ -187,6 +187,38 @@ un stop avec photo preuve. Vérifier dans le dashboard Supabase →
 **Storage** → bucket `preuves` → tu dois voir un dossier `<ton_uuid>/`
 contenant les `<stop_uuid>.jpg` uploadées.
 
+## Jalon 2.D-1c — Last-write-wins fin via `updated_at`
+
+Modification de la fonction `set_updated_at()` (section 1 du SQL) pour
+préserver le timestamp source du device qui a poussé la modif (au lieu
+de l'écraser systématiquement à `now()` au moment du push). Sert au
+pull last-write-wins : les autres devices comparent leur
+`local.updated_at` au timestamp source pour décider d'écraser ou de
+skip leur version locale.
+
+Action requise : ré-exécuter le SQL complet (idempotent grâce à
+`CREATE OR REPLACE FUNCTION`).
+
+### Vérifier la nouvelle fonction
+
+```sql
+SELECT prosrc FROM pg_proc
+  WHERE proname = 'set_updated_at' AND pronamespace = 'public'::regnamespace;
+```
+Attendu : la définition doit contenir
+`IF NEW.updated_at IS NULL OR NEW.updated_at = OLD.updated_at THEN`.
+Si c'est juste `NEW.updated_at = now();`, c'est l'ancienne version —
+ré-exécuter le SQL.
+
+### Tester le last-write-wins (device A + device B)
+
+1. Sur device A : modifier une tournée déjà sync → push (auto-push 5s).
+2. Sur device B (qui a déjà la même tournée localement, valeur
+   ancienne) : ouvrir l'app + faire « Re-télécharger depuis le cloud ».
+3. Vérifier : la tournée se met à jour avec les modifs de A. La
+   SnackBar doit afficher `... (N ignoré(s))` si d'autres rows cloud
+   étaient plus vieilles que les rows locales.
+
 ## Jalons suivants (à venir)
 
 - **Jalon 3** : sync bi-directionnel chef ↔ coéquipiers via Supabase

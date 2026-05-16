@@ -74,4 +74,15 @@ class SavedDestinations extends Table {
   /// Null = entree carnet jamais sync. Voir `Tournees.cloudId` pour le
   /// pattern.
   TextColumn get cloudId => text().nullable()();
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Voir `Tournees.updatedAt` pour le pattern complet.
+  ///
+  /// Distinct de `lastUsedAt` (qui represente le dernier usage du
+  /// carnet pour l'autocomplete, mis a jour automatiquement a chaque
+  /// nouvel arret creant cette adresse) — `updatedAt` ne change que
+  /// quand le contenu de la fiche elle-meme est edite (notes carnet,
+  /// favori, color tag, photo, etc.). Sert au last-write-wins pull.
+  DateTimeColumn get updatedAt =>
+      dateTime().withDefault(currentDateAndTime)();
 }

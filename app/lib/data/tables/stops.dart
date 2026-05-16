@@ -71,4 +71,10 @@ class Stops extends Table {
   /// les photos preuves (le metier-critique = adresses + statuts,
   /// les photos sont un confort).
   TextColumn get cloudPhotoPath => text().nullable()();
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Voir `Tournees.updatedAt` pour le pattern complet (trigger SQLite
+  /// + last-write-wins au pull).
+  DateTimeColumn get updatedAt =>
+      dateTime().withDefault(currentDateAndTime)();
 }

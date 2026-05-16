@@ -47,10 +47,20 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 
 -- 1. Helper : trigger générique updated_at ────────────────────────
+-- Sous-jalon 2.D-1c : on ne touche `updated_at` que si le client
+-- n'a pas envoyé de valeur explicite (ou a réutilisé la même que
+-- précédemment). Ça permet aux apps Flutter de pousser un timestamp
+-- *source* (= moment où la modif a été faite sur le device d'origine),
+-- préservé tel quel par Postgres. Sert au last-write-wins fin du pull :
+-- les autres devices comparent leur local.updated_at vs ce timestamp
+-- source. Sans cette logique, le trigger réécrirait toujours à
+-- `now()` (= moment du push, pas moment de la modif) → faux conflits.
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = now();
+  IF NEW.updated_at IS NULL OR NEW.updated_at = OLD.updated_at THEN
+    NEW.updated_at = now();
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -237,10 +247,9 @@ CREATE POLICY "owner_all_saved_destinations" ON public.saved_destinations
 
 
 -- ══════════════════════════════════════════════════════════════════
+-- 7. Migrations incrémentales
 -- ══════════════════════════════════════════════════════════════════
--- 7. Migrations incrémentales (sous-jalon 2.E)
--- ══════════════════════════════════════════════════════════════════
--- Idempotent via `ADD COLUMN IF NOT EXISTS` (Postgres ≥ 9.6).
+-- Idempotent via `ADD COLUMN IF NOT EXISTS` / `CREATE OR REPLACE`.
 -- À ré-exécuter sur les projets Supabase déjà existants pour aligner
 -- le schema avec les nouvelles colonnes ajoutées par les jalons.
 
@@ -249,6 +258,21 @@ CREATE POLICY "owner_all_saved_destinations" ON public.saved_destinations
 -- uploadée. L'upload se fait au push du stop par CloudSyncService.
 ALTER TABLE public.stops
   ADD COLUMN IF NOT EXISTS cloud_photo_path TEXT;
+
+-- Sous-jalon 2.D-1c : mise à jour du comportement du trigger
+-- `set_updated_at`. AVANT : écrasait toujours `updated_at` à `now()`
+-- au moment du push (donc le timestamp source du device d'origine
+-- était perdu). MAINTENANT : ne touche `updated_at` que si le client
+-- n'a rien envoyé ou a réutilisé la valeur précédente.
+--
+-- La nouvelle définition est déjà dans la section 1 (CREATE OR REPLACE
+-- FUNCTION) — ré-exécuter le script complet la propage automatiquement
+-- partout (les triggers la rappellent à chaque UPDATE).
+--
+-- Sert au last-write-wins fin : les autres devices comparent leur
+-- `local.updated_at` vs le timestamp source pour décider d'écraser
+-- ou skip. Sans cette logique, le pull rewriterait tout systématique-
+-- ment puisque `cloud.updated_at = now() > local.updated_at` toujours.
 
 
 -- ══════════════════════════════════════════════════════════════════

@@ -259,6 +259,18 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -283,6 +295,7 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
     coequipierDefautId,
     creeLe,
     cloudId,
+    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -468,6 +481,12 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -565,6 +584,10 @@ class $TourneesTable extends Tournees with TableInfo<$TourneesTable, Tournee> {
         DriftSqlType.string,
         data['${effectivePrefix}cloud_id'],
       ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
@@ -651,6 +674,17 @@ class Tournee extends DataClass implements Insertable<Tournee> {
   /// du push : INSERT si null, UPDATE sinon). Format : UUID standard
   /// 36 chars avec tirets, ex `7c9e6679-7425-40de-944b-e07fc1f90ae7`.
   final String? cloudId;
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Set automatiquement par un trigger SQLite `AFTER UPDATE WHEN
+  /// NEW.updated_at = OLD.updated_at` qui se declenche a chaque UPDATE
+  /// si le code Dart n'a pas explicitement touche a la colonne.
+  /// Default `currentDateAndTime` au INSERT.
+  ///
+  /// Sert au pull cloud (last-write-wins) : si cloud.updated_at >
+  /// local.updated_at, le cloud ecrase ; sinon on skip (local plus
+  /// recent ou egal). Plus safe que le cloud-wins strict du 2.D-1a.
+  final DateTime updatedAt;
   const Tournee({
     required this.id,
     required this.nom,
@@ -674,6 +708,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     this.coequipierDefautId,
     required this.creeLe,
     this.cloudId,
+    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -718,6 +753,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     if (!nullToAbsent || cloudId != null) {
       map['cloud_id'] = Variable<String>(cloudId);
     }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
@@ -763,6 +799,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       cloudId: cloudId == null && nullToAbsent
           ? const Value.absent()
           : Value(cloudId),
+      updatedAt: Value(updatedAt),
     );
   }
 
@@ -796,6 +833,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       coequipierDefautId: serializer.fromJson<int?>(json['coequipierDefautId']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       cloudId: serializer.fromJson<String?>(json['cloudId']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -824,6 +862,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
       'coequipierDefautId': serializer.toJson<int?>(coequipierDefautId),
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'cloudId': serializer.toJson<String?>(cloudId),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
@@ -850,6 +889,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     Value<int?> coequipierDefautId = const Value.absent(),
     DateTime? creeLe,
     Value<String?> cloudId = const Value.absent(),
+    DateTime? updatedAt,
   }) => Tournee(
     id: id ?? this.id,
     nom: nom ?? this.nom,
@@ -877,6 +917,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
         : this.coequipierDefautId,
     creeLe: creeLe ?? this.creeLe,
     cloudId: cloudId.present ? cloudId.value : this.cloudId,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
   Tournee copyWithCompanion(TourneesCompanion data) {
     return Tournee(
@@ -926,6 +967,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           : this.coequipierDefautId,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
       cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -953,7 +995,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           ..write('pauseeSeconds: $pauseeSeconds, ')
           ..write('coequipierDefautId: $coequipierDefautId, ')
           ..write('creeLe: $creeLe, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -982,6 +1025,7 @@ class Tournee extends DataClass implements Insertable<Tournee> {
     coequipierDefautId,
     creeLe,
     cloudId,
+    updatedAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1008,7 +1052,8 @@ class Tournee extends DataClass implements Insertable<Tournee> {
           other.pauseeSeconds == this.pauseeSeconds &&
           other.coequipierDefautId == this.coequipierDefautId &&
           other.creeLe == this.creeLe &&
-          other.cloudId == this.cloudId);
+          other.cloudId == this.cloudId &&
+          other.updatedAt == this.updatedAt);
 }
 
 class TourneesCompanion extends UpdateCompanion<Tournee> {
@@ -1034,6 +1079,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
   final Value<int?> coequipierDefautId;
   final Value<DateTime> creeLe;
   final Value<String?> cloudId;
+  final Value<DateTime> updatedAt;
   const TourneesCompanion({
     this.id = const Value.absent(),
     this.nom = const Value.absent(),
@@ -1057,6 +1103,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.coequipierDefautId = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   TourneesCompanion.insert({
     this.id = const Value.absent(),
@@ -1081,6 +1128,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     this.coequipierDefautId = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   }) : nom = Value(nom),
        date = Value(date),
        pointDepartLat = Value(pointDepartLat),
@@ -1109,6 +1157,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Expression<int>? coequipierDefautId,
     Expression<DateTime>? creeLe,
     Expression<String>? cloudId,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1135,6 +1184,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
         'coequipier_defaut_id': coequipierDefautId,
       if (creeLe != null) 'cree_le': creeLe,
       if (cloudId != null) 'cloud_id': cloudId,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -1161,6 +1211,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     Value<int?>? coequipierDefautId,
     Value<DateTime>? creeLe,
     Value<String?>? cloudId,
+    Value<DateTime>? updatedAt,
   }) {
     return TourneesCompanion(
       id: id ?? this.id,
@@ -1186,6 +1237,7 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
       coequipierDefautId: coequipierDefautId ?? this.coequipierDefautId,
       creeLe: creeLe ?? this.creeLe,
       cloudId: cloudId ?? this.cloudId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -1260,6 +1312,9 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
     if (cloudId.present) {
       map['cloud_id'] = Variable<String>(cloudId.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -1287,7 +1342,8 @@ class TourneesCompanion extends UpdateCompanion<Tournee> {
           ..write('pauseeSeconds: $pauseeSeconds, ')
           ..write('coequipierDefautId: $coequipierDefautId, ')
           ..write('creeLe: $creeLe, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -1576,6 +1632,18 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1603,6 +1671,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     creeLe,
     cloudId,
     cloudPhotoPath,
+    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1800,6 +1869,12 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1909,6 +1984,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}cloud_photo_path'],
       ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
@@ -1983,6 +2062,11 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// les photos preuves (le metier-critique = adresses + statuts,
   /// les photos sont un confort).
   final String? cloudPhotoPath;
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Voir `Tournees.updatedAt` pour le pattern complet (trigger SQLite
+  /// + last-write-wins au pull).
+  final DateTime updatedAt;
   const Stop({
     required this.id,
     required this.tourneeId,
@@ -2009,6 +2093,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     required this.creeLe,
     this.cloudId,
     this.cloudPhotoPath,
+    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2072,6 +2157,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || cloudPhotoPath != null) {
       map['cloud_photo_path'] = Variable<String>(cloudPhotoPath);
     }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
@@ -2132,6 +2218,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       cloudPhotoPath: cloudPhotoPath == null && nullToAbsent
           ? const Value.absent()
           : Value(cloudPhotoPath),
+      updatedAt: Value(updatedAt),
     );
   }
 
@@ -2168,6 +2255,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       cloudId: serializer.fromJson<String?>(json['cloudId']),
       cloudPhotoPath: serializer.fromJson<String?>(json['cloudPhotoPath']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -2199,6 +2287,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'cloudId': serializer.toJson<String?>(cloudId),
       'cloudPhotoPath': serializer.toJson<String?>(cloudPhotoPath),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
@@ -2228,6 +2317,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     DateTime? creeLe,
     Value<String?> cloudId = const Value.absent(),
     Value<String?> cloudPhotoPath = const Value.absent(),
+    DateTime? updatedAt,
   }) => Stop(
     id: id ?? this.id,
     tourneeId: tourneeId ?? this.tourneeId,
@@ -2264,6 +2354,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     cloudPhotoPath: cloudPhotoPath.present
         ? cloudPhotoPath.value
         : this.cloudPhotoPath,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
   Stop copyWithCompanion(StopsCompanion data) {
     return Stop(
@@ -2316,6 +2407,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       cloudPhotoPath: data.cloudPhotoPath.present
           ? data.cloudPhotoPath.value
           : this.cloudPhotoPath,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -2346,7 +2438,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe, ')
           ..write('cloudId: $cloudId, ')
-          ..write('cloudPhotoPath: $cloudPhotoPath')
+          ..write('cloudPhotoPath: $cloudPhotoPath, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -2378,6 +2471,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     creeLe,
     cloudId,
     cloudPhotoPath,
+    updatedAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2407,7 +2501,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.coequipierId == this.coequipierId &&
           other.creeLe == this.creeLe &&
           other.cloudId == this.cloudId &&
-          other.cloudPhotoPath == this.cloudPhotoPath);
+          other.cloudPhotoPath == this.cloudPhotoPath &&
+          other.updatedAt == this.updatedAt);
 }
 
 class StopsCompanion extends UpdateCompanion<Stop> {
@@ -2436,6 +2531,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<DateTime> creeLe;
   final Value<String?> cloudId;
   final Value<String?> cloudPhotoPath;
+  final Value<DateTime> updatedAt;
   const StopsCompanion({
     this.id = const Value.absent(),
     this.tourneeId = const Value.absent(),
@@ -2462,6 +2558,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
     this.cloudPhotoPath = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   StopsCompanion.insert({
     this.id = const Value.absent(),
@@ -2489,6 +2586,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
     this.cloudPhotoPath = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
   static Insertable<Stop> custom({
@@ -2517,6 +2615,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<DateTime>? creeLe,
     Expression<String>? cloudId,
     Expression<String>? cloudPhotoPath,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2544,6 +2643,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (creeLe != null) 'cree_le': creeLe,
       if (cloudId != null) 'cloud_id': cloudId,
       if (cloudPhotoPath != null) 'cloud_photo_path': cloudPhotoPath,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -2573,6 +2673,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<DateTime>? creeLe,
     Value<String?>? cloudId,
     Value<String?>? cloudPhotoPath,
+    Value<DateTime>? updatedAt,
   }) {
     return StopsCompanion(
       id: id ?? this.id,
@@ -2600,6 +2701,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       creeLe: creeLe ?? this.creeLe,
       cloudId: cloudId ?? this.cloudId,
       cloudPhotoPath: cloudPhotoPath ?? this.cloudPhotoPath,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -2681,6 +2783,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (cloudPhotoPath.present) {
       map['cloud_photo_path'] = Variable<String>(cloudPhotoPath.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -2711,7 +2816,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('coequipierId: $coequipierId, ')
           ..write('creeLe: $creeLe, ')
           ..write('cloudId: $cloudId, ')
-          ..write('cloudPhotoPath: $cloudPhotoPath')
+          ..write('cloudPhotoPath: $cloudPhotoPath, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -4071,6 +4177,18 @@ class $SavedDestinationsTable extends SavedDestinations
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4092,6 +4210,7 @@ class $SavedDestinationsTable extends SavedDestinations
     codeAcces,
     etageBatiment,
     cloudId,
+    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4234,6 +4353,12 @@ class $SavedDestinationsTable extends SavedDestinations
         cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -4319,6 +4444,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.string,
         data['${effectivePrefix}cloud_id'],
       ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
@@ -4389,6 +4518,16 @@ class SavedDestination extends DataClass
   /// Null = entree carnet jamais sync. Voir `Tournees.cloudId` pour le
   /// pattern.
   final String? cloudId;
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Voir `Tournees.updatedAt` pour le pattern complet.
+  ///
+  /// Distinct de `lastUsedAt` (qui represente le dernier usage du
+  /// carnet pour l'autocomplete, mis a jour automatiquement a chaque
+  /// nouvel arret creant cette adresse) — `updatedAt` ne change que
+  /// quand le contenu de la fiche elle-meme est edite (notes carnet,
+  /// favori, color tag, photo, etc.). Sert au last-write-wins pull.
+  final DateTime updatedAt;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -4409,6 +4548,7 @@ class SavedDestination extends DataClass
     this.codeAcces,
     this.etageBatiment,
     this.cloudId,
+    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4454,6 +4594,7 @@ class SavedDestination extends DataClass
     if (!nullToAbsent || cloudId != null) {
       map['cloud_id'] = Variable<String>(cloudId);
     }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
@@ -4498,6 +4639,7 @@ class SavedDestination extends DataClass
       cloudId: cloudId == null && nullToAbsent
           ? const Value.absent()
           : Value(cloudId),
+      updatedAt: Value(updatedAt),
     );
   }
 
@@ -4526,6 +4668,7 @@ class SavedDestination extends DataClass
       codeAcces: serializer.fromJson<String?>(json['codeAcces']),
       etageBatiment: serializer.fromJson<String?>(json['etageBatiment']),
       cloudId: serializer.fromJson<String?>(json['cloudId']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -4551,6 +4694,7 @@ class SavedDestination extends DataClass
       'codeAcces': serializer.toJson<String?>(codeAcces),
       'etageBatiment': serializer.toJson<String?>(etageBatiment),
       'cloudId': serializer.toJson<String?>(cloudId),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
@@ -4574,6 +4718,7 @@ class SavedDestination extends DataClass
     Value<String?> codeAcces = const Value.absent(),
     Value<String?> etageBatiment = const Value.absent(),
     Value<String?> cloudId = const Value.absent(),
+    DateTime? updatedAt,
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -4596,6 +4741,7 @@ class SavedDestination extends DataClass
         ? etageBatiment.value
         : this.etageBatiment,
     cloudId: cloudId.present ? cloudId.value : this.cloudId,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -4628,6 +4774,7 @@ class SavedDestination extends DataClass
           ? data.etageBatiment.value
           : this.etageBatiment,
       cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -4652,7 +4799,8 @@ class SavedDestination extends DataClass
           ..write('photoPath: $photoPath, ')
           ..write('codeAcces: $codeAcces, ')
           ..write('etageBatiment: $etageBatiment, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -4678,6 +4826,7 @@ class SavedDestination extends DataClass
     codeAcces,
     etageBatiment,
     cloudId,
+    updatedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -4701,7 +4850,8 @@ class SavedDestination extends DataClass
           other.photoPath == this.photoPath &&
           other.codeAcces == this.codeAcces &&
           other.etageBatiment == this.etageBatiment &&
-          other.cloudId == this.cloudId);
+          other.cloudId == this.cloudId &&
+          other.updatedAt == this.updatedAt);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -4724,6 +4874,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<String?> codeAcces;
   final Value<String?> etageBatiment;
   final Value<String?> cloudId;
+  final Value<DateTime> updatedAt;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -4744,6 +4895,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.codeAcces = const Value.absent(),
     this.etageBatiment = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -4765,6 +4917,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.codeAcces = const Value.absent(),
     this.etageBatiment = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -4788,6 +4941,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<String>? codeAcces,
     Expression<String>? etageBatiment,
     Expression<String>? cloudId,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4809,6 +4963,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (codeAcces != null) 'code_acces': codeAcces,
       if (etageBatiment != null) 'etage_batiment': etageBatiment,
       if (cloudId != null) 'cloud_id': cloudId,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -4832,6 +4987,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<String?>? codeAcces,
     Value<String?>? etageBatiment,
     Value<String?>? cloudId,
+    Value<DateTime>? updatedAt,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -4853,6 +5009,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       codeAcces: codeAcces ?? this.codeAcces,
       etageBatiment: etageBatiment ?? this.etageBatiment,
       cloudId: cloudId ?? this.cloudId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -4916,6 +5073,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (cloudId.present) {
       map['cloud_id'] = Variable<String>(cloudId.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -4940,7 +5100,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('photoPath: $photoPath, ')
           ..write('codeAcces: $codeAcces, ')
           ..write('etageBatiment: $etageBatiment, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -5488,6 +5649,18 @@ class $CoequipiersTable extends Coequipiers
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5497,6 +5670,7 @@ class $CoequipiersTable extends Coequipiers
     actif,
     creeLe,
     cloudId,
+    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5551,6 +5725,12 @@ class $CoequipiersTable extends Coequipiers
         cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -5588,6 +5768,10 @@ class $CoequipiersTable extends Coequipiers
         DriftSqlType.string,
         data['${effectivePrefix}cloud_id'],
       ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
@@ -5622,6 +5806,10 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
   /// Null = coequipier jamais sync. Voir `Tournees.cloudId` pour le
   /// pattern.
   final String? cloudId;
+
+  /// Timestamp de la derniere modification locale (sous-jalon 2.D-1c).
+  /// Voir `Tournees.updatedAt` pour le pattern complet.
+  final DateTime updatedAt;
   const Coequipier({
     required this.id,
     required this.nom,
@@ -5630,6 +5818,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
     required this.actif,
     required this.creeLe,
     this.cloudId,
+    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5647,6 +5836,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
     if (!nullToAbsent || cloudId != null) {
       map['cloud_id'] = Variable<String>(cloudId);
     }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
@@ -5665,6 +5855,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
       cloudId: cloudId == null && nullToAbsent
           ? const Value.absent()
           : Value(cloudId),
+      updatedAt: Value(updatedAt),
     );
   }
 
@@ -5681,6 +5872,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
       actif: serializer.fromJson<bool>(json['actif']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       cloudId: serializer.fromJson<String?>(json['cloudId']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -5694,6 +5886,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
       'actif': serializer.toJson<bool>(actif),
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'cloudId': serializer.toJson<String?>(cloudId),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
@@ -5705,6 +5898,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
     bool? actif,
     DateTime? creeLe,
     Value<String?> cloudId = const Value.absent(),
+    DateTime? updatedAt,
   }) => Coequipier(
     id: id ?? this.id,
     nom: nom ?? this.nom,
@@ -5713,6 +5907,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
     actif: actif ?? this.actif,
     creeLe: creeLe ?? this.creeLe,
     cloudId: cloudId.present ? cloudId.value : this.cloudId,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
   Coequipier copyWithCompanion(CoequipiersCompanion data) {
     return Coequipier(
@@ -5723,6 +5918,7 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
       actif: data.actif.present ? data.actif.value : this.actif,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
       cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -5735,14 +5931,23 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
           ..write('telephone: $telephone, ')
           ..write('actif: $actif, ')
           ..write('creeLe: $creeLe, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, nom, colorTag, telephone, actif, creeLe, cloudId);
+  int get hashCode => Object.hash(
+    id,
+    nom,
+    colorTag,
+    telephone,
+    actif,
+    creeLe,
+    cloudId,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5753,7 +5958,8 @@ class Coequipier extends DataClass implements Insertable<Coequipier> {
           other.telephone == this.telephone &&
           other.actif == this.actif &&
           other.creeLe == this.creeLe &&
-          other.cloudId == this.cloudId);
+          other.cloudId == this.cloudId &&
+          other.updatedAt == this.updatedAt);
 }
 
 class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
@@ -5764,6 +5970,7 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
   final Value<bool> actif;
   final Value<DateTime> creeLe;
   final Value<String?> cloudId;
+  final Value<DateTime> updatedAt;
   const CoequipiersCompanion({
     this.id = const Value.absent(),
     this.nom = const Value.absent(),
@@ -5772,6 +5979,7 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
     this.actif = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   CoequipiersCompanion.insert({
     this.id = const Value.absent(),
@@ -5781,6 +5989,7 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
     this.actif = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.cloudId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   }) : nom = Value(nom);
   static Insertable<Coequipier> custom({
     Expression<int>? id,
@@ -5790,6 +5999,7 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
     Expression<bool>? actif,
     Expression<DateTime>? creeLe,
     Expression<String>? cloudId,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5799,6 +6009,7 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
       if (actif != null) 'actif': actif,
       if (creeLe != null) 'cree_le': creeLe,
       if (cloudId != null) 'cloud_id': cloudId,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -5810,6 +6021,7 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
     Value<bool>? actif,
     Value<DateTime>? creeLe,
     Value<String?>? cloudId,
+    Value<DateTime>? updatedAt,
   }) {
     return CoequipiersCompanion(
       id: id ?? this.id,
@@ -5819,6 +6031,7 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
       actif: actif ?? this.actif,
       creeLe: creeLe ?? this.creeLe,
       cloudId: cloudId ?? this.cloudId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -5846,6 +6059,9 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
     if (cloudId.present) {
       map['cloud_id'] = Variable<String>(cloudId.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -5858,7 +6074,8 @@ class CoequipiersCompanion extends UpdateCompanion<Coequipier> {
           ..write('telephone: $telephone, ')
           ..write('actif: $actif, ')
           ..write('creeLe: $creeLe, ')
-          ..write('cloudId: $cloudId')
+          ..write('cloudId: $cloudId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -5940,6 +6157,7 @@ typedef $$TourneesTableCreateCompanionBuilder =
       Value<int?> coequipierDefautId,
       Value<DateTime> creeLe,
       Value<String?> cloudId,
+      Value<DateTime> updatedAt,
     });
 typedef $$TourneesTableUpdateCompanionBuilder =
     TourneesCompanion Function({
@@ -5965,6 +6183,7 @@ typedef $$TourneesTableUpdateCompanionBuilder =
       Value<int?> coequipierDefautId,
       Value<DateTime> creeLe,
       Value<String?> cloudId,
+      Value<DateTime> updatedAt,
     });
 
 final class $$TourneesTableReferences
@@ -6107,6 +6326,11 @@ class $$TourneesTableFilterComposer
 
   ColumnFilters<String> get cloudId => $composableBuilder(
     column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6254,6 +6478,11 @@ class $$TourneesTableOrderingComposer
     column: $table.cloudId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TourneesTableAnnotationComposer
@@ -6355,6 +6584,9 @@ class $$TourneesTableAnnotationComposer
   GeneratedColumn<String> get cloudId =>
       $composableBuilder(column: $table.cloudId, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
   Expression<T> stopsRefs<T extends Object>(
     Expression<T> Function($$StopsTableAnnotationComposer a) f,
   ) {
@@ -6431,6 +6663,7 @@ class $$TourneesTableTableManager
                 Value<int?> coequipierDefautId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => TourneesCompanion(
                 id: id,
                 nom: nom,
@@ -6454,6 +6687,7 @@ class $$TourneesTableTableManager
                 coequipierDefautId: coequipierDefautId,
                 creeLe: creeLe,
                 cloudId: cloudId,
+                updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
@@ -6479,6 +6713,7 @@ class $$TourneesTableTableManager
                 Value<int?> coequipierDefautId = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => TourneesCompanion.insert(
                 id: id,
                 nom: nom,
@@ -6502,6 +6737,7 @@ class $$TourneesTableTableManager
                 coequipierDefautId: coequipierDefautId,
                 creeLe: creeLe,
                 cloudId: cloudId,
+                updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -6578,6 +6814,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<DateTime> creeLe,
       Value<String?> cloudId,
       Value<String?> cloudPhotoPath,
+      Value<DateTime> updatedAt,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
     StopsCompanion Function({
@@ -6606,6 +6843,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<DateTime> creeLe,
       Value<String?> cloudId,
       Value<String?> cloudPhotoPath,
+      Value<DateTime> updatedAt,
     });
 
 final class $$StopsTableReferences
@@ -6792,6 +7030,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get cloudPhotoPath => $composableBuilder(
     column: $table.cloudPhotoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6998,6 +7241,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TourneesTableOrderingComposer get tourneeId {
     final $$TourneesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7126,6 +7374,9 @@ class $$StopsTableAnnotationComposer
     column: $table.cloudPhotoPath,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   $$TourneesTableAnnotationComposer get tourneeId {
     final $$TourneesTableAnnotationComposer composer = $composerBuilder(
@@ -7258,6 +7509,7 @@ class $$StopsTableTableManager
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
                 Value<String?> cloudPhotoPath = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
                 tourneeId: tourneeId,
@@ -7284,6 +7536,7 @@ class $$StopsTableTableManager
                 creeLe: creeLe,
                 cloudId: cloudId,
                 cloudPhotoPath: cloudPhotoPath,
+                updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
@@ -7312,6 +7565,7 @@ class $$StopsTableTableManager
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
                 Value<String?> cloudPhotoPath = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
                 tourneeId: tourneeId,
@@ -7338,6 +7592,7 @@ class $$StopsTableTableManager
                 creeLe: creeLe,
                 cloudId: cloudId,
                 cloudPhotoPath: cloudPhotoPath,
+                updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -8201,6 +8456,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<String?> codeAcces,
       Value<String?> etageBatiment,
       Value<String?> cloudId,
+      Value<DateTime> updatedAt,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -8223,6 +8479,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<String?> codeAcces,
       Value<String?> etageBatiment,
       Value<String?> cloudId,
+      Value<DateTime> updatedAt,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -8326,6 +8583,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<String> get cloudId => $composableBuilder(
     column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8433,6 +8695,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.cloudId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -8510,6 +8777,9 @@ class $$SavedDestinationsTableAnnotationComposer
 
   GeneratedColumn<String> get cloudId =>
       $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$SavedDestinationsTableTableManager
@@ -8571,6 +8841,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> codeAcces = const Value.absent(),
                 Value<String?> etageBatiment = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -8591,6 +8862,7 @@ class $$SavedDestinationsTableTableManager
                 codeAcces: codeAcces,
                 etageBatiment: etageBatiment,
                 cloudId: cloudId,
+                updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
@@ -8613,6 +8885,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> codeAcces = const Value.absent(),
                 Value<String?> etageBatiment = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -8633,6 +8906,7 @@ class $$SavedDestinationsTableTableManager
                 codeAcces: codeAcces,
                 etageBatiment: etageBatiment,
                 cloudId: cloudId,
+                updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -9024,6 +9298,7 @@ typedef $$CoequipiersTableCreateCompanionBuilder =
       Value<bool> actif,
       Value<DateTime> creeLe,
       Value<String?> cloudId,
+      Value<DateTime> updatedAt,
     });
 typedef $$CoequipiersTableUpdateCompanionBuilder =
     CoequipiersCompanion Function({
@@ -9034,6 +9309,7 @@ typedef $$CoequipiersTableUpdateCompanionBuilder =
       Value<bool> actif,
       Value<DateTime> creeLe,
       Value<String?> cloudId,
+      Value<DateTime> updatedAt,
     });
 
 class $$CoequipiersTableFilterComposer
@@ -9077,6 +9353,11 @@ class $$CoequipiersTableFilterComposer
 
   ColumnFilters<String> get cloudId => $composableBuilder(
     column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -9124,6 +9405,11 @@ class $$CoequipiersTableOrderingComposer
     column: $table.cloudId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CoequipiersTableAnnotationComposer
@@ -9155,6 +9441,9 @@ class $$CoequipiersTableAnnotationComposer
 
   GeneratedColumn<String> get cloudId =>
       $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$CoequipiersTableTableManager
@@ -9195,6 +9484,7 @@ class $$CoequipiersTableTableManager
                 Value<bool> actif = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => CoequipiersCompanion(
                 id: id,
                 nom: nom,
@@ -9203,6 +9493,7 @@ class $$CoequipiersTableTableManager
                 actif: actif,
                 creeLe: creeLe,
                 cloudId: cloudId,
+                updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
@@ -9213,6 +9504,7 @@ class $$CoequipiersTableTableManager
                 Value<bool> actif = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => CoequipiersCompanion.insert(
                 id: id,
                 nom: nom,
@@ -9221,6 +9513,7 @@ class $$CoequipiersTableTableManager
                 actif: actif,
                 creeLe: creeLe,
                 cloudId: cloudId,
+                updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
