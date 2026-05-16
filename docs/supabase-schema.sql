@@ -340,49 +340,94 @@ INSERT INTO public.tournee_membres (tournee_id, user_id, role)
   ON CONFLICT (tournee_id, user_id) DO NOTHING;
 
 
--- 3.A.3 — RLS sur `tournee_membres` ───────────────────────────────
+-- 3.A.3 — Helper SECURITY DEFINER pour eviter la recursion RLS ────
+-- Toute policy qui ferait `SELECT FROM public.tournee_membres` dans
+-- son USING/WITH CHECK declenche une recursion infinie cote PG
+-- (code 42P17) : pour evaluer la policy, PG doit lire la table ;
+-- pour lire la table, PG doit evaluer la policy. Boucle.
+--
+-- Solution standard : encapsuler la lookup dans une fonction
+-- SECURITY DEFINER avec `set search_path` explicit. La fonction
+-- s'execute avec les droits de son owner (postgres = bypass RLS),
+-- donc le SELECT interne ne re-declenche pas les policies.
+--
+-- Reuse partout ou on a besoin de "le user courant est-il membre de
+-- la tournee X ?" (policies tournees / stops / invitations / etc).
+CREATE OR REPLACE FUNCTION public.user_is_member_of(p_tournee_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.tournee_membres
+    WHERE tournee_id = p_tournee_id
+    AND user_id = auth.uid()
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.user_is_owner_of(p_tournee_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.tournee_membres
+    WHERE tournee_id = p_tournee_id
+    AND user_id = auth.uid()
+    AND role = 'owner'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.user_tournee_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT tournee_id FROM public.tournee_membres
+  WHERE user_id = auth.uid();
+$$;
+
+GRANT EXECUTE ON FUNCTION public.user_is_member_of(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.user_is_owner_of(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.user_tournee_ids() TO authenticated;
+
+
+-- 3.A.3b — RLS sur `tournee_membres` (sans recursion) ─────────────
 ALTER TABLE public.tournee_membres ENABLE ROW LEVEL SECURITY;
 
--- Un user voit SES adhésions ET celles aux tournées où il est déjà
--- membre (pour voir la liste complète des coéquipiers d'une tournée
--- partagée — utile à l'UI "Tournée partagée avec X, Y").
+-- SELECT : un user voit UNIQUEMENT ses propres adhesions. La vision
+-- "tous les membres d'une tournee partagee" (utile a l'UI 3.B liste
+-- coequipiers) sera ajoutee via une RPC SECURITY DEFINER dediee si
+-- besoin, plutot que d'elargir la policy (qui re-introduirait la
+-- recursion infinie 42P17).
 DROP POLICY IF EXISTS "member_select_tournee_membres"
   ON public.tournee_membres;
 CREATE POLICY "member_select_tournee_membres"
   ON public.tournee_membres FOR SELECT TO authenticated
-  USING (
-    user_id = auth.uid()
-    OR tournee_id IN (
-      SELECT tm.tournee_id FROM public.tournee_membres tm
-      WHERE tm.user_id = auth.uid()
-    )
-  );
+  USING (user_id = auth.uid());
 
--- INSERT : géré par le trigger auto-owner OU la fonction RPC
+-- INSERT : geré par le trigger auto-owner OU la fonction RPC
 -- accept_invitation (SECURITY DEFINER, contourne la RLS). Aucun INSERT
--- direct par le client n'est autorisé — donc pas de policy INSERT.
+-- direct par le client n'est autorise — donc pas de policy INSERT.
 
 -- UPDATE : aucun cas d'usage (role n'est pas modifiable, joined_at
--- non plus). Pas de policy UPDATE → tout UPDATE est refusé.
+-- non plus). Pas de policy UPDATE -> tout UPDATE est refuse.
 
--- DELETE : un user peut quitter une tournée (supprimer son row), et
--- l'owner peut éjecter un member. Pas l'inverse (un member ne peut
--- pas éjecter l'owner).
+-- DELETE : un user peut quitter une tournee (supprimer son row), et
+-- l'owner peut ejecter un member. Pas l'inverse.
 DROP POLICY IF EXISTS "leave_or_kick_tournee_membres"
   ON public.tournee_membres;
 CREATE POLICY "leave_or_kick_tournee_membres"
   ON public.tournee_membres FOR DELETE TO authenticated
   USING (
     user_id = auth.uid()  -- je quitte
-    OR (
-      role = 'member'      -- éjection d'un member par l'owner
-      AND EXISTS (
-        SELECT 1 FROM public.tournee_membres me
-        WHERE me.tournee_id = tournee_membres.tournee_id
-        AND me.user_id = auth.uid()
-        AND me.role = 'owner'
-      )
-    )
+    OR (role = 'member' AND public.user_is_owner_of(tournee_id))
   );
 
 
@@ -405,14 +450,13 @@ DROP POLICY IF EXISTS "owner_insert_tournees"     ON public.tournees;
 DROP POLICY IF EXISTS "member_update_tournees"    ON public.tournees;
 DROP POLICY IF EXISTS "owner_delete_tournees"     ON public.tournees;
 
+-- IMPORTANT : toutes les policies ci-dessous utilisent les fonctions
+-- helpers SECURITY DEFINER `user_is_member_of` / `user_is_owner_of`
+-- pour eviter la recursion infinie 42P17 (cf section 3.A.3).
+
 CREATE POLICY "member_select_tournees" ON public.tournees
   FOR SELECT TO authenticated
-  USING (
-    id IN (
-      SELECT tournee_id FROM public.tournee_membres
-      WHERE user_id = auth.uid()
-    )
-  );
+  USING (public.user_is_member_of(id));
 
 CREATE POLICY "owner_insert_tournees" ON public.tournees
   FOR INSERT TO authenticated
@@ -420,29 +464,12 @@ CREATE POLICY "owner_insert_tournees" ON public.tournees
 
 CREATE POLICY "member_update_tournees" ON public.tournees
   FOR UPDATE TO authenticated
-  USING (
-    id IN (
-      SELECT tournee_id FROM public.tournee_membres
-      WHERE user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    id IN (
-      SELECT tournee_id FROM public.tournee_membres
-      WHERE user_id = auth.uid()
-    )
-  );
+  USING (public.user_is_member_of(id))
+  WITH CHECK (public.user_is_member_of(id));
 
 CREATE POLICY "owner_delete_tournees" ON public.tournees
   FOR DELETE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.tournee_membres
-      WHERE tournee_id = tournees.id
-      AND user_id = auth.uid()
-      AND role = 'owner'
-    )
-  );
+  USING (public.user_is_owner_of(id));
 
 
 -- 3.A.4b — Trigger anti-vol user_id sur tournees ──────────────────
@@ -481,48 +508,23 @@ DROP POLICY IF EXISTS "owner_delete_stops"     ON public.stops;
 
 CREATE POLICY "member_select_stops" ON public.stops
   FOR SELECT TO authenticated
-  USING (
-    tournee_id IN (
-      SELECT tournee_id FROM public.tournee_membres
-      WHERE user_id = auth.uid()
-    )
-  );
+  USING (public.user_is_member_of(tournee_id));
 
 CREATE POLICY "member_insert_stops" ON public.stops
   FOR INSERT TO authenticated
   WITH CHECK (
     user_id = auth.uid()
-    AND tournee_id IN (
-      SELECT tournee_id FROM public.tournee_membres
-      WHERE user_id = auth.uid()
-    )
+    AND public.user_is_member_of(tournee_id)
   );
 
 CREATE POLICY "member_update_stops" ON public.stops
   FOR UPDATE TO authenticated
-  USING (
-    tournee_id IN (
-      SELECT tournee_id FROM public.tournee_membres
-      WHERE user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    tournee_id IN (
-      SELECT tournee_id FROM public.tournee_membres
-      WHERE user_id = auth.uid()
-    )
-  );
+  USING (public.user_is_member_of(tournee_id))
+  WITH CHECK (public.user_is_member_of(tournee_id));
 
 CREATE POLICY "owner_delete_stops" ON public.stops
   FOR DELETE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.tournee_membres
-      WHERE tournee_id = stops.tournee_id
-      AND user_id = auth.uid()
-      AND role = 'owner'
-    )
-  );
+  USING (public.user_is_owner_of(tournee_id));
 
 
 -- 3.A.5b — Trigger anti-vol user_id sur stops ─────────────────────
@@ -569,21 +571,11 @@ CREATE POLICY "owner_all_invitations"
   ON public.tournee_invitations FOR ALL TO authenticated
   USING (
     created_by = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM public.tournee_membres
-      WHERE tournee_id = tournee_invitations.tournee_id
-      AND user_id = auth.uid()
-      AND role = 'owner'
-    )
+    AND public.user_is_owner_of(tournee_id)
   )
   WITH CHECK (
     created_by = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM public.tournee_membres
-      WHERE tournee_id = tournee_invitations.tournee_id
-      AND user_id = auth.uid()
-      AND role = 'owner'
-    )
+    AND public.user_is_owner_of(tournee_id)
   );
 
 
