@@ -37,6 +37,11 @@ class ParametresRepository {
   static const _kAutoBackupPeriod = 'auto_backup_period';
   static const _kLastAutoBackupAt = 'last_auto_backup_at';
   static const _kRecentSearches = 'recent_searches_v1';
+  // Prefix des cles "pull initial effectue pour le user X" (Phase 2
+  // jalon 2.D-1b). Suffixe = uuid Supabase du user. Set au 1er pull
+  // reussi pour eviter de re-pull a chaque cold start (et ecraser
+  // d'eventuelles modifs locales offline).
+  static const _kCloudPullDoneForPrefix = 'cloud_pull_done_for_';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -478,6 +483,28 @@ class ParametresRepository {
     final dd = now.day.toString().padLeft(2, '0');
     return '${now.year}-$mm-$dd';
   }
+
+  // ─── Cloud pull (Phase 2 jalon 2.D-1b) ────────────────────────
+
+  /// Vrai si le pull initial Supabase a deja ete fait pour ce user
+  /// sur ce telephone. Sert au declenchement auto au 1er sign-in :
+  /// on ne re-pull pas automatiquement aux sign-ins suivants pour
+  /// eviter d'ecraser silencieusement des modifs locales offline.
+  Future<bool> isCloudPullDoneFor(String userId) async {
+    final v = await _readKey('$_kCloudPullDoneForPrefix$userId');
+    return v == '1';
+  }
+
+  /// Marque le pull initial comme effectue pour ce user (1 entree par
+  /// user sur ce telephone — un meme telephone peut servir plusieurs
+  /// comptes).
+  Future<void> setCloudPullDoneFor(String userId) =>
+      _write('$_kCloudPullDoneForPrefix$userId', '1');
+
+  /// Reset du flag — utile si l'utilisateur supprime son compte ou
+  /// veut forcer un re-pull initial au prochain sign-in.
+  Future<void> clearCloudPullDoneFor(String userId) =>
+      _delete('$_kCloudPullDoneForPrefix$userId');
 
   Future<String?> _readKey(String cle) async {
     final v = await _readRaw(cle);

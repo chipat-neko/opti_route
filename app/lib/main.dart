@@ -12,6 +12,7 @@ import 'data/notifications_service.dart';
 import 'data/supabase_service.dart';
 import 'providers/database_providers.dart';
 import 'providers/geocoding_providers.dart';
+import 'providers/supabase_providers.dart';
 import 'screens/app_lock_gate.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -93,6 +94,33 @@ class OptiRouteApp extends ConsumerWidget {
     // notif immediate (showEndOfRouteSummary, showPendingStopsAlert).
     NotificationsService.instance
         .attachParametres(ref.read(parametresRepositoryProvider));
+
+    // Auto-pull initial Supabase au 1er sign-in d'un user sur ce
+    // telephone (Phase 2 jalon 2.D-1b). Le service check un flag
+    // par-user dans Parametres et no-op si deja fait — donc safe a
+    // declencher a chaque emission de cloudUserProvider.
+    //
+    // Pas de re-pull aux sign-ins suivants : la strategie cloud-wins
+    // ecraserait silencieusement des modifs locales offline. Le
+    // bouton "Re-telecharger depuis le cloud" (jalon 2.D-1a) reste
+    // dispo pour les re-syncs explicites.
+    ref.listen(cloudUserProvider, (prev, next) {
+      final user = next.value;
+      if (user == null) return;
+      final userId = user.id;
+      final notifier = ref.read(cloudPullStateProvider.notifier);
+      notifier.set(const AsyncLoading());
+      ref
+          .read(cloudAutoPullServiceProvider)
+          .maybeRunInitialPull(userId)
+          .then((result) {
+        // result == null -> deja pull dans le passe (no-op). On
+        // remet l'etat a idle pour ne pas afficher le toast.
+        notifier.set(AsyncData(result));
+      }, onError: (Object e, StackTrace st) {
+        notifier.set(AsyncError(e, st));
+      });
+    });
 
     return MaterialApp(
       title: 'opti_route',
