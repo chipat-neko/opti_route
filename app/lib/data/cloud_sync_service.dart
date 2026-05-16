@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -309,6 +310,56 @@ class CloudSyncService {
     }
   }
 
+  /// Telecharge la photo preuve depuis Supabase Storage vers le
+  /// filesystem local et renvoie le chemin local final a stocker dans
+  /// `Stops.preuvePhotoPath`. Sous-jalon 2.E-2.
+  ///
+  /// Logique :
+  /// - Si [existingLocalPath] existe et pointe vers un fichier present
+  ///   -> on garde tel quel (no-op, jamais ecraser une photo locale par
+  ///   la version cloud)
+  /// - Si [cloudPhotoPath] est null -> rien a download, retourne
+  ///   [existingLocalPath] (qui peut etre null)
+  /// - Sinon -> download dans `app_documents/preuves/cloud_$stopCloudId.jpg`
+  ///   et retourne ce chemin
+  ///
+  /// **Silencieux** en cas d'echec (web, RLS deny, fichier absent du
+  /// bucket, I/O, etc) — retourne [existingLocalPath] (souvent null).
+  /// Idempotent : si le fichier local existe deja (download precedent),
+  /// retourne son chemin sans re-download. Au prochain pull, re-tente.
+  Future<String?> _maybeDownloadPhoto({
+    required SupabaseClient client,
+    required String? cloudPhotoPath,
+    required String? existingLocalPath,
+    required String stopCloudId,
+  }) async {
+    if (cloudPhotoPath == null) return existingLocalPath;
+    if (kIsWeb) return existingLocalPath;
+    if (existingLocalPath != null && await File(existingLocalPath).exists()) {
+      return existingLocalPath;
+    }
+    try {
+      final baseDir = await getApplicationDocumentsDirectory();
+      final preuvesDir = Directory('${baseDir.path}/preuves');
+      if (!await preuvesDir.exists()) {
+        await preuvesDir.create(recursive: true);
+      }
+      final localPath = '${preuvesDir.path}/cloud_$stopCloudId.jpg';
+      final localFile = File(localPath);
+      // Si on a deja telecharge precedemment (meme stop, run anterieur),
+      // re-utiliser sans round-trip Storage (gain bandwidth + speed).
+      if (await localFile.exists()) {
+        return localPath;
+      }
+      final bytes = await client.storage.from('preuves').download(cloudPhotoPath);
+      await localFile.writeAsBytes(bytes);
+      return localPath;
+    } on Object catch (e) {
+      debugPrint('[CloudSyncService] Download photo preuve echec : $e');
+      return existingLocalPath;
+    }
+  }
+
   // ─── Pull cloud → local (sous-jalon 2.D-1a) ─────────────────────
 
   /// Fetch toutes les donnees du user courant depuis Supabase et les
@@ -523,6 +574,20 @@ class CloudSyncService {
                 ..where((c) => c.cloudId.equals(coequipierCloudId)))
               .map((c) => c.id)
               .getSingleOrNull();
+      // Sous-jalon 2.E-2 : si le row cloud a une photo preuve uploadee
+      // (cloud_photo_path != null) ET qu'on n'a pas deja un fichier
+      // local pour ce stop, on telecharge depuis Storage. Sert au cas
+      // multi-appareils : install sur un 2e telephone, sign-in, la photo
+      // preuve d'une livraison faite sur l'autre device est restauree.
+      final cloudPhotoPath = row['cloud_photo_path'] as String?;
+      final existingLocalPath =
+          localRow?.preuvePhotoPath ?? row['preuve_photo_path'] as String?;
+      final resolvedLocalPath = await _maybeDownloadPhoto(
+        client: client,
+        cloudPhotoPath: cloudPhotoPath,
+        existingLocalPath: existingLocalPath,
+        stopCloudId: cloudId,
+      );
       final companion = StopsCompanion(
         tourneeId: Value(tourneeLocalId),
         adresseBrute: Value(row['adresse_brute'] as String),
@@ -545,12 +610,8 @@ class CloudSyncService {
             : DateTime.parse(row['livre_le'] as String)),
         ordreOptimise: Value(row['ordre_optimise'] as int?),
         ordrePriorite: Value(row['ordre_priorite'] as int?),
-        preuvePhotoPath: Value(row['preuve_photo_path'] as String?),
-        // cloud_photo_path : si le row cloud le porte, on le persiste
-        // localement. Le download du fichier lui-meme (binary) viendra
-        // dans un sous-jalon ulterieur — pour l'instant on conserve
-        // juste la reference Storage.
-        cloudPhotoPath: Value(row['cloud_photo_path'] as String?),
+        preuvePhotoPath: Value(resolvedLocalPath),
+        cloudPhotoPath: Value(cloudPhotoPath),
         coequipierId: Value(coequipierLocalId),
         creeLe: Value(DateTime.parse(row['cree_le'] as String)),
         cloudId: Value(cloudId),
