@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/cloud_sync_service.dart';
 import '../../data/supabase_service.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -35,8 +36,14 @@ class CloudSection extends ConsumerWidget {
       return _NotConfiguredTile(palette: p);
     }
     return userAsync.when(
-      data: (user) =>
-          user == null ? _SignInTile(palette: p) : _SignedInTile(user: user),
+      data: (user) => user == null
+          ? _SignInTile(palette: p)
+          : Column(
+              children: [
+                _SignedInTile(user: user),
+                const _PullCloudTile(),
+              ],
+            ),
       loading: () => const _LoadingTile(),
       error: (e, _) => _ErrorTile(message: '$e', palette: p),
     );
@@ -203,6 +210,99 @@ class _ErrorTile extends StatelessWidget {
         message,
         style: TextStyle(fontSize: 12, color: palette.textMute),
       ),
+    );
+  }
+}
+
+/// Tile "Re-telecharger depuis le cloud" (sous-jalon 2.D-1a). Fait un
+/// pull manuel des 4 tables (coequipiers/tournees/stops/saved_dests)
+/// avec confirmation dialog parce que ca peut ecraser des modifs
+/// locales non sync (cloud-wins strategy pour les rows deja sync).
+class _PullCloudTile extends ConsumerStatefulWidget {
+  const _PullCloudTile();
+
+  @override
+  ConsumerState<_PullCloudTile> createState() => _PullCloudTileState();
+}
+
+class _PullCloudTileState extends ConsumerState<_PullCloudTile> {
+  bool _pulling = false;
+
+  Future<void> _confirmAndPull() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Re-telecharger depuis le cloud ?'),
+        content: const Text(
+          'Toutes les donnees du cloud seront recuperees et fusionnees '
+          'avec celles de ce telephone.\n\n'
+          'Attention : si tu as modifie une tournee LOCALEMENT depuis '
+          'son dernier push, ces modifs seront ECRASEES par la version '
+          'cloud. Utilise plutot "Pousser au cloud" sur la tournee '
+          'concernee d\'abord si tu n\'es pas sur.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Re-telecharger'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _pulling = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result =
+          await ref.read(cloudSyncServiceProvider).pullAllForCurrentUser();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(result.summary),
+          backgroundColor: AppColors.emerald,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } on CloudSyncException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: AppColors.emeraldSoft,
+        foregroundColor: AppColors.emerald,
+        child: const Icon(Icons.cloud_download_outlined, size: 18),
+      ),
+      title: const Text('Re-telecharger depuis le cloud'),
+      subtitle: Text(
+        'Recupere toutes tes tournees / arrets / carnet du cloud',
+        style: TextStyle(fontSize: 12, color: p.textMute),
+      ),
+      trailing: _pulling
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.chevron_right),
+      onTap: _pulling ? null : _confirmAndPull,
     );
   }
 }

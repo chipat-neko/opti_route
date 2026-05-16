@@ -237,6 +237,274 @@ class CloudSyncService {
     return cloudId;
   }
 
+  // ─── Pull cloud → local (sous-jalon 2.D-1a) ─────────────────────
+
+  /// Fetch toutes les donnees du user courant depuis Supabase et les
+  /// merge en local. Sert au mode multi-appareils :
+  /// - 1er install sur un 2e phone -> recupere toutes les tournees
+  /// - Restauration apres perte/reset du telephone
+  /// - "Resync depuis le cloud" manuel si l'utilisateur veut forcer
+  ///
+  /// **Strategie de merge (cloud-wins simple)** :
+  /// - Row local sans `cloud_id` matchant : INSERT (jamais d'ecrasement
+  ///   d'une row locale-seulement).
+  /// - Row local avec `cloud_id` matchant : UPDATE (cloud ecrase local).
+  ///   Limitation acceptable du 2.D-1a : les modifs locales offline
+  ///   d'une row deja sync seront perdues. Sera rendu plus fin au
+  ///   2.D-1b avec une colonne updated_at + comparaison fine.
+  ///
+  /// **Ordre des fetch** : coequipiers d'abord (referenced par tournees
+  /// et stops), puis tournees (referenced par stops), puis stops, puis
+  /// saved_destinations (independant).
+  ///
+  /// **Idempotent** : re-pull = no-op si rien n'a change cote cloud.
+  /// Pas de duplication grace au match par `cloud_id`.
+  ///
+  /// Throws [CloudSyncException] si pas configure, pas auth ou erreur
+  /// reseau / RLS.
+  Future<CloudPullResult> pullAllForCurrentUser() async {
+    final client = _client();
+    _requireUserId();
+    // Pas besoin de filtrer par user_id dans les selects : la RLS
+    // Supabase fait deja le filtrage (chaque select retourne uniquement
+    // les rows ou user_id = auth.uid()).
+    final coequipiers = await _pullCoequipiers(client);
+    final tournees = await _pullTournees(client);
+    final stops = await _pullStops(client);
+    final savedDestinations = await _pullSavedDestinations(client);
+    return CloudPullResult(
+      coequipiers: coequipiers,
+      tournees: tournees,
+      stops: stops,
+      savedDestinations: savedDestinations,
+    );
+  }
+
+  Future<CloudPullStats> _pullCoequipiers(SupabaseClient client) async {
+    final List<dynamic> rows;
+    try {
+      rows = await client.from('coequipiers').select();
+    } on Object catch (e) {
+      throw CloudSyncException('Echec fetch coequipiers : $e');
+    }
+    int inserted = 0, updated = 0;
+    for (final r in rows) {
+      final row = r as Map<String, dynamic>;
+      final cloudId = row['id'] as String;
+      final localId = await (_db.select(_db.coequipiers)
+            ..where((c) => c.cloudId.equals(cloudId)))
+          .map((c) => c.id)
+          .getSingleOrNull();
+      final companion = CoequipiersCompanion(
+        nom: Value(row['nom'] as String),
+        colorTag: Value(row['color_tag'] as String?),
+        telephone: Value(row['telephone'] as String?),
+        actif: Value(row['actif'] as bool? ?? true),
+        cloudId: Value(cloudId),
+      );
+      if (localId == null) {
+        await _db.into(_db.coequipiers).insert(companion);
+        inserted++;
+      } else {
+        await (_db.update(_db.coequipiers)..where((c) => c.id.equals(localId)))
+            .write(companion);
+        updated++;
+      }
+    }
+    return CloudPullStats(inserted: inserted, updated: updated);
+  }
+
+  Future<CloudPullStats> _pullTournees(SupabaseClient client) async {
+    final List<dynamic> rows;
+    try {
+      rows = await client.from('tournees').select();
+    } on Object catch (e) {
+      throw CloudSyncException('Echec fetch tournees : $e');
+    }
+    int inserted = 0, updated = 0;
+    for (final r in rows) {
+      final row = r as Map<String, dynamic>;
+      final cloudId = row['id'] as String;
+      final coequipierCloudId = row['coequipier_defaut_id'] as String?;
+      // Resoud le coequipier_defaut_id cloud (UUID) -> id local (int).
+      // Si pas trouve, on garde null (le coequipier referenced n'a
+      // peut-etre pas encore ete pull, ce qui est anormal vu l'ordre,
+      // ou il a ete supprime du cloud).
+      final coequipierLocalId = coequipierCloudId == null
+          ? null
+          : await (_db.select(_db.coequipiers)
+                ..where((c) => c.cloudId.equals(coequipierCloudId)))
+              .map((c) => c.id)
+              .getSingleOrNull();
+      final localId = await (_db.select(_db.tournees)
+            ..where((t) => t.cloudId.equals(cloudId)))
+          .map((t) => t.id)
+          .getSingleOrNull();
+      final companion = TourneesCompanion(
+        nom: Value(row['nom'] as String),
+        date: Value(DateTime.parse(row['date'] as String)),
+        pointDepartLat: Value((row['point_depart_lat'] as num).toDouble()),
+        pointDepartLng: Value((row['point_depart_lng'] as num).toDouble()),
+        pointDepartLabel: Value(row['point_depart_label'] as String),
+        vehiculeCapaciteColis:
+            Value(row['vehicule_capacite_colis'] as int? ?? 0),
+        statut: Value(row['statut'] as String? ?? 'brouillon'),
+        distanceTotaleM: Value(row['distance_totale_m'] as int?),
+        dureeTotaleS: Value(row['duree_totale_s'] as int?),
+        optimiseeLe: Value(row['optimisee_le'] == null
+            ? null
+            : DateTime.parse(row['optimisee_le'] as String)),
+        traceGeojson: Value(row['trace_geojson'] as String?),
+        demareeLe: Value(row['demaree_le'] == null
+            ? null
+            : DateTime.parse(row['demaree_le'] as String)),
+        isTemplate: Value(row['is_template'] as bool? ?? false),
+        profilOrs: Value(row['profil_ors'] as String? ?? 'driving-car'),
+        eviterPeages: Value(row['eviter_peages'] as bool? ?? false),
+        rappelLe: Value(row['rappel_le'] == null
+            ? null
+            : DateTime.parse(row['rappel_le'] as String)),
+        pauseeLe: Value(row['pausee_le'] == null
+            ? null
+            : DateTime.parse(row['pausee_le'] as String)),
+        pauseeSeconds: Value(row['pausee_seconds'] as int? ?? 0),
+        coequipierDefautId: Value(coequipierLocalId),
+        creeLe: Value(DateTime.parse(row['cree_le'] as String)),
+        cloudId: Value(cloudId),
+      );
+      if (localId == null) {
+        await _db.into(_db.tournees).insert(companion);
+        inserted++;
+      } else {
+        await (_db.update(_db.tournees)..where((t) => t.id.equals(localId)))
+            .write(companion);
+        updated++;
+      }
+    }
+    return CloudPullStats(inserted: inserted, updated: updated);
+  }
+
+  Future<CloudPullStats> _pullStops(SupabaseClient client) async {
+    final List<dynamic> rows;
+    try {
+      rows = await client.from('stops').select();
+    } on Object catch (e) {
+      throw CloudSyncException('Echec fetch stops : $e');
+    }
+    int inserted = 0, updated = 0;
+    for (final r in rows) {
+      final row = r as Map<String, dynamic>;
+      final cloudId = row['id'] as String;
+      final tourneeCloudId = row['tournee_id'] as String;
+      final tourneeLocalId = await (_db.select(_db.tournees)
+            ..where((t) => t.cloudId.equals(tourneeCloudId)))
+          .map((t) => t.id)
+          .getSingleOrNull();
+      if (tourneeLocalId == null) {
+        // Orphan : la tournee parent n'a pas ete trouvee localement.
+        // On skip plutot que de crasher. Peut arriver si la tournee
+        // a ete supprimee du cloud entre le fetch tournees et le
+        // fetch stops, ou si la RLS la cache (ne devrait pas).
+        continue;
+      }
+      final coequipierCloudId = row['coequipier_id'] as String?;
+      final coequipierLocalId = coequipierCloudId == null
+          ? null
+          : await (_db.select(_db.coequipiers)
+                ..where((c) => c.cloudId.equals(coequipierCloudId)))
+              .map((c) => c.id)
+              .getSingleOrNull();
+      final localId = await (_db.select(_db.stops)
+            ..where((s) => s.cloudId.equals(cloudId)))
+          .map((s) => s.id)
+          .getSingleOrNull();
+      final companion = StopsCompanion(
+        tourneeId: Value(tourneeLocalId),
+        adresseBrute: Value(row['adresse_brute'] as String),
+        adresseNormalisee: Value(row['adresse_normalisee'] as String?),
+        lat: Value((row['lat'] as num?)?.toDouble()),
+        lng: Value((row['lng'] as num?)?.toDouble()),
+        nbColis: Value(row['nb_colis'] as int? ?? 1),
+        priorite: Value(row['priorite'] as String? ?? 'flexible'),
+        fenetreDebut: Value(row['fenetre_debut'] as String?),
+        fenetreFin: Value(row['fenetre_fin'] as String?),
+        dureeArretMin: Value(row['duree_arret_min'] as int? ?? 3),
+        notes: Value(row['notes'] as String?),
+        nomClient: Value(row['nom_client'] as String?),
+        statutLivraison: Value(row['statut_livraison'] as String? ?? 'a_livrer'),
+        raisonEchec: Value(row['raison_echec'] as String?),
+        livreLat: Value((row['livre_lat'] as num?)?.toDouble()),
+        livreLng: Value((row['livre_lng'] as num?)?.toDouble()),
+        livreLe: Value(row['livre_le'] == null
+            ? null
+            : DateTime.parse(row['livre_le'] as String)),
+        ordreOptimise: Value(row['ordre_optimise'] as int?),
+        ordrePriorite: Value(row['ordre_priorite'] as int?),
+        preuvePhotoPath: Value(row['preuve_photo_path'] as String?),
+        coequipierId: Value(coequipierLocalId),
+        creeLe: Value(DateTime.parse(row['cree_le'] as String)),
+        cloudId: Value(cloudId),
+      );
+      if (localId == null) {
+        await _db.into(_db.stops).insert(companion);
+        inserted++;
+      } else {
+        await (_db.update(_db.stops)..where((s) => s.id.equals(localId)))
+            .write(companion);
+        updated++;
+      }
+    }
+    return CloudPullStats(inserted: inserted, updated: updated);
+  }
+
+  Future<CloudPullStats> _pullSavedDestinations(SupabaseClient client) async {
+    final List<dynamic> rows;
+    try {
+      rows = await client.from('saved_destinations').select();
+    } on Object catch (e) {
+      throw CloudSyncException('Echec fetch carnet : $e');
+    }
+    int inserted = 0, updated = 0;
+    for (final r in rows) {
+      final row = r as Map<String, dynamic>;
+      final cloudId = row['id'] as String;
+      final localId = await (_db.select(_db.savedDestinations)
+            ..where((s) => s.cloudId.equals(cloudId)))
+          .map((s) => s.id)
+          .getSingleOrNull();
+      final companion = SavedDestinationsCompanion(
+        nomClient: Value(row['nom_client'] as String?),
+        adresseDisplay: Value(row['adresse_display'] as String),
+        lat: Value((row['lat'] as num).toDouble()),
+        lng: Value((row['lng'] as num).toDouble()),
+        rue: Value(row['rue'] as String?),
+        codePostal: Value(row['code_postal'] as String?),
+        ville: Value(row['ville'] as String?),
+        useCount: Value(row['use_count'] as int? ?? 1),
+        lastUsedAt: Value(DateTime.parse(row['last_used_at'] as String)),
+        creeLe: Value(DateTime.parse(row['cree_le'] as String)),
+        isFavori: Value(row['is_favori'] as bool? ?? false),
+        colorTag: Value(row['color_tag'] as String?),
+        notesCarnet: Value(row['notes_carnet'] as String?),
+        tagsJson: Value(row['tags_json'] as String?),
+        photoPath: Value(row['photo_path'] as String?),
+        codeAcces: Value(row['code_acces'] as String?),
+        etageBatiment: Value(row['etage_batiment'] as String?),
+        cloudId: Value(cloudId),
+      );
+      if (localId == null) {
+        await _db.into(_db.savedDestinations).insert(companion);
+        inserted++;
+      } else {
+        await (_db.update(_db.savedDestinations)
+              ..where((s) => s.id.equals(localId)))
+            .write(companion);
+        updated++;
+      }
+    }
+    return CloudPullStats(inserted: inserted, updated: updated);
+  }
+
   // ─── Guards ─────────────────────────────────────────────────────
 
   SupabaseClient _client() {
@@ -276,4 +544,47 @@ class CloudSyncException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Resume du resultat d'un pull cloud → local. Affiche par l'UI dans
+/// une SnackBar : "12 elements synchronises (3 tournees, 8 arrets, 1
+/// coequipier)".
+class CloudPullResult {
+  const CloudPullResult({
+    required this.coequipiers,
+    required this.tournees,
+    required this.stops,
+    required this.savedDestinations,
+  });
+
+  final CloudPullStats coequipiers;
+  final CloudPullStats tournees;
+  final CloudPullStats stops;
+  final CloudPullStats savedDestinations;
+
+  int get totalChanged =>
+      coequipiers.total + tournees.total + stops.total + savedDestinations.total;
+
+  /// Phrase courte pour SnackBar / dialog de fin de pull.
+  String get summary {
+    if (totalChanged == 0) {
+      return 'Tout etait deja a jour. Rien a synchroniser.';
+    }
+    final parts = <String>[];
+    if (tournees.total > 0) parts.add('${tournees.total} tournee(s)');
+    if (stops.total > 0) parts.add('${stops.total} arret(s)');
+    if (coequipiers.total > 0) parts.add('${coequipiers.total} coequipier(s)');
+    if (savedDestinations.total > 0) {
+      parts.add('${savedDestinations.total} entree(s) carnet');
+    }
+    return '$totalChanged element(s) synchronise(s) : ${parts.join(', ')}';
+  }
+}
+
+/// Compteur interne (inserted + updated) pour une table donnee.
+class CloudPullStats {
+  const CloudPullStats({required this.inserted, required this.updated});
+  final int inserted;
+  final int updated;
+  int get total => inserted + updated;
 }
