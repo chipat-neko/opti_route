@@ -386,14 +386,40 @@ CREATE POLICY "leave_or_kick_tournee_membres"
   );
 
 
--- 3.A.4 — RLS élargie sur `tournees` (owner OU member) ────────────
--- Remplace la policy `owner_all_tournees` de la section 6. Désormais
--- un user voit/modifie une tournée s'il est dans `tournee_membres`
--- pour cette tournée (peu importe son role).
-DROP POLICY IF EXISTS "owner_all_tournees" ON public.tournees;
-DROP POLICY IF EXISTS "member_all_tournees" ON public.tournees;
-CREATE POLICY "member_all_tournees" ON public.tournees
-  FOR ALL TO authenticated
+-- 3.A.4 — RLS sur `tournees` (split FOR ALL en SELECT/INSERT/UPDATE/DELETE)
+-- Remplace la policy `owner_all_tournees` de la section 6. Le split
+-- permet de DIFFERENCIER les permissions par operation :
+-- - SELECT : tout membre (owner + member) voit la tournee
+-- - INSERT : seulement avec user_id = auth.uid() (creation de SA tournee).
+--   Le trigger auto-add-owner remplit ensuite tournee_membres.
+-- - UPDATE : tout membre peut modifier (statuts, demareeLe, etc). Le
+--   changement de user_id est bloque par le trigger
+--   `tournees_protect_user_id` ci-dessous (sinon Lucas pourrait voler
+--   la tournee de Noah en re-pushant avec son propre user_id).
+-- - DELETE : OWNER UNIQUEMENT. Un member ne peut pas supprimer la
+--   tournee du chef (perte de donnees catastrophique pour Noah).
+DROP POLICY IF EXISTS "owner_all_tournees"        ON public.tournees;
+DROP POLICY IF EXISTS "member_all_tournees"       ON public.tournees;
+DROP POLICY IF EXISTS "member_select_tournees"    ON public.tournees;
+DROP POLICY IF EXISTS "owner_insert_tournees"     ON public.tournees;
+DROP POLICY IF EXISTS "member_update_tournees"    ON public.tournees;
+DROP POLICY IF EXISTS "owner_delete_tournees"     ON public.tournees;
+
+CREATE POLICY "member_select_tournees" ON public.tournees
+  FOR SELECT TO authenticated
+  USING (
+    id IN (
+      SELECT tournee_id FROM public.tournee_membres
+      WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "owner_insert_tournees" ON public.tournees
+  FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "member_update_tournees" ON public.tournees
+  FOR UPDATE TO authenticated
   USING (
     id IN (
       SELECT tournee_id FROM public.tournee_membres
@@ -401,23 +427,79 @@ CREATE POLICY "member_all_tournees" ON public.tournees
     )
   )
   WITH CHECK (
-    -- À l'INSERT : user_id = auth.uid() (on ne crée pas pour autrui).
-    -- À l'UPDATE : tournée déjà visible donc déjà membre, OK.
-    user_id = auth.uid()
-    OR id IN (
+    id IN (
       SELECT tournee_id FROM public.tournee_membres
       WHERE user_id = auth.uid()
     )
   );
 
+CREATE POLICY "owner_delete_tournees" ON public.tournees
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.tournee_membres
+      WHERE tournee_id = tournees.id
+      AND user_id = auth.uid()
+      AND role = 'owner'
+    )
+  );
 
--- 3.A.5 — RLS élargie sur `stops` (membre de la tournée parente) ──
--- Remplace `owner_all_stops`. Un user voit/modifie un stop si membre
--- de la tournée parente.
-DROP POLICY IF EXISTS "owner_all_stops" ON public.stops;
-DROP POLICY IF EXISTS "member_all_stops" ON public.stops;
-CREATE POLICY "member_all_stops" ON public.stops
-  FOR ALL TO authenticated
+
+-- 3.A.4b — Trigger anti-vol user_id sur tournees ──────────────────
+-- Empeche tout UPDATE qui tenterait de changer la colonne user_id
+-- (proprietaire). Sans ce trigger, un member d'une tournee partagee
+-- pourrait re-pusher un row avec user_id = lui-meme et voler la
+-- tournee du chef. Le client est aussi protege au niveau Dart (ne
+-- pas envoyer user_id apres le 1er push) mais le serveur est la
+-- ligne de defense ultime contre les clients malveillants / bugges.
+CREATE OR REPLACE FUNCTION public.tournees_protect_user_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+    RAISE EXCEPTION 'USER_ID_IMMUTABLE';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tournees_protect_user_id ON public.tournees;
+CREATE TRIGGER tournees_protect_user_id
+  BEFORE UPDATE ON public.tournees
+  FOR EACH ROW EXECUTE FUNCTION public.tournees_protect_user_id();
+
+
+-- 3.A.5 — RLS sur `stops` (split + DELETE owner-only) ─────────────
+-- Meme split que tournees, avec DELETE reserve a l'owner de la
+-- tournee parente. Un member peut INSERT/UPDATE un stop (livraison
+-- legitime) mais pas en supprimer un (risque d'erreur destructrice).
+DROP POLICY IF EXISTS "owner_all_stops"        ON public.stops;
+DROP POLICY IF EXISTS "member_all_stops"       ON public.stops;
+DROP POLICY IF EXISTS "member_select_stops"    ON public.stops;
+DROP POLICY IF EXISTS "member_insert_stops"    ON public.stops;
+DROP POLICY IF EXISTS "member_update_stops"    ON public.stops;
+DROP POLICY IF EXISTS "owner_delete_stops"     ON public.stops;
+
+CREATE POLICY "member_select_stops" ON public.stops
+  FOR SELECT TO authenticated
+  USING (
+    tournee_id IN (
+      SELECT tournee_id FROM public.tournee_membres
+      WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "member_insert_stops" ON public.stops
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    user_id = auth.uid()
+    AND tournee_id IN (
+      SELECT tournee_id FROM public.tournee_membres
+      WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "member_update_stops" ON public.stops
+  FOR UPDATE TO authenticated
   USING (
     tournee_id IN (
       SELECT tournee_id FROM public.tournee_membres
@@ -430,6 +512,34 @@ CREATE POLICY "member_all_stops" ON public.stops
       WHERE user_id = auth.uid()
     )
   );
+
+CREATE POLICY "owner_delete_stops" ON public.stops
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.tournee_membres
+      WHERE tournee_id = stops.tournee_id
+      AND user_id = auth.uid()
+      AND role = 'owner'
+    )
+  );
+
+
+-- 3.A.5b — Trigger anti-vol user_id sur stops ─────────────────────
+CREATE OR REPLACE FUNCTION public.stops_protect_user_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+    RAISE EXCEPTION 'USER_ID_IMMUTABLE';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS stops_protect_user_id ON public.stops;
+CREATE TRIGGER stops_protect_user_id
+  BEFORE UPDATE ON public.stops
+  FOR EACH ROW EXECUTE FUNCTION public.stops_protect_user_id();
 
 
 -- 3.A.6 — Table `tournee_invitations` ─────────────────────────────

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'cloud_auto_push_service.dart';
 import 'database.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -29,9 +30,13 @@ import 'database.dart';
 /// le réseau coupe, le client tente de re-subscribe automatiquement
 /// quand il revient. On ne fait rien de spécial côté app.
 class TourneeRealtimeService {
-  TourneeRealtimeService(this._db);
+  TourneeRealtimeService(this._db, this._autoPush);
 
   final AppDatabase _db;
+  /// Auto-push service du device — sert a suppress les push apres
+  /// chaque write Realtime, pour casser la boucle ping-pong entre
+  /// 2 devices d'une tournee partagee. Cf [_handleStopChange].
+  final CloudAutoPushService _autoPush;
   RealtimeChannel? _activeChannel;
   String? _activeTourneeCloudId;
 
@@ -92,6 +97,13 @@ class TourneeRealtimeService {
   /// crash dans le handler tuerait le channel.
   Future<void> _handleStopChange(PostgresChangePayload payload) async {
     try {
+      // Suppress l'auto-push AVANT le write Drift : si on suppresse
+      // apres, le watch Drift de auto-push aurait deja fire et
+      // schedule un push avant qu'on suppress (race). 10s = largement
+      // au-dessus du debounce 5s + drift transactionnel. Sans cette
+      // suppression : ping-pong infini avec le device source de
+      // l'event (il re-recoit le push, re-applique, re-push, etc).
+      _autoPush.suppress(const Duration(seconds: 10));
       switch (payload.eventType) {
         case PostgresChangeEvent.delete:
           await _handleDelete(payload.oldRecord);

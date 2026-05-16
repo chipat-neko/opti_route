@@ -173,13 +173,6 @@ class AppDatabase extends _$AppDatabase {
             // `<user_id>/<stop_uuid>.jpg` apres upload reussi.
             await m.addColumn(stops, stops.cloudPhotoPath);
           }
-          if (from < 26) {
-            // Sous-jalon 3.A : table locale `tournee_membres` qui
-            // cache les adhesions cloud. Sert a l'UI pour distinguer
-            // tournee perso vs partagee, et afficher le badge nombre
-            // de coequipiers / le role owner/member.
-            await m.createTable(tourneeMembres);
-          }
           if (from < 25) {
             // Sous-jalon 2.D-1c : colonne `updated_at` sur les 4 tables
             // candidates au sync cloud (tournees, stops, coequipiers,
@@ -213,6 +206,13 @@ class AppDatabase extends _$AppDatabase {
                 "UPDATE saved_destinations SET updated_at = "
                 "strftime('%s','now') WHERE updated_at IS NULL");
             await _createUpdatedAtTriggers();
+          }
+          if (from < 26) {
+            // Sous-jalon 3.A : table locale `tournee_membres` qui
+            // cache les adhesions cloud. Sert a l'UI pour distinguer
+            // tournee perso vs partagee, et afficher le badge nombre
+            // de coequipiers / le role owner/member.
+            await m.createTable(tourneeMembres);
           }
         },
         beforeOpen: (details) async {
