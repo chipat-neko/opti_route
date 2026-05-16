@@ -29,6 +29,7 @@ enum PlusAction {
   exportPdf,
   exportPdfCo,
   prefetchTuiles,
+  pushCloud,
   delete,
 }
 
@@ -180,6 +181,27 @@ class PlusMenu extends StatelessWidget {
             title: Text('Telecharger pour hors-ligne'),
             subtitle: Text(
               'Tuiles carte de la zone (zone faible 4G)',
+              style: TextStyle(fontSize: 11),
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: PlusAction.pushCloud,
+          child: ListTile(
+            leading: Icon(
+              tournee.cloudId == null
+                  ? Icons.cloud_upload_outlined
+                  : Icons.cloud_sync_outlined,
+              color: AppColors.emerald,
+            ),
+            title: Text(
+              tournee.cloudId == null
+                  ? 'Pousser au cloud'
+                  : 'Synchroniser au cloud',
+            ),
+            subtitle: const Text(
+              'Sauvegarde la tournee + ses arrets sur Supabase',
               style: TextStyle(fontSize: 11),
             ),
             contentPadding: EdgeInsets.zero,

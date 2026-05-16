@@ -76,4 +76,11 @@ class Tournees extends Table {
   IntColumn get coequipierDefautId => integer().nullable()();
 
   DateTimeColumn get creeLe => dateTime().withDefault(currentDateAndTime)();
+
+  /// UUID v4 attribue par l'app au moment du 1er push vers Supabase
+  /// (sous-jalon 2.B). Null = jamais synchronisee. Une fois set, sert
+  /// de cle de rapprochement pour les UPDATE ulterieurs (idempotence
+  /// du push : INSERT si null, UPDATE sinon). Format : UUID standard
+  /// 36 chars avec tirets, ex `7c9e6679-7425-40de-944b-e07fc1f90ae7`.
+  TextColumn get cloudId => text().nullable()();
 }
