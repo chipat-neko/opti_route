@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/cloud_auto_pull_service.dart';
+import '../data/cloud_auto_push_service.dart';
 import '../data/cloud_sync_service.dart';
 import '../data/supabase_service.dart';
 import 'database_providers.dart';
@@ -72,3 +73,23 @@ class CloudPullStateNotifier
 
 final cloudPullStateProvider = NotifierProvider<CloudPullStateNotifier,
     AsyncValue<CloudPullResult?>>(CloudPullStateNotifier.new);
+
+/// Service d'auto-push de la tournee active vers Supabase (sous-jalon
+/// 2.D-2). Debounce 5s, silencieux. Demarre via [CloudAutoPushService.
+/// watchTournee] depuis [TourneeDuJourScreen.initState], arrete via
+/// [CloudAutoPushService.stop] dans `dispose`.
+///
+/// Singleton : un seul watch a la fois (la "tournee active" courante).
+/// Garder l'instance entre les ouvertures d'ecran evite des re-init
+/// inutiles.
+final cloudAutoPushServiceProvider = Provider<CloudAutoPushService>((ref) {
+  final service = CloudAutoPushService(
+    ref.watch(cloudSyncServiceProvider),
+    ref.watch(appDatabaseProvider),
+    SupabaseService.instance,
+  );
+  // Cleanup propre si jamais le Provider est dispose (theoriquement
+  // pas avant la fin de l'app vu qu'il n'est pas autoDispose).
+  ref.onDispose(service.stop);
+  return service;
+});

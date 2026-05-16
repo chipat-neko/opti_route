@@ -45,6 +45,29 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   bool _optimizing = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-push de la tournee active vers Supabase (sous-jalon 2.D-2).
+    // Le service watche les changements (Tournees row + Stops) et push
+    // silencieusement apres 5s de debounce. No-op si user pas connecte.
+    // Stop dans dispose().
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(cloudAutoPushServiceProvider)
+          .watchTournee(widget.tournee.id);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Arrete le watch auto-push pour ne pas continuer a push apres que
+    // l'ecran est ferme (le user va peut-etre ouvrir une autre tournee
+    // qui declenchera son propre watchTournee).
+    ref.read(cloudAutoPushServiceProvider).stop();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final stopsAsync = ref.watch(stopsByTourneeProvider(widget.tournee.id));
     final optimizer = ref.watch(optimizationServiceProvider);
