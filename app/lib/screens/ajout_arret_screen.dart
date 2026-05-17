@@ -8,6 +8,7 @@ import '../data/database.dart';
 import '../data/geo_utils.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
+import '../providers/supabase_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
 import 'ajout_arret/dialogs.dart';
@@ -379,7 +380,10 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
 
     setState(() => _saving = true);
     try {
-      await ref.read(stopsRepositoryProvider).delete(widget.initial!.id);
+      // Jalon 2.F : propagation cloud (best-effort) + local
+      await ref
+          .read(cloudSyncServiceProvider)
+          .deleteStopWithCloudCleanup(widget.initial!.id);
       await ref
           .read(tourneesRepositoryProvider)
           .invalidateOptimization(widget.tourneeId);

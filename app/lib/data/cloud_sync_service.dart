@@ -645,6 +645,87 @@ class CloudSyncService {
         .go();
   }
 
+  /// Sous-jalon 2.F : supprime une tournee EN PROPAGEANT la suppression
+  /// au cloud (row tournees + cascade stops + photos Storage). Suit
+  /// par le DELETE Drift local.
+  ///
+  /// **Best-effort cloud** : si pas configure / pas auth / network down /
+  /// pas de cloudId, on continue le delete local quand meme (le user
+  /// doit pouvoir supprimer offline). Erreurs cloud loguees mais non
+  /// throw — sinon Noah ne pourrait pas delete en mode avion.
+  ///
+  /// **Pas de tombstone** : on assume que le user qui delete a la
+  /// possibilite de re-sign-in plus tard et fera un pull qui ne
+  /// retrouvera plus le row (parce qu'il est DELETE cloud aussi). Si
+  /// un autre device a une copie locale, elle restera tant qu'il ne
+  /// re-pull pas. C'est acceptable pour le MVP (vs tombstone qui
+  /// demanderait une table `deletions` + cron de cleanup).
+  Future<void> deleteTourneeWithCloudCleanup(int localTourneeId) async {
+    final tournee = await (_db.select(_db.tournees)
+          ..where((t) => t.id.equals(localTourneeId)))
+        .getSingleOrNull();
+    final stops = await (_db.select(_db.stops)
+          ..where((s) => s.tourneeId.equals(localTourneeId)))
+        .get();
+    final cloudId = tournee?.cloudId;
+    if (cloudId != null && _supabase.isConfigured &&
+        _supabase.currentUser != null) {
+      final client = _client();
+      // 1. Cleanup photos Storage (batch remove pour gain perf)
+      final photoPaths = <String>[
+        for (final s in stops)
+          if (s.cloudPhotoPath != null) s.cloudPhotoPath!,
+      ];
+      if (photoPaths.isNotEmpty) {
+        try {
+          await client.storage.from('preuves').remove(photoPaths);
+        } on Object catch (e) {
+          debugPrint('[CloudSync] cleanup photos Storage fail : $e');
+        }
+      }
+      // 2. DELETE row tournee cloud (CASCADE supprime stops + invits)
+      try {
+        await client.from('tournees').delete().eq('id', cloudId);
+      } on Object catch (e) {
+        debugPrint('[CloudSync] cleanup row tournee cloud fail : $e');
+      }
+    }
+    // 3. Delete local (Drift CASCADE via FK supprime les stops aussi)
+    await (_db.delete(_db.tournees)
+          ..where((t) => t.id.equals(localTourneeId)))
+        .go();
+  }
+
+  /// Sous-jalon 2.F : equivalent pour un stop individuel.
+  Future<void> deleteStopWithCloudCleanup(int localStopId) async {
+    final stop = await (_db.select(_db.stops)
+          ..where((s) => s.id.equals(localStopId)))
+        .getSingleOrNull();
+    final cloudId = stop?.cloudId;
+    if (cloudId != null && _supabase.isConfigured &&
+        _supabase.currentUser != null) {
+      final client = _client();
+      // 1. Cleanup photo Storage (1 seul fichier si present)
+      final cloudPhotoPath = stop?.cloudPhotoPath;
+      if (cloudPhotoPath != null) {
+        try {
+          await client.storage.from('preuves').remove([cloudPhotoPath]);
+        } on Object catch (e) {
+          debugPrint('[CloudSync] cleanup photo Storage fail : $e');
+        }
+      }
+      // 2. DELETE row stop cloud
+      try {
+        await client.from('stops').delete().eq('id', cloudId);
+      } on Object catch (e) {
+        debugPrint('[CloudSync] cleanup row stop cloud fail : $e');
+      }
+    }
+    // 3. Delete local
+    await (_db.delete(_db.stops)..where((s) => s.id.equals(localStopId)))
+        .go();
+  }
+
   /// L'owner ejecte un member d'une tournee partagee. Throws si pas
   /// owner / target n'est pas member / pas auth.
   Future<void> kickMember(int localTourneeId, String memberUserCloudId) async {
