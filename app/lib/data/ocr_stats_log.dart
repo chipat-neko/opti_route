@@ -74,6 +74,48 @@ class OcrStatsLog {
     }
   }
 
+  /// Lit le CSV et calcule le breakdown du taux carte verte / orange /
+  /// rouge. Retourne `OcrBaselineStats.empty()` si pas de fichier ou
+  /// erreur lecture (jamais throw — best-effort comme `log()`).
+  ///
+  /// Sert au tile Parametres > Stats OCR pour afficher directement le
+  /// taux atteint sans devoir exporter le CSV.
+  ///
+  /// Format CSV attendu (cf [_header]) :
+  /// `timestamp,parser,confidence,rotation_deg,attempts,ban_validated,
+  /// validation_score,duration_ms`
+  /// La colonne `confidence` est en index 2.
+  Future<OcrBaselineStats> computeBaseline() async {
+    try {
+      final file = await _file();
+      if (!await file.exists()) return OcrBaselineStats.empty();
+      final lines = await file.readAsLines();
+      if (lines.length < 2) return OcrBaselineStats.empty();
+      int high = 0;
+      int low = 0;
+      int none = 0;
+      // Skip line 0 (header)
+      for (var i = 1; i < lines.length; i++) {
+        final line = lines[i].trim();
+        if (line.isEmpty) continue;
+        final parts = line.split(',');
+        if (parts.length < 3) continue;
+        final confidence = parts[2];
+        switch (confidence) {
+          case 'high':
+            high++;
+          case 'low':
+            low++;
+          case 'none':
+            none++;
+        }
+      }
+      return OcrBaselineStats(highCount: high, lowCount: low, noneCount: none);
+    } catch (_) {
+      return OcrBaselineStats.empty();
+    }
+  }
+
   /// Partage le fichier CSV via le selecteur natif (Drive / mail / etc.).
   /// Retourne false si pas de stats a partager.
   Future<bool> exportShare() async {
@@ -110,4 +152,37 @@ class OcrStatsLog {
     }
     return file;
   }
+}
+
+/// Breakdown des scans OCR par niveau de confidence (cf [OcrStatsLog.
+/// computeBaseline]). Sert au tile Stats OCR de Parametres pour
+/// afficher inline le taux carte verte sans devoir exporter le CSV.
+///
+/// Convention couleur projet :
+/// - **verte** = high (extraction tres confiante, prefill direct OK)
+/// - **orange** = low (extraction incertaine, user doit verifier)
+/// - **rouge** = none (extraction echouee, saisie manuelle forcee)
+class OcrBaselineStats {
+  const OcrBaselineStats({
+    required this.highCount,
+    required this.lowCount,
+    required this.noneCount,
+  });
+
+  /// Factory : aucun scan enregistre. Tous les rates sont a 0%.
+  const OcrBaselineStats.empty()
+      : highCount = 0,
+        lowCount = 0,
+        noneCount = 0;
+
+  final int highCount;
+  final int lowCount;
+  final int noneCount;
+
+  int get total => highCount + lowCount + noneCount;
+
+  /// Taux carte verte 0.0-1.0. Retourne 0 si aucun scan.
+  double get greenRate => total == 0 ? 0 : highCount / total;
+  double get orangeRate => total == 0 ? 0 : lowCount / total;
+  double get redRate => total == 0 ? 0 : noneCount / total;
 }
