@@ -52,7 +52,16 @@ class ImagePreprocessService {
     bool autoCrop = true,
   }) async {
     final bytes = await source.readAsBytes();
-    final decoded = img.decodeImage(bytes);
+    // decodeImage peut throw sur certains bytes corrompus (ex: header
+    // PSD malforme leve RangeError) au lieu de retourner null. Wrap
+    // dans try-catch pour garder le contrat "format invalide -> source
+    // intacte" (test ajoute 2026-05-17).
+    img.Image? decoded;
+    try {
+      decoded = img.decodeImage(bytes);
+    } catch (_) {
+      return source;
+    }
     if (decoded == null) return source; // format non supporte
 
     // 1. EXIF orientation -- toujours bake (idempotent + leger)
@@ -78,7 +87,14 @@ class ImagePreprocessService {
   /// Utile en preview (preview a 0 cout) avant decider d'enhancer plus.
   Future<File> bakeExifOnly(File source) async {
     final bytes = await source.readAsBytes();
-    final decoded = img.decodeImage(bytes);
+    // Cf enhance : decodeImage peut throw. Wrap pour garantir source
+    // intacte en cas de bytes corrompus.
+    img.Image? decoded;
+    try {
+      decoded = img.decodeImage(bytes);
+    } catch (_) {
+      return source;
+    }
     if (decoded == null) return source;
     final baked = img.bakeOrientation(decoded);
     final encoded = img.encodeJpg(baked, quality: 92);
