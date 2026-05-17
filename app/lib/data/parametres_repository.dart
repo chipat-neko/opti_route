@@ -104,18 +104,21 @@ class ParametresRepository {
     return int.tryParse(v ?? '') ?? 0;
   }
 
-  Stream<int> watchOrsUsedToday() async* {
-    // Stream basique : on emet a chaque changement de count OU de date.
-    // En pratique, l'UI peut juste re-watch le count et l'UI re-render
-    // a chaque incrementation, ce qui suffit pour notre cas.
-    await for (final v in _watchKey(_kOrsUsedCount)) {
+  Stream<int> watchOrsUsedToday() {
+    // Audit 2026-05-17 fix : avant on faisait `async*` + `await for`
+    // avec un `await` au milieu avant `yield`, ce qui pouvait perdre
+    // des events par back-pressure du generator. `asyncMap` serialise
+    // proprement chaque event sans risque de perte.
+    //
+    // Limitation acceptee : le passage de minuit n'est pas auto-detecte
+    // (le stream n'emet pas tant que count ne change pas). Acceptable
+    // car le user fera une opti dans la journee = count change = trigger
+    // recalcul + reset si nouveau jour.
+    return _watchKey(_kOrsUsedCount).asyncMap((v) async {
       final date = await _readKey(_kOrsUsedDate);
-      if (date != _todayIso()) {
-        yield 0;
-      } else {
-        yield int.tryParse(v ?? '') ?? 0;
-      }
-    }
+      if (date != _todayIso()) return 0;
+      return int.tryParse(v ?? '') ?? 0;
+    });
   }
 
   /// Incremente le compteur d'utilisation ORS du jour. Si on bascule

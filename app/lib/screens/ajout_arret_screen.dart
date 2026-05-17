@@ -103,15 +103,15 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   }
 
   void _resetForm() {
-    _nbColisCtrl.dispose();
-    _dureeArretCtrl.dispose();
-    _nomClientCtrl.dispose();
-    _notesCtrl.dispose();
+    // Audit 2026-05-17 fix : avant on faisait dispose + new sur les
+    // controllers, mais ils restaient reference par le Form / les
+    // TextField pendant le re-build, ce qui pouvait crasher. Utiliser
+    // .text = ... + .clear() est safe : meme instance preservee.
     setState(() {
-      _nbColisCtrl = TextEditingController(text: '1');
-      _dureeArretCtrl = TextEditingController(text: '3');
-      _nomClientCtrl = TextEditingController();
-      _notesCtrl = TextEditingController();
+      _nbColisCtrl.text = '1';
+      _dureeArretCtrl.text = '3';
+      _nomClientCtrl.clear();
+      _notesCtrl.clear();
       _address = null;
       _priorite = 'flexible';
       _fenetreDebut = null;

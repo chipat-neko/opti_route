@@ -260,7 +260,15 @@ class StopsRepository {
           ..limit(1))
         .getSingleOrNull();
     if (hist == null) return null;
-    return stops.firstWhere((s) => s.id == hist.stopId);
+    // Audit 2026-05-17 fix : avant `firstWhere` sans `orElse` qui
+    // throw StateError si le stop a ete supprime entre le getByTournee
+    // et le check history (race rare mais possible quand sync 3.A
+    // arrive depuis un autre device). Retourne null silencieusement
+    // a la place — le bouton "Annuler le dernier statut" sera no-op.
+    for (final s in stops) {
+      if (s.id == hist.stopId) return s;
+    }
+    return null;
   }
 
   /// Annule le statut d'un stop : alias de [markAaLivrer] avec
