@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/cloud_error_humanizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+
 void main() {
   group('humanizeCloudError - exceptions Dart typed', () {
     test('SocketException -> "Pas de connexion internet"', () {
@@ -105,6 +106,50 @@ void main() {
       final result = humanizeCloudError(e);
       expect(result.length, 120);
       expect(result.endsWith('...'), isFalse);
+    });
+  });
+
+  group('humanizeAnyError - extension Drift + I/O', () {
+    test('FileSystemException avec OSError "No space" -> disque plein', () {
+      final e = FileSystemException(
+          'write failed', '/some/path', const OSError('No space left on device', 28));
+      expect(humanizeAnyError(e), contains('Disque plein'));
+    });
+
+    test('FileSystemException avec OSError "Permission denied"', () {
+      final e = FileSystemException(
+          'write failed', '/some/path', const OSError('Permission denied', 13));
+      expect(humanizeAnyError(e), contains('Permission refusee'));
+    });
+
+    test('FileSystemException sans OSError specifique -> "Erreur fichier"',
+        () {
+      const e = FileSystemException('unknown error', '/x');
+      expect(humanizeAnyError(e), contains('Erreur fichier'));
+    });
+
+    test('Exception toString contient "SqliteException" + "constraint"', () {
+      final e = Exception(
+          'SqliteException(constraint failed: UNIQUE on tournees.id)');
+      expect(humanizeAnyError(e), contains('Conflit dans la base locale'));
+    });
+
+    test('Exception toString contient "database is locked"', () {
+      final e =
+          Exception('SqliteException(database is locked) [code: 5]');
+      expect(humanizeAnyError(e), contains('occupee'));
+    });
+
+    test('Exception "drift" generique -> "Erreur base de donnees locale"',
+        () {
+      final e = Exception('drift query failed mid-transaction');
+      expect(humanizeAnyError(e), contains('base de donnees locale'));
+    });
+
+    test('humanizeAnyError delegue a humanizeCloudError pour le reste', () {
+      // SocketException reste pris par humanizeCloudError via fall-through
+      const e = SocketException('Failed host lookup');
+      expect(humanizeAnyError(e), contains('Pas de connexion internet'));
     });
   });
 }

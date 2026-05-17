@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/address_suggestion.dart';
+import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../data/notifications_service.dart';
 import '../providers/database_providers.dart';
@@ -282,7 +283,9 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+        SnackBar(
+            content:
+                Text('Erreur lors de la suppression : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -413,7 +416,9 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de l\'enregistrement : $e')),
+        SnackBar(
+            content: Text(
+                'Erreur lors de l\'enregistrement : ${humanizeAnyError(e)}')),
       );
     }
   }

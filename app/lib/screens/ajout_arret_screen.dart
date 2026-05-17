@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/address_suggestion.dart';
 import '../data/bordereau_extraction.dart';
+import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../data/geo_utils.dart';
 import '../providers/database_providers.dart';
@@ -398,7 +399,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+        SnackBar(
+            content:
+                Text('Erreur lors de la suppression : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -592,7 +595,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de l\'enregistrement : $e')),
+        SnackBar(
+            content:
+                Text('Erreur lors de l\'enregistrement : ${humanizeAnyError(e)}')),
       );
     }
   }
