@@ -123,13 +123,18 @@ class BackupService {
     if (!await zipFile.exists()) {
       throw const BackupException('Fichier zip introuvable');
     }
-    final bytes = await zipFile.readAsBytes();
+    // Audit 2026-05-17 fix critique : utiliser InputFileStream pour
+    // streamer le zip plutot que charger les bytes en RAM. Un backup
+    // complet peut faire 100+ MB (DB + 1000 photos preuves) → OOM
+    // probable sur Xiaomi entree de gamme avec readAsBytes.
     final Archive archive;
+    final inputStream = InputFileStream(zipPath);
     try {
-      archive = ZipDecoder().decodeBytes(bytes);
-    } catch (_) {
-      throw const BackupException('Fichier zip corrompu ou illisible');
-    }
+      try {
+        archive = ZipDecoder().decodeStream(inputStream);
+      } catch (_) {
+        throw const BackupException('Fichier zip corrompu ou illisible');
+      }
 
     // Sanity-check : manifest present + format reconnu
     final manifestEntry = archive.files.firstWhere(
@@ -178,6 +183,12 @@ class BackupService {
         await File(outPath).writeAsBytes(entry.content as List<int>);
       } catch (_) {/* photo individuelle KO = on continue */}
     }
+    } finally {
+      // Toujours fermer le stream de lecture du zip pour liberer le
+      // handle fichier (sinon Android peut refuser de delete le zip
+      // source plus tard si l'utilisateur veut nettoyer).
+      await inputStream.close();
+    }
   }
 
   /// Verifie l'existence d'un fichier `.pending_restore` et l'applique
@@ -187,6 +198,14 @@ class BackupService {
   ///
   /// Retourne true si un restore a ete applique. L'UI peut alors
   /// afficher un toast "Restore reussi".
+  ///
+  /// **Atomicite** (audit 2026-05-17 fix critique) : on ne fait PLUS
+  /// `delete(target)` + `rename(pending, target)` qui laissait une
+  /// fenetre ou la DB courante etait perdue si on crashe au milieu.
+  /// On utilise maintenant `pending.rename(target.path)` direct, qui
+  /// est atomique sur la plupart des FS (replace target en une seule
+  /// syscall sur POSIX). Le .pre_restore est cree EN AMONT (copy
+  /// best-effort) pour permettre un fallback manuel.
   static Future<bool> applyPendingRestoreIfAny() async {
     final docs = await getApplicationDocumentsDirectory();
     final pending = File('${docs.path}${Platform.pathSeparator}'
@@ -194,19 +213,24 @@ class BackupService {
     if (!await pending.exists()) return false;
     final target = File('${docs.path}${Platform.pathSeparator}'
         'opti_route.sqlite');
+    // Snapshot safety : copy l'ancienne DB en .pre_restore AVANT le
+    // rename (qui va detruire l'original). Best-effort : si la copy
+    // echoue, on continue quand meme (mieux vaut restorer sans
+    // backup que de bloquer le user qui demande explicitement le
+    // restore).
+    if (await target.exists()) {
+      try {
+        await target.copy('${target.path}.pre_restore');
+      } catch (_) {/* best-effort */}
+    }
     try {
-      // Si l'ancienne DB existe, on la garde en .pre_restore pour
-      // safety (l'utilisateur peut revenir en arriere manuellement).
-      if (await target.exists()) {
-        final backupOldPath = '${target.path}.pre_restore';
-        try {
-          await target.copy(backupOldPath);
-        } catch (_) {/* best-effort */}
-        await target.delete();
-      }
+      // Atomique : remplace target si existe (POSIX rename). Si crash
+      // pendant cet appel, on a soit l'ancien target intact + pending
+      // restant (retry au prochain boot), soit le nouveau target en
+      // place. Pas de fenetre "rien".
       await pending.rename(target.path);
       return true;
-    } catch (e) {
+    } catch (_) {
       // Erreur de swap (permissions, disque plein...). On laisse le
       // .pending_restore en place pour retry au prochain boot.
       return false;

@@ -73,7 +73,10 @@ class TilePrefetchService {
     onProgress?.call(0, total);
 
     // Pool de [concurrency] workers : on consomme une queue partagee
-    // sans semaphore (Dart est mono-thread).
+    // sans semaphore (Dart est mono-thread, l'event loop garantit
+    // l'atomicite entre 2 awaits). IMPORTANT : ne PAS ajouter d'await
+    // entre `queue.isNotEmpty` et `queue.removeLast()` — ca creerait
+    // une vraie race condition.
     final queue = List<TileXYZ>.from(tiles);
     Future<void> worker() async {
       while (queue.isNotEmpty) {
