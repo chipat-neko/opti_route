@@ -1,9 +1,30 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cloud_auto_push_service.dart';
 import 'database.dart';
+
+/// Position GPS live d'un coequipier (jalon 3.C). Recue via Realtime
+/// Broadcast sur le channel `tournee:<uuid>`. Ephemere — pas stockee
+/// en DB, juste maintenue en memoire le temps de la session.
+class LivePosition {
+  const LivePosition({
+    required this.userCloudId,
+    required this.lat,
+    required this.lng,
+    required this.accuracyMeters,
+    required this.timestamp,
+  });
+
+  final String userCloudId;
+  final double lat;
+  final double lng;
+  final double accuracyMeters;
+  final DateTime timestamp;
+}
 
 /// ════════════════════════════════════════════════════════════════
 /// Realtime live des stops d'une tournée partagée (jalon 3.A).
@@ -39,6 +60,24 @@ class TourneeRealtimeService {
   final CloudAutoPushService _autoPush;
   RealtimeChannel? _activeChannel;
   String? _activeTourneeCloudId;
+  String? _myUserCloudId;
+
+  /// Jalon 3.C : positions GPS live des AUTRES membres de la tournee
+  /// (le user courant est exclu). Maintenu en memoire via le handler
+  /// onBroadcast. Expose via [othersPositionsStream].
+  final Map<String, LivePosition> _othersPositions = {};
+  final _othersController =
+      StreamController<Map<String, LivePosition>>.broadcast();
+
+  /// Stream de la map userId -> LivePosition des autres members.
+  /// Sert au CarteScreen pour afficher les markers live du livreur.
+  Stream<Map<String, LivePosition>> get othersPositionsStream =>
+      _othersController.stream;
+
+  /// Snapshot synchrone de la map (utile au 1er build avant que le
+  /// StreamBuilder ait recu une emission).
+  Map<String, LivePosition> get othersPositions =>
+      Map.unmodifiable(_othersPositions);
 
   /// True si on est déjà subscribed à cette tournée.
   bool isSubscribedTo(String tourneeCloudId) =>
@@ -55,6 +94,7 @@ class TourneeRealtimeService {
   ) async {
     if (isSubscribedTo(tourneeCloudId)) return;
     await unsubscribe();
+    _myUserCloudId = client.auth.currentUser?.id;
     final channel = client.channel('tournee:$tourneeCloudId');
     channel
         .onPostgresChanges(
@@ -70,9 +110,72 @@ class TourneeRealtimeService {
             _handleStopChange(payload);
           },
         )
+        // Jalon 3.C : broadcast event "position" pour la geoloc live.
+        // Pas de filter cote serveur (broadcast Realtime ne supporte
+        // pas les filters comme Postgres Changes) — on filtre cote
+        // client dans le handler (skip si payload.user_id == moi).
+        .onBroadcast(
+          event: 'position',
+          callback: (payload) {
+            _handlePositionBroadcast(payload);
+          },
+        )
         .subscribe();
     _activeChannel = channel;
     _activeTourneeCloudId = tourneeCloudId;
+  }
+
+  /// Jalon 3.C : push la position GPS du device courant sur le channel
+  /// actif. No-op si pas abonne (= pas en train de regarder une
+  /// tournee partagee). Best-effort : silencieux en cas d'echec.
+  Future<void> broadcastMyPosition({
+    required double lat,
+    required double lng,
+    required double accuracyMeters,
+  }) async {
+    final channel = _activeChannel;
+    final myUserId = _myUserCloudId;
+    if (channel == null || myUserId == null) return;
+    try {
+      await channel.sendBroadcastMessage(
+        event: 'position',
+        payload: {
+          'user_id': myUserId,
+          'lat': lat,
+          'lng': lng,
+          'accuracy': accuracyMeters,
+          'ts': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+    } on Object catch (e) {
+      debugPrint('[TourneeRealtimeService] broadcastMyPosition fail : $e');
+    }
+  }
+
+  void _handlePositionBroadcast(Map<String, dynamic> payload) {
+    try {
+      final userId = payload['user_id'] as String?;
+      if (userId == null) return;
+      // Skip nos propres positions (echo).
+      if (userId == _myUserCloudId) return;
+      final lat = (payload['lat'] as num?)?.toDouble();
+      final lng = (payload['lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) return;
+      final accuracy = (payload['accuracy'] as num?)?.toDouble() ?? 0;
+      final ts = payload['ts'] is String
+          ? DateTime.parse(payload['ts'] as String).toLocal()
+          : DateTime.now();
+      _othersPositions[userId] = LivePosition(
+        userCloudId: userId,
+        lat: lat,
+        lng: lng,
+        accuracyMeters: accuracy,
+        timestamp: ts,
+      );
+      _othersController.add(Map.unmodifiable(_othersPositions));
+    } on Object catch (e, st) {
+      debugPrint('[TourneeRealtimeService] position handler fail : $e\n$st');
+    }
   }
 
   /// Désabonne le channel actif. No-op si rien d'actif.
@@ -86,6 +189,9 @@ class TourneeRealtimeService {
     }
     _activeChannel = null;
     _activeTourneeCloudId = null;
+    _myUserCloudId = null;
+    _othersPositions.clear();
+    _othersController.add(const {});
   }
 
   /// Handler Postgres Changes. Merge l'event dans Drift en UPSERT

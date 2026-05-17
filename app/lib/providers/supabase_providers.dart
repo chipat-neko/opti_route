@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/cloud_auto_pull_service.dart';
 import '../data/cloud_auto_push_service.dart';
 import '../data/cloud_sync_service.dart';
+import '../data/live_presence_service.dart';
 import '../data/supabase_service.dart';
 import '../data/tournee_realtime_service.dart';
 import 'database_providers.dart';
@@ -105,5 +106,16 @@ final tourneeRealtimeServiceProvider =
     ref.watch(cloudAutoPushServiceProvider),
   );
   ref.onDispose(service.unsubscribe);
+  return service;
+});
+
+/// Service de push periodique de la position GPS du device courant
+/// sur le channel Realtime de la tournee partagee active (jalon 3.C).
+/// Demarre par TourneeDuJourScreen quand on ouvre une tournee partagee
+/// `en_cours`, stop dans dispose.
+final livePresenceServiceProvider = Provider<LivePresenceService>((ref) {
+  final service =
+      LivePresenceService(ref.watch(tourneeRealtimeServiceProvider));
+  ref.onDispose(service.stop);
   return service;
 });
