@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
@@ -91,7 +92,7 @@ class ExportCsvCard extends ConsumerWidget {
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur export : $e')),
+        SnackBar(content: Text('Erreur export : ${humanizeAnyError(e)}')),
       );
     }
   }

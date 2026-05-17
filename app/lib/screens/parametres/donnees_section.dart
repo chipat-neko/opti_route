@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/backup_service.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -62,7 +63,7 @@ class _BackupTileState extends ConsumerState<BackupTile> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur backup : $e')),
+        SnackBar(content: Text('Erreur backup : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _running = false);
@@ -191,7 +192,7 @@ class _RestoreTileState extends ConsumerState<RestoreTile> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur restore : $e')),
+        SnackBar(content: Text('Erreur restore : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _running = false);

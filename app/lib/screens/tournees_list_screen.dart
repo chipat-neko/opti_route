@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../data/template_share_service.dart';
 import '../providers/database_providers.dart';
@@ -74,7 +75,7 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur import : $e')),
+        SnackBar(content: Text('Erreur import : ${humanizeAnyError(e)}')),
       );
     }
   }

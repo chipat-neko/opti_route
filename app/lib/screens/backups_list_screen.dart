@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/backup_service.dart';
 import '../data/backups_list_service.dart';
 import '../providers/database_providers.dart';
@@ -118,7 +119,7 @@ class BackupsListScreen extends ConsumerWidget {
       Navigator.of(context).pop(); // ferme le loader
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Erreur creation backup : $e'),
+          content: Text('Erreur creation backup : ${humanizeAnyError(e)}'),
           backgroundColor: AppColors.red,
         ),
       );
@@ -261,7 +262,7 @@ class _BackupTile extends ConsumerWidget {
       await BackupsListService().shareBackup(backup.path);
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur partage : $e')),
+        SnackBar(content: Text('Erreur partage : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -330,7 +331,7 @@ class _BackupTile extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur restore : $e')),
+        SnackBar(content: Text('Erreur restore : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -373,7 +374,7 @@ class _BackupTile extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur suppression : $e')),
+        SnackBar(content: Text('Erreur suppression : ${humanizeAnyError(e)}')),
       );
     }
   }

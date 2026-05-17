@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/notifications_service.dart';
 import '../data/parametres_repository.dart';
 import '../providers/database_providers.dart';
@@ -706,7 +707,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -753,7 +754,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -823,7 +824,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -849,7 +850,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -869,7 +870,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -895,7 +896,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -914,7 +915,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
