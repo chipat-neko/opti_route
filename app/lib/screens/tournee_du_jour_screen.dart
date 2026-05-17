@@ -12,7 +12,6 @@ import '../data/supabase_service.dart';
 import '../data/location_service.dart';
 import '../data/notifications_service.dart';
 import '../data/tile_prefetch_service.dart';
-import '../providers/geocoding_providers.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../providers/supabase_providers.dart';
@@ -25,6 +24,7 @@ import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
 import 'tournee_du_jour/cloud_actions.dart';
 import 'tournee_du_jour/export_actions.dart';
+import 'tournee_du_jour/stops_bulk_actions.dart';
 import 'parametres_screen.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/fabs.dart';
@@ -254,86 +254,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   /// restants en statut 'a_livrer'. Utile pour les depots d'entreprise
   /// ou on livre 10 colis en une fois, ou pour cloturer rapidement une
   /// tournee terminee qu'on a oublie de marquer.
-  Future<void> _onBatchLivrePressed() async {
-    final stopsRepo = ref.read(stopsRepositoryProvider);
-    final tourneesRepo = ref.read(tourneesRepositoryProvider);
-    final all = await stopsRepo.getByTournee(widget.tournee.id);
-    final pending =
-        all.where((s) => s.statutLivraison == 'a_livrer').toList();
-    if (!mounted) return;
-    if (pending.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Aucun arret en attente de livraison'),
-        ),
+  Future<void> _onBatchLivrePressed() => StopsBulkActions.batchLivre(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-      return;
-    }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Tout marquer livre ?'),
-        content: Text(
-          '${pending.length} arret(s) en attente vont etre marques comme '
-          'livres. Tu pourras revenir en arriere arret par arret depuis la '
-          'bottom sheet si besoin.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.emerald,
-              foregroundColor: context.palette.paper,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Tout livrer'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    // Capture GPS une fois pour tout le batch (best-effort).
-    ({double lat, double lng})? pos;
-    try {
-      final ok = await LocationService.ensurePermission();
-      if (ok) {
-        final p = await LocationService.currentPosition()
-            .timeout(const Duration(seconds: 4));
-        pos = (lat: p.latitude, lng: p.longitude);
-      }
-    } catch (_) {}
-
-    for (final s in pending) {
-      await stopsRepo.markLivre(s.id, position: pos);
-    }
-    // Bascule auto en 'terminee' (tous les arrets valides maintenant).
-    final refreshed = await stopsRepo.getByTournee(widget.tournee.id);
-    final tousValides = refreshed.every(
-      (s) => s.statutLivraison == 'livre' || s.statutLivraison == 'echec',
-    );
-    if (tousValides) {
-      await tourneesRepo.update(
-        widget.tournee.id,
-        const TourneesCompanion(statut: Value('terminee')),
-      );
-      // Tournee finie : on annule le rappel local s'il y en avait un
-      // (inutile de reveiller Noah le lendemain pour une tournee deja
-      // terminee).
-      await NotificationsService.instance
-          .cancelTourneeRappel(widget.tournee.id);
-    }
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${pending.length} arret(s) marques livres'),
-        backgroundColor: AppColors.emerald,
-      ),
-    );
-  }
 
   Future<void> _onExportPdfPressed() => ExportTourneeActions.exportPdf(
         context: context,
@@ -390,110 +315,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     }
   }
 
-  /// Annule le dernier statut (livre ou echec) pose dans cette tournee.
-  /// Retrouve le stop via `getLastTransitionedStop` puis le repasse en
-  /// 'a_livrer'. Snackbar de confirmation avec un bouton de re-annule.
-  Future<void> _onUndoLastStatusPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final repo = ref.read(stopsRepositoryProvider);
-      final last = await repo.getLastTransitionedStop(widget.tournee.id);
-      if (!mounted) return;
-      if (last == null) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Aucun statut a annuler dans cette tournee.'),
-          ),
-        );
-        return;
-      }
-      await repo.revertStatus(last.id);
-      if (!mounted) return;
-      final label = last.nomClient?.trim().isNotEmpty == true
-          ? last.nomClient!.trim()
-          : last.adresseBrute.split(',').first.trim();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('"$label" est repasse en "A livrer"'),
-          duration: const Duration(seconds: 3),
-        ),
+  Future<void> _onUndoLastStatusPressed() =>
+      StopsBulkActions.undoLastStatus(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
-      );
-    }
-  }
 
-  /// Lance le re-geocodage des arrets sans coords (mode hors-ligne).
-  /// Affiche un dialog de progression simple, puis un bilan en snackbar.
-  Future<void> _onRetryGeocodePressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context, rootNavigator: true);
-    // Dialog "loading" non dismissible
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(
-              height: 18,
-              width: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: AppSpacing.x14),
-            Expanded(child: Text('Geolocalisation en cours...')),
-          ],
-        ),
-      ),
-    );
-    try {
-      final svc = ref.read(stopsGeocodeRetryServiceProvider);
-      final res = await svc.retryFor(widget.tournee.id);
-      navigator.pop(); // ferme le loader
-      if (!mounted) return;
-      if (res.totalCandidats == 0) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Aucun arret sans GPS a geolocaliser.'),
-          ),
-        );
-        return;
-      }
-      // Si on a resolu au moins 1 stop, l'optim est invalidee : le
-      // bouton "Optimiser" redevient cliquable.
-      if (res.resolved.isNotEmpty) {
-        await ref
-            .read(tourneesRepositoryProvider)
-            .invalidateOptimization(widget.tournee.id);
-        // Auto-reorder local : maintenant que les stops ont des coords,
-        // ils peuvent participer au nearest-neighbor.
-        await ref
-            .read(localReorderServiceProvider)
-            .reorder(widget.tournee.id);
-      }
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            res.unresolved.isEmpty
-                ? '${res.resolved.length} arret(s) geolocalise(s)'
-                : '${res.resolved.length} resolu(s), '
-                    '${res.unresolved.length} echec(s) - '
-                    'verifie l\'adresse manuellement',
-          ),
-          duration: const Duration(seconds: 4),
-        ),
+  Future<void> _onRetryGeocodePressed() => StopsBulkActions.retryGeocode(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-    } catch (e) {
-      navigator.pop();
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
-      );
-    }
-  }
 
   Future<void> _onShareTextPressed() => ExportTourneeActions.shareText(
         context: context,
@@ -511,117 +344,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         tournee: widget.tournee,
       );
 
-  // Reste utilise par _onAssignRestPressed (cf plus bas). A extraire
-  // dans une prochaine PR refactor.
-  static String _coequipierInitials(String nom) {
-    final parts = nom.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
-        .toUpperCase();
-  }
-
-  /// Affectation en masse : tous les stops non encore affectes (Moi)
-  /// passent au coequipier choisi. Le cas d'usage typique chef d'equipe :
-  /// "je m'occupe des 5 premiers, le reste va a Lucas".
-  Future<void> _onAssignRestPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final p = context.palette;
-    final coequipiers =
-        await ref.read(coequipiersRepositoryProvider).getAllActifs();
-    if (!mounted) return;
-    if (coequipiers.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
-          ),
-        ),
+  Future<void> _onAssignRestPressed() => StopsBulkActions.assignRest(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-      return;
-    }
-    final stops = await ref
-        .read(stopsRepositoryProvider)
-        .getByTournee(widget.tournee.id);
-    final reste =
-        stops.where((s) => s.coequipierId == null).toList(growable: false);
-    if (reste.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Tous les arrets ont deja un coequipier affecte.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    if (!mounted) return;
-    final picked = await showModalBottomSheet<Coequipier>(
-      context: context,
-      backgroundColor: p.cream,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.r22),
-        ),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x18,
-            vertical: AppSpacing.x14,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Affecter ${reste.length} arret${reste.length > 1 ? "s" : ""} non affecte${reste.length > 1 ? "s" : ""} a',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: p.ink,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.x12),
-              for (final c in coequipiers)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: colorFromTag(
-                      c.colorTag,
-                      defaultColor: AppColors.creamSoft,
-                    ),
-                    child: Text(
-                      _coequipierInitials(c.nom),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ),
-                  title: Text(c.nom),
-                  onTap: () => Navigator.of(context).pop(c),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (picked == null || !mounted) return;
-    await ref
-        .read(stopsRepositoryProvider)
-        .setCoequipierForUnassigned(widget.tournee.id, picked.id);
-    if (!mounted) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '${reste.length} arret${reste.length > 1 ? "s" : ""} affecte${reste.length > 1 ? "s" : ""} a ${picked.nom}',
-        ),
-        backgroundColor: AppColors.emerald,
-      ),
-    );
-  }
 
   Future<void> _onDemarrerPressed() async {
     final messenger = ScaffoldMessenger.of(context);
