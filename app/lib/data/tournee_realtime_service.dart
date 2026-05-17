@@ -79,6 +79,20 @@ class TourneeRealtimeService {
   Map<String, LivePosition> get othersPositions =>
       Map.unmodifiable(_othersPositions);
 
+  /// Jalon 3.D : userIds des membres actuellement "en ligne" (= ont
+  /// track() sur le channel et sont toujours connectes via WebSocket).
+  /// Maintenu par les handlers `onPresenceSync` / join / leave de
+  /// Supabase Realtime Presence (qui implemente CRDT cote serveur).
+  final Set<String> _onlineMemberIds = {};
+  final _onlineController = StreamController<Set<String>>.broadcast();
+
+  /// Stream de l'ensemble des userIds des membres connectes au channel.
+  /// Sert a la section "Coequipiers" pour afficher un badge "en ligne".
+  Stream<Set<String>> get onlineMembersStream => _onlineController.stream;
+
+  /// Snapshot synchrone des userIds connectes.
+  Set<String> get onlineMembers => Set.unmodifiable(_onlineMemberIds);
+
   /// True si on est déjà subscribed à cette tournée.
   bool isSubscribedTo(String tourneeCloudId) =>
       _activeTourneeCloudId == tourneeCloudId && _activeChannel != null;
@@ -95,7 +109,12 @@ class TourneeRealtimeService {
     if (isSubscribedTo(tourneeCloudId)) return;
     await unsubscribe();
     _myUserCloudId = client.auth.currentUser?.id;
-    final channel = client.channel('tournee:$tourneeCloudId');
+    final channel = client.channel(
+      'tournee:$tourneeCloudId',
+      // Jalon 3.D : configurer le presence key avec notre userId. Sans
+      // ca, Supabase utilise un key random qui change a chaque resub.
+      opts: RealtimeChannelConfig(key: _myUserCloudId ?? ''),
+    );
     channel
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
@@ -120,9 +139,46 @@ class TourneeRealtimeService {
             _handlePositionBroadcast(payload);
           },
         )
-        .subscribe();
+        // Jalon 3.D : Presence events (sync / join / leave). Le full
+        // state arrive via `sync` au subscribe et a chaque change. On
+        // recompute le set complet a chaque sync (CRDT cote serveur
+        // = source de verite).
+        .onPresenceSync((_) => _handlePresenceSync(channel))
+        .onPresenceJoin((_) => _handlePresenceSync(channel))
+        .onPresenceLeave((_) => _handlePresenceSync(channel))
+        .subscribe((status, _) {
+          // Track notre presence des que le channel est SUBSCRIBED
+          // (avant ca, sendBroadcastMessage et track sont rejetes).
+          if (status == RealtimeSubscribeStatus.subscribed &&
+              _myUserCloudId != null) {
+            channel.track({
+              'user_id': _myUserCloudId,
+              'online_at': DateTime.now().toUtc().toIso8601String(),
+            });
+          }
+        });
     _activeChannel = channel;
     _activeTourneeCloudId = tourneeCloudId;
+  }
+
+  /// Jalon 3.D : recompute la liste des membres connectes a partir du
+  /// presenceState() du channel (map keyed par user_id). Emet sur le
+  /// stream pour faire reagir les widgets UI.
+  void _handlePresenceSync(RealtimeChannel channel) {
+    try {
+      final state = channel.presenceState();
+      final newIds = <String>{};
+      for (final entry in state) {
+        // entry.key est notre userId (cf RealtimeChannelConfig.key)
+        newIds.add(entry.key);
+      }
+      _onlineMemberIds
+        ..clear()
+        ..addAll(newIds);
+      _onlineController.add(Set.unmodifiable(_onlineMemberIds));
+    } on Object catch (e) {
+      debugPrint('[TourneeRealtimeService] presence handler fail : $e');
+    }
   }
 
   /// Jalon 3.C : push la position GPS du device courant sur le channel
@@ -192,6 +248,10 @@ class TourneeRealtimeService {
     _myUserCloudId = null;
     _othersPositions.clear();
     _othersController.add(const {});
+    // Jalon 3.D : clear le set online (le user qui ferme le channel
+    // n'a plus aucun coequipier "vu en ligne").
+    _onlineMemberIds.clear();
+    _onlineController.add(const {});
   }
 
   /// Handler Postgres Changes. Merge l'event dans Drift en UPSERT
