@@ -98,6 +98,10 @@ class _SectionContent extends ConsumerWidget {
     final iAmOwner = members.any(
       (m) => m.userCloudId == myUserId && m.isOwner,
     );
+    // Jalon 3.D : presence live des coequipiers. Le stream emet le
+    // set des userIds connectes au channel Realtime de cette tournee.
+    // Vide si pas configure / pas auth / channel pas encore subscribed.
+    final realtime = ref.watch(tourneeRealtimeServiceProvider);
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x14,
@@ -109,37 +113,45 @@ class _SectionContent extends ConsumerWidget {
         borderRadius: BorderRadius.circular(AppRadius.r14),
         border: Border.all(color: p.inkLine, width: 1),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: StreamBuilder<Set<String>>(
+        stream: realtime.onlineMembersStream,
+        initialData: realtime.onlineMembers,
+        builder: (context, snap) {
+          final onlineIds = snap.data ?? const <String>{};
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.groups_outlined,
-                size: 18,
-                color: AppColors.emerald,
+              Row(
+                children: [
+                  const Icon(
+                    Icons.groups_outlined,
+                    size: 18,
+                    color: AppColors.emerald,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Coequipiers (${members.length})',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: p.ink,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
-              Text(
-                'Coequipiers (${members.length})',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: p.ink,
+              const SizedBox(height: AppSpacing.x8),
+              for (final m in members)
+                _MemberRow(
+                  tournee: tournee,
+                  member: m,
+                  isMe: m.userCloudId == myUserId,
+                  iAmOwner: iAmOwner,
+                  isOnline: onlineIds.contains(m.userCloudId),
+                  onChanged: onChanged,
                 ),
-              ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.x8),
-          for (final m in members)
-            _MemberRow(
-              tournee: tournee,
-              member: m,
-              isMe: m.userCloudId == myUserId,
-              iAmOwner: iAmOwner,
-              onChanged: onChanged,
-            ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -151,6 +163,7 @@ class _MemberRow extends ConsumerWidget {
     required this.member,
     required this.isMe,
     required this.iAmOwner,
+    required this.isOnline,
     required this.onChanged,
   });
 
@@ -158,6 +171,7 @@ class _MemberRow extends ConsumerWidget {
   final TourneeMembreInfo member;
   final bool isMe;
   final bool iAmOwner;
+  final bool isOnline;
   final VoidCallback onChanged;
 
   @override
@@ -167,16 +181,38 @@ class _MemberRow extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: member.isOwner
-                ? AppColors.emeraldSoft
-                : p.creamSoft,
-            foregroundColor: member.isOwner ? AppColors.emerald : p.ink,
-            child: Icon(
-              member.isOwner ? Icons.shield_outlined : Icons.person_outline,
-              size: 16,
-            ),
+          // Avatar avec dot "en ligne" en bas a droite via Stack
+          // (jalon 3.D). Dot emerald si presence tracked sur le channel,
+          // invisible sinon. Le user courant lui-meme est toujours
+          // "online" puisque c'est lui qui track au subscribe.
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: member.isOwner
+                    ? AppColors.emeraldSoft
+                    : p.creamSoft,
+                foregroundColor: member.isOwner ? AppColors.emerald : p.ink,
+                child: Icon(
+                  member.isOwner ? Icons.shield_outlined : Icons.person_outline,
+                  size: 16,
+                ),
+              ),
+              if (isOnline)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: AppColors.emerald,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: p.paper, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -193,9 +229,24 @@ class _MemberRow extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  member.isOwner ? 'Chef' : 'Coequipier',
-                  style: TextStyle(fontSize: 10, color: p.textMute),
+                Row(
+                  children: [
+                    Text(
+                      member.isOwner ? 'Chef' : 'Coequipier',
+                      style: TextStyle(fontSize: 10, color: p.textMute),
+                    ),
+                    if (isOnline) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '· en ligne',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.emerald,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
