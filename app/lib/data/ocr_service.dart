@@ -75,7 +75,7 @@ class OcrService {
     try {
       // Etape 1 : OCR de l'image (eventuellement pre-traitee).
       final base = await extractFromFile(workingImage);
-      final baseScore = _qualityScore(base);
+      final baseScore = qualityScore(base);
       if (baseScore >= qualityThreshold) {
         return OcrRotatedResult(
           result: base,
@@ -100,7 +100,7 @@ class OcrService {
           );
           if (rotatedFile == null) continue;
           final rotated = await extractFromFile(rotatedFile);
-          final score = _qualityScore(rotated);
+          final score = qualityScore(rotated);
           attempted.add(degrees);
           if (score > bestScore) {
             bestResult = rotated;
@@ -143,7 +143,12 @@ class OcrService {
   /// Critere actuel : nombre de lignes contenant au moins 3 caracteres
   /// **alphanumeriques contigus** (filtre les lignes de bruit qui ne
   /// contiennent que ponctuation / chiffres epars).
-  static int _qualityScore(OcrResult r) {
+  ///
+  /// Public (et non `_qualityScore`) pour permettre les tests unitaires
+  /// sans avoir a faire tourner tout le pipeline OCR ML Kit (qui requiert
+  /// le plugin Android non disponible en test). Sert aussi de hook pour
+  /// d'eventuels parsers tiers qui veulent reutiliser la metric.
+  static int qualityScore(OcrResult r) {
     final richLineRe = RegExp(r'[A-Za-z0-9]{3,}');
     var count = 0;
     for (final line in r.lines) {
@@ -201,7 +206,7 @@ class OcrRotatedResult {
   /// (0, 90, 180, ou 270). 0 = image originale, pas de rotation.
   final int rotationDegrees;
 
-  /// Score qualite du resultat retenu (cf [_qualityScore]). Sert au
+  /// Score qualite du resultat retenu (cf [qualityScore]). Sert au
   /// caller pour decider d'afficher la card extraction ou non.
   final int qualityScore;
 
