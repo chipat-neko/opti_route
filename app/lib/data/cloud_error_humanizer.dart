@@ -71,3 +71,41 @@ String humanizeCloudError(Object e) {
   if (raw.length <= 120) return raw;
   return '${raw.substring(0, 117)}...';
 }
+
+/// Variante etendue de [humanizeCloudError] qui gere AUSSI les
+/// exceptions locales courantes (Drift SQLite + I/O fichier). Sert aux
+/// screens UI qui melangent operations cloud et locales (ex: delete
+/// d'une tournee qui fait delete cloud + local + Storage).
+///
+/// Si on est sur de ne traiter que des erreurs cloud, prefer
+/// [humanizeCloudError] qui evite les checks fichier inutiles.
+String humanizeAnyError(Object e) {
+  // FileSystemException (write disque plein, permission denied, etc.)
+  if (e is FileSystemException) {
+    final msg = e.osError?.message ?? '';
+    if (msg.toLowerCase().contains('no space')) {
+      return 'Disque plein. Libere de l\'espace et ressaie.';
+    }
+    if (msg.toLowerCase().contains('permission denied')) {
+      return 'Permission refusee sur le fichier.';
+    }
+    return 'Erreur fichier : ${e.message}';
+  }
+
+  // String-based : Drift / SQLite exceptions (SqliteException n'est pas
+  // exporte directement, on detecte par toString)
+  final s = e.toString().toLowerCase();
+  if (s.contains('sqliteexception') || s.contains('drift')) {
+    if (s.contains('constraint')) {
+      return 'Conflit dans la base locale (donnee deja existante ?).';
+    }
+    if (s.contains('disk i/o') || s.contains('database is locked')) {
+      return 'Base de donnees occupee, ressaie dans qq secondes.';
+    }
+    return 'Erreur base de donnees locale.';
+  }
+
+  // Sinon : delegue a humanizeCloudError (qui gere lui-meme le fallback
+  // toString tronque).
+  return humanizeCloudError(e);
+}

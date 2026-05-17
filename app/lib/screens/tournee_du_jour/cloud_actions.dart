@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/cloud_sync_service.dart';
 import '../../data/database.dart';
 import '../../providers/supabase_providers.dart';
@@ -191,7 +192,9 @@ class CloudTourneeActions {
     } catch (e) {
       if (!context.mounted) return false;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+        SnackBar(
+            content:
+                Text('Erreur lors de la suppression : ${humanizeAnyError(e)}')),
       );
       return false;
     }
