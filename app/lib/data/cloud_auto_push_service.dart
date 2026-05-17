@@ -38,6 +38,19 @@ import 'supabase_service.dart';
 /// rapidement (en quittant/reouvrant), seul le dernier watch est actif.
 /// C'est OK : les autres tournees peuvent etre push via le bouton
 /// manuel (jalon 2.B/2.C) ou attendre la prochaine ouverture.
+/// Etat actuel de l'auto-push pour affichage UI (cf jalon sync indicator
+/// 2026-05-17). Sert au petit icone ⟳ dans l'AppBar.
+enum AutoPushState {
+  /// Rien a push, debounce inactif. Pas d'indicateur affiche.
+  idle,
+  /// Le user vient de modifier qqchose, le debounce 5s tourne avant
+  /// le push effectif. Indicateur "⟳ Sauvegarde dans 5s..." subtil.
+  pending,
+  /// Le push HTTP est en cours vers Supabase. Indicateur "⟳ Sauvegarde
+  /// en cours..." plus actif.
+  pushing,
+}
+
 class CloudAutoPushService {
   CloudAutoPushService(this._sync, this._db, this._supabase);
 
@@ -51,6 +64,22 @@ class CloudAutoPushService {
   StreamSubscription<dynamic>? _stopsSub;
   Timer? _debounce;
   int? _currentTourneeId;
+
+  /// Stream de l'etat courant de l'auto-push pour UI feedback.
+  /// Broadcast pour permettre plusieurs listeners (debug log + indicateur
+  /// AppBar par ex). Emet la valeur initiale `idle`.
+  final _stateController =
+      StreamController<AutoPushState>.broadcast();
+  AutoPushState _state = AutoPushState.idle;
+
+  Stream<AutoPushState> get stateStream => _stateController.stream;
+  AutoPushState get currentState => _state;
+
+  void _setState(AutoPushState newState) {
+    if (_state == newState) return;
+    _state = newState;
+    _stateController.add(newState);
+  }
 
   /// Date jusqu'a laquelle l'auto-push doit etre supprime, set par
   /// [suppress]. Sert a casser la boucle Realtime ↔ auto-push : quand
@@ -95,6 +124,7 @@ class CloudAutoPushService {
     _stopsSub = null;
     _debounce = null;
     _currentTourneeId = null;
+    _setState(AutoPushState.idle);
   }
 
   /// Suppresse les auto-push pendant [duration]. Appele par le
@@ -111,23 +141,33 @@ class CloudAutoPushService {
   /// pas encore tire) et en demarre un nouveau de 5 secondes.
   void _scheduleDebouncedPush(int tourneeId) {
     _debounce?.cancel();
+    _setState(AutoPushState.pending);
     _debounce = Timer(const Duration(seconds: 5), () async {
       // Re-check juste avant le push : la tournee peut avoir ete
       // changee (autre tournee ouverte) ou le user peut s'etre
       // deconnecte entre le schedule et l'expiration du timer.
-      if (_currentTourneeId != tourneeId) return;
-      if (_supabase.currentUser == null) return;
+      if (_currentTourneeId != tourneeId) {
+        _setState(AutoPushState.idle);
+        return;
+      }
+      if (_supabase.currentUser == null) {
+        _setState(AutoPushState.idle);
+        return;
+      }
       // Skip si on est dans la fenetre de suppression (write Realtime
       // recent). Cf [suppress].
       final until = _suppressUntil;
-      if (until != null && DateTime.now().isBefore(until)) return;
+      if (until != null && DateTime.now().isBefore(until)) {
+        _setState(AutoPushState.idle);
+        return;
+      }
+      _setState(AutoPushState.pushing);
       try {
         await _sync.pushTournee(tourneeId);
       } on Object {
         // Silent : on re-tentera au prochain change. Pas de SnackBar.
-        // Eventuellement, on pourra ajouter un Provider d'etat
-        // "derniere sync echouee" pour afficher un indicateur subtil
-        // dans l'UI, mais pas dans ce sous-jalon.
+      } finally {
+        _setState(AutoPushState.idle);
       }
     });
   }
