@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -385,6 +386,35 @@ final tourneeByIdProvider =
 final hasTourneeEnCoursProvider = Provider<bool>((ref) {
   final list = ref.watch(tourneesStreamProvider).asData?.value ?? const [];
   return list.any((t) => t.statut == 'en_cours');
+});
+
+/// Stream du nombre de membres d'une tournee partagee (jalon 3.B).
+/// Retourne 0 si la tournee n'a jamais ete pushee au cloud OU s'il
+/// n'y a aucun row dans tournee_membres pour ce tourneeCloudId.
+/// Une tournee est consideree "partagee" si count >= 2 (owner + au
+/// moins 1 member). count == 1 = tournee perso (owner seul).
+final tourneeMembresCountProvider =
+    StreamProvider.family<int, String>((ref, tourneeCloudId) {
+  final db = ref.watch(appDatabaseProvider);
+  final query = db.select(db.tourneeMembres)
+    ..where((m) => m.tourneeCloudId.equals(tourneeCloudId));
+  return query.watch().map((rows) => rows.length);
+});
+
+/// Stream des rows TourneeMembres (cache local) pour une tournee
+/// donnee (jalon 3.B). Sert a la section "Coequipiers" de l'ecran
+/// tournee pour afficher owner/member badges sans round-trip cloud.
+/// Pour l'email reel des membres (que Drift n'a pas), passer par la
+/// RPC `listTourneeMembers` du CloudSyncService.
+final tourneeMembresProvider =
+    StreamProvider.family<List<TourneeMembre>, String>((ref, tourneeCloudId) {
+  final db = ref.watch(appDatabaseProvider);
+  final query = db.select(db.tourneeMembres)
+    ..where((m) => m.tourneeCloudId.equals(tourneeCloudId))
+    ..orderBy([
+      (m) => OrderingTerm.asc(m.joinedAt),
+    ]);
+  return query.watch();
 });
 
 /// Toutes les tournees datees d'aujourd'hui (peu importe leur statut).

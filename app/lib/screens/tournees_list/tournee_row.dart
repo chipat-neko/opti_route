@@ -120,19 +120,13 @@ class TourneeRow extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  // Indicateur sync cloud : icone discrete emerald
-                  // visible uniquement si la tournee a deja ete poussee
-                  // au moins une fois (cloud_id != null). Indique a
-                  // l'utilisateur que cette tournee est sauvegardee
-                  // hors du telephone.
-                  if (tournee.cloudId != null) ...[
-                    const Icon(
-                      Icons.cloud_done_outlined,
-                      size: 16,
-                      color: AppColors.emerald,
-                    ),
-                    const SizedBox(width: 4),
-                  ],
+                  // Jalon 3.B : badge "Equipe (N)" si tournee partagee
+                  // (au moins 1 member en plus du owner). On affiche
+                  // soit le badge equipe (qui inclut deja l'idee cloud),
+                  // soit l'icone cloud-done simple si juste perso sync.
+                  if (tournee.cloudId != null)
+                    _CloudOrTeamBadge(tourneeCloudId: tournee.cloudId!),
+                  const SizedBox(width: 4),
                   Icon(
                     Icons.chevron_right,
                     color: p.textFaint,
@@ -506,6 +500,58 @@ class StatutBadge extends StatelessWidget {
           fontWeight: FontWeight.w800,
           fontSize: 14,
         ),
+      ),
+    );
+  }
+}
+
+/// Badge cloud-synced (icone seule) OU "Equipe (N)" si la tournee
+/// est partagee avec d'autres users (au moins 2 membres). Sous-jalon
+/// 3.B. Watch `tourneeMembresCountProvider` pour reagir aux changes.
+class _CloudOrTeamBadge extends ConsumerWidget {
+  const _CloudOrTeamBadge({required this.tourneeCloudId});
+
+  final String tourneeCloudId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final countAsync = ref.watch(tourneeMembresCountProvider(tourneeCloudId));
+    final count = countAsync.asData?.value ?? 0;
+    // count == 0 : pull pas encore fait pour les membres. On affiche
+    // l'icone cloud-done quand meme (la tournee est push, c'est sur).
+    // count == 1 : juste l'owner = perso sync. Icone cloud-done seule.
+    // count >= 2 : tournee partagee. Badge "Equipe (N)" plus visible.
+    if (count < 2) {
+      return const Icon(
+        Icons.cloud_done_outlined,
+        size: 16,
+        color: AppColors.emerald,
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.emeraldSoft,
+        borderRadius: BorderRadius.circular(AppRadius.r8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.groups_outlined,
+            size: 12,
+            color: AppColors.emerald,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: AppColors.emerald,
+            ),
+          ),
+        ],
       ),
     );
   }

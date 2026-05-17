@@ -31,6 +31,7 @@ enum PlusAction {
   prefetchTuiles,
   pushCloud,
   inviteEquipier,
+  leaveEquipe,
   delete,
 }
 
@@ -221,6 +222,24 @@ class PlusMenu extends StatelessWidget {
               title: Text('Inviter un coequipier'),
               subtitle: Text(
                 'Genere un code 6 chiffres a partager',
+                style: TextStyle(fontSize: 11),
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        // Jalon 3.B : "Quitter cette tournee" disponible si elle a
+        // un cloudId (donc potentiellement partagee). Le handler
+        // ecran-cote verifiera via listTourneeMembers si le caller
+        // est member (et non owner) et throw si owner pour eviter
+        // la perte d'acces aux donnees de SA tournee.
+        if (tournee.cloudId != null)
+          const PopupMenuItem(
+            value: PlusAction.leaveEquipe,
+            child: ListTile(
+              leading: Icon(Icons.logout, color: AppColors.amber),
+              title: Text('Quitter cette tournee'),
+              subtitle: Text(
+                'Si tu es coequipier (pas chef) seulement',
                 style: TextStyle(fontSize: 11),
               ),
               contentPadding: EdgeInsets.zero,
