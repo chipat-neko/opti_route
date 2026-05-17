@@ -640,6 +640,45 @@ $$;
 GRANT EXECUTE ON FUNCTION public.accept_invitation(TEXT) TO authenticated;
 
 
+-- 3.B.1 — RPC `list_tournee_members` ────────────────────────────
+-- Sous-jalon 3.B : retourne la liste complete des membres d'une
+-- tournee partagee, avec leur email auth.users (pour affichage UI).
+-- SECURITY DEFINER pour pouvoir JOIN sur auth.users (que le client
+-- ne peut PAS SELECT directement) et bypass la RLS de tournee_membres
+-- (qui ne renvoie que les rows du caller).
+--
+-- Check d'autorisation cote fonction : on verifie que le caller est
+-- bien membre de cette tournee avant de retourner les autres membres.
+-- Sans ce check, n'importe quel user authentifie pourrait enumerer
+-- les membres de n'importe quelle tournee.
+CREATE OR REPLACE FUNCTION public.list_tournee_members(p_tournee_id UUID)
+RETURNS TABLE (
+  user_id UUID,
+  email TEXT,
+  role TEXT,
+  joined_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+BEGIN
+  IF NOT public.user_is_member_of(p_tournee_id) THEN
+    RAISE EXCEPTION 'NOT_A_MEMBER';
+  END IF;
+  RETURN QUERY
+    SELECT tm.user_id, u.email::TEXT, tm.role, tm.joined_at
+    FROM public.tournee_membres tm
+    JOIN auth.users u ON u.id = tm.user_id
+    WHERE tm.tournee_id = p_tournee_id
+    ORDER BY (tm.role = 'owner') DESC, tm.joined_at ASC;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.list_tournee_members(UUID) TO authenticated;
+
+
 -- 3.A.8 — Realtime publication ────────────────────────────────────
 -- Supabase Realtime utilise la publication PG `supabase_realtime`
 -- pour pousser les CHANGES en WebSocket. On y ajoute nos tables.

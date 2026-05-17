@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/database.dart';
 import '../../theme/app_tokens.dart';
+import '../cloud/coequipiers_section.dart';
 import 'autres_tournees_banner.dart';
 import 'banners.dart';
 import 'header.dart';
@@ -44,6 +45,10 @@ class Body extends StatelessWidget {
       ),
       children: [
         Header(tournee: tournee),
+        // Jalon 3.B : section coequipiers (visible seulement si la
+        // tournee est partagee = au moins 1 member en plus du owner).
+        // Auto-masquee sinon via SizedBox.shrink interne.
+        CoequipiersSection(tournee: tournee),
         AutresTourneesDuJourBanner(currentTourneeId: tournee.id),
         const SizedBox(height: AppSpacing.x16),
         StatRow(

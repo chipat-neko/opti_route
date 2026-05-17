@@ -208,6 +208,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         _onPushCloudPressed();
       case PlusAction.inviteEquipier:
         _onInviteEquipierPressed();
+      case PlusAction.leaveEquipe:
+        _onLeaveEquipePressed();
       case PlusAction.delete:
         _confirmDeleteTournee();
     }
@@ -233,6 +235,60 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       );
     } on CloudSyncException catch (e) {
       messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
+  }
+
+  /// Jalon 3.B : quitter une tournee partagee. Si l'utilisateur est
+  /// owner, le service throw avec message "supprime-la plutot" : on
+  /// affiche l'erreur sans pop l'ecran. Si member, on confirme via
+  /// dialog puis pop l'ecran apres le DELETE reussi.
+  Future<void> _onLeaveEquipePressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Quitter cette tournee ?'),
+        content: const Text(
+          'Tu n\'auras plus acces a cette tournee ni a ses arrets. '
+          'Le chef pourra te re-inviter via un nouveau code si besoin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.amber.withValues(alpha: 0.18),
+              foregroundColor: AppColors.amber,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Quitter'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(cloudSyncServiceProvider).leaveTournee(widget.tournee.id);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Tournee quittee'),
+          backgroundColor: AppColors.emerald,
+        ),
+      );
+      navigator.pop();
+    } on CloudSyncException catch (e) {
+      if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
           content: Text(e.message),

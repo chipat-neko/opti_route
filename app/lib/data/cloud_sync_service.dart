@@ -547,6 +547,129 @@ class CloudSyncService {
     });
   }
 
+  /// Liste les membres d'une tournee partagee via RPC SECURITY DEFINER
+  /// (sous-jalon 3.B). Throws [CloudSyncException] si pas auth, pas
+  /// membre, tournee jamais push au cloud, ou erreur reseau.
+  Future<List<TourneeMembreInfo>> listTourneeMembers(
+    int localTourneeId,
+  ) async {
+    final client = _client();
+    _requireUserId();
+    final tournee = await (_db.select(_db.tournees)
+          ..where((t) => t.id.equals(localTourneeId)))
+        .getSingleOrNull();
+    if (tournee == null) {
+      throw CloudSyncException(
+        'Tournee introuvable en local (id=$localTourneeId).',
+      );
+    }
+    final cloudId = tournee.cloudId;
+    if (cloudId == null) {
+      throw const CloudSyncException(
+        'Tournee jamais sync — aucun coequipier possible.',
+      );
+    }
+    try {
+      final res = await client.rpc(
+        'list_tournee_members',
+        params: {'p_tournee_id': cloudId},
+      );
+      if (res is! List) {
+        throw const CloudSyncException(
+          'Reponse cloud invalide (list_tournee_members).',
+        );
+      }
+      return res.map((r) {
+        final row = r as Map<String, dynamic>;
+        return TourneeMembreInfo(
+          userCloudId: row['user_id'] as String,
+          email: row['email'] as String? ?? '?',
+          role: row['role'] as String,
+          joinedAt: DateTime.parse(row['joined_at'] as String).toLocal(),
+        );
+      }).toList();
+    } on PostgrestException catch (e) {
+      if (e.message.contains('NOT_A_MEMBER')) {
+        throw const CloudSyncException(
+          'Tu n\'es plus membre de cette tournee.',
+        );
+      }
+      throw CloudSyncException('Echec list membres : ${e.message}');
+    } on Object catch (e) {
+      throw CloudSyncException('Echec list membres : $e');
+    }
+  }
+
+  /// Quitte une tournee partagee (DELETE row tournee_membres pour le
+  /// user courant). L'owner ne peut PAS quitter — il doit supprimer la
+  /// tournee a la place. Throws si owner / pas membre / pas auth.
+  Future<void> leaveTournee(int localTourneeId) async {
+    final client = _client();
+    final userId = _requireUserId();
+    final tournee = await (_db.select(_db.tournees)
+          ..where((t) => t.id.equals(localTourneeId)))
+        .getSingleOrNull();
+    if (tournee?.cloudId == null) {
+      throw const CloudSyncException('Tournee jamais sync au cloud.');
+    }
+    // Refuser si owner : la RLS DELETE accepte mais l'UX est mauvaise
+    // (l'owner perd l'acces a sa propre tournee).
+    final members = await listTourneeMembers(localTourneeId);
+    TourneeMembreInfo? me;
+    for (final m in members) {
+      if (m.userCloudId == userId) {
+        me = m;
+        break;
+      }
+    }
+    if (me == null) {
+      throw const CloudSyncException('Tu n\'es pas membre de cette tournee.');
+    }
+    if (me.role == 'owner') {
+      throw const CloudSyncException(
+        'Tu es le chef de cette tournee. Pour la liberer, supprime-la '
+        'plutot.',
+      );
+    }
+    try {
+      await client.from('tournee_membres').delete()
+          .eq('tournee_id', tournee!.cloudId!)
+          .eq('user_id', userId);
+    } on Object catch (e) {
+      throw CloudSyncException('Echec quitter tournee : $e');
+    }
+    // Nettoyage local : supprime la tournee + ses stops (on n'y a plus
+    // acces cote cloud, donc inutile de les garder localement).
+    await (_db.delete(_db.tournees)
+          ..where((t) => t.id.equals(localTourneeId)))
+        .go();
+  }
+
+  /// L'owner ejecte un member d'une tournee partagee. Throws si pas
+  /// owner / target n'est pas member / pas auth.
+  Future<void> kickMember(int localTourneeId, String memberUserCloudId) async {
+    final client = _client();
+    final userId = _requireUserId();
+    final tournee = await (_db.select(_db.tournees)
+          ..where((t) => t.id.equals(localTourneeId)))
+        .getSingleOrNull();
+    if (tournee?.cloudId == null) {
+      throw const CloudSyncException('Tournee jamais sync au cloud.');
+    }
+    if (memberUserCloudId == userId) {
+      throw const CloudSyncException(
+        'Pour quitter ta propre tournee, utilise "Quitter".',
+      );
+    }
+    try {
+      await client.from('tournee_membres').delete()
+          .eq('tournee_id', tournee!.cloudId!)
+          .eq('user_id', memberUserCloudId);
+    } on Object catch (e) {
+      throw CloudSyncException('Echec ejecter coequipier : $e');
+    }
+  }
+
   static final _invitationRandom = Random.secure();
 
   String _generateInvitationCode() {
@@ -997,4 +1120,23 @@ class CloudPullStats {
   final int updated;
   final int skipped;
   int get total => inserted + updated;
+}
+
+/// Info affichable d'un membre de tournee partagee (sous-jalon 3.B).
+/// Returned par la RPC `list_tournee_members`. Sert a la section
+/// "Coequipiers" de l'ecran tournee + au badge "Equipe (N)" sur tile.
+class TourneeMembreInfo {
+  const TourneeMembreInfo({
+    required this.userCloudId,
+    required this.email,
+    required this.role,
+    required this.joinedAt,
+  });
+
+  final String userCloudId;
+  final String email;
+  final String role; // 'owner' ou 'member'
+  final DateTime joinedAt;
+
+  bool get isOwner => role == 'owner';
 }
