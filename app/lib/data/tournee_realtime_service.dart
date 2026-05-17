@@ -7,6 +7,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cloud_auto_push_service.dart';
 import 'database.dart';
 
+/// Event de delta presence (jalon 3.E) : un coequipier a rejoint
+/// (`isJoin = true`) ou quitte (`isJoin = false`) le channel
+/// Realtime de la tournee. Emis par [TourneeRealtimeService.
+/// presenceDeltaStream] pour que l'UI affiche un SnackBar
+/// "X est en ligne" / "X est parti".
+class PresenceDelta {
+  const PresenceDelta({
+    required this.userCloudId,
+    required this.isJoin,
+  });
+
+  final String userCloudId;
+  final bool isJoin;
+}
+
 /// Position GPS live d'un coequipier (jalon 3.C). Recue via Realtime
 /// Broadcast sur le channel `tournee:<uuid>`. Ephemere — pas stockee
 /// en DB, juste maintenue en memoire le temps de la session.
@@ -93,6 +108,15 @@ class TourneeRealtimeService {
   /// Snapshot synchrone des userIds connectes.
   Set<String> get onlineMembers => Set.unmodifiable(_onlineMemberIds);
 
+  /// Jalon 3.E : delta event (join ou leave) calcule a chaque presence
+  /// sync. Sert a l'UI pour afficher un SnackBar "X est en ligne" /
+  /// "X est parti" quand un coequipier rejoint / quitte le channel.
+  /// Le user courant est exclu (on n'emet pas pour soi-meme).
+  final _presenceDeltaController =
+      StreamController<PresenceDelta>.broadcast();
+  Stream<PresenceDelta> get presenceDeltaStream =>
+      _presenceDeltaController.stream;
+
   /// True si on est déjà subscribed à cette tournée.
   bool isSubscribedTo(String tourneeCloudId) =>
       _activeTourneeCloudId == tourneeCloudId && _activeChannel != null;
@@ -164,6 +188,9 @@ class TourneeRealtimeService {
   /// Jalon 3.D : recompute la liste des membres connectes a partir du
   /// presenceState() du channel (map keyed par user_id). Emet sur le
   /// stream pour faire reagir les widgets UI.
+  ///
+  /// Jalon 3.E : emet aussi un PresenceDelta par join / leave (en
+  /// excluant le user courant — on ne notifie pas pour soi-meme).
   void _handlePresenceSync(RealtimeChannel channel) {
     try {
       final state = channel.presenceState();
@@ -172,10 +199,26 @@ class TourneeRealtimeService {
         // entry.key est notre userId (cf RealtimeChannelConfig.key)
         newIds.add(entry.key);
       }
+      // Jalon 3.E : calculer joins / leaves avant d'overwrite l'ancien
+      // set. On exclut le user courant des 2 deltas (le fait que JE
+      // rejoigne le channel n'a pas a etre notifie a moi-meme).
+      final myUserId = _myUserCloudId;
+      final joins = newIds.difference(_onlineMemberIds)
+        ..removeWhere((id) => id == myUserId);
+      final leaves = _onlineMemberIds.difference(newIds)
+        ..removeWhere((id) => id == myUserId);
       _onlineMemberIds
         ..clear()
         ..addAll(newIds);
       _onlineController.add(Set.unmodifiable(_onlineMemberIds));
+      for (final id in joins) {
+        _presenceDeltaController
+            .add(PresenceDelta(userCloudId: id, isJoin: true));
+      }
+      for (final id in leaves) {
+        _presenceDeltaController
+            .add(PresenceDelta(userCloudId: id, isJoin: false));
+      }
     } on Object catch (e) {
       debugPrint('[TourneeRealtimeService] presence handler fail : $e');
     }
@@ -252,6 +295,9 @@ class TourneeRealtimeService {
     // n'a plus aucun coequipier "vu en ligne").
     _onlineMemberIds.clear();
     _onlineController.add(const {});
+    // Jalon 3.E : pas de cleanup particulier pour le delta stream
+    // (broadcast, pas de subscribers a forcer). Le screen qui ecoute
+    // via ref.listen sera unwatch automatiquement au dispose.
   }
 
   /// Handler Postgres Changes. Merge l'event dans Drift en UPSERT
