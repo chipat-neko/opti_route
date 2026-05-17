@@ -1,34 +1,24 @@
-import 'dart:async';
-import 'dart:convert';
-
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../data/database.dart';
 import '../data/supabase_service.dart';
-import '../data/location_service.dart';
-import '../data/notifications_service.dart';
-import '../data/tile_prefetch_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../providers/supabase_providers.dart';
-import '../providers/tile_provider.dart';
-import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/drawer_badge_icon.dart';
-import '../widgets/ordre_priorite_dialog.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
+import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/cloud_actions.dart';
 import 'tournee_du_jour/export_actions.dart';
-import 'tournee_du_jour/stops_bulk_actions.dart';
-import 'parametres_screen.dart';
-import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/fabs.dart';
+import 'tournee_du_jour/lifecycle_actions.dart';
+import 'tournee_du_jour/optim_actions.dart';
 import 'tournee_du_jour/plus_menu.dart';
+import 'tournee_du_jour/stops_bulk_actions.dart';
 import 'tournee_form_screen.dart';
 
 class TourneeDuJourScreen extends ConsumerStatefulWidget {
@@ -276,44 +266,12 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   /// Duplique la tournee courante a la meme date + 7 jours. Reset le
   /// statut + statuts arrets (via `duplicate` qui le fait deja). Affiche
   /// une confirmation et propose de basculer dessus.
-  Future<void> _onDuplicatePlus7Pressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    try {
-      final repo = ref.read(tourneesRepositoryProvider);
-      final targetDate =
-          widget.tournee.date.add(const Duration(days: 7));
-      final newId = await repo.duplicate(
-        widget.tournee.id,
-        targetDate: targetDate,
+  Future<void> _onDuplicatePlus7Pressed() =>
+      OptimTourneeActions.duplicatePlus7(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-      final newTournee = await repo.getById(newId);
-      if (!mounted || newTournee == null) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Duplique en "${newTournee.nom}" pour la semaine prochaine',
-          ),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Ouvrir',
-            onPressed: () {
-              navigator.pushReplacement(
-                MaterialPageRoute<void>(
-                  builder: (_) => TourneeDuJourScreen(tournee: newTournee),
-                ),
-              );
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
-      );
-    }
-  }
 
   Future<void> _onUndoLastStatusPressed() =>
       StopsBulkActions.undoLastStatus(
@@ -350,411 +308,38 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         tournee: widget.tournee,
       );
 
-  Future<void> _onDemarrerPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    // Demande la permission GPS avant de basculer en mode en_cours
-    // pour eviter d'afficher la card "prochain arret" sans donnees.
-    try {
-      final ok = await LocationService.ensurePermission();
-      if (!ok) return;
-    } on LocationPermissionDenied catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          duration: const Duration(seconds: 5),
-        ),
-      );
-      return;
-    }
-    if (!mounted) return;
-    await ref.read(tourneesRepositoryProvider).update(
-          widget.tournee.id,
-          TourneesCompanion(
-            statut: const Value('en_cours'),
-            // Pose le timestamp de demarrage seulement s'il n'y en a
-            // pas deja un (ex: reprise apres Pause -> on garde le 1er).
-            demareeLe: widget.tournee.demareeLe == null
-                ? Value(DateTime.now())
-                : const Value.absent(),
-          ),
-        );
-    if (!mounted) return;
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Tournee demarree. Bonne route !'),
-        backgroundColor: AppColors.emerald,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  /// Pause "courte" (pause dejeuner par ex) sans changer le statut de
-  /// la tournee. Toggle entre pause / reprendre selon que `pauseeLe`
-  /// est deja set ou non.
-  ///
-  /// La duree pausee s'accumule dans `pauseeSeconds` au moment du
-  /// "Reprendre". Ce cumul est utilise par les stats (heures
-  /// travaillees effectives) et a l'affichage chrono "Demarree il y a".
-  Future<void> _onPauseShortPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final repo = ref.read(tourneesRepositoryProvider);
-    final t = await repo.getById(widget.tournee.id);
-    if (t == null || !mounted) return;
-    if (t.pauseeLe == null) {
-      await repo.pauseTournee(t.id);
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tournee en pause. Tap "Reprendre" quand tu repars.'),
-          backgroundColor: AppColors.amber,
-          duration: Duration(seconds: 3),
-        ),
-      );
-    } else {
-      await repo.reprendreTournee(t.id);
-      if (!mounted) return;
-      final pauseDuree = DateTime.now().difference(t.pauseeLe!);
-      final mins = pauseDuree.inMinutes;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'C\'est reparti. Pause de ${mins}min comptee.',
-          ),
-          backgroundColor: AppColors.emerald,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  Future<void> _onArreterPressed() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Mettre la tournee en pause ?'),
-        content: const Text(
-          'La tournee repasse en mode "optimisee". Tu pourras la '
-          'relancer plus tard.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Mettre en pause'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await ref.read(tourneesRepositoryProvider).update(
-          widget.tournee.id,
-          const TourneesCompanion(statut: Value('optimisee')),
-        );
-    // Alerte "arrets oublies" : si la tournee est mise en pause avec
-    // des stops a_livrer restants, on push une notif rappel.
-    final stops = await ref
-        .read(stopsRepositoryProvider)
-        .getByTournee(widget.tournee.id);
-    final pending =
-        stops.where((s) => s.statutLivraison == 'a_livrer').length;
-    if (pending > 0) {
-      unawaited(
-        NotificationsService.instance.showPendingStopsAlert(
-          tourneeId: widget.tournee.id,
-          nomTournee: widget.tournee.nom,
-          nbPending: pending,
-        ),
-      );
-    }
-  }
-
-  Future<void> _onOptimizePressed() async {
-    final optimizer = ref.read(optimizationServiceProvider);
-    if (optimizer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Cle OpenRouteService manquante. Configure-la dans les Parametres.',
-          ),
-          action: SnackBarAction(
-            label: 'Ouvrir',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ParametresScreen(),
-              ),
-            ),
-          ),
-        ),
-      );
-      return;
-    }
-
-    final stopsRepo = ref.read(stopsRepositoryProvider);
-    final stops = await stopsRepo.getByTournee(widget.tournee.id);
-    final geocoded =
-        stops.where((s) => s.lat != null && s.lng != null).toList();
-    if (geocoded.length < 2) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Au moins 2 arrets avec coordonnees sont necessaires.'),
-        ),
-      );
-      return;
-    }
-
-    // 1. Si plusieurs arrets EN 1ER : demander a Noah l'ordre voulu
-    //    entre eux. Idem pour EN DERNIER. VROOM ne sait pas le faire :
-    //    son champ priority est un score, pas un ordre absolu.
-    final firsts = geocoded
-        .where((s) => s.priorite == 'obligatoire_premier')
-        .toList()
-      ..sort(_existingOrdrePrio);
-    final lasts = geocoded
-        .where((s) => s.priorite == 'obligatoire_dernier')
-        .toList()
-      ..sort(_existingOrdrePrio);
-
-    if (!mounted) return;
-    final firstsOrdered = await OrdrePrioriteDialog.showIfNeeded(
-      context,
-      titre: 'Ordre des arrets EN 1ER',
-      sousTitre: 'Tu as ${firsts.length} arrets a livrer en premier. '
-          'Glisse-les dans l\'ordre voulu : 1, 2, 3...',
-      stops: firsts,
-    );
-    if (firstsOrdered == null) return; // annule
-    if (!mounted) return;
-    final lastsOrdered = await OrdrePrioriteDialog.showIfNeeded(
-      context,
-      titre: 'Ordre des arrets EN DERNIER',
-      sousTitre: 'Tu as ${lasts.length} arrets a livrer en fin de tournee. '
-          'Glisse-les dans l\'ordre voulu.',
-      stops: lasts,
-    );
-    if (lastsOrdered == null) return;
-
-    // 2. Persister `ordrePriorite` pour que le solveur (et la prochaine
-    //    optimisation) le retrouvent.
-    await _persistOrdrePriorite(firstsOrdered);
-    await _persistOrdrePriorite(lastsOrdered);
-
-    // Recharger les stops pour avoir les ordrePriorite a jour avant
-    // d'appeler le solveur.
-    final stopsRefreshed = await stopsRepo.getByTournee(widget.tournee.id);
-    final geocodedRefreshed = stopsRefreshed
-        .where((s) => s.lat != null && s.lng != null)
-        .toList(growable: false);
-
-    if (!mounted) return;
-    setState(() => _optimizing = true);
-    try {
-      final result = await optimizer.optimize(
+  Future<void> _onDemarrerPressed() => LifecycleTourneeActions.demarrer(
+        context: context,
+        ref: ref,
         tournee: widget.tournee,
-        stops: geocodedRefreshed,
       );
-      // Incremente le compteur du quota ORS pour Parametres.
-      // Best-effort : si l'ecriture echoue, on ne casse pas l'optim.
-      try {
-        await ref
-            .read(parametresRepositoryProvider)
-            .incrementOrsUsed();
-      } catch (_) {}
 
-      await ref
-          .read(stopsRepositoryProvider)
-          .applyOptimizedOrder(result.orderedStopIds);
-
-      // On serialise la geometry GeoJSON en string JSON pour stockage
-      // SQLite. La carte la decodera en LineString a l'affichage.
-      final traceJson = result.routeGeometry == null
-          ? null
-          : jsonEncode(result.routeGeometry);
-      await ref.read(tourneesRepositoryProvider).update(
-            widget.tournee.id,
-            TourneesCompanion(
-              statut: const Value('optimisee'),
-              distanceTotaleM: Value(result.totalDistanceMeters),
-              dureeTotaleS: Value(result.totalDurationSeconds),
-              optimiseeLe: Value(DateTime.now()),
-              traceGeojson: Value(traceJson),
-            ),
-          );
-
-      if (!mounted) return;
-      final km = (result.totalDistanceMeters / 1000).toStringAsFixed(1);
-      final dur = _formatDuration(result.totalDurationSeconds);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tournee optimisee : $km km · $dur'),
-          backgroundColor: AppColors.emerald,
-        ),
+  Future<void> _onPauseShortPressed() => LifecycleTourneeActions.pauseShort(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur d\'optimisation : $e')),
+
+  Future<void> _onArreterPressed() => LifecycleTourneeActions.arreter(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-    } finally {
-      if (mounted) setState(() => _optimizing = false);
-    }
-  }
 
-  /// Tri stable d'arrets par `ordrePriorite` (croissant). Null tombe a
-  /// la fin -- les arrets non encore ordonnes apparaissent en queue,
-  /// l'utilisateur les classera dans le dialog.
-  static int _existingOrdrePrio(Stop a, Stop b) {
-    final ao = a.ordrePriorite;
-    final bo = b.ordrePriorite;
-    if (ao == null && bo == null) return a.id.compareTo(b.id);
-    if (ao == null) return 1;
-    if (bo == null) return -1;
-    return ao.compareTo(bo);
-  }
-
-  /// Ecrit `ordrePriorite = position dans la liste` (1-based) pour
-  /// chaque stop. Permet aux prochaines optimisations de reprendre
-  /// l'ordre choisi sans redemander. Batch atomique (1 round-trip
-  /// SQLite au lieu de N).
-  Future<void> _persistOrdrePriorite(List<int> orderedIds) async {
-    if (orderedIds.isEmpty) return;
-    await ref
-        .read(stopsRepositoryProvider)
-        .applyOrdrePriorite(orderedIds);
-  }
-
-  /// Pre-telecharge les tuiles OSM de la bbox (depot + arrets
-  /// geocodes) aux zooms 13-16. Affiche d'abord une dialog de
-  /// confirmation avec l'estimation taille + nb tuiles, puis une
-  /// progress dialog pendant le download. Etape 4 du plan GPS.
-  Future<void> _onPrefetchTuilesPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final stops =
-        await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
-    if (!mounted) return;
-
-    // Collecte des points : depot + arrets geocodes (lat/lng non nuls).
-    final points = <LatLng>[
-      LatLng(widget.tournee.pointDepartLat, widget.tournee.pointDepartLng),
-      for (final s in stops)
-        if (s.lat != null && s.lng != null) LatLng(s.lat!, s.lng!),
-    ];
-    if (points.length < 2) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Aucun arret geocode. Geolocalise d\'abord les arrets.'),
-      ));
-      return;
-    }
-
-    final estimate = TilePrefetchService.estimate(points: points);
-    if (estimate.tiles > TilePrefetchService.maxTiles) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-          'Zone trop large (${estimate.tiles} tuiles). Limite '
-          '${TilePrefetchService.maxTiles}.',
-        ),
-      ));
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Telecharger pour hors-ligne ?'),
-        content: Text(
-          '${estimate.tiles} tuiles a telecharger '
-          '(~${estimate.estimatedSizeLabel}).\n\n'
-          'Les tuiles serviront a afficher la carte meme sans 4G '
-          'pendant cette tournee. Operation a faire de preference '
-          'en wifi.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Telecharger'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final service = TilePrefetchService(ref.read(cachedTileProviderInstance));
-    final progress = ValueNotifier<({int done, int total})>(
-      (done: 0, total: estimate.tiles),
-    );
-
-    // Progress dialog non-bloquante (rentre dans la stack mais on la
-    // pop nous-meme a la fin). Animation desactivee pour eviter le
-    // flicker entre chaque update.
-    unawaited(showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Telechargement...'),
-        content: ValueListenableBuilder<({int done, int total})>(
-          valueListenable: progress,
-          builder: (_, v, _) {
-            final ratio = v.total == 0 ? 0.0 : v.done / v.total;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                LinearProgressIndicator(value: ratio),
-                const SizedBox(height: 12),
-                Text('${v.done} / ${v.total} tuiles'),
-              ],
-            );
-          },
-        ),
-      ),
-    ));
-
-    var downloaded = 0;
-    String? errorMsg;
-    try {
-      downloaded = await service.prefetchBbox(
-        points: points,
-        onProgress: (done, total) {
-          progress.value = (done: done, total: total);
+  Future<void> _onOptimizePressed() => OptimTourneeActions.optimize(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
+        setOptimizing: (v) {
+          if (mounted) setState(() => _optimizing = v);
         },
       );
-    } on TilePrefetchError catch (e) {
-      errorMsg = e.message;
-    } catch (e) {
-      errorMsg = 'Erreur : $e';
-    }
 
-    if (mounted) Navigator.of(context).pop(); // ferme la progress dialog
-    progress.dispose();
-    if (!mounted) return;
-    if (errorMsg != null) {
-      messenger.showSnackBar(SnackBar(content: Text(errorMsg)));
-      return;
-    }
-    final failed = estimate.tiles - downloaded;
-    messenger.showSnackBar(SnackBar(
-      content: Text(
-        '$downloaded / ${estimate.tiles} tuiles en cache'
-        '${failed > 0 ? ' ($failed echec(s))' : ''}',
-      ),
-      backgroundColor: AppColors.emerald,
-    ));
-  }
-}
-
-String _formatDuration(int totalSeconds) {
-  final h = totalSeconds ~/ 3600;
-  final m = (totalSeconds % 3600) ~/ 60;
-  if (h == 0) return '${m}min';
-  return '${h}h${m.toString().padLeft(2, '0')}';
+  Future<void> _onPrefetchTuilesPressed() =>
+      OptimTourneeActions.prefetchTuiles(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
+      );
 }
 
