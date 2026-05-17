@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../data/database.dart';
 import '../data/supabase_service.dart';
+import '../data/tournee_realtime_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../providers/supabase_providers.dart';
@@ -33,6 +36,7 @@ class TourneeDuJourScreen extends ConsumerStatefulWidget {
 
 class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   bool _optimizing = false;
+  StreamSubscription<PresenceDelta>? _presenceDeltaSub;
 
   @override
   void initState() {
@@ -49,6 +53,9 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       // membres), s'abonner au Realtime channel pour recevoir les events
       // live des autres devices. No-op si tournee perso pure.
       _maybeSubscribeRealtime();
+      // Jalon 3.E : ecoute les delta presence pour afficher des
+      // SnackBar "X a rejoint / quitte la tournee".
+      _maybeListenPresenceDeltas();
     });
   }
 
@@ -62,7 +69,32 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     ref.read(tourneeRealtimeServiceProvider).unsubscribe();
     // Jalon 3.C : arrete le push GPS live.
     ref.read(livePresenceServiceProvider).stop();
+    // Jalon 3.E : cancel la subscription au stream presence delta.
+    _presenceDeltaSub?.cancel();
     super.dispose();
+  }
+
+  /// Jalon 3.E : ecoute les delta presence du channel actif et affiche
+  /// un SnackBar in-app a chaque join/leave d'un autre coequipier.
+  /// Volontairement basique : pas de nom (round-trip RPC trop lourd
+  /// par event), juste "Un coequipier" — le user peut consulter la
+  /// section Coequipiers pour le detail.
+  void _maybeListenPresenceDeltas() {
+    final realtime = ref.read(tourneeRealtimeServiceProvider);
+    _presenceDeltaSub =
+        realtime.presenceDeltaStream.listen((delta) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            delta.isJoin
+                ? 'Un coequipier vient de rejoindre cette tournee'
+                : 'Un coequipier vient de quitter cette tournee',
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
   }
 
   /// Subscribe au channel Realtime de la tournee si elle a un cloudId
