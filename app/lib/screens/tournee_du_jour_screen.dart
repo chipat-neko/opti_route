@@ -10,11 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 import '../data/database.dart';
 import '../data/supabase_service.dart';
 import '../data/location_service.dart';
-import '../data/navigation_service.dart';
 import '../data/notifications_service.dart';
 import '../data/tile_prefetch_service.dart';
-import '../data/tournee_pdf_service.dart';
-import '../data/tournee_text_share_service.dart';
 import '../providers/geocoding_providers.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
@@ -27,6 +24,7 @@ import '../widgets/ordre_priorite_dialog.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
 import 'tournee_du_jour/cloud_actions.dart';
+import 'tournee_du_jour/export_actions.dart';
 import 'parametres_screen.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/fabs.dart';
@@ -337,123 +335,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     );
   }
 
-  Future<void> _onExportPdfPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final stops =
-          await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
-      final service = TourneePdfService();
-      // Calcule le cout carburant pour l'inclure dans le PDF si la
-      // tournee a une distance.
-      double? cout;
-      if (widget.tournee.distanceTotaleM != null &&
-          widget.tournee.distanceTotaleM! > 0) {
-        cout = await ref
-            .read(parametresRepositoryProvider)
-            .estimerCoutCarburant(
-              distanceMeters: widget.tournee.distanceTotaleM!,
-            );
-      }
-      // Profil entreprise (optionnel) : ajoute un footer "nom + SIRET +
-      // slogan" en bas de chaque page du PDF.
-      final paramsRepo = ref.read(parametresRepositoryProvider);
-      final entrepriseNom = await paramsRepo.getEntrepriseNom();
-      final entrepriseSiret = await paramsRepo.getEntrepriseSiret();
-      final entrepriseSlogan = await paramsRepo.getEntrepriseSlogan();
-      await service.exportAndShare(
+  Future<void> _onExportPdfPressed() => ExportTourneeActions.exportPdf(
+        context: context,
+        ref: ref,
         tournee: widget.tournee,
-        stops: stops,
-        coutCarburantEur: cout,
-        entrepriseNom: entrepriseNom,
-        entrepriseSiret: entrepriseSiret,
-        entrepriseSlogan: entrepriseSlogan,
       );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export PDF : $e')),
+
+  Future<void> _onExportPdfPerCoequipierPressed() =>
+      ExportTourneeActions.exportPdfPerCoequipier(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-    }
-  }
-
-  /// Export un PDF par coequipier present dans la tournee (Moi + chaque
-  /// affecte). Genere N fichiers et lance N partages successifs. Le
-  /// chef peut ainsi envoyer une fiche dediee a chaque livreur.
-  Future<void> _onExportPdfPerCoequipierPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final stops =
-          await ref.read(stopsRepositoryProvider).getByTournee(widget.tournee.id);
-      // Set des cles : null + ids presents
-      final keys = <int?>{};
-      for (final s in stops) {
-        keys.add(s.coequipierId);
-      }
-      if (keys.isEmpty) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Aucun arret a exporter.')),
-        );
-        return;
-      }
-      if (keys.length == 1) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Tous les arrets ont la meme affectation. Utilise '
-              '"Exporter en PDF" classique.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      // Resolution noms coequipiers
-      final coRepo = ref.read(coequipiersRepositoryProvider);
-      final coequipiers = await coRepo.getAllActifs();
-      final byId = {for (final c in coequipiers) c.id: c};
-
-      final paramsRepo = ref.read(parametresRepositoryProvider);
-      final entrepriseNom = await paramsRepo.getEntrepriseNom();
-      final entrepriseSiret = await paramsRepo.getEntrepriseSiret();
-      final entrepriseSlogan = await paramsRepo.getEntrepriseSlogan();
-      double? cout;
-      if (widget.tournee.distanceTotaleM != null &&
-          widget.tournee.distanceTotaleM! > 0) {
-        cout = await paramsRepo.estimerCoutCarburant(
-          distanceMeters: widget.tournee.distanceTotaleM!,
-        );
-      }
-
-      final service = TourneePdfService();
-      for (final key in keys) {
-        final nom = key == null ? 'Moi' : (byId[key]?.nom ?? 'Coequipier #$key');
-        await service.exportForCoequipier(
-          tournee: widget.tournee,
-          allStops: stops,
-          coequipierIdOrNull: key,
-          coequipierNom: nom,
-          coutCarburantEur: cout,
-          entrepriseNom: entrepriseNom,
-          entrepriseSiret: entrepriseSiret,
-          entrepriseSlogan: entrepriseSlogan,
-        );
-      }
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            '${keys.length} PDF generes (1 par coequipier).',
-          ),
-          backgroundColor: AppColors.emerald,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export PDF equipe : $e')),
-      );
-    }
-  }
 
   /// Duplique la tournee courante a la meme date + 7 jours. Reset le
   /// statut + statuts arrets (via `duplicate` qui le fait deja). Affiche
@@ -602,168 +495,24 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     }
   }
 
-  /// Partage la tournee sous forme de texte court via le selecteur natif
-  /// Android (WhatsApp, SMS, mail, etc.). Utilise les arrets dans leur
-  /// ordre actuel (optimise si l'optim a tourne, sinon ordre de saisie).
-  Future<void> _onShareTextPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final stops = await ref
-          .read(stopsRepositoryProvider)
-          .getByTournee(widget.tournee.id);
-      final service = TourneeTextShareService(
-        parametres: ref.read(parametresRepositoryProvider),
-      );
-      await service.shareAsText(
+  Future<void> _onShareTextPressed() => ExportTourneeActions.shareText(
+        context: context,
+        ref: ref,
         tournee: widget.tournee,
-        stops: stops,
       );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur au partage : $e')),
-      );
-    }
-  }
 
   /// Affiche un selecteur de coequipier, puis genere un text-share
   /// filtre sur ses arrets affectes. Si le coequipier a un numero, on
   /// pre-remplit l'intent vers WhatsApp / SMS via url_launcher.
-  Future<void> _onShareToCoequipierPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final p = context.palette;
-    final coequipiers =
-        await ref.read(coequipiersRepositoryProvider).getAllActifs();
-    if (!mounted) return;
-    if (coequipiers.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    final picked = await showModalBottomSheet<Coequipier>(
-      context: context,
-      backgroundColor: p.cream,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.r22),
-        ),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x18,
-            vertical: AppSpacing.x14,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Partager a',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: p.ink,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.x12),
-              for (final c in coequipiers)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: colorFromTag(
-                      c.colorTag,
-                      defaultColor: AppColors.creamSoft,
-                    ),
-                    child: Text(
-                      _coequipierInitials(c.nom),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ),
-                  title: Text(c.nom),
-                  subtitle: c.telephone != null && c.telephone!.isNotEmpty
-                      ? Text(c.telephone!)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(c),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (picked == null || !mounted) return;
-
-    try {
-      final allStops = await ref
-          .read(stopsRepositoryProvider)
-          .getByTournee(widget.tournee.id);
-      final stopsLui =
-          allStops.where((s) => s.coequipierId == picked.id).toList();
-      if (stopsLui.isEmpty) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Aucun arret affecte a ${picked.nom}. Affecte-lui des '
-              'arrets depuis la bottom sheet d\'un arret.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      final service = TourneeTextShareService(
-        parametres: ref.read(parametresRepositoryProvider),
-      );
-      final text = await service.formatPlainText(
+  Future<void> _onShareToCoequipierPressed() =>
+      ExportTourneeActions.shareToCoequipier(
+        context: context,
+        ref: ref,
         tournee: widget.tournee,
-        stops: stopsLui,
       );
-      final preamble =
-          'Tes arrets pour ${widget.tournee.nom} (${stopsLui.length}) :\n\n';
 
-      // Si le coequipier a un telephone, on tente WhatsApp d'abord
-      // (le scheme `whatsapp://` ouvre l'app si installee), puis SMS.
-      // Sinon fallback share natif (Share.share).
-      final tel = picked.telephone?.replaceAll(RegExp(r'\D'), '');
-      if (tel != null && tel.isNotEmpty) {
-        final waUri = Uri.parse(
-          'https://wa.me/33${tel.startsWith('0') ? tel.substring(1) : tel}'
-          '?text=${Uri.encodeComponent(preamble + text)}',
-        );
-        final ok = await NavigationService.tryLaunch(waUri);
-        if (!ok) {
-          // Fallback SMS
-          final smsUri = Uri.parse(
-            'sms:${picked.telephone}'
-            '?body=${Uri.encodeComponent(preamble + text)}',
-          );
-          await NavigationService.tryLaunch(smsUri);
-        }
-      } else {
-        // Pas de tel : share natif
-        await service.shareAsText(
-          tournee: widget.tournee,
-          stops: stopsLui,
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur au partage : $e')),
-      );
-    }
-  }
-
+  // Reste utilise par _onAssignRestPressed (cf plus bas). A extraire
+  // dans une prochaine PR refactor.
   static String _coequipierInitials(String nom) {
     final parts = nom.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty) return '?';
