@@ -365,7 +365,13 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await ref.read(tourneesRepositoryProvider).delete(widget.tournee.id);
+      // Jalon 2.F : passe par CloudSyncService pour propager au cloud
+      // (delete row cloud + cleanup photos Storage) en best-effort,
+      // puis delete local. Si offline / pas auth, juste le delete
+      // local s'execute (le cleanup cloud sera no-op).
+      await ref
+          .read(cloudSyncServiceProvider)
+          .deleteTourneeWithCloudCleanup(widget.tournee.id);
       if (!mounted) return;
       // Le HomeScreen va detecter qu'il n'y a plus de tournee du jour
       // et basculer sur l'empty state  -  pas besoin de pop manuellement.

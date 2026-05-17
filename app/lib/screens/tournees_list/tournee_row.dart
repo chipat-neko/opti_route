@@ -51,7 +51,10 @@ class TourneeRow extends ConsumerWidget {
         ),
         confirmDismiss: (_) => _confirmDelete(context, tournee),
         onDismissed: (_) async {
-          await ref.read(tourneesRepositoryProvider).delete(tournee.id);
+          // Jalon 2.F : propagation cloud (best-effort) + local
+          await ref
+              .read(cloudSyncServiceProvider)
+              .deleteTourneeWithCloudCleanup(tournee.id);
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Tournee "${tournee.nom}" supprimee')),

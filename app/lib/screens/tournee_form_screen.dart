@@ -7,6 +7,7 @@ import '../data/address_suggestion.dart';
 import '../data/database.dart';
 import '../data/notifications_service.dart';
 import '../providers/database_providers.dart';
+import '../providers/supabase_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
 import 'tournee_form/form_widgets.dart';
@@ -271,7 +272,10 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
     try {
       await NotificationsService.instance
           .cancelTourneeRappel(widget.initial!.id);
-      await ref.read(tourneesRepositoryProvider).delete(widget.initial!.id);
+      // Jalon 2.F : propagation cloud (best-effort) + local
+      await ref
+          .read(cloudSyncServiceProvider)
+          .deleteTourneeWithCloudCleanup(widget.initial!.id);
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {

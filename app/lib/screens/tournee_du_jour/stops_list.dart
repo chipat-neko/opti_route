@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
+import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
 import 'stop_row.dart';
 
@@ -236,7 +237,10 @@ class _StopsListState extends ConsumerState<StopsList> {
       ),
     );
     if (confirmed == true && context.mounted) {
-      await ref.read(stopsRepositoryProvider).delete(stop.id);
+      // Jalon 2.F : propagation cloud (best-effort) + local
+      await ref
+          .read(cloudSyncServiceProvider)
+          .deleteStopWithCloudCleanup(stop.id);
       await ref
           .read(tourneesRepositoryProvider)
           .invalidateOptimization(stop.tourneeId);
