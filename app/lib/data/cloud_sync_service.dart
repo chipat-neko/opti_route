@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import 'cloud_error_humanizer.dart';
 import 'database.dart';
 import 'supabase_service.dart';
 
@@ -146,7 +147,8 @@ class CloudSyncService {
         await client.from('coequipiers').update(row).eq('id', cloudId);
       }
     } on Object catch (e) {
-      throw CloudSyncException('Echec push coequipier "${c.nom}" : $e');
+      throw CloudSyncException(
+          'Echec push coequipier "${c.nom}" : ${humanizeCloudError(e)}');
     }
     if (isFirstPush) {
       await (_db.update(_db.coequipiers)..where((row) => row.id.equals(c.id)))
@@ -200,7 +202,8 @@ class CloudSyncService {
         await client.from('tournees').update(row).eq('id', cloudId);
       }
     } on Object catch (e) {
-      throw CloudSyncException('Echec push tournee "${t.nom}" : $e');
+      throw CloudSyncException(
+          'Echec push tournee "${t.nom}" : ${humanizeCloudError(e)}');
     }
     if (isFirstPush) {
       await (_db.update(_db.tournees)..where((row) => row.id.equals(t.id)))
@@ -267,7 +270,7 @@ class CloudSyncService {
       }
     } on Object catch (e) {
       throw CloudSyncException(
-        'Echec push stop "${s.adresseBrute}" : $e',
+        'Echec push stop "${s.adresseBrute}" : ${humanizeCloudError(e)}',
       );
     }
     // Persist en local : cloudId (1er push) et/ou cloudPhotoPath
@@ -475,7 +478,8 @@ class CloudSyncService {
         return code;
       } on Object catch (e) {
         if (attempt == 1) {
-          throw CloudSyncException('Echec creation invitation : $e');
+          throw CloudSyncException(
+          'Echec creation invitation : ${humanizeCloudError(e)}');
         }
       }
     }
@@ -514,7 +518,8 @@ class CloudSyncService {
     } on PostgrestException catch (e) {
       throw CloudSyncException(_invitationErrorToFr(e.message));
     } on Object catch (e) {
-      throw CloudSyncException('Echec acceptation invitation : $e');
+      throw CloudSyncException(
+          'Echec acceptation invitation : ${humanizeCloudError(e)}');
     }
   }
 
@@ -527,7 +532,8 @@ class CloudSyncService {
     try {
       rows = await client.from('tournee_membres').select();
     } on Object catch (e) {
-      throw CloudSyncException('Echec fetch tournee_membres : $e');
+      throw CloudSyncException(
+          'Echec fetch tournee_membres : ${humanizeCloudError(e)}');
     }
     await _db.transaction(() async {
       await _db.delete(_db.tourneeMembres).go();
@@ -596,7 +602,7 @@ class CloudSyncService {
       }
       throw CloudSyncException('Echec list membres : ${e.message}');
     } on Object catch (e) {
-      throw CloudSyncException('Echec list membres : $e');
+      throw CloudSyncException('Echec list membres : ${humanizeCloudError(e)}');
     }
   }
 
@@ -636,7 +642,7 @@ class CloudSyncService {
           .eq('tournee_id', tournee!.cloudId!)
           .eq('user_id', userId);
     } on Object catch (e) {
-      throw CloudSyncException('Echec quitter tournee : $e');
+      throw CloudSyncException('Echec quitter tournee : ${humanizeCloudError(e)}');
     }
     // Nettoyage local : supprime la tournee + ses stops (on n'y a plus
     // acces cote cloud, donc inutile de les garder localement).
@@ -747,7 +753,7 @@ class CloudSyncService {
           .eq('tournee_id', tournee!.cloudId!)
           .eq('user_id', memberUserCloudId);
     } on Object catch (e) {
-      throw CloudSyncException('Echec ejecter coequipier : $e');
+      throw CloudSyncException('Echec ejecter coequipier : ${humanizeCloudError(e)}');
     }
   }
 
@@ -786,7 +792,7 @@ class CloudSyncService {
     try {
       rows = await client.from('coequipiers').select();
     } on Object catch (e) {
-      throw CloudSyncException('Echec fetch coequipiers : $e');
+      throw CloudSyncException('Echec fetch coequipiers : ${humanizeCloudError(e)}');
     }
     int inserted = 0, updated = 0, skipped = 0;
     for (final r in rows) {
@@ -831,7 +837,7 @@ class CloudSyncService {
     try {
       rows = await client.from('tournees').select();
     } on Object catch (e) {
-      throw CloudSyncException('Echec fetch tournees : $e');
+      throw CloudSyncException('Echec fetch tournees : ${humanizeCloudError(e)}');
     }
     int inserted = 0, updated = 0, skipped = 0;
     for (final r in rows) {
@@ -912,7 +918,7 @@ class CloudSyncService {
     try {
       rows = await client.from('stops').select();
     } on Object catch (e) {
-      throw CloudSyncException('Echec fetch stops : $e');
+      throw CloudSyncException('Echec fetch stops : ${humanizeCloudError(e)}');
     }
     int inserted = 0, updated = 0, skipped = 0;
     // Phase 1 : INSERT/UPDATE tous les rows AVEC le path local existant
@@ -1065,7 +1071,7 @@ class CloudSyncService {
     try {
       rows = await client.from('saved_destinations').select();
     } on Object catch (e) {
-      throw CloudSyncException('Echec fetch carnet : $e');
+      throw CloudSyncException('Echec fetch carnet : ${humanizeCloudError(e)}');
     }
     int inserted = 0, updated = 0, skipped = 0;
     for (final r in rows) {
