@@ -834,6 +834,10 @@ class CloudSyncService {
       throw CloudSyncException('Echec fetch stops : $e');
     }
     int inserted = 0, updated = 0, skipped = 0;
+    // Phase 1 : INSERT/UPDATE tous les rows AVEC le path local existant
+    // (sans download). Collecte les downloads a faire dans une liste
+    // pour les paralleliser ensuite.
+    final pendingDownloads = <_PhotoDownloadTask>[];
     for (final r in rows) {
       final row = r as Map<String, dynamic>;
       final cloudId = row['id'] as String;
@@ -853,9 +857,6 @@ class CloudSyncService {
           .getSingleOrNull();
       if (tourneeLocalId == null) {
         // Orphan : la tournee parent n'a pas ete trouvee localement.
-        // On skip plutot que de crasher. Peut arriver si la tournee
-        // a ete supprimee du cloud entre le fetch tournees et le
-        // fetch stops, ou si la RLS la cache (ne devrait pas).
         continue;
       }
       final coequipierCloudId = row['coequipier_id'] as String?;
@@ -865,20 +866,13 @@ class CloudSyncService {
                 ..where((c) => c.cloudId.equals(coequipierCloudId)))
               .map((c) => c.id)
               .getSingleOrNull();
-      // Sous-jalon 2.E-2 : si le row cloud a une photo preuve uploadee
-      // (cloud_photo_path != null) ET qu'on n'a pas deja un fichier
-      // local pour ce stop, on telecharge depuis Storage. Sert au cas
-      // multi-appareils : install sur un 2e telephone, sign-in, la photo
-      // preuve d'une livraison faite sur l'autre device est restauree.
+      // 2.E-2 + perf parallel : on garde l'existing path pour ne pas
+      // ecraser une photo locale, et on schedule le download a faire
+      // dans la phase 2 (parallele). Si pas de cloud_photo_path ou
+      // fichier local deja la, _resolveDownloadTask renvoie null.
       final cloudPhotoPath = row['cloud_photo_path'] as String?;
       final existingLocalPath =
           localRow?.preuvePhotoPath ?? row['preuve_photo_path'] as String?;
-      final resolvedLocalPath = await _maybeDownloadPhoto(
-        client: client,
-        cloudPhotoPath: cloudPhotoPath,
-        existingLocalPath: existingLocalPath,
-        stopCloudId: cloudId,
-      );
       final companion = StopsCompanion(
         tourneeId: Value(tourneeLocalId),
         adresseBrute: Value(row['adresse_brute'] as String),
@@ -901,27 +895,88 @@ class CloudSyncService {
             : DateTime.parse(row['livre_le'] as String)),
         ordreOptimise: Value(row['ordre_optimise'] as int?),
         ordrePriorite: Value(row['ordre_priorite'] as int?),
-        preuvePhotoPath: Value(resolvedLocalPath),
+        // Pour la phase 1 : on garde le path existant (peut etre null).
+        // Si download succede en phase 2, on UPDATE plus tard.
+        preuvePhotoPath: Value(existingLocalPath),
         cloudPhotoPath: Value(cloudPhotoPath),
         coequipierId: Value(coequipierLocalId),
         creeLe: Value(DateTime.parse(row['cree_le'] as String)),
         cloudId: Value(cloudId),
         updatedAt: Value(cloudUpdatedAt),
       );
+      int stopLocalId;
       if (localRow == null) {
-        await _db.into(_db.stops).insert(companion);
+        stopLocalId = await _db.into(_db.stops).insert(companion);
         inserted++;
       } else {
+        stopLocalId = localRow.id;
         await (_db.update(_db.stops)..where((s) => s.id.equals(localRow.id)))
             .write(companion);
         updated++;
       }
+      // Schedule le download photo si pertinent.
+      if (cloudPhotoPath != null &&
+          !await _isLocalFilePresent(existingLocalPath)) {
+        pendingDownloads.add(_PhotoDownloadTask(
+          stopLocalId: stopLocalId,
+          cloudPhotoPath: cloudPhotoPath,
+          stopCloudId: cloudId,
+        ));
+      }
     }
+    // Phase 2 : parallelise les downloads par batchs de 5 (compromise
+    // entre rapidite et eviter de surcharger le reseau/Storage). Avant
+    // refactor : ~500ms/photo sequentiel. Apres : ~5 photos en paralele,
+    // gain d'environ 5x sur les pulls multi-photos.
+    await _processDownloadBatch(client, pendingDownloads, batchSize: 5);
     return CloudPullStats(
       inserted: inserted,
       updated: updated,
       skipped: skipped,
     );
+  }
+
+  Future<bool> _isLocalFilePresent(String? path) async {
+    if (path == null || kIsWeb) return false;
+    return File(path).exists();
+  }
+
+  /// Telecharge en parallele un batch de photos preuves et UPDATE le
+  /// preuvePhotoPath du stop Drift correspondant. Best-effort par
+  /// download : un echec isole ne bloque pas les autres.
+  Future<void> _processDownloadBatch(
+    SupabaseClient client,
+    List<_PhotoDownloadTask> tasks, {
+    required int batchSize,
+  }) async {
+    for (var i = 0; i < tasks.length; i += batchSize) {
+      final end = (i + batchSize).clamp(0, tasks.length);
+      await Future.wait(
+        tasks.sublist(i, end).map((t) => _executeDownload(client, t)),
+      );
+    }
+  }
+
+  Future<void> _executeDownload(
+    SupabaseClient client,
+    _PhotoDownloadTask task,
+  ) async {
+    final resolved = await _maybeDownloadPhoto(
+      client: client,
+      cloudPhotoPath: task.cloudPhotoPath,
+      existingLocalPath: null,
+      stopCloudId: task.stopCloudId,
+    );
+    if (resolved == null) return;
+    // UPDATE le row Drift avec le path local final. On utilise une
+    // Value.absent() partout sauf preuvePhotoPath pour eviter de
+    // toucher le trigger updated_at (ne tirera pas car NEW = OLD sur
+    // tout sauf cette colonne, mais le trigger compare updated_at
+    // specifiquement). Le trigger NE tirera donc QUE si on change
+    // updated_at, ce qu'on ne fait pas ici.
+    await (_db.update(_db.stops)
+          ..where((s) => s.id.equals(task.stopLocalId)))
+        .write(StopsCompanion(preuvePhotoPath: Value(resolved)));
   }
 
   Future<CloudPullStats> _pullSavedDestinations(SupabaseClient client) async {
@@ -1120,6 +1175,21 @@ class CloudPullStats {
   final int updated;
   final int skipped;
   int get total => inserted + updated;
+}
+
+/// Task de download photo en attente (perf parallel pull 2.E-2 v2).
+/// Cree en phase 1 de [CloudSyncService._pullStops] et execute en
+/// parallele par batch en phase 2.
+class _PhotoDownloadTask {
+  const _PhotoDownloadTask({
+    required this.stopLocalId,
+    required this.cloudPhotoPath,
+    required this.stopCloudId,
+  });
+
+  final int stopLocalId;
+  final String cloudPhotoPath;
+  final String stopCloudId;
 }
 
 /// Info affichable d'un membre de tournee partagee (sous-jalon 3.B).
