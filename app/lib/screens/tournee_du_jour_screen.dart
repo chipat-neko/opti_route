@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
-import '../data/cloud_sync_service.dart';
 import '../data/database.dart';
 import '../data/supabase_service.dart';
 import '../data/location_service.dart';
@@ -27,7 +26,7 @@ import '../widgets/drawer_badge_icon.dart';
 import '../widgets/ordre_priorite_dialog.dart';
 import 'ajout_arret_screen.dart';
 import 'carte_screen.dart';
-import 'cloud/invitation_code_dialog.dart';
+import 'tournee_du_jour/cloud_actions.dart';
 import 'parametres_screen.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/fabs.dart';
@@ -227,161 +226,31 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     }
   }
 
-  Future<void> _onPushCloudPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final service = ref.read(cloudSyncServiceProvider);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Sync en cours...'),
-        duration: Duration(seconds: 10),
-      ),
-    );
-    try {
-      await service.pushTournee(widget.tournee.id);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tournee synchronisee au cloud'),
-          backgroundColor: AppColors.emerald,
-        ),
+  // Handlers cloud delegues a [CloudTourneeActions] (refactor 2026-05-17).
+  Future<void> _onPushCloudPressed() => CloudTourneeActions.push(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-    } on CloudSyncException catch (e) {
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 6),
-        ),
-      );
-    }
-  }
 
-  /// Jalon 3.B : quitter une tournee partagee. Si l'utilisateur est
-  /// owner, le service throw avec message "supprime-la plutot" : on
-  /// affiche l'erreur sans pop l'ecran. Si member, on confirme via
-  /// dialog puis pop l'ecran apres le DELETE reussi.
-  Future<void> _onLeaveEquipePressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Quitter cette tournee ?'),
-        content: const Text(
-          'Tu n\'auras plus acces a cette tournee ni a ses arrets. '
-          'Le chef pourra te re-inviter via un nouveau code si besoin.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton.tonal(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.amber.withValues(alpha: 0.18),
-              foregroundColor: AppColors.amber,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Quitter'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    try {
-      await ref.read(cloudSyncServiceProvider).leaveTournee(widget.tournee.id);
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tournee quittee'),
-          backgroundColor: AppColors.emerald,
-        ),
+  Future<void> _onInviteEquipierPressed() => CloudTourneeActions.invite(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-      navigator.pop();
-    } on CloudSyncException catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 6),
-        ),
-      );
-    }
-  }
 
-  /// Jalon 3.A : genere un code 6 chiffres et l'affiche dans un dialog
-  /// avec boutons "Copier" + "Partager via WhatsApp/SMS". Lucas saisit
-  /// ce code dans son app via "Rejoindre une tournee".
-  Future<void> _onInviteEquipierPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final service = ref.read(cloudSyncServiceProvider);
-    String? code;
-    try {
-      code = await service.createInvitation(widget.tournee.id);
-    } on CloudSyncException catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 6),
-        ),
+  Future<void> _onLeaveEquipePressed() => CloudTourneeActions.leave(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
+        onSuccess: () => Navigator.of(context).pop(),
       );
-      return;
-    }
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => InvitationCodeDialog(code: code!),
-    );
-  }
 
-  Future<void> _confirmDeleteTournee() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Supprimer cette tournee ?'),
-        content: Text(
-          '"${widget.tournee.nom}" et tous ses arrets seront supprimes '
-          'definitivement.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton.tonal(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.red.withValues(alpha: 0.15),
-              foregroundColor: AppColors.red,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    try {
-      // Jalon 2.F : passe par CloudSyncService pour propager au cloud
-      // (delete row cloud + cleanup photos Storage) en best-effort,
-      // puis delete local. Si offline / pas auth, juste le delete
-      // local s'execute (le cleanup cloud sera no-op).
-      await ref
-          .read(cloudSyncServiceProvider)
-          .deleteTourneeWithCloudCleanup(widget.tournee.id);
-      if (!mounted) return;
-      // Le HomeScreen va detecter qu'il n'y a plus de tournee du jour
-      // et basculer sur l'empty state  -  pas besoin de pop manuellement.
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+  Future<void> _confirmDeleteTournee() => CloudTourneeActions.confirmAndDelete(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
       );
-    }
-  }
 
   /// Action "Tout marquer livre" : valide d'un coup tous les arrets
   /// restants en statut 'a_livrer'. Utile pour les depots d'entreprise
