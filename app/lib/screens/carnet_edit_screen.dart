@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
 import '../data/saved_destinations_repository.dart';
@@ -232,7 +233,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     }
   }

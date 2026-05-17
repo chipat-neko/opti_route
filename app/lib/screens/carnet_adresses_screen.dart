@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/carnet_export_service.dart';
 import '../data/carnet_import_service.dart';
 import '../data/carnet_vcard_export_service.dart';
@@ -277,7 +278,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'import : $e')),
+        SnackBar(content: Text('Erreur a l\'import : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -302,7 +303,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export : $e')),
+        SnackBar(content: Text('Erreur a l\'export : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -327,7 +328,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export vCard : $e')),
+        SnackBar(content: Text('Erreur a l\'export vCard : ${humanizeAnyError(e)}')),
       );
     }
   }

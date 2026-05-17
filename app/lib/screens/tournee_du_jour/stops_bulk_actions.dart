@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
 import '../../data/location_service.dart';
 import '../../data/notifications_service.dart';
@@ -137,7 +138,7 @@ class StopsBulkActions {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -207,7 +208,7 @@ class StopsBulkActions {
       navigator.pop();
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     }
   }

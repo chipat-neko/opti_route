@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
 import '../../data/tile_prefetch_service.dart';
 import '../../providers/database_providers.dart';
@@ -63,7 +64,7 @@ class OptimTourneeActions {
       );
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      messenger.showSnackBar(SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')));
     }
   }
 
@@ -205,7 +206,7 @@ class OptimTourneeActions {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur d\'optimisation : $e')),
+        SnackBar(content: Text('Erreur d\'optimisation : ${humanizeAnyError(e)}')),
       );
     } finally {
       if (context.mounted) setOptimizing(false);

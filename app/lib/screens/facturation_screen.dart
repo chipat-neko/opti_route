@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/facturation_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
@@ -98,7 +99,7 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
       if (!mounted) return;
       setState(() => _calculating = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur calcul : $e')),
+        SnackBar(content: Text('Erreur calcul : ${humanizeAnyError(e)}')),
       );
     }
   }

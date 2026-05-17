@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/cloud_sync_service.dart';
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
@@ -306,7 +307,7 @@ class TourneeRow extends ConsumerWidget {
                   } catch (e) {
                     if (!context.mounted) return;
                     messenger.showSnackBar(
-                      SnackBar(content: Text('Erreur duplication : $e')),
+                      SnackBar(content: Text('Erreur duplication : ${humanizeAnyError(e)}')),
                     );
                   }
                 },
@@ -379,7 +380,7 @@ class TourneeRow extends ConsumerWidget {
                     } catch (e) {
                       if (!context.mounted) return;
                       messenger.showSnackBar(
-                        SnackBar(content: Text('Erreur partage : $e')),
+                        SnackBar(content: Text('Erreur partage : ${humanizeAnyError(e)}')),
                       );
                     }
                   },

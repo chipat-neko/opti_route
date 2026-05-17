@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/ocr_stats_log.dart';
 import '../../theme/app_tokens.dart';
 
@@ -96,7 +97,7 @@ class OcrStatsTile extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur export : $e')),
+        SnackBar(content: Text('Erreur export : ${humanizeAnyError(e)}')),
       );
     }
   }

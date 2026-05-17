@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
 import '../../data/navigation_service.dart';
 import '../../data/tournee_pdf_service.dart';
@@ -59,7 +60,7 @@ class ExportTourneeActions {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export PDF : $e')),
+        SnackBar(content: Text('Erreur a l\'export PDF : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -144,7 +145,7 @@ class ExportTourneeActions {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export PDF equipe : $e')),
+        SnackBar(content: Text('Erreur a l\'export PDF equipe : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -172,7 +173,7 @@ class ExportTourneeActions {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur au partage : $e')),
+        SnackBar(content: Text('Erreur au partage : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -315,7 +316,7 @@ class ExportTourneeActions {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur au partage : $e')),
+        SnackBar(content: Text('Erreur au partage : ${humanizeAnyError(e)}')),
       );
     }
   }
