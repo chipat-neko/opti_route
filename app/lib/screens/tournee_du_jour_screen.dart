@@ -73,12 +73,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     ref.read(cloudAutoPushServiceProvider).stop();
     // Jalon 3.A : desabonne le channel Realtime de cette tournee.
     ref.read(tourneeRealtimeServiceProvider).unsubscribe();
+    // Jalon 3.C : arrete le push GPS live.
+    ref.read(livePresenceServiceProvider).stop();
     super.dispose();
   }
 
   /// Subscribe au channel Realtime de la tournee si elle a un cloudId
   /// (= deja pushee au cloud). Best-effort : si pas configure / pas
   /// auth / cloudId null, on skip silencieusement.
+  ///
+  /// Jalon 3.C : si la tournee est `en_cours` au moment du subscribe,
+  /// on demarre aussi le push GPS live pour que le chef voie le
+  /// livreur bouger sur la carte. Auto-stop dans dispose.
   Future<void> _maybeSubscribeRealtime() async {
     final cloudId = widget.tournee.cloudId;
     if (cloudId == null) return;
@@ -88,6 +94,12 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       await ref
           .read(tourneeRealtimeServiceProvider)
           .subscribeTournee(Supabase.instance.client, cloudId);
+      // Demarre le push GPS si tournee active (statut en_cours). Pour
+      // les tournees brouillon/optimisee/terminee, pas la peine de
+      // brûler la batterie pour push une position figee.
+      if (widget.tournee.statut == 'en_cours') {
+        await ref.read(livePresenceServiceProvider).start();
+      }
     } on Object {/* best-effort */}
   }
 

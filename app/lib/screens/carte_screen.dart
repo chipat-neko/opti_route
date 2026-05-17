@@ -8,7 +8,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../data/database.dart';
 import '../data/location_service.dart';
+import '../data/tournee_realtime_service.dart';
 import '../providers/database_providers.dart';
+import '../providers/supabase_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -168,6 +170,13 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
                   ),
               ],
             ),
+            // Jalon 3.C : markers live des autres membres d'une tournee
+            // partagee. Stream de TourneeRealtimeService.othersPositions
+            // qui se met a jour a chaque broadcast Realtime recu.
+            // Vide si tournee perso ou si aucun autre membre n'est en
+            // train de pusher sa position (auto-stop quand statut !=
+            // en_cours).
+            _LiveMembersLayer(realtimeServiceProvider: tourneeRealtimeServiceProvider),
           ],
         ),
         if (stopsGeoreferenced.isEmpty &&
@@ -430,6 +439,83 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// MarkerLayer transitoire qui affiche un point GPS par membre de la
+/// tournee partagee qui pousse sa position via Realtime Broadcast
+/// (jalon 3.C). Auto-vide quand l'utilisateur courant est seul.
+class _LiveMembersLayer extends ConsumerWidget {
+  const _LiveMembersLayer({required this.realtimeServiceProvider});
+
+  final Provider<TourneeRealtimeService> realtimeServiceProvider;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(realtimeServiceProvider);
+    return StreamBuilder<Map<String, LivePosition>>(
+      stream: service.othersPositionsStream,
+      initialData: service.othersPositions,
+      builder: (context, snap) {
+        final positions = snap.data ?? const <String, LivePosition>{};
+        if (positions.isEmpty) return const SizedBox.shrink();
+        return MarkerLayer(
+          markers: [
+            for (final pos in positions.values)
+              Marker(
+                point: LatLng(pos.lat, pos.lng),
+                width: 44,
+                height: 44,
+                alignment: Alignment.bottomCenter,
+                child: _LiveMemberPin(position: pos),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LiveMemberPin extends StatelessWidget {
+  const _LiveMemberPin({required this.position});
+
+  final LivePosition position;
+
+  @override
+  Widget build(BuildContext context) {
+    final ageSeconds =
+        DateTime.now().difference(position.timestamp).inSeconds;
+    // Couleur du pin selon fraicheur :
+    // - < 60s : emerald vif (vraiment live)
+    // - 60-300s : amber (un peu vieux)
+    // - > 300s : faded (probablement deconnecte)
+    final color = ageSeconds < 60
+        ? AppColors.emerald
+        : (ageSeconds < 300 ? AppColors.amber : AppColors.creamSoft);
+    return Tooltip(
+      message:
+          'Coequipier · MAJ il y a ${ageSeconds}s · precision ${position.accuracyMeters.toStringAsFixed(0)}m',
+      child: Container(
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.paper, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.person,
+          size: 22,
+          color: AppColors.paper,
         ),
       ),
     );
