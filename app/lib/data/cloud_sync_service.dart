@@ -8,8 +8,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'cloud_error_humanizer.dart';
+import 'cloud_sync_types.dart';
 import 'database.dart';
 import 'supabase_service.dart';
+
+// Re-export pour conserver la compat des callers qui font
+// `import 'cloud_sync_service.dart';` et utilisent CloudSyncException,
+// CloudPullResult, CloudPullStats, TourneeMembreInfo (cf split refactor
+// 2026-05-18). Le `_PhotoDownloadTask` reste private dans ce fichier.
+export 'cloud_sync_types.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Service de sync local → cloud (Phase 2 backend, sous-jalon 2.B).
@@ -1188,85 +1195,13 @@ class CloudSyncService {
   }
 }
 
-/// Exception type-safe pour les erreurs de sync. Le message est FR et
-/// destine a l'affichage utilisateur (SnackBar).
-class CloudSyncException implements Exception {
-  const CloudSyncException(this.message);
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
-/// Resume du resultat d'un pull cloud → local. Affiche par l'UI dans
-/// une SnackBar : "12 elements synchronises (3 tournees, 8 arrets, 1
-/// coequipier)".
-class CloudPullResult {
-  const CloudPullResult({
-    required this.coequipiers,
-    required this.tournees,
-    required this.stops,
-    required this.savedDestinations,
-  });
-
-  final CloudPullStats coequipiers;
-  final CloudPullStats tournees;
-  final CloudPullStats stops;
-  final CloudPullStats savedDestinations;
-
-  int get totalChanged =>
-      coequipiers.total + tournees.total + stops.total + savedDestinations.total;
-
-  /// Nombre total de rows ignorees par le last-write-wins (cloud plus
-  /// ancien ou egal au local). Sous-jalon 2.D-1c.
-  int get totalSkipped =>
-      coequipiers.skipped +
-      tournees.skipped +
-      stops.skipped +
-      savedDestinations.skipped;
-
-  /// Phrase courte pour SnackBar / dialog de fin de pull.
-  String get summary {
-    if (totalChanged == 0) {
-      if (totalSkipped > 0) {
-        return 'Tout etait deja a jour ($totalSkipped element(s) cloud '
-            'plus ancien(s) que la version locale).';
-      }
-      return 'Tout etait deja a jour. Rien a synchroniser.';
-    }
-    final parts = <String>[];
-    if (tournees.total > 0) parts.add('${tournees.total} tournee(s)');
-    if (stops.total > 0) parts.add('${stops.total} arret(s)');
-    if (coequipiers.total > 0) parts.add('${coequipiers.total} coequipier(s)');
-    if (savedDestinations.total > 0) {
-      parts.add('${savedDestinations.total} entree(s) carnet');
-    }
-    final suffix = totalSkipped > 0 ? ' ($totalSkipped ignore(s))' : '';
-    return '$totalChanged element(s) synchronise(s) : '
-        '${parts.join(', ')}$suffix';
-  }
-}
-
-/// Compteur interne (inserted + updated + skipped) pour une table donnee.
-/// `skipped` = rows cloud ignorees par le last-write-wins (sous-jalon
-/// 2.D-1c) car la version locale est plus recente ou egale. `total`
-/// reste le nombre de changements appliques (insert + update), pas le
-/// nombre de rows lues du cloud.
-class CloudPullStats {
-  const CloudPullStats({
-    required this.inserted,
-    required this.updated,
-    this.skipped = 0,
-  });
-  final int inserted;
-  final int updated;
-  final int skipped;
-  int get total => inserted + updated;
-}
-
 /// Task de download photo en attente (perf parallel pull 2.E-2 v2).
 /// Cree en phase 1 de [CloudSyncService._pullStops] et execute en
 /// parallele par batch en phase 2.
+///
+/// Private a ce fichier (sert uniquement au pull interne). Pas extrait
+/// dans cloud_sync_types.dart contrairement aux autres types data qui
+/// sont consommes par les screens.
 class _PhotoDownloadTask {
   const _PhotoDownloadTask({
     required this.stopLocalId,
@@ -1277,23 +1212,4 @@ class _PhotoDownloadTask {
   final int stopLocalId;
   final String cloudPhotoPath;
   final String stopCloudId;
-}
-
-/// Info affichable d'un membre de tournee partagee (sous-jalon 3.B).
-/// Returned par la RPC `list_tournee_members`. Sert a la section
-/// "Coequipiers" de l'ecran tournee + au badge "Equipe (N)" sur tile.
-class TourneeMembreInfo {
-  const TourneeMembreInfo({
-    required this.userCloudId,
-    required this.email,
-    required this.role,
-    required this.joinedAt,
-  });
-
-  final String userCloudId;
-  final String email;
-  final String role; // 'owner' ou 'member'
-  final DateTime joinedAt;
-
-  bool get isOwner => role == 'owner';
 }
