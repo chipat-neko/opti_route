@@ -8,6 +8,18 @@ class Stops extends Table {
       .references(Tournees, #id, onDelete: KeyAction.cascade)();
   TextColumn get adresseBrute => text()();
   TextColumn get adresseNormalisee => text().nullable()();
+
+  /// Type d'arret : 'livraison' (defaut, on depose un colis chez le
+  /// destinataire) ou 'ramasse' (on recupere un colis chez le client
+  /// pour le rapporter au depot). Les ramasses sont comptes separement
+  /// dans les stats / facturation (cf [StatsService]) et ont un visuel
+  /// distinct dans la liste (icone download + tag orange).
+  ///
+  /// Use cases ramasse :
+  /// - Retour client : Noah doit recuperer un colis chez Mme Dupont
+  /// - Enlevement fournisseur : ramener un envoi entrant au depot
+  /// - Echange (livre A + ramasse B au meme point) : 2 stops distincts
+  TextColumn get type => text().withDefault(const Constant('livraison'))();
   RealColumn get lat => real().nullable()();
   RealColumn get lng => real().nullable()();
   IntColumn get nbColis => integer().withDefault(const Constant(1))();

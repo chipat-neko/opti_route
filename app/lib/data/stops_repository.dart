@@ -69,6 +69,21 @@ class StopsRepository {
         .write(StopsCompanion(coequipierId: Value(coequipierId)));
   }
 
+  /// Bascule le type d'un arret entre 'livraison' et 'ramasse'. Sert au
+  /// "Convertir en ramasse" / "Convertir en livraison" depuis la bottom
+  /// sheet, quand Noah s'apercoit qu'il a mal coche au moment de la
+  /// creation, ou que le client lui demande un retour en plus.
+  ///
+  /// Pas de log dans StopHistory : le type est une caracteristique de
+  /// l'arret, pas une transition de statut. Si l'arret etait deja
+  /// valide (statut livre/echec), le statut reste, on bascule juste le
+  /// type pour les futures stats. Pour vraiment "annuler", utiliser
+  /// [markAaLivrer] separement.
+  Future<int> setType(int stopId, String type) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(type: Value(type)));
+  }
+
   /// Affecte un coequipier a TOUS les stops d'une tournee qui n'ont
   /// pas encore d'affectation. Sert au "Tout affecter a X" rapide.
   Future<int> setCoequipierForUnassigned(

@@ -173,8 +173,14 @@ class _StatsBody extends StatelessWidget {
               child: _SmallStat(
                 label: 'Arrets',
                 value: '${stats.nbArrets}',
-                hint:
-                    '${stats.nbLivres} livres · ${stats.nbEchecs} echecs',
+                // Split livraisons / ramasses pour aller plus vite dans
+                // la lecture metier. Si pas de ramasse sur la fenetre,
+                // on garde l'ancien format compact pour ne pas charger.
+                hint: stats.nbRamasses == 0
+                    ? '${stats.nbLivraisons} livres · ${stats.nbEchecs} echecs'
+                    : '${stats.nbLivraisons} livres · '
+                        '${stats.nbRamasses} ramasses · '
+                        '${stats.nbEchecs} echecs',
               ),
             ),
           ],

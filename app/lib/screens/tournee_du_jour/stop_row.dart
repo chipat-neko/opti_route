@@ -10,6 +10,7 @@ import '../../data/eta_calculator.dart';
 import '../../data/location_service.dart';
 import '../../data/notifications_service.dart';
 import '../../data/preuve_photo_service.dart';
+import '../../data/stop_types.dart';
 import '../../data/stops_repository.dart';
 import '../../data/tournees_repository.dart';
 import '../../providers/database_providers.dart';
@@ -117,7 +118,10 @@ class StopRow extends ConsumerWidget {
                     if (isEchec) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Echec : ${_humanRaison(stop.raisonEchec)}',
+                        // Pour un ramasse echoue : "Pas ramasse : raison".
+                        // Pour une livraison echouee : "Echec : raison".
+                        '${stop.type == kStopTypeRamasse ? "Pas ramasse" : "Echec"} '
+                        ': ${_humanRaison(stop.raisonEchec)}',
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -183,7 +187,10 @@ class StopRow extends ConsumerWidget {
         unawaited(HapticFeedback.mediumImpact());
         messenger.showSnackBar(
           SnackBar(
-            content: Text('${_primaryLine(stop)} marque livre'),
+            content: Text(
+              '${_primaryLine(stop)} '
+              'marque ${stopActionVerbParticipe(stop.type)}',
+            ),
             backgroundColor: AppColors.emerald,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
@@ -203,7 +210,10 @@ class StopRow extends ConsumerWidget {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-                '${_primaryLine(stop)} en echec : ${_humanRaison(r)}'),
+              '${_primaryLine(stop)} '
+              '${stop.type == kStopTypeRamasse ? "pas ramasse" : "en echec"} '
+              ': ${_humanRaison(r)}',
+            ),
             backgroundColor: AppColors.red,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
@@ -226,6 +236,19 @@ class StopRow extends ConsumerWidget {
               tourneeId: stop.tourneeId,
               initial: stop,
             ),
+          ),
+        );
+      case ConvertTypeAction(newType: final newType):
+        await repo.setType(stop.id, newType);
+        unawaited(HapticFeedback.lightImpact());
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              '${_primaryLine(stop)} converti en '
+              '${newType == kStopTypeRamasse ? "ramasse" : "livraison"}',
+            ),
+            backgroundColor: AppColors.emerald,
+            duration: const Duration(seconds: 2),
           ),
         );
       case MoveToTourneeAction(targetTourneeId: final targetId):
@@ -356,6 +379,15 @@ class StopRow extends ConsumerWidget {
 
   List<Widget> _buildTags(Stop s, AppPalette p) {
     final out = <Widget>[];
+    // Tag ramasse en premier : forte distinction visuelle (orange amber)
+    // car le geste est inverse de la livraison classique.
+    if (s.type == kStopTypeRamasse) {
+      out.add(const StopTag(
+        label: 'RAMASSE',
+        bg: AppColors.amber,
+        fg: AppColors.ink,
+      ));
+    }
     final priority = _priorityTag(s.priorite);
     if (priority != null) out.add(priority);
     // Stop sans coordonnees (mode hors-ligne, geocodage echoue) : tag

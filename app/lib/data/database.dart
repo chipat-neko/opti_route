@@ -66,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -213,6 +213,16 @@ class AppDatabase extends _$AppDatabase {
             // tournee perso vs partagee, et afficher le badge nombre
             // de coequipiers / le role owner/member.
             await m.createTable(tourneeMembres);
+          }
+          if (from < 27) {
+            // Feature ramasses (2026-05-18) : ajout colonne `type` sur
+            // stops, 'livraison' default. SQLite applique automatiquement
+            // le default constant aux rows existants lors du ADD COLUMN,
+            // donc pas de backfill manuel necessaire.
+            //
+            // 'livraison' = on depose un colis, 'ramasse' = on en
+            // recupere un. Compte separement dans les stats.
+            await m.addColumn(stops, stops.type);
           }
         },
         beforeOpen: (details) async {

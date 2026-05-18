@@ -1404,6 +1404,16 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('livraison'),
+  );
   static const VerificationMeta _latMeta = const VerificationMeta('lat');
   @override
   late final GeneratedColumn<double> lat = GeneratedColumn<double>(
@@ -1650,6 +1660,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     tourneeId,
     adresseBrute,
     adresseNormalisee,
+    type,
     lat,
     lng,
     nbColis,
@@ -1714,6 +1725,12 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
           data['adresse_normalisee']!,
           _adresseNormaliseeMeta,
         ),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
       );
     }
     if (data.containsKey('lat')) {
@@ -1900,6 +1917,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}adresse_normalisee'],
       ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
       lat: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}lat'],
@@ -2002,6 +2023,18 @@ class Stop extends DataClass implements Insertable<Stop> {
   final int tourneeId;
   final String adresseBrute;
   final String? adresseNormalisee;
+
+  /// Type d'arret : 'livraison' (defaut, on depose un colis chez le
+  /// destinataire) ou 'ramasse' (on recupere un colis chez le client
+  /// pour le rapporter au depot). Les ramasses sont comptes separement
+  /// dans les stats / facturation (cf [StatsService]) et ont un visuel
+  /// distinct dans la liste (icone download + tag orange).
+  ///
+  /// Use cases ramasse :
+  /// - Retour client : Noah doit recuperer un colis chez Mme Dupont
+  /// - Enlevement fournisseur : ramener un envoi entrant au depot
+  /// - Echange (livre A + ramasse B au meme point) : 2 stops distincts
+  final String type;
   final double? lat;
   final double? lng;
   final int nbColis;
@@ -2072,6 +2105,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     required this.tourneeId,
     required this.adresseBrute,
     this.adresseNormalisee,
+    required this.type,
     this.lat,
     this.lng,
     required this.nbColis,
@@ -2104,6 +2138,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || adresseNormalisee != null) {
       map['adresse_normalisee'] = Variable<String>(adresseNormalisee);
     }
+    map['type'] = Variable<String>(type);
     if (!nullToAbsent || lat != null) {
       map['lat'] = Variable<double>(lat);
     }
@@ -2169,6 +2204,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       adresseNormalisee: adresseNormalisee == null && nullToAbsent
           ? const Value.absent()
           : Value(adresseNormalisee),
+      type: Value(type),
       lat: lat == null && nullToAbsent ? const Value.absent() : Value(lat),
       lng: lng == null && nullToAbsent ? const Value.absent() : Value(lng),
       nbColis: Value(nbColis),
@@ -2234,6 +2270,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       adresseNormalisee: serializer.fromJson<String?>(
         json['adresseNormalisee'],
       ),
+      type: serializer.fromJson<String>(json['type']),
       lat: serializer.fromJson<double?>(json['lat']),
       lng: serializer.fromJson<double?>(json['lng']),
       nbColis: serializer.fromJson<int>(json['nbColis']),
@@ -2266,6 +2303,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'tourneeId': serializer.toJson<int>(tourneeId),
       'adresseBrute': serializer.toJson<String>(adresseBrute),
       'adresseNormalisee': serializer.toJson<String?>(adresseNormalisee),
+      'type': serializer.toJson<String>(type),
       'lat': serializer.toJson<double?>(lat),
       'lng': serializer.toJson<double?>(lng),
       'nbColis': serializer.toJson<int>(nbColis),
@@ -2296,6 +2334,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     int? tourneeId,
     String? adresseBrute,
     Value<String?> adresseNormalisee = const Value.absent(),
+    String? type,
     Value<double?> lat = const Value.absent(),
     Value<double?> lng = const Value.absent(),
     int? nbColis,
@@ -2325,6 +2364,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     adresseNormalisee: adresseNormalisee.present
         ? adresseNormalisee.value
         : this.adresseNormalisee,
+    type: type ?? this.type,
     lat: lat.present ? lat.value : this.lat,
     lng: lng.present ? lng.value : this.lng,
     nbColis: nbColis ?? this.nbColis,
@@ -2366,6 +2406,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       adresseNormalisee: data.adresseNormalisee.present
           ? data.adresseNormalisee.value
           : this.adresseNormalisee,
+      type: data.type.present ? data.type.value : this.type,
       lat: data.lat.present ? data.lat.value : this.lat,
       lng: data.lng.present ? data.lng.value : this.lng,
       nbColis: data.nbColis.present ? data.nbColis.value : this.nbColis,
@@ -2418,6 +2459,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('tourneeId: $tourneeId, ')
           ..write('adresseBrute: $adresseBrute, ')
           ..write('adresseNormalisee: $adresseNormalisee, ')
+          ..write('type: $type, ')
           ..write('lat: $lat, ')
           ..write('lng: $lng, ')
           ..write('nbColis: $nbColis, ')
@@ -2450,6 +2492,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     tourneeId,
     adresseBrute,
     adresseNormalisee,
+    type,
     lat,
     lng,
     nbColis,
@@ -2481,6 +2524,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.tourneeId == this.tourneeId &&
           other.adresseBrute == this.adresseBrute &&
           other.adresseNormalisee == this.adresseNormalisee &&
+          other.type == this.type &&
           other.lat == this.lat &&
           other.lng == this.lng &&
           other.nbColis == this.nbColis &&
@@ -2510,6 +2554,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<int> tourneeId;
   final Value<String> adresseBrute;
   final Value<String?> adresseNormalisee;
+  final Value<String> type;
   final Value<double?> lat;
   final Value<double?> lng;
   final Value<int> nbColis;
@@ -2537,6 +2582,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.tourneeId = const Value.absent(),
     this.adresseBrute = const Value.absent(),
     this.adresseNormalisee = const Value.absent(),
+    this.type = const Value.absent(),
     this.lat = const Value.absent(),
     this.lng = const Value.absent(),
     this.nbColis = const Value.absent(),
@@ -2565,6 +2611,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     required int tourneeId,
     required String adresseBrute,
     this.adresseNormalisee = const Value.absent(),
+    this.type = const Value.absent(),
     this.lat = const Value.absent(),
     this.lng = const Value.absent(),
     this.nbColis = const Value.absent(),
@@ -2594,6 +2641,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<int>? tourneeId,
     Expression<String>? adresseBrute,
     Expression<String>? adresseNormalisee,
+    Expression<String>? type,
     Expression<double>? lat,
     Expression<double>? lng,
     Expression<int>? nbColis,
@@ -2622,6 +2670,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (tourneeId != null) 'tournee_id': tourneeId,
       if (adresseBrute != null) 'adresse_brute': adresseBrute,
       if (adresseNormalisee != null) 'adresse_normalisee': adresseNormalisee,
+      if (type != null) 'type': type,
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
       if (nbColis != null) 'nb_colis': nbColis,
@@ -2652,6 +2701,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<int>? tourneeId,
     Value<String>? adresseBrute,
     Value<String?>? adresseNormalisee,
+    Value<String>? type,
     Value<double?>? lat,
     Value<double?>? lng,
     Value<int>? nbColis,
@@ -2680,6 +2730,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       tourneeId: tourneeId ?? this.tourneeId,
       adresseBrute: adresseBrute ?? this.adresseBrute,
       adresseNormalisee: adresseNormalisee ?? this.adresseNormalisee,
+      type: type ?? this.type,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
       nbColis: nbColis ?? this.nbColis,
@@ -2719,6 +2770,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     }
     if (adresseNormalisee.present) {
       map['adresse_normalisee'] = Variable<String>(adresseNormalisee.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
     }
     if (lat.present) {
       map['lat'] = Variable<double>(lat.value);
@@ -2796,6 +2850,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('tourneeId: $tourneeId, ')
           ..write('adresseBrute: $adresseBrute, ')
           ..write('adresseNormalisee: $adresseNormalisee, ')
+          ..write('type: $type, ')
           ..write('lat: $lat, ')
           ..write('lng: $lng, ')
           ..write('nbColis: $nbColis, ')
@@ -7165,6 +7220,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       required int tourneeId,
       required String adresseBrute,
       Value<String?> adresseNormalisee,
+      Value<String> type,
       Value<double?> lat,
       Value<double?> lng,
       Value<int> nbColis,
@@ -7194,6 +7250,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<int> tourneeId,
       Value<String> adresseBrute,
       Value<String?> adresseNormalisee,
+      Value<String> type,
       Value<double?> lat,
       Value<double?> lng,
       Value<int> nbColis,
@@ -7297,6 +7354,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get adresseNormalisee => $composableBuilder(
     column: $table.adresseNormalisee,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7508,6 +7570,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get lat => $composableBuilder(
     column: $table.lat,
     builder: (column) => ColumnOrderings(column),
@@ -7663,6 +7730,9 @@ class $$StopsTableAnnotationComposer
     column: $table.adresseNormalisee,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
 
   GeneratedColumn<double> get lat =>
       $composableBuilder(column: $table.lat, builder: (column) => column);
@@ -7860,6 +7930,7 @@ class $$StopsTableTableManager
                 Value<int> tourneeId = const Value.absent(),
                 Value<String> adresseBrute = const Value.absent(),
                 Value<String?> adresseNormalisee = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 Value<double?> lat = const Value.absent(),
                 Value<double?> lng = const Value.absent(),
                 Value<int> nbColis = const Value.absent(),
@@ -7887,6 +7958,7 @@ class $$StopsTableTableManager
                 tourneeId: tourneeId,
                 adresseBrute: adresseBrute,
                 adresseNormalisee: adresseNormalisee,
+                type: type,
                 lat: lat,
                 lng: lng,
                 nbColis: nbColis,
@@ -7916,6 +7988,7 @@ class $$StopsTableTableManager
                 required int tourneeId,
                 required String adresseBrute,
                 Value<String?> adresseNormalisee = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 Value<double?> lat = const Value.absent(),
                 Value<double?> lng = const Value.absent(),
                 Value<int> nbColis = const Value.absent(),
@@ -7943,6 +8016,7 @@ class $$StopsTableTableManager
                 tourneeId: tourneeId,
                 adresseBrute: adresseBrute,
                 adresseNormalisee: adresseNormalisee,
+                type: type,
                 lat: lat,
                 lng: lng,
                 nbColis: nbColis,

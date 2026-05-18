@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/stop_types.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 
@@ -15,6 +16,114 @@ import '../../theme/app_tokens.dart';
 /// - [TimePickerField]       : champ horaire avec long-press = effacer
 ///
 /// Tous sont stateless purs, pas d'etat ni de provider.
+
+/// Toggle large "Livraison / Ramasse" affiche en haut du form d'ajout
+/// d'arret. Bien visible pour eviter de saisir un arret en livraison
+/// par defaut alors qu'il faut le ramasse (ou inverse).
+///
+/// Visuel : 2 segments cote a cote. Le segment selectionne prend une
+/// couleur d'accent (lime pour livraison = cohesion app, orange pour
+/// ramasse = action distincte). Icones differentes (download / upload)
+/// pour reinforcer visuellement.
+class StopTypeToggle extends StatelessWidget {
+  const StopTypeToggle({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Row(
+      children: [
+        Expanded(
+          child: _Segment(
+            label: 'Livraison',
+            icon: Icons.local_shipping_outlined,
+            selected: value == kStopTypeLivraison,
+            accent: AppColors.lime,
+            onTap: () => onChanged(kStopTypeLivraison),
+            palette: p,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x10),
+        Expanded(
+          child: _Segment(
+            label: 'Ramasse',
+            icon: Icons.move_to_inbox_outlined,
+            selected: value == kStopTypeRamasse,
+            accent: AppColors.amber,
+            onTap: () => onChanged(kStopTypeRamasse),
+            palette: p,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+    required this.palette,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+  final AppPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r14),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x14,
+          vertical: AppSpacing.x12,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? accent : palette.paper,
+          borderRadius: BorderRadius.circular(AppRadius.r14),
+          border: Border.all(
+            color: selected ? accent : palette.inkLine,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: palette.ink,
+            ),
+            const SizedBox(width: AppSpacing.x8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                color: palette.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Encart jaune affiche au-dessus du champ adresse quand l'utilisateur
 /// a saisi une adresse en mode hors-ligne (sans geocodage). Permet de
