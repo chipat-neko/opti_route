@@ -66,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 30;
+  int get schemaVersion => 31;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -263,6 +263,48 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'UPDATE saved_destinations SET is_favori = 0 '
               'WHERE is_favori IS NULL',
+            );
+          }
+          if (from < 31) {
+            // Bug fix 2026-05-18 #163 : updated_at sur les 4 tables
+            // (Tournees, Stops, Coequipiers, SavedDestinations).
+            //
+            // Symptome : crash "Cannot read properties of null reading
+            // toString" decode via source map a database.g.dart:590
+            // ($TourneesTable.map) sur le `!` de updated_at.
+            //
+            // Cause : la migration v25 backfille via
+            // `strftime('%s','now')` mais sur Drift Web certaines rows
+            // ont quand meme updated_at NULL ou stocke en TEXT alors
+            // que Drift attend INT seconds. Le typeMapping.read
+            // retourne null -> `!` crash.
+            //
+            // Fix : re-backfill avec un INTEGER lit (seconds since
+            // epoch) embede directement dans le SQL. Couvre 2 cas :
+            //   1. updated_at IS NULL (le strftime v25 n'a pas tourne)
+            //   2. typeof(updated_at) != 'integer' (stocke comme TEXT
+            //      par erreur, format incompatible)
+            //
+            // Sur Android natif, ce UPDATE est un no-op (toutes les
+            // rows ont deja updated_at en INT seconds). Safe a forcer.
+            final nowSec =
+                DateTime.now().millisecondsSinceEpoch ~/ 1000;
+            const condition =
+                "updated_at IS NULL OR typeof(updated_at) != 'integer'";
+            await customStatement(
+              'UPDATE tournees SET updated_at = $nowSec '
+              'WHERE $condition',
+            );
+            await customStatement(
+              'UPDATE stops SET updated_at = $nowSec WHERE $condition',
+            );
+            await customStatement(
+              'UPDATE coequipiers SET updated_at = $nowSec '
+              'WHERE $condition',
+            );
+            await customStatement(
+              'UPDATE saved_destinations SET updated_at = $nowSec '
+              'WHERE $condition',
             );
           }
         },
