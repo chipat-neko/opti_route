@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/address_suggestion.dart';
@@ -582,6 +583,9 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       }
 
       if (!mounted) return;
+      // Confirmation tactile : sauvegarde OK. Light si "ajouter encore"
+      // (action repetee), medium pour "enregistrer + fermer".
+      HapticFeedback.lightImpact();
       if (addAnother) {
         _resetForm();
         ScaffoldMessenger.of(context).showSnackBar(

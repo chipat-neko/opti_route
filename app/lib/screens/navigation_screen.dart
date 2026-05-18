@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -608,7 +609,13 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               right: AppSpacing.x18,
               bottom: AppSpacing.x18,
               child: FloatingActionButton.extended(
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () {
+                  // Vibration franche : arrivee a destination = signal
+                  // important pour Noah qui tient le phone d'une main
+                  // en sortant du vehicule.
+                  HapticFeedback.heavyImpact();
+                  Navigator.of(context).pop(true);
+                },
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('J\'y suis'),
                 backgroundColor: AppColors.lime,

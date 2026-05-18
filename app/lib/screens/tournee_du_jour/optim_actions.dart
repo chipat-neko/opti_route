@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -195,6 +196,9 @@ class OptimTourneeActions {
           );
 
       if (!context.mounted) return;
+      // Vibration "operation lourde reussie" : optim VROOM peut prendre
+      // 2-5s, Noah n'attend pas devant l'ecran.
+      unawaited(HapticFeedback.heavyImpact());
       final km = (result.totalDistanceMeters / 1000).toStringAsFixed(1);
       final dur = _formatDuration(result.totalDurationSeconds);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -313,6 +317,7 @@ class OptimTourneeActions {
           progress.value = (done: done, total: total);
         },
       );
+      unawaited(HapticFeedback.mediumImpact());
     } on TilePrefetchError catch (e) {
       errorMsg = e.message;
     } catch (e) {

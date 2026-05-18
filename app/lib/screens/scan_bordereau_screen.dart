@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -461,12 +462,17 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
   /// extraction avec juste `rue` rempli (l'utilisateur affinera dans
   /// le formulaire si besoin).
   void _confirm() {
+    HapticFeedback.lightImpact();
     final composed = _composeAddress();
     Navigator.of(context).pop(BordereauExtraction(rue: composed));
   }
 
   /// Confirmation depuis la detection auto : on retourne tout.
   void _confirmExtraction(BordereauExtraction extraction) {
+    // OCR + parser ont detecte une adresse complete : pulse moyen pour
+    // confirmer "ok, on importe tel quel". Le caller (ajout_arret)
+    // pre-remplit puis fait HapticFeedback.lightImpact a la sauvegarde.
+    HapticFeedback.mediumImpact();
     Navigator.of(context).pop(extraction);
   }
 }

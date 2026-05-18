@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/cloud_error_humanizer.dart';
@@ -95,6 +98,8 @@ class StopsBulkActions {
       await NotificationsService.instance.cancelTourneeRappel(tournee.id);
     }
     if (!context.mounted) return;
+    // Pulse heavy : batch complet -> evenement marquant.
+    unawaited(HapticFeedback.heavyImpact());
     messenger.showSnackBar(
       SnackBar(
         content: Text('${pending.length} arret(s) marques livres'),
@@ -126,6 +131,7 @@ class StopsBulkActions {
       }
       await repo.revertStatus(last.id);
       if (!context.mounted) return;
+      unawaited(HapticFeedback.lightImpact());
       final label = last.nomClient?.trim().isNotEmpty == true
           ? last.nomClient!.trim()
           : last.adresseBrute.split(',').first.trim();

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
@@ -50,6 +51,9 @@ class LifecycleTourneeActions {
           ),
         );
     if (!context.mounted) return;
+    // Pulse marquant : "ca demarre". Plus fort qu'un simple tap car
+    // c'est un evenement de transition important.
+    unawaited(HapticFeedback.heavyImpact());
     messenger.showSnackBar(
       const SnackBar(
         content: Text('Tournee demarree. Bonne route !'),
@@ -74,6 +78,7 @@ class LifecycleTourneeActions {
     if (t.pauseeLe == null) {
       await repo.pauseTournee(t.id);
       if (!context.mounted) return;
+      unawaited(HapticFeedback.lightImpact());
       messenger.showSnackBar(
         const SnackBar(
           content: Text('Tournee en pause. Tap "Reprendre" quand tu repars.'),
@@ -84,6 +89,7 @@ class LifecycleTourneeActions {
     } else {
       await repo.reprendreTournee(t.id);
       if (!context.mounted) return;
+      unawaited(HapticFeedback.mediumImpact());
       final pauseDuree = DateTime.now().difference(t.pauseeLe!);
       final mins = pauseDuree.inMinutes;
       messenger.showSnackBar(
@@ -128,6 +134,7 @@ class LifecycleTourneeActions {
           tournee.id,
           const TourneesCompanion(statut: Value('optimisee')),
         );
+    unawaited(HapticFeedback.heavyImpact());
     // Alerte "arrets oublies" : si la tournee est mise en pause avec
     // des stops a_livrer restants, on push une notif rappel.
     final stops = await ref

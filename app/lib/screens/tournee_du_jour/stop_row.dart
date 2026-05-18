@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
@@ -177,6 +178,9 @@ class StopRow extends ConsumerWidget {
         final pos = await _captureGpsPosition();
         await repo.markLivre(stop.id, position: pos);
         statutChange = true;
+        // Vibration courte de confirmation : terrain gants l'hiver,
+        // Noah ne regarde pas toujours l'ecran apres avoir tape.
+        unawaited(HapticFeedback.mediumImpact());
         messenger.showSnackBar(
           SnackBar(
             content: Text('${_primaryLine(stop)} marque livre'),
@@ -193,6 +197,9 @@ class StopRow extends ConsumerWidget {
         final pos = await _captureGpsPosition();
         await repo.markEchec(stop.id, r, position: pos);
         statutChange = true;
+        // Vibration plus marquee qu'un livre OK : signal "attention,
+        // statut negatif".
+        unawaited(HapticFeedback.heavyImpact());
         messenger.showSnackBar(
           SnackBar(
             content: Text(
@@ -209,6 +216,7 @@ class StopRow extends ConsumerWidget {
       case MarkAaLivrerAction():
         await repo.markAaLivrer(stop.id);
         statutChange = true;
+        unawaited(HapticFeedback.lightImpact());
       case TakePreuvePhotoAction():
         await _capturerPreuve(ref, stop.id);
       case OpenDetailsAction():
@@ -230,6 +238,7 @@ class StopRow extends ConsumerWidget {
         await tourneesRepo.invalidateOptimization(targetId);
         await ref.read(localReorderServiceProvider).reorder(sourceTourneeId);
         await ref.read(localReorderServiceProvider).reorder(targetId);
+        unawaited(HapticFeedback.mediumImpact());
         messenger.showSnackBar(
           SnackBar(
             content: Text(
