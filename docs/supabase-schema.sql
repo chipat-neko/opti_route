@@ -138,6 +138,10 @@ CREATE TABLE IF NOT EXISTS public.stops (
   lng                 DOUBLE PRECISION,
   nb_colis            INTEGER NOT NULL DEFAULT 1,
   priorite            TEXT NOT NULL DEFAULT 'flexible',
+  -- 'livraison' (defaut, depot d'un colis) ou 'ramasse' (recuperation
+  -- d'un colis chez le client pour rapport au depot). Feature ajoutee
+  -- le 2026-05-18, cf migration ci-dessous pour les schemas existants.
+  type                TEXT NOT NULL DEFAULT 'livraison',
   fenetre_debut       TEXT,
   fenetre_fin         TEXT,
   duree_arret_min     INTEGER NOT NULL DEFAULT 3,
@@ -258,6 +262,13 @@ CREATE POLICY "owner_all_saved_destinations" ON public.saved_destinations
 -- uploadée. L'upload se fait au push du stop par CloudSyncService.
 ALTER TABLE public.stops
   ADD COLUMN IF NOT EXISTS cloud_photo_path TEXT;
+
+-- Feature ramasses (2026-05-18) : colonne `type` qui distingue les
+-- arrêts livraison (default) des ramasses (Noah récupère un colis
+-- chez le client pour le rapporter au dépôt). Cf docs/feature-ramasses.md
+-- pour le UX rationale. Default 'livraison' pour les rows existants.
+ALTER TABLE public.stops
+  ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'livraison';
 
 -- Sous-jalon 2.D-1c : mise à jour du comportement du trigger
 -- `set_updated_at`. AVANT : écrasait toujours `updated_at` à `now()`
