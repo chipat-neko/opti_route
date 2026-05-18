@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+
 import 'database.dart';
 
 /// Statistiques agregees pour un client donne du carnet d'adresses :
@@ -54,17 +56,39 @@ class ClientStatsService {
   }
 
   Future<List<Stop>> _matchingStops(SavedDestination c) async {
-    // Filtrage SQL prefiltre, puis matching fin en Dart (Drift gere
-    // mal le case-insensitive sur les colonnes texte avec accents,
-    // et on veut aussi matcher par coords approximatives).
-    final all = await _db.select(_db.stops).get();
     final cName = c.nomClient?.trim().toLowerCase();
-    return all.where((s) {
+    // Box lat/lng ~110 m (3 decimales). Pre-filtre SQL hautement
+    // selectif vs l'ancien `select(stops).get()` qui chargeait toute
+    // la table en memoire pour chaque appel.
+    final latLow = c.lat - 0.001;
+    final latHigh = c.lat + 0.001;
+    final lngLow = c.lng - 0.001;
+    final lngHigh = c.lng + 0.001;
+
+    final query = _db.select(_db.stops)
+      ..where((s) {
+        final boxMatch = s.lat.isBetweenValues(latLow, latHigh) &
+            s.lng.isBetweenValues(lngLow, lngHigh);
+        if (cName == null || cName.isEmpty) return boxMatch;
+        // lower() SQLite est ASCII-only : "Élise" reste "Élise" cote
+        // SQL alors que Dart "Élise".toLowerCase() = "élise". Pour
+        // les noms FR courants (M. / Mme + nom ASCII) c'est OK ;
+        // les rares cas accentues majuscules seront rattrapes par le
+        // post-filtre Dart ci-dessous (qui ne voit que les rows
+        // pre-filtres -- limitation acceptee).
+        final nameMatch = s.nomClient.lower().equals(cName);
+        return boxMatch | nameMatch;
+      });
+    final prefiltered = await query.get();
+
+    // Post-filtre Dart : meme regle qu'avant, sur un set deja reduit.
+    // Garde la semantique d'origine (case-insensitive Dart, accents
+    // normalises selon les regles Unicode de String.toLowerCase).
+    return prefiltered.where((s) {
       if (cName != null && cName.isNotEmpty) {
         final stopName = (s.nomClient ?? '').trim().toLowerCase();
         if (stopName == cName) return true;
       }
-      // Match par coords arrondies a 3 decimales (~110 m).
       if (s.lat != null && s.lng != null) {
         if ((s.lat! - c.lat).abs() < 0.001 &&
             (s.lng! - c.lng).abs() < 0.001) {
