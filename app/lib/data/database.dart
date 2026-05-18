@@ -66,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 30;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -233,11 +233,6 @@ class AppDatabase extends _$AppDatabase {
             // le default aux rows existantes lors d'un ADD COLUMN.
             // Code genere Drift fait `data['col']!` -> crash si NULL.
             //
-            // Le bump v29 (vs etendre v28) est volontaire : Noah a
-            // deja tourne v28 lors du deploy du fix #160, donc
-            // re-elargir v28 ne re-tournerait pas chez lui. v29 force
-            // le passage des nouveaux UPDATE.
-            //
             // Couvre v12 (isTemplate), v15 (profilOrs + eviterPeages),
             // v18 (pauseeSeconds). v27/type deja fait en v28.
             //
@@ -257,6 +252,17 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'UPDATE tournees SET pausee_seconds = 0 '
               'WHERE pausee_seconds IS NULL',
+            );
+          }
+          if (from < 30) {
+            // Bug fix 2026-05-18 #162 - oubli dans v29 : meme probleme
+            // pour saved_destinations.is_favori, BoolColumn default
+            // false ajoutee par migration v10. Si Noah a un carnet
+            // d'adresses pre-v10 -> crash dans SavedDestination.fromRow
+            // sur Drift Web.
+            await customStatement(
+              'UPDATE saved_destinations SET is_favori = 0 '
+              'WHERE is_favori IS NULL',
             );
           }
         },
