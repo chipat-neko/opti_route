@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
@@ -170,7 +171,13 @@ class _StopsListState extends ConsumerState<StopsList> {
         physics: const NeverScrollableScrollPhysics(),
         buildDefaultDragHandles: false,
         itemCount: _local.length,
-        onReorderStart: (_) => _dragging = true,
+        onReorderStart: (i) {
+          _dragging = true;
+          // Click selection (tic discret) au demarrage du drag : retour
+          // tactile que la poignee a bien ete attrapee, important quand
+          // on porte des gants l'hiver.
+          HapticFeedback.selectionClick();
+        },
         onReorder: _onReorder,
         itemBuilder: (context, i) {
           final stop = _local[i];
@@ -198,6 +205,9 @@ class _StopsListState extends ConsumerState<StopsList> {
       final item = _local.removeAt(oldIndex);
       _local.insert(adjusted, item);
     });
+    // Confirmation de drop : pulse "moyen" pour signaler que le
+    // nouvel ordre est valide et va etre persiste.
+    HapticFeedback.mediumImpact();
     // Persister le nouvel ordre. La liste des stops du stream va etre
     // rafraichie automatiquement avec ces nouveaux ordreOptimise.
     await ref

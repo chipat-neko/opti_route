@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -411,6 +412,7 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
       } catch (_) {/* best-effort */}
 
       if (!mounted) return;
+      HapticFeedback.mediumImpact();
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
