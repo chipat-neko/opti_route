@@ -222,18 +222,37 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 28) {
             // Bug fix 2026-05-18 (Noah crash web "Null check operator
-            // used on a null value" dans Stop.fromRow) : le default
-            // constant n'est PAS toujours applique aux rows existantes
-            // par sqlite3.wasm (Drift Web / IndexedDB). Le code genere
-            // Drift fait `data['type']!` -> crash si NULL.
+            // used on a null value" + "Cannot read properties of null
+            // reading toString") dans Tournee/Stop.fromRow : Drift Web
+            // (sqlite3.wasm + IndexedDB) n'applique PAS toujours le
+            // default constant aux rows existantes lors d'un ADD
+            // COLUMN. Code genere Drift fait `data['col']!` -> crash
+            // si NULL pour les colonnes non-nullable.
             //
-            // Backfill manuel pour rattraper les rows qui ont ete
-            // creees AVANT v27 et migrees v26 -> v27 sans recevoir
-            // le default. Sur Android natif sqlite3, le default
-            // constant a deja ete applique au ADD COLUMN, donc ce
-            // UPDATE est un no-op. Safe a forcer dans les 2 cas.
+            // Backfill defensif global pour TOUTES les colonnes ajoutees
+            // par migration avec default constant non-nullable. Sur
+            // Android natif sqlite3 ces UPDATE sont des no-op (les
+            // defaults sont deja appliques). Safe a forcer.
+            //
+            // Couvre les migrations v12 (isTemplate), v15 (profilOrs +
+            // eviterPeages), v18 (pauseeSeconds), v27 (type).
             await customStatement(
               "UPDATE stops SET type = 'livraison' WHERE type IS NULL",
+            );
+            await customStatement(
+              "UPDATE tournees SET is_template = 0 WHERE is_template IS NULL",
+            );
+            await customStatement(
+              "UPDATE tournees SET profil_ors = 'driving-car' "
+              'WHERE profil_ors IS NULL',
+            );
+            await customStatement(
+              'UPDATE tournees SET eviter_peages = 0 '
+              'WHERE eviter_peages IS NULL',
+            );
+            await customStatement(
+              'UPDATE tournees SET pausee_seconds = 0 '
+              'WHERE pausee_seconds IS NULL',
             );
           }
         },
