@@ -8,6 +8,7 @@ import '../data/bordereau_extraction.dart';
 import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../data/geo_utils.dart';
+import '../data/stop_types.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../providers/supabase_providers.dart';
@@ -53,6 +54,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   AddressSuggestion? _address;
   String? _scannedAddress;
   String _priorite = 'flexible';
+  String _type = kStopTypeLivraison;
   TimeOfDay? _fenetreDebut;
   TimeOfDay? _fenetreFin;
   bool _saving = false;
@@ -86,6 +88,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     _nomClientCtrl = TextEditingController(text: s?.nomClient ?? '');
     _notesCtrl = TextEditingController(text: s?.notes ?? '');
     _priorite = s?.priorite ?? 'flexible';
+    _type = s?.type ?? kStopTypeLivraison;
     _fenetreDebut = _parseTime(s?.fenetreDebut);
     _fenetreFin = _parseTime(s?.fenetreFin);
     if (s != null && s.lat != null && s.lng != null) {
@@ -117,6 +120,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       _notesCtrl.clear();
       _address = null;
       _priorite = 'flexible';
+      _type = kStopTypeLivraison;
       _fenetreDebut = null;
       _fenetreFin = null;
     });
@@ -143,6 +147,13 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x18),
           children: [
+            // Toggle Livraison/Ramasse en haut du form : visible avant
+            // meme de taper l'adresse, evite d'oublier de switcher.
+            StopTypeToggle(
+              value: _type,
+              onChanged: (v) => setState(() => _type = v),
+            ),
+            const SizedBox(height: AppSpacing.x14),
             AddressAutocompleteField(
               key: ValueKey(
                 'address-${widget.initial?.id ?? "new"}-$_addressFieldVersion',
@@ -518,6 +529,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           lng: Value(lng),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
           priorite: Value(_priorite),
+          type: Value(_type),
           fenetreDebut: Value(_formatTime(_fenetreDebut)),
           fenetreFin: Value(_formatTime(_fenetreFin)),
           dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
@@ -544,6 +556,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           lng: Value(lng),
           nbColis: Value(int.tryParse(_nbColisCtrl.text.trim()) ?? 1),
           priorite: Value(_priorite),
+          type: Value(_type),
           fenetreDebut: Value(_formatTime(_fenetreDebut)),
           fenetreFin: Value(_formatTime(_fenetreFin)),
           dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),

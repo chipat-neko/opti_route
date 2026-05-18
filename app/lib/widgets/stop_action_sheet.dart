@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/navigation_service.dart';
+import '../data/stop_types.dart';
 import '../providers/database_providers.dart';
 import '../screens/navigation_screen.dart';
 import '../theme/app_tokens.dart';
@@ -51,6 +52,17 @@ class MoveToTourneeAction extends StopAction {
 
   /// Id de la tournee de destination (different de la tournee courante).
   final int targetTourneeId;
+}
+
+/// Bascule le type entre 'livraison' et 'ramasse'. Le caller appelle
+/// `StopsRepository.setType(stopId, newType)`. Sert au "j'ai oublie
+/// de cocher ramasse" ou "le client me demande aussi de recuperer un
+/// retour" en cours de tournee.
+class ConvertTypeAction extends StopAction {
+  const ConvertTypeAction(this.newType);
+
+  /// Nouveau type a appliquer ('livraison' ou 'ramasse').
+  final String newType;
 }
 
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
@@ -400,6 +412,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
 
             if (_pickingRaison)
               RaisonEchecPicker(
+                type: stop.type,
                 onPicked: (raison) =>
                     Navigator.of(context).pop(MarkEchecAction(raison)),
                 onBack: () => setState(() => _pickingRaison = false),
@@ -409,6 +422,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 StatutBanner(
                   isLivre: isLivre,
                   raison: stop.raisonEchec,
+                  type: stop.type,
                 ),
               if (hasStatut) const SizedBox(height: AppSpacing.x14),
               FilledButton.icon(
@@ -422,7 +436,13 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                     : () => Navigator.of(context).pop(const MarkLivreAction()),
                 icon: const Icon(Icons.check_circle_outline),
                 label: Text(
-                  isLivre ? 'Deja livre' : 'Marquer livre',
+                  isLivre
+                      ? (stop.type == kStopTypeRamasse
+                          ? 'Deja ramasse'
+                          : 'Deja livre')
+                      : (stop.type == kStopTypeRamasse
+                          ? 'Marquer ramasse'
+                          : 'Marquer livre'),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
@@ -438,9 +458,11 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 ),
                 onPressed: () => setState(() => _pickingRaison = true),
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text(
-                  'Marquer echec',
-                  style: TextStyle(
+                label: Text(
+                  stop.type == kStopTypeRamasse
+                      ? 'Pas pu ramasser'
+                      : 'Marquer echec',
+                  style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                   ),
@@ -525,6 +547,29 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 onPressed: () => _onMoveTo(context),
                 icon: const Icon(Icons.swap_horiz, size: 18),
                 label: const Text('Deplacer vers une autre tournee'),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: p.ink,
+                ),
+                onPressed: () => Navigator.of(context).pop(
+                  ConvertTypeAction(
+                    stop.type == kStopTypeRamasse
+                        ? kStopTypeLivraison
+                        : kStopTypeRamasse,
+                  ),
+                ),
+                icon: Icon(
+                  stop.type == kStopTypeRamasse
+                      ? Icons.local_shipping_outlined
+                      : Icons.move_to_inbox_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  stop.type == kStopTypeRamasse
+                      ? 'Convertir en livraison'
+                      : 'Convertir en ramasse',
+                ),
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/stop_types.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -15,9 +16,15 @@ import '../theme/app_tokens.dart';
 
 /// Bandeau de statut affiche en haut de la sheet quand le stop a
 /// deja ete valide (livre ou echec). Vert emerald pour livre, rouge
-/// pour echec avec la raison humanisee.
+/// pour echec avec la raison humanisee. Le verbe est adapte au [type]
+/// du stop : "Livre" pour livraison, "Ramasse" pour ramasse.
 class StatutBanner extends StatelessWidget {
-  const StatutBanner({super.key, required this.isLivre, this.raison});
+  const StatutBanner({
+    super.key,
+    required this.isLivre,
+    this.raison,
+    this.type = kStopTypeLivraison,
+  });
 
   final bool isLivre;
 
@@ -25,13 +32,20 @@ class StatutBanner extends StatelessWidget {
   /// 'adresse_fausse', 'autre'). Ignore si `isLivre == true`.
   final String? raison;
 
+  /// Type du stop : adapte le libelle ('Livre' / 'Ramasse').
+  final String type;
+
   @override
   Widget build(BuildContext context) {
     final bg = isLivre
         ? AppColors.emeraldSoft
         : AppColors.red.withValues(alpha: 0.12);
     final fg = isLivre ? AppColors.emerald : AppColors.red;
-    final libelle = isLivre ? 'Livre' : 'Echec : ${_humanRaison(raison)}';
+    final libelle = isLivre
+        ? (type == kStopTypeRamasse ? 'Ramasse' : 'Livre')
+        : (type == kStopTypeRamasse
+            ? 'Pas ramasse : ${_humanRaison(raison)}'
+            : 'Echec : ${_humanRaison(raison)}');
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x12,
@@ -63,12 +77,15 @@ class StatutBanner extends StatelessWidget {
     );
   }
 
-  /// Traduction des codes raison vers du francais lisible.
+  /// Traduction des codes raison vers du francais lisible. Inclut les
+  /// raisons specifiques aux ramasses (pas_pret, introuvable).
   static String _humanRaison(String? r) {
     return switch (r) {
       'absent' => 'absent',
       'refuse' => 'refuse',
       'adresse_fausse' => 'adresse fausse',
+      'pas_pret' => 'colis pas pret',
+      'introuvable' => 'colis introuvable',
       'autre' => 'autre',
       _ => 'sans raison',
     };
@@ -261,37 +278,59 @@ class FenetreInlineField extends StatelessWidget {
   }
 }
 
-/// Sous-ecran de la sheet qui propose les 4 raisons d'echec possibles
-/// (absent, refuse, adresse fausse, autre) sous forme de OutlinedButtons
-/// alignes a gauche. Tap sur une option -> propage le code via
-/// `onPicked`. Tap "Retour" -> revient a la sheet principale.
+/// Sous-ecran de la sheet qui propose les raisons d'echec possibles
+/// (absent, refuse, etc.) sous forme de OutlinedButtons. Tap sur une
+/// option -> propage le code via `onPicked`. Tap "Retour" -> revient
+/// a la sheet principale.
+///
+/// Le set de raisons est adapte au [type] du stop :
+/// - livraison : absent / refuse le colis / adresse fausse / autre
+/// - ramasse   : pas pret / introuvable / refuse / absent / autre
 class RaisonEchecPicker extends StatelessWidget {
   const RaisonEchecPicker({
     super.key,
     required this.onPicked,
     required this.onBack,
+    this.type = kStopTypeLivraison,
   });
 
   /// Callback : recoit le code interne ('absent' / 'refuse' /
-  /// 'adresse_fausse' / 'autre').
+  /// 'adresse_fausse' / 'autre' / 'pas_pret' / 'introuvable').
   final ValueChanged<String> onPicked;
   final VoidCallback onBack;
 
-  static const _options = [
+  /// Type du stop -- determine quel set de raisons afficher.
+  final String type;
+
+  static const _optionsLivraison = [
     ('absent', 'Absent', Icons.person_off_outlined),
     ('refuse', 'Refuse le colis', Icons.front_hand_outlined),
     ('adresse_fausse', 'Adresse fausse', Icons.wrong_location_outlined),
     ('autre', 'Autre', Icons.more_horiz),
   ];
 
+  static const _optionsRamasse = [
+    ('pas_pret', 'Colis pas pret', Icons.hourglass_empty),
+    ('introuvable', 'Colis introuvable', Icons.search_off_outlined),
+    ('refuse', 'Refuse de donner', Icons.front_hand_outlined),
+    ('absent', 'Absent', Icons.person_off_outlined),
+    ('autre', 'Autre', Icons.more_horiz),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final options = type == kStopTypeRamasse
+        ? _optionsRamasse
+        : _optionsLivraison;
+    final title = type == kStopTypeRamasse
+        ? 'Pourquoi pas de ramasse ?'
+        : 'Raison de l\'echec';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Raison de l\'echec',
+          title,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -299,7 +338,7 @@ class RaisonEchecPicker extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.x10),
-        for (final (id, label, icon) in _options) ...[
+        for (final (id, label, icon) in options) ...[
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: p.ink,

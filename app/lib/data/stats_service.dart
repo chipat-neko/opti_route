@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'database.dart';
+import 'stop_types.dart';
 
 /// Service de calcul des statistiques cumulatives sur l'activite de
 /// livraison de Noah. Aggregations par fenetre temporelle (7j / 30j /
@@ -56,6 +57,11 @@ class StatsService {
 
     final livres = stops.where((s) => s.statutLivraison == 'livre').toList();
     final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
+    // Split par type : on compte separement les livraisons et les ramasses.
+    // `livres` ci-dessus regroupe les 2 (un ramasse "livre" = un ramasse
+    // effectue). Le split donne la visibilite metier/facturation.
+    final livraisonsOK = livres.where((s) => s.type == kStopTypeLivraison).length;
+    final ramassesOK = livres.where((s) => s.type == kStopTypeRamasse).length;
     return TourneeStats(
       nbTournees: tournees.length,
       nbTourneesTerminees:
@@ -63,6 +69,8 @@ class StatsService {
       nbArrets: stops.length,
       nbColisLivres: livres.fold<int>(0, (s, x) => s + x.nbColis),
       nbLivres: livres.length,
+      nbLivraisons: livraisonsOK,
+      nbRamasses: ramassesOK,
       nbEchecs: echecs,
       distanceMeters: tournees
           .fold<int>(0, (s, t) => s + (t.distanceTotaleM ?? 0)),
@@ -94,6 +102,10 @@ class StatsService {
         stops.where((s) => s.statutLivraison == 'livre').toList();
     final echecs =
         stops.where((s) => s.statutLivraison == 'echec').length;
+    final livraisonsOK =
+        livres.where((s) => s.type == kStopTypeLivraison).length;
+    final ramassesOK =
+        livres.where((s) => s.type == kStopTypeRamasse).length;
 
     final colisLivres = livres.fold<int>(0, (sum, s) => sum + s.nbColis);
     final distanceM = tournees.fold<int>(
@@ -112,6 +124,8 @@ class StatsService {
       nbArrets: stops.length,
       nbColisLivres: colisLivres,
       nbLivres: livres.length,
+      nbLivraisons: livraisonsOK,
+      nbRamasses: ramassesOK,
       nbEchecs: echecs,
       distanceMeters: distanceM,
       durationSeconds: dureeS,
@@ -375,7 +389,8 @@ class StatsService {
           ..orderBy([(t) => OrderingTerm.asc(t.date)]))
         .get();
     if (tournees.isEmpty) {
-      return 'date,nom,statut,arrets,colis_livres,distance_km,duree_min,pause_min\n';
+      return 'date,nom,statut,arrets,colis_livres,nb_livraisons,nb_ramasses,'
+          'distance_km,duree_min,pause_min\n';
     }
     final ids = tournees.map((t) => t.id).toList();
     final allStops = await (_db.select(_db.stops)
@@ -390,20 +405,26 @@ class StatsService {
 
     final buf = StringBuffer();
     buf.writeln(
-      'date,nom,statut,arrets,colis_livres,distance_km,duree_min,pause_min',
+      'date,nom,statut,arrets,colis_livres,nb_livraisons,nb_ramasses,'
+      'distance_km,duree_min,pause_min',
     );
     for (final t in tournees) {
       final stops = stopsByTournee[t.id] ?? const <Stop>[];
-      final colisLivres = stops
-          .where((s) => s.statutLivraison == 'livre')
-          .fold<int>(0, (acc, s) => acc + s.nbColis);
+      final livres =
+          stops.where((s) => s.statutLivraison == 'livre').toList();
+      final colisLivres = livres.fold<int>(0, (acc, s) => acc + s.nbColis);
+      final nbLivraisons =
+          livres.where((s) => s.type == kStopTypeLivraison).length;
+      final nbRamasses =
+          livres.where((s) => s.type == kStopTypeRamasse).length;
       final km = ((t.distanceTotaleM ?? 0) / 1000).toStringAsFixed(1);
       final dureeMin = ((t.dureeTotaleS ?? 0) / 60).round();
       final pauseMin = (t.pauseeSeconds / 60).round();
       final dateIso = t.date.toIso8601String().split('T').first;
       buf.writeln(
         '$dateIso,"${t.nom.replaceAll('"', '""')}",${t.statut},'
-        '${stops.length},$colisLivres,$km,$dureeMin,$pauseMin',
+        '${stops.length},$colisLivres,$nbLivraisons,$nbRamasses,'
+        '$km,$dureeMin,$pauseMin',
       );
     }
     return buf.toString();
@@ -421,6 +442,8 @@ class TourneeStats {
     required this.nbEchecs,
     required this.distanceMeters,
     required this.durationSeconds,
+    this.nbLivraisons = 0,
+    this.nbRamasses = 0,
   });
 
   static const empty = TourneeStats(
@@ -442,7 +465,21 @@ class TourneeStats {
   /// 1 arret peut avoir plusieurs colis).
   final int nbColisLivres;
 
+  /// Total des arrets valides "livre" (livraisons + ramasses confondus).
+  /// Conserve pour la compat des callers existants. Pour le split, voir
+  /// [nbLivraisons] et [nbRamasses].
   final int nbLivres;
+
+  /// Nombre d'arrets type='livraison' marques 'livre' (depots reussis).
+  /// Sous-ensemble de [nbLivres]. Permet d'afficher "12 livraisons /
+  /// 3 ramasses" dans les stats.
+  final int nbLivraisons;
+
+  /// Nombre d'arrets type='ramasse' marques 'livre' (= effectivement
+  /// recuperes). Sous-ensemble de [nbLivres]. Sert au compteur ramasse
+  /// dans les stats et a la facturation differentielle si applicable.
+  final int nbRamasses;
+
   final int nbEchecs;
   final int distanceMeters;
   final int durationSeconds;
