@@ -34,7 +34,7 @@ class HomeScreen extends ConsumerWidget {
       data: (tournee) =>
           tournee == null ? const _NoTourTodayScreen() : TourneeDuJourScreen(tournee: tournee),
       loading: () => const _LoadingScaffold(),
-      error: (err, _) => _ErrorScaffold(error: '$err'),
+      error: (err, st) => _ErrorScaffold(error: '$err', stack: '$st'),
     );
   }
 }
@@ -51,18 +51,42 @@ class _LoadingScaffold extends StatelessWidget {
 }
 
 class _ErrorScaffold extends StatelessWidget {
-  const _ErrorScaffold({required this.error});
+  const _ErrorScaffold({required this.error, this.stack});
 
   final String error;
+  final String? stack;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Erreur')),
-      body: Center(
-        child: Padding(
+      body: SafeArea(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.x22),
-          child: Text('Erreur de chargement : $error'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Erreur de chargement : $error'),
+              if (stack != null) ...[
+                const SizedBox(height: AppSpacing.x18),
+                const Text(
+                  'Stack trace (pour debug) :',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x8),
+                SelectableText(
+                  stack!,
+                  style: const TextStyle(
+                    fontFamily: 'JetBrainsMono',
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
