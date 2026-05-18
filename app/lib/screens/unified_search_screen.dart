@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../data/unified_search_service.dart';
 import '../providers/database_providers.dart';
@@ -16,6 +15,7 @@ import 'scan_bordereau_screen.dart';
 import 'stats_screen.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
+import 'unified_search/hit_tiles.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Recherche universelle (Cmd+K style) — modal plein ecran.
@@ -401,15 +401,15 @@ class _UnifiedSearchScreenState extends ConsumerState<UnifiedSearchScreen> {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       children: [
         if (tournees.isNotEmpty) ...[
-          _SectionHeader(label: 'TOURNEES', count: tournees.length),
+          SearchSectionHeader(label: 'TOURNEES', count: tournees.length),
           for (final h in tournees) tileFor(h),
         ],
         if (stops.isNotEmpty) ...[
-          _SectionHeader(label: 'ARRETS', count: stops.length),
+          SearchSectionHeader(label: 'ARRETS', count: stops.length),
           for (final h in stops) tileFor(h),
         ],
         if (clients.isNotEmpty) ...[
-          _SectionHeader(label: 'CARNET', count: clients.length),
+          SearchSectionHeader(label: 'CARNET', count: clients.length),
           for (final h in clients) tileFor(h),
         ],
         const SizedBox(height: AppSpacing.x18),
@@ -465,11 +465,11 @@ class _UnifiedSearchScreenState extends ConsumerState<UnifiedSearchScreen> {
     void cb() => _rememberQuery(_debouncedQuery);
     Widget tile;
     if (h is SearchHitTournee) {
-      tile = _TourneeHitTile(hit: h, query: _debouncedQuery, onBeforeOpen: cb);
+      tile = TourneeHitTile(hit: h, query: _debouncedQuery, onBeforeOpen: cb);
     } else if (h is SearchHitStop) {
-      tile = _StopHitTile(hit: h, query: _debouncedQuery, onBeforeOpen: cb);
+      tile = StopHitTile(hit: h, query: _debouncedQuery, onBeforeOpen: cb);
     } else if (h is SearchHitClient) {
-      tile = _ClientHitTile(hit: h, query: _debouncedQuery, onBeforeOpen: cb);
+      tile = ClientHitTile(hit: h, query: _debouncedQuery, onBeforeOpen: cb);
     } else {
       tile = const SizedBox.shrink();
     }
@@ -787,270 +787,6 @@ class _Hint extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label, required this.count});
-  final String label;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x14,
-        AppSpacing.x14,
-        AppSpacing.x14,
-        AppSpacing.x6,
-      ),
-      child: Text(
-        '$label · $count',
-        style: appMonoStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: context.palette.textMute,
-          letterSpacing: 0.6,
-        ),
-      ),
-    );
-  }
-}
-
-/// Tile pour une tournee : tap = ouvre TourneeDuJourScreen.
-/// [query] sert au highlight du match ; [onBeforeOpen] memorise la
-/// query dans l'historique des recherches recentes avant la nav.
-class _TourneeHitTile extends StatelessWidget {
-  const _TourneeHitTile({
-    required this.hit,
-    required this.query,
-    required this.onBeforeOpen,
-  });
-  final SearchHitTournee hit;
-  final String query;
-  final VoidCallback onBeforeOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final t = hit.tournee;
-    final df = DateFormat('d MMM yyyy', 'fr').format(t.date);
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: p.creamSoft,
-        foregroundColor: p.ink,
-        child: const Icon(Icons.local_shipping_outlined, size: 18),
-      ),
-      title: _HighlightedText(
-        text: t.nom,
-        query: query,
-        style: const TextStyle(fontWeight: FontWeight.w700),
-      ),
-      subtitle: Text(
-        '$df · ${_statutLabel(t.statut)}',
-        style: TextStyle(fontSize: 12, color: p.textMute),
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () {
-        onBeforeOpen();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => TourneeDuJourScreen(tournee: t),
-          ),
-        );
-      },
-    );
-  }
-
-  static String _statutLabel(String s) => switch (s) {
-        'brouillon' => 'Brouillon',
-        'optimisee' => 'Optimisee',
-        'en_cours' => 'En cours',
-        'terminee' => 'Terminee',
-        _ => s,
-      };
-}
-
-/// Tile pour un stop : tap = ouvre la tournee parente (l'utilisateur
-/// peut ensuite scroller jusqu'au stop dans la liste).
-class _StopHitTile extends StatelessWidget {
-  const _StopHitTile({
-    required this.hit,
-    required this.query,
-    required this.onBeforeOpen,
-  });
-  final SearchHitStop hit;
-  final String query;
-  final VoidCallback onBeforeOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final s = hit.stop;
-    final primary = (s.nomClient?.isNotEmpty ?? false)
-        ? s.nomClient!
-        : s.adresseBrute.split(',').first.trim();
-    final secondary = s.adresseNormalisee ?? s.adresseBrute;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: p.creamSoft,
-        foregroundColor: p.ink,
-        child: const Icon(Icons.location_on_outlined, size: 18),
-      ),
-      title: _HighlightedText(
-        text: primary,
-        query: query,
-        style: const TextStyle(fontWeight: FontWeight.w700),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        '$secondary\n→ ${hit.tournee.nom}',
-        style: TextStyle(fontSize: 12, color: p.textMute),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      isThreeLine: true,
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () {
-        onBeforeOpen();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => TourneeDuJourScreen(tournee: hit.tournee),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Tile pour un client du carnet : tap = ouvre CarnetEditScreen.
-class _ClientHitTile extends StatelessWidget {
-  const _ClientHitTile({
-    required this.hit,
-    required this.query,
-    required this.onBeforeOpen,
-  });
-  final SearchHitClient hit;
-  final String query;
-  final VoidCallback onBeforeOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final c = hit.client;
-    final primary =
-        (c.nomClient?.isNotEmpty ?? false) ? c.nomClient! : c.adresseDisplay;
-    final secondary = (c.nomClient?.isNotEmpty ?? false)
-        ? c.adresseDisplay
-        : '${c.useCount} livraison${c.useCount > 1 ? "s" : ""}';
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: colorFromTag(c.colorTag, defaultColor: p.creamSoft),
-        foregroundColor: p.ink,
-        child: Text(
-          _initials(primary),
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-        ),
-      ),
-      title: _HighlightedText(
-        text: primary,
-        query: query,
-        style: const TextStyle(fontWeight: FontWeight.w700),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        secondary,
-        style: TextStyle(fontSize: 12, color: p.textMute),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () {
-        onBeforeOpen();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => CarnetEditScreen(entry: c),
-          ),
-        );
-      },
-    );
-  }
-
-  static String _initials(String s) {
-    final parts = s.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts[1].substring(0, 1))
-        .toUpperCase();
-  }
-}
-
-/// Texte qui met en gras + accent lime les substrings matchant la
-/// query (case-insensitive). Si la query ne match pas exactement dans
-/// le texte (cas Levenshtein fuzzy), on retombe sur un Text normal.
-class _HighlightedText extends StatelessWidget {
-  const _HighlightedText({
-    required this.text,
-    required this.query,
-    this.style,
-    this.maxLines,
-    this.overflow,
-  });
-
-  final String text;
-  final String query;
-  final TextStyle? style;
-  final int? maxLines;
-  final TextOverflow? overflow;
-
-  @override
-  Widget build(BuildContext context) {
-    final spans = _buildSpans(text, query, style);
-    if (spans.length == 1) {
-      // Pas de match exact -> texte normal (rapide, evite RichText).
-      return Text(
-        text,
-        style: style,
-        maxLines: maxLines,
-        overflow: overflow,
-      );
-    }
-    return RichText(
-      text: TextSpan(style: style, children: spans),
-      maxLines: maxLines,
-      overflow: overflow ?? TextOverflow.clip,
-    );
-  }
-
-  static List<InlineSpan> _buildSpans(
-    String text,
-    String query,
-    TextStyle? base,
-  ) {
-    final q = query.trim();
-    if (q.isEmpty) return [TextSpan(text: text)];
-    final lower = text.toLowerCase();
-    final qLower = q.toLowerCase();
-    final spans = <InlineSpan>[];
-    var i = 0;
-    while (i < text.length) {
-      final idx = lower.indexOf(qLower, i);
-      if (idx < 0) {
-        spans.add(TextSpan(text: text.substring(i)));
-        break;
-      }
-      if (idx > i) {
-        spans.add(TextSpan(text: text.substring(i, idx)));
-      }
-      spans.add(TextSpan(
-        text: text.substring(idx, idx + qLower.length),
-        style: TextStyle(
-          backgroundColor: AppColors.lime.withValues(alpha: 0.45),
-          fontWeight: FontWeight.w800,
-          color: base?.color,
-        ),
-      ));
-      i = idx + qLower.length;
-    }
-    return spans;
-  }
-}
+// _SectionHeader / _TourneeHitTile / _StopHitTile / _ClientHitTile /
+// _HighlightedText sont extraits dans lib/screens/unified_search/hit_tiles.dart
+// (refactor 2026-05-18, split du fichier 1056 -> ~790 lignes).
