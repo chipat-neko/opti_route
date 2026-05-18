@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/parametres_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
 
@@ -37,6 +38,12 @@ class _EntrepriseFormState extends ConsumerState<EntrepriseForm> {
   // pas vu le formulaire (build avant _load).
   bool _loaded = false;
 
+  /// Reference capturee au build pour reutiliser dans dispose() sans
+  /// repasser par `ref.read` (interdit apres unmount avec Riverpod >=2).
+  /// Cf bug fix 2026-05-18 : crash "Using ref when widget is about to
+  /// or has been unmounted" qui crashait la rebuild loop.
+  ParametresRepository? _capturedRepo;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +55,7 @@ class _EntrepriseFormState extends ConsumerState<EntrepriseForm> {
   /// dispose.
   Future<void> _load() async {
     final repo = ref.read(parametresRepositoryProvider);
+    _capturedRepo = repo;
     final nom = await repo.getEntrepriseNom();
     final siret = await repo.getEntrepriseSiret();
     final slogan = await repo.getEntrepriseSlogan();
@@ -63,8 +71,12 @@ class _EntrepriseFormState extends ConsumerState<EntrepriseForm> {
   @override
   void dispose() {
     // Sauvegarde finale si modifs en attente (l'utilisateur sort de
-    // l'ecran Parametres avant d'avoir tape Done).
-    if (_loaded) _persistAll();
+    // l'ecran Parametres avant d'avoir tape Done). Pas de `ref.read`
+    // ici -- Riverpod >=2 interdit l'acces a `ref` apres unmount, on
+    // utilise la reference capturee pendant `_load()`.
+    if (_loaded && _capturedRepo != null) {
+      _persistAll();
+    }
     _nomCtrl.dispose();
     _siretCtrl.dispose();
     _sloganCtrl.dispose();
@@ -75,8 +87,14 @@ class _EntrepriseFormState extends ConsumerState<EntrepriseForm> {
   /// on supprime l'entree au lieu de stocker la chaine vide -> les
   /// templates PDF / texte ne tenteront pas d'afficher une ligne
   /// vide.
+  ///
+  /// Utilise [_capturedRepo] (capture au build dans `_load`) pour
+  /// fonctionner aussi quand on est appele depuis `dispose()` --
+  /// Riverpod >=2 interdit `ref.read` apres unmount. No-op si le
+  /// repo n'a jamais ete capture (cas anormal : appel avant _load).
   Future<void> _persistAll() async {
-    final repo = ref.read(parametresRepositoryProvider);
+    final repo = _capturedRepo;
+    if (repo == null) return;
     final nom = _nomCtrl.text.trim();
     final siret = _siretCtrl.text.trim();
     final slogan = _sloganCtrl.text.trim();
