@@ -64,8 +64,12 @@ jobs:
       # sous-chemin du nom du repo, donc tous les paths absolus
       # (assets, canvaskit, main.dart.js) doivent commencer par
       # /opti_route/.
-      - name: Build web (release)
-        run: flutter build web --release --base-href "/opti_route/"
+      # --source-maps : permet de decoder le stack trace minifie quand
+      # un user envoie un screen d'erreur (sans ca on a juste
+      # main.dart.js:156366 = inutile). Cout : ~3-5 MB de .map upload.
+      # Acceptable pour un MVP en debug actif.
+      - name: Build web (release + source maps)
+        run: flutter build web --release --source-maps --base-href "/opti_route/"
 
       # Copie le site vitrine statique (site_doc/) dans un sous-dossier
       # `site/` du build Flutter Web, pour qu'il soit accessible a
