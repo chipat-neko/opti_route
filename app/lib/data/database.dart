@@ -66,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -221,24 +221,28 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(stops, stops.type);
           }
           if (from < 28) {
-            // Bug fix 2026-05-18 (Noah crash web "Null check operator
-            // used on a null value" + "Cannot read properties of null
-            // reading toString") dans Tournee/Stop.fromRow : Drift Web
-            // (sqlite3.wasm + IndexedDB) n'applique PAS toujours le
-            // default constant aux rows existantes lors d'un ADD
-            // COLUMN. Code genere Drift fait `data['col']!` -> crash
-            // si NULL pour les colonnes non-nullable.
-            //
-            // Backfill defensif global pour TOUTES les colonnes ajoutees
-            // par migration avec default constant non-nullable. Sur
-            // Android natif sqlite3 ces UPDATE sont des no-op (les
-            // defaults sont deja appliques). Safe a forcer.
-            //
-            // Couvre les migrations v12 (isTemplate), v15 (profilOrs +
-            // eviterPeages), v18 (pauseeSeconds), v27 (type).
+            // Bug fix 2026-05-18 #160 : backfill stops.type.
             await customStatement(
               "UPDATE stops SET type = 'livraison' WHERE type IS NULL",
             );
+          }
+          if (from < 29) {
+            // Bug fix 2026-05-18 #161 + bump v29 : audit complet des
+            // colonnes non-nullable avec default constant ajoutees
+            // par migration. Drift Web (sqlite3.wasm) n'applique PAS
+            // le default aux rows existantes lors d'un ADD COLUMN.
+            // Code genere Drift fait `data['col']!` -> crash si NULL.
+            //
+            // Le bump v29 (vs etendre v28) est volontaire : Noah a
+            // deja tourne v28 lors du deploy du fix #160, donc
+            // re-elargir v28 ne re-tournerait pas chez lui. v29 force
+            // le passage des nouveaux UPDATE.
+            //
+            // Couvre v12 (isTemplate), v15 (profilOrs + eviterPeages),
+            // v18 (pauseeSeconds). v27/type deja fait en v28.
+            //
+            // Sur Android natif sqlite3 ces UPDATE sont des no-op.
+            // Safe a forcer. Cf [[feedback-drift-web-default-backfill]].
             await customStatement(
               "UPDATE tournees SET is_template = 0 WHERE is_template IS NULL",
             );
