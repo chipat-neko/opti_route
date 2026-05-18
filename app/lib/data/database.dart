@@ -66,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -216,13 +216,25 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 27) {
             // Feature ramasses (2026-05-18) : ajout colonne `type` sur
-            // stops, 'livraison' default. SQLite applique automatiquement
-            // le default constant aux rows existants lors du ADD COLUMN,
-            // donc pas de backfill manuel necessaire.
-            //
-            // 'livraison' = on depose un colis, 'ramasse' = on en
-            // recupere un. Compte separement dans les stats.
+            // stops, 'livraison' default ('livraison' = on depose un
+            // colis, 'ramasse' = on en recupere un).
             await m.addColumn(stops, stops.type);
+          }
+          if (from < 28) {
+            // Bug fix 2026-05-18 (Noah crash web "Null check operator
+            // used on a null value" dans Stop.fromRow) : le default
+            // constant n'est PAS toujours applique aux rows existantes
+            // par sqlite3.wasm (Drift Web / IndexedDB). Le code genere
+            // Drift fait `data['type']!` -> crash si NULL.
+            //
+            // Backfill manuel pour rattraper les rows qui ont ete
+            // creees AVANT v27 et migrees v26 -> v27 sans recevoir
+            // le default. Sur Android natif sqlite3, le default
+            // constant a deja ete applique au ADD COLUMN, donc ce
+            // UPDATE est un no-op. Safe a forcer dans les 2 cas.
+            await customStatement(
+              "UPDATE stops SET type = 'livraison' WHERE type IS NULL",
+            );
           }
         },
         beforeOpen: (details) async {
