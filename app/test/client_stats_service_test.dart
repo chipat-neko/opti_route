@@ -105,6 +105,72 @@ void main() {
       expect(s.nbLivraisons, 1);
     });
 
+    test('match croise nom+coords : un seul stop comptabilise pas en double',
+        () async {
+      // Regression : si un stop matche par nom ET par coords, il doit
+      // etre compte une seule fois (et pas 2x).
+      final c = await seedClient(
+        nomClient: 'Mme Dupont',
+        lat: 48.43,
+        lng: 1.49,
+      );
+      await seedStop(
+        statut: 'livre',
+        nomClient: 'Mme Dupont',
+        lat: 48.4301,
+        lng: 1.4901,
+      );
+      final s = await stats.computeFor(c);
+      expect(s.nbLivraisons, 1);
+    });
+
+    test('stop hors box mais nom correct : trouve via prefiltre lower()',
+        () async {
+      // Valide que le pre-filtre SQL OR (lower(nom_client) = lower(?))
+      // ramene aussi les stops hors box geographique.
+      final c = await seedClient(
+        nomClient: 'Mme Dupont',
+        lat: 48.43,
+        lng: 1.49,
+      );
+      // Stop avec le bon nom mais coords completement ailleurs (Paris).
+      await seedStop(
+        statut: 'livre',
+        nomClient: 'mme dupont',
+        lat: 48.85,
+        lng: 2.35,
+      );
+      final s = await stats.computeFor(c);
+      expect(s.nbLivraisons, 1);
+    });
+
+    test('1000 stops parasites : prefiltre rend la query selective',
+        () async {
+      final c = await seedClient(
+        nomClient: 'Mme Cible',
+        lat: 48.43,
+        lng: 1.49,
+      );
+      // Seed 1000 stops parasites loin (au Nord) avec d'autres noms.
+      for (var i = 0; i < 1000; i++) {
+        await seedStop(
+          statut: 'livre',
+          nomClient: 'Autre $i',
+          lat: 49.0 + i * 0.0001,
+          lng: 2.0 + i * 0.0001,
+        );
+      }
+      // Le seul stop qui match : nom ET coords dans la box.
+      await seedStop(
+        statut: 'livre',
+        nomClient: 'Mme Cible',
+        lat: 48.4301,
+        lng: 1.4901,
+      );
+      final s = await stats.computeFor(c);
+      expect(s.nbLivraisons, 1);
+    });
+
     test('top 3 des raisons d\'echec triees par frequence', () async {
       final c = await seedClient();
       for (var i = 0; i < 3; i++) {
