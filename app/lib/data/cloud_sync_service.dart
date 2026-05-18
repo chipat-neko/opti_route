@@ -249,6 +249,7 @@ class CloudSyncService {
       'lng': s.lng,
       'nb_colis': s.nbColis,
       'priorite': s.priorite,
+      'type': s.type,
       'fenetre_debut': s.fenetreDebut,
       'fenetre_fin': s.fenetreFin,
       'duree_arret_min': s.dureeArretMin,
@@ -975,6 +976,9 @@ class CloudSyncService {
         lng: Value((row['lng'] as num?)?.toDouble()),
         nbColis: Value(row['nb_colis'] as int? ?? 1),
         priorite: Value(row['priorite'] as String? ?? 'flexible'),
+        // Default 'livraison' au pull pour les rows pre-feature-ramasses
+        // (colonne cloud potentiellement NULL si push d'une vieille app).
+        type: Value(row['type'] as String? ?? 'livraison'),
         fenetreDebut: Value(row['fenetre_debut'] as String?),
         fenetreFin: Value(row['fenetre_fin'] as String?),
         dureeArretMin: Value(row['duree_arret_min'] as int? ?? 3),
