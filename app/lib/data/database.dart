@@ -66,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 31;
+  int get schemaVersion => 32;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -266,46 +266,52 @@ class AppDatabase extends _$AppDatabase {
             );
           }
           if (from < 31) {
-            // Bug fix 2026-05-18 #163 : updated_at sur les 4 tables
-            // (Tournees, Stops, Coequipiers, SavedDestinations).
+            // (No-op : ce bloc avait tente un UPDATE sur updated_at,
+            // mais sur Drift Web la colonne n'existait meme pas car
+            // l'ALTER TABLE de v25 avait silencieusement echoue. Cf
+            // bloc v32 ci-dessous pour la vraie correction.)
+          }
+          if (from < 32) {
+            // ════════════════════════════════════════════════════════
+            // VRAIE CAUSE TROUVEE 2026-05-19 :
+            // ════════════════════════════════════════════════════════
+            // La migration v25 essayait :
+            //   ALTER TABLE tournees ADD COLUMN updated_at INTEGER
+            //   NOT NULL DEFAULT (CAST(strftime('%s', CURRENT_TIMESTAMP)
+            //   AS INTEGER));
             //
-            // Symptome : crash "Cannot read properties of null reading
-            // toString" decode via source map a database.g.dart:590
-            // ($TourneesTable.map) sur le `!` de updated_at.
+            // SQLite refuse les DEFAULT non-constants dans ADD COLUMN.
+            // Resultat sur Drift Web : SqliteException(1) "Cannot add
+            // a column with non-constant default" -> migration v25
+            // a echoue silencieusement -> la colonne updated_at
+            // n'existe PAS sur les 4 tables -> tout fromRow crash sur
+            // `data['updated_at']!`.
             //
-            // Cause : la migration v25 backfille via
-            // `strftime('%s','now')` mais sur Drift Web certaines rows
-            // ont quand meme updated_at NULL ou stocke en TEXT alors
-            // que Drift attend INT seconds. Le typeMapping.read
-            // retourne null -> `!` crash.
+            // Sur Android natif sqlite3 a peut-etre une version plus
+            // permissive (ou throw differemment) qui a laisse passer.
             //
-            // Fix : re-backfill avec un INTEGER lit (seconds since
-            // epoch) embede directement dans le SQL. Couvre 2 cas :
-            //   1. updated_at IS NULL (le strftime v25 n'a pas tourne)
-            //   2. typeof(updated_at) != 'integer' (stocke comme TEXT
-            //      par erreur, format incompatible)
-            //
-            // Sur Android natif, ce UPDATE est un no-op (toutes les
-            // rows ont deja updated_at en INT seconds). Safe a forcer.
-            final nowSec =
-                DateTime.now().millisecondsSinceEpoch ~/ 1000;
-            const condition =
-                "updated_at IS NULL OR typeof(updated_at) != 'integer'";
-            await customStatement(
-              'UPDATE tournees SET updated_at = $nowSec '
-              'WHERE $condition',
-            );
-            await customStatement(
-              'UPDATE stops SET updated_at = $nowSec WHERE $condition',
-            );
-            await customStatement(
-              'UPDATE coequipiers SET updated_at = $nowSec '
-              'WHERE $condition',
-            );
-            await customStatement(
-              'UPDATE saved_destinations SET updated_at = $nowSec '
-              'WHERE $condition',
-            );
+            // Fix : ADD COLUMN manuel avec DEFAULT CONSTANT (0), puis
+            // backfill avec timestamp en seconds via UPDATE.
+            // Idempotent : si la colonne existe deja (Android), le ADD
+            // COLUMN throws "duplicate column name" qu'on swallow.
+            final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+            const tables = ['tournees', 'stops', 'coequipiers',
+                'saved_destinations'];
+            for (final t in tables) {
+              try {
+                await customStatement(
+                  'ALTER TABLE $t ADD COLUMN updated_at INTEGER '
+                  'NOT NULL DEFAULT 0',
+                );
+              } on Object catch (_) {
+                // Colonne existe deja (Android natif ou retry). OK.
+              }
+              await customStatement(
+                'UPDATE $t SET updated_at = $nowSec '
+                "WHERE updated_at IS NULL OR updated_at = 0 "
+                "OR typeof(updated_at) != 'integer'",
+              );
+            }
           }
         },
         beforeOpen: (details) async {
