@@ -182,29 +182,43 @@ class AppDatabase extends _$AppDatabase {
             // Sert au pull last-write-wins : si cloud.updated_at >
             // local.updated_at on ecrase, sinon on skip.
             //
-            // Sur upgrade, les rows existants ont updated_at = NULL
-            // (Drift ne peut pas appliquer le DEFAULT a posteriori).
-            // On les backfill manuellement a now() apres l'ADD COLUMN
-            // pour qu'ils participent correctement au last-write-wins
-            // (sinon ils seraient toujours consideres comme "infiniment
-            // anciens" et ecrases au moindre pull).
-            await m.addColumn(tournees, tournees.updatedAt);
-            await m.addColumn(stops, stops.updatedAt);
-            await m.addColumn(coequipiers, coequipiers.updatedAt);
-            await m.addColumn(
-                savedDestinations, savedDestinations.updatedAt);
-            await customStatement(
-                "UPDATE tournees SET updated_at = strftime('%s','now') "
-                'WHERE updated_at IS NULL');
-            await customStatement(
-                "UPDATE stops SET updated_at = strftime('%s','now') "
-                'WHERE updated_at IS NULL');
-            await customStatement(
-                "UPDATE coequipiers SET updated_at = strftime('%s','now') "
-                'WHERE updated_at IS NULL');
-            await customStatement(
-                "UPDATE saved_destinations SET updated_at = "
-                "strftime('%s','now') WHERE updated_at IS NULL");
+            // ════════════════════════════════════════════════════════
+            // Reecriture 2026-05-19 (fix #166) suite au crash web :
+            // ════════════════════════════════════════════════════════
+            // L'ancienne version utilisait `m.addColumn(...)` qui
+            // genere un ALTER TABLE ADD COLUMN ... DEFAULT
+            // (CAST(strftime('%s', CURRENT_TIMESTAMP) AS INTEGER)).
+            //
+            // SQLite refuse les DEFAULT non-constants dans ADD COLUMN.
+            // Sur Drift Web -> SqliteException(1) "Cannot add a column
+            // with non-constant default" -> migration v25 echouait
+            // silencieusement -> updated_at n'existait pas -> tous
+            // les fromRow crashaient sur `data['updated_at']!`.
+            //
+            // Sur Android natif, sqlite3 lib avait peut-etre une
+            // version plus permissive qui acceptait. Mais pour etre
+            // safe partout, on utilise customStatement avec DEFAULT
+            // CONSTANT 0, puis backfill via UPDATE.
+            //
+            // Le UPDATE backfill subsequent (avec strftime ou int)
+            // est OK car strftime est autorise dans UPDATE.
+            for (final t in const ['tournees', 'stops', 'coequipiers',
+                'saved_destinations']) {
+              try {
+                await customStatement(
+                  'ALTER TABLE $t ADD COLUMN updated_at INTEGER '
+                  'NOT NULL DEFAULT 0',
+                );
+              } on Object catch (_) {
+                // Colonne existe deja (rare : retry de migration ou
+                // version sqlite plus permissive qui avait laisse
+                // passer l'ancienne version). Swallow.
+              }
+              await customStatement(
+                "UPDATE $t SET updated_at = strftime('%s','now') "
+                'WHERE updated_at IS NULL OR updated_at = 0',
+              );
+            }
             await _createUpdatedAtTriggers();
           }
           if (from < 26) {
