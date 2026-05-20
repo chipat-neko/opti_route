@@ -90,8 +90,31 @@ class LocalReorderService {
     final startLng = premiers.isNotEmpty
         ? premiers.last.lng!
         : tournee.pointDepartLng;
-    final flexiblesOrdered =
+    final flexiblesNN =
         _nearestNeighbor(start: (startLat, startLng), stops: flexibles);
+
+    // 3b. Amelioration 2-opt : NN seul donne ~15-25% de detour vs
+    //     optimal. Le 2-opt inverse iterativement des sous-segments
+    //     pour reduire la longueur totale. Gain typique : -10% a
+    //     -15% supplementaire, et converge en 2-3 passes pour les
+    //     tournees Noah-sized (10-50 stops). Toujours local, O(n^2)
+    //     par passe = <5ms sur phone moyen pour 50 stops.
+    //
+    //     End point pour le 2-opt : si "derniers" existe, on s'arrete
+    //     juste avant le 1er d'entre eux (le NN a deja calcule l'ordre
+    //     en partant du depart et en finissant librement, mais le
+    //     2-opt veut savoir vers ou il "sort" pour comparer les bords).
+    //     Sinon, pas de retour fixe (mode tournee aller-simple sans
+    //     boucle, ce qui est le cas Noah).
+    (double, double)? endHint;
+    if (derniers.isNotEmpty) {
+      endHint = (derniers.first.lat!, derniers.first.lng!);
+    }
+    final flexiblesOrdered = _twoOpt(
+      start: (startLat, startLng),
+      end: endHint,
+      stops: flexiblesNN,
+    );
 
     // 4. Concatene : premiers + flexibles(NN) + derniers + eviter +
     //    sans-coords (ces derniers a la fin, l'utilisateur les
@@ -156,5 +179,98 @@ class LocalReorderService {
       curLng = picked.lng!;
     }
     return ordered;
+  }
+
+  /// Amelioration **2-opt** d'un ordre existant (typiquement le sortie
+  /// du nearest-neighbor). Inverse iterativement des sous-segments
+  /// `[i..j]` quand l'inversion reduit la distance totale.
+  ///
+  /// Le 2-opt garantit un minimum local : a la fin, aucune inversion
+  /// de segment n'ameliore plus. Gain typique vs NN seul : -10 a -15 %
+  /// de distance totale.
+  ///
+  /// Complexite : O(n^2) par passe, O(n^2 * iter) au total. Pour
+  /// n=50 stops et iter=5 (cas moyen), ~12500 ops = < 5 ms sur phone.
+  /// `maxIterations` capte un fallback en cas d'oscillation (rare avec
+  /// l'amelioration stricte `delta < -epsilon`).
+  ///
+  /// Bord externes :
+  /// - [start] : point d'ou on arrive sur le 1er stop de la liste.
+  /// - [end] : point ou on va apres le dernier stop (null = pas de
+  ///   retour fixe, on ignore l'edge de sortie).
+  ///
+  /// **Invariant** : l'inversion d'un segment [i..j] ne change PAS
+  /// la somme des distances intra-segment (on parcourt les memes
+  /// aretes en sens inverse). Donc seul l'effet sur les 2 aretes
+  /// "bords" `(stops[i-1] -> stops[i])` et `(stops[j] -> stops[j+1])`
+  /// compte. Ca permet une comparaison delta en O(1) par paire.
+  static List<Stop> _twoOpt({
+    required (double, double) start,
+    required (double, double)? end,
+    required List<Stop> stops,
+    int maxIterations = 100,
+  }) {
+    // Pour n < 4, 2-opt n'a aucun degre de liberte utile (le seul
+    // segment inversable est la liste entiere, ce que NN aurait deja
+    // capture s'il etait meilleur de partir vers l'autre cote).
+    if (stops.length < 4) return stops;
+
+    final current = List<Stop>.of(stops);
+    const epsilon = 1e-6;
+
+    // Helper : distance haversine entre 2 points (lat, lng).
+    double dist((double, double) a, (double, double) b) =>
+        GeoUtils.haversineMeters(
+          lat1: a.$1,
+          lon1: a.$2,
+          lat2: b.$1,
+          lon2: b.$2,
+        );
+
+    (double, double) coords(Stop s) => (s.lat!, s.lng!);
+
+    bool improved = true;
+    var iter = 0;
+    while (improved && iter < maxIterations) {
+      improved = false;
+      iter++;
+      // i parcourt de 0 a length-2, j de i+1 a length-1.
+      // L'inversion swap les 2 aretes bords (prev->cur[i]) et
+      // (cur[j]->next).
+      for (var i = 0; i < current.length - 1; i++) {
+        for (var j = i + 1; j < current.length; j++) {
+          final prev = i == 0 ? start : coords(current[i - 1]);
+          final ci = coords(current[i]);
+          final cj = coords(current[j]);
+          final next = j == current.length - 1
+              ? end
+              : coords(current[j + 1]);
+          final beforeLeft = dist(prev, ci);
+          final afterLeft = dist(prev, cj);
+          double beforeRight = 0;
+          double afterRight = 0;
+          if (next != null) {
+            beforeRight = dist(cj, next);
+            afterRight = dist(ci, next);
+          }
+          final delta =
+              (afterLeft + afterRight) - (beforeLeft + beforeRight);
+          if (delta < -epsilon) {
+            // Reverse segment [i..j] in place.
+            var lo = i;
+            var hi = j;
+            while (lo < hi) {
+              final tmp = current[lo];
+              current[lo] = current[hi];
+              current[hi] = tmp;
+              lo++;
+              hi--;
+            }
+            improved = true;
+          }
+        }
+      }
+    }
+    return current;
   }
 }
