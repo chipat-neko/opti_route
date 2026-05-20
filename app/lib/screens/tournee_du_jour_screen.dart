@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
+import '../data/address_suggestion.dart';
 import '../data/cloud_auto_push_service.dart';
 import '../data/database.dart';
 import '../data/local_reorder_service.dart';
@@ -19,6 +21,7 @@ import '../widgets/drawer_badge_icon.dart';
 import 'ajout_arret_screen.dart';
 import 'bulk_paste_screen.dart';
 import 'carte_screen.dart';
+import 'nearby_poi_screen.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/cloud_actions.dart';
 import 'tournee_du_jour/export_actions.dart';
@@ -248,6 +251,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         _onRetryGeocodePressed();
       case PlusAction.bulkPasteAddresses:
         _onBulkPasteAddressesPressed();
+      case PlusAction.nearbyPoi:
+        _onNearbyPoiPressed();
       case PlusAction.duplicatePlus7:
         _onDuplicatePlus7Pressed();
       case PlusAction.shareText:
@@ -454,6 +459,85 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         builder: (_) => BulkPasteScreen(tourneeId: widget.tournee.id),
       ),
     );
+  }
+
+  /// Ouvre [NearbyPoiScreen] (Sprint 2B) pour chercher les commerces
+  /// (pharmacie, supermarche, etc.) autour du **dernier stop pending**
+  /// si la tournee a des stops geocodes, sinon autour du depot. Le user
+  /// choisit une categorie + tap sur un POI -> on l'ajoute comme nouvel
+  /// arret a la tournee courante.
+  Future<void> _onNearbyPoiPressed() async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final stops = await ref
+        .read(stopsRepositoryProvider)
+        .getByTournee(widget.tournee.id);
+    // Centre par defaut : depot. Si la tournee a au moins un stop
+    // pending geocode, on prend le dernier comme centre (plus
+    // pertinent : Noah va chercher 'un truc en passant' depuis sa
+    // position actuelle/prochaine).
+    var centerLat = widget.tournee.pointDepartLat;
+    var centerLng = widget.tournee.pointDepartLng;
+    var centerLabel = 'Depot';
+    final lastPending = stops.lastWhereOrNull(
+      (s) => s.statutLivraison == 'a_livrer' &&
+          s.lat != null &&
+          s.lng != null,
+    );
+    if (lastPending != null) {
+      centerLat = lastPending.lat!;
+      centerLng = lastPending.lng!;
+      centerLabel = 'Dernier arret en attente';
+    }
+    if (!mounted) return;
+    final picked = await navigator.push<AddressSuggestion?>(
+      MaterialPageRoute(
+        builder: (_) => NearbyPoiScreen(
+          centerLat: centerLat,
+          centerLng: centerLng,
+          centerLabel: centerLabel,
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    // Ajoute le POI comme nouveau stop dans la tournee courante.
+    await ref.read(stopsRepositoryProvider).create(
+          StopsCompanion.insert(
+            tourneeId: widget.tournee.id,
+            adresseBrute: picked.adressePostale.isEmpty
+                ? (picked.poiName ?? picked.displayName)
+                : picked.adressePostale,
+            adresseNormalisee: Value(picked.adressePostale),
+            lat: Value(picked.lat),
+            lng: Value(picked.lon),
+            nomClient: Value(picked.poiName),
+          ),
+        );
+    await ref
+        .read(tourneesRepositoryProvider)
+        .invalidateOptimization(widget.tournee.id);
+    await ref
+        .read(localReorderServiceProvider)
+        .reorder(widget.tournee.id);
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('${picked.poiName ?? "POI"} ajoute a la tournee'),
+        backgroundColor: AppColors.emerald,
+      ),
+    );
+  }
+}
+
+/// Extension utilitaire (manque sur Iterable Dart) pour trouver le
+/// dernier element correspondant a un predicat, ou null si rien.
+extension _IterableLastWhereOrNull<E> on Iterable<E> {
+  E? lastWhereOrNull(bool Function(E) test) {
+    E? found;
+    for (final e in this) {
+      if (test(e)) found = e;
+    }
+    return found;
   }
 }
 
