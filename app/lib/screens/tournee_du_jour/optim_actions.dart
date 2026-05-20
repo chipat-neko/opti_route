@@ -17,6 +17,7 @@ import '../../theme/app_tokens.dart';
 import '../../widgets/ordre_priorite_dialog.dart';
 import '../parametres_screen.dart';
 import '../tournee_du_jour_screen.dart';
+import 'optim_preview_dialog.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Handlers d'optimisation / duplication / prefetch tuiles extraits
@@ -174,6 +175,20 @@ class OptimTourneeActions {
       try {
         await ref.read(parametresRepositoryProvider).incrementOrsUsed();
       } catch (_) {}
+
+      // Sprint 1E : preview avant d'appliquer. Le user voit la
+      // distance avant (ordre actuel) vs apres (propose par VROOM)
+      // et confirme. Evite les surprises 'VROOM a optim en boucle
+      // c'est contre-intuitif' que Noah avait signale.
+      if (!context.mounted) return;
+      final accepted = await OptimPreviewDialog.show(
+        context: context,
+        tournee: tournee,
+        stops: geocodedRefreshed,
+        proposedOrder: result.orderedStopIds,
+        title: 'Optim avancee : aperçu',
+      );
+      if (accepted != true || !context.mounted) return;
 
       await ref
           .read(stopsRepositoryProvider)

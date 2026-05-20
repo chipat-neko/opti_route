@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../data/cloud_auto_push_service.dart';
 import '../data/database.dart';
+import '../data/local_reorder_service.dart';
 import '../data/supabase_service.dart';
 import '../data/tournee_realtime_service.dart';
 import '../theme/app_tokens.dart';
@@ -24,6 +25,7 @@ import 'tournee_du_jour/export_actions.dart';
 import 'tournee_du_jour/fabs.dart';
 import 'tournee_du_jour/lifecycle_actions.dart';
 import 'tournee_du_jour/optim_actions.dart';
+import 'tournee_du_jour/optim_preview_dialog.dart';
 import 'tournee_du_jour/plus_menu.dart';
 import 'tournee_du_jour/stops_bulk_actions.dart';
 import 'tournee_form_screen.dart';
@@ -392,15 +394,35 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         },
       );
 
-  /// Tri rapide local (NN haversine) : du plus proche au plus loin
-  /// depuis le depart, instantane, sans cle ORS. Style Spoke route
-  /// planner. Sert quand Noah a juste besoin d'un ordre logique vite,
-  /// sans la precision routes-reelles de VROOM.
+  /// Tri rapide local (NN haversine + 2-opt) : du plus proche au plus
+  /// loin depuis le depart, instantane, sans cle ORS. Style Spoke
+  /// route planner.
+  ///
+  /// Sprint 1E : montre un dialog de preview avec distance avant/apres
+  /// avant d'appliquer. Le user voit le gain potentiel et confirme.
   Future<void> _onQuickSortPressed() async {
     final messenger = ScaffoldMessenger.of(context);
+    final stops = await ref
+        .read(stopsRepositoryProvider)
+        .getByTournee(widget.tournee.id);
+    if (stops.length < 2) return;
+    // Compute le nouvel ordre SANS l'appliquer (dry-run).
+    final proposed = LocalReorderService.computeOrder(
+      tournee: widget.tournee,
+      stops: stops,
+    );
+    if (!mounted) return;
+    final accepted = await OptimPreviewDialog.show(
+      context: context,
+      tournee: widget.tournee,
+      stops: stops,
+      proposedOrder: proposed,
+      title: 'Tri rapide : aperçu',
+    );
+    if (accepted != true || !mounted) return;
     await ref
-        .read(localReorderServiceProvider)
-        .reorder(widget.tournee.id);
+        .read(stopsRepositoryProvider)
+        .applyOptimizedOrder(proposed);
     if (!mounted) return;
     HapticFeedback.mediumImpact();
     messenger.showSnackBar(
