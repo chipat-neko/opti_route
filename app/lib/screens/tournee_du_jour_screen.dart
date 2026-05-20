@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
@@ -156,6 +157,19 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           ],
         ),
         actions: [
+          // Tri rapide local (NN) : du plus proche au plus loin
+          // depuis le depart, instantane, sans cle ORS, illimite.
+          // Style Spoke route planner. C'est le bouton primaire pour
+          // un livreur qui veut juste un ordre intuitif rapidement.
+          IconButton(
+            icon: const Icon(Icons.sort_outlined),
+            tooltip: 'Tri rapide : du plus proche au plus loin',
+            onPressed: _onQuickSortPressed,
+          ),
+          // Optim avancee VROOM : routes reelles, fenetres horaires,
+          // boucle minimale. Plus precise mais consomme un quota ORS
+          // et peut donner un ordre contre-intuitif (loin d'abord si
+          // c'est sur le chemin de retour).
           IconButton(
             icon: _optimizing
                 ? const SizedBox(
@@ -167,8 +181,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             tooltip: optimizer == null
                 ? 'Configure ta cle ORS dans les Parametres'
                 : dejaOptimisee
-                    ? 'Tournee deja optimisee  -  modifie un arret pour relancer'
-                    : 'Optimiser la tournee',
+                    ? 'Optim avancee deja faite  -  modifie un arret pour relancer'
+                    : 'Optim avancee (routes reelles, 1 quota ORS)',
             onPressed: (_optimizing || dejaOptimisee)
                 ? null
                 : _onOptimizePressed,
@@ -374,6 +388,28 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           if (mounted) setState(() => _optimizing = v);
         },
       );
+
+  /// Tri rapide local (NN haversine) : du plus proche au plus loin
+  /// depuis le depart, instantane, sans cle ORS. Style Spoke route
+  /// planner. Sert quand Noah a juste besoin d'un ordre logique vite,
+  /// sans la precision routes-reelles de VROOM.
+  Future<void> _onQuickSortPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ref
+        .read(localReorderServiceProvider)
+        .reorder(widget.tournee.id);
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Liste triee : du plus proche au plus loin depuis ton depart',
+        ),
+        backgroundColor: AppColors.emerald,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
 
   Future<void> _onPrefetchTuilesPressed() =>
       OptimTourneeActions.prefetchTuiles(
