@@ -14,6 +14,7 @@ import '../providers/geocoding_providers.dart';
 import '../providers/supabase_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import '../widgets/voice_input_button.dart';
 import 'ajout_arret/dialogs.dart';
 import 'ajout_arret/form_widgets.dart';
 import 'scan_bordereau_screen.dart';
@@ -210,6 +211,17 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 48),
                     ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x10),
+                // Bouton Dicter : reconnaissance vocale on-device pour
+                // entrer une adresse mains-libres au volant. Inspire de
+                // Spoke route planner ("Speak, search, or scan to add
+                // stops"). Le texte reconnu remplit le champ adresse
+                // qui declenche l'autocomplete Nominatim derriere.
+                Expanded(
+                  child: VoiceInputButtonOutlined(
+                    onResult: _onVoiceAddress,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x10),
@@ -424,6 +436,54 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     final n = int.tryParse(s);
     if (n == null || n < 0) return 'Entier positif';
     return null;
+  }
+
+  /// Callback du bouton micro : recoit le texte reconnu, lance la
+  /// recherche d'adresse via Nominatim et pre-remplit le champ
+  /// Adresse avec le 1er resultat. Si rien trouve, bascule en mode
+  /// hors-ligne avec le texte brut.
+  ///
+  /// Style Spoke route planner : dictation mains-libres au volant.
+  Future<void> _onVoiceAddress(String spoken) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final cleaned = spoken.trim();
+    if (cleaned.isEmpty) return;
+    final service = ref.read(geocodingServiceProvider);
+    try {
+      final results = await service.search(cleaned);
+      if (!mounted) return;
+      if (results.isEmpty) {
+        // Pas d'adresse trouvee : on stocke en hors-ligne avec le
+        // texte brut. Noah pourra re-geocoder plus tard.
+        setState(() {
+          _offlineAddressText = cleaned;
+          _address = null;
+          _scannedAddress = cleaned;
+          _addressFieldVersion++;
+        });
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Adresse non geocodee, ajoutee en hors ligne. '
+              'Tu pourras la re-geocoder plus tard.',
+            ),
+          ),
+        );
+        return;
+      }
+      // 1er resultat : on le selectionne d'office.
+      setState(() {
+        _address = results.first;
+        _scannedAddress = results.first.displayName;
+        _offlineAddressText = null;
+        _addressFieldVersion++;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Recherche d\'adresse echouee : $e')),
+      );
+    }
   }
 
   Future<void> _scanBordereau() async {

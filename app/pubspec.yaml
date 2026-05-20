@@ -85,6 +85,12 @@ dependencies:
   # dans la colonne `cloud_id` Drift -- ca rend le re-push idempotent
   # et permet a 2 phones de generer en parallele sans collision.
   uuid: ^4.5.1
+  # speech_to_text : reconnaissance vocale on-device pour ajouter
+  # une adresse a la voix en cours de tournee (mains libres au volant,
+  # style Spoke route planner). Utilise le moteur Google Speech sur
+  # Android (gratuit, on-device). Pas de cle API, pas de cout.
+  # Permissions iOS/Android auto-declarees par le plugin.
+  speech_to_text: ^7.3.0
 
 dev_dependencies:
   flutter_test:
