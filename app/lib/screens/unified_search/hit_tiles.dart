@@ -123,15 +123,41 @@ class StopHitTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final s = hit.stop;
+    final t = hit.tournee;
     final primary = (s.nomClient?.isNotEmpty ?? false)
         ? s.nomClient!
         : s.adresseBrute.split(',').first.trim();
     final secondary = s.adresseNormalisee ?? s.adresseBrute;
+
+    // Package Finder style Spoke : on calcule l'ordre du stop dans
+    // sa tournee + un flag "aujourd'hui" pour aider Noah a localiser
+    // le colis dans son camion immediatement.
+    final now = DateTime.now();
+    final isToday = t.date.year == now.year &&
+        t.date.month == now.month &&
+        t.date.day == now.day;
+    final isActiveTour = t.statut == 'en_cours';
+    final ordre = s.ordreOptimise;
+    final ordreLabel = ordre != null ? '#$ordre' : '';
+
+    // Badge "DANS TA TOURNEE" si la tournee est en_cours OU date du jour.
+    // Couleur lime forte pour attirer l'oeil.
+    final showLiveBadge = isActiveTour || isToday;
+
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: p.creamSoft,
+        backgroundColor:
+            showLiveBadge ? AppColors.lime : p.creamSoft,
         foregroundColor: p.ink,
-        child: const Icon(Icons.location_on_outlined, size: 18),
+        child: ordre != null
+            ? Text(
+                '$ordre',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              )
+            : const Icon(Icons.location_on_outlined, size: 18),
       ),
       title: HighlightedText(
         text: primary,
@@ -140,11 +166,58 @@ class StopHitTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
-        '$secondary\n→ ${hit.tournee.nom}',
-        style: TextStyle(fontSize: 12, color: p.textMute),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            secondary,
+            style: TextStyle(fontSize: 12, color: p.textMute),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Row(
+            children: [
+              if (showLiveBadge) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.lime,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isActiveTour ? 'EN COURS' : 'AUJOURD\'HUI',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: Text(
+                  ordreLabel.isEmpty
+                      ? '→ ${t.nom}'
+                      : '$ordreLabel · ${t.nom}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: p.textMute,
+                    fontWeight: showLiveBadge
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       isThreeLine: true,
       trailing: const Icon(Icons.chevron_right),
@@ -152,7 +225,7 @@ class StopHitTile extends StatelessWidget {
         onBeforeOpen();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
-            builder: (_) => TourneeDuJourScreen(tournee: hit.tournee),
+            builder: (_) => TourneeDuJourScreen(tournee: t),
           ),
         );
       },
