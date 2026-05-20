@@ -9,11 +9,13 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'data/backup_service.dart';
 import 'data/notifications_service.dart';
+import 'data/share_intent_service.dart';
 import 'data/supabase_service.dart';
 import 'providers/database_providers.dart';
 import 'providers/geocoding_providers.dart';
 import 'providers/supabase_providers.dart';
 import 'screens/app_lock_gate.dart';
+import 'screens/bulk_paste_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_tokens.dart';
@@ -60,6 +62,23 @@ Future<void> main() async {
   runApp(const ProviderScope(child: OptiRouteApp()));
 }
 
+/// Singleton du service de reception des partages externes
+/// (ACTION_SEND Android). L'init est differe dans le build d'
+/// OptiRouteApp pour pouvoir ecouter le stream avec acces au
+/// Navigator (push BulkPasteScreen pre-rempli).
+final shareIntentServiceProvider = Provider<ShareIntentService>((ref) {
+  final svc = ShareIntentService();
+  // Init lazy : la 1ere lecture du provider declenche l'ecoute.
+  unawaited(svc.init());
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// GlobalKey pour pouvoir push une route depuis le listener
+/// share_intent (qui s'execute hors d'un BuildContext). Set sur le
+/// MaterialApp dans OptiRouteApp.
+final _navigatorKey = GlobalKey<NavigatorState>();
+
 class OptiRouteApp extends ConsumerWidget {
   const OptiRouteApp({super.key});
 
@@ -105,6 +124,56 @@ class OptiRouteApp extends ConsumerWidget {
     // - Sign-in apres une session sur un 2e device : recupere les
     //   modifs faites ailleurs depuis le dernier sign-in
     // - Re-sign-in apres logout : idem
+    // Reception des partages Android (ACTION_SEND text/plain) :
+    // l'utilisateur fait 'Partager -> opti_route' depuis Google Maps,
+    // SMS, mail, etc. On parse le texte, on cherche la tournee active
+    // (en_cours ou aujourd'hui), et on push BulkPasteScreen pre-rempli.
+    // Si pas de tournee active : SnackBar invite a en creer une d'abord.
+    ref.listen(shareIntentServiceProvider, (_, _) {
+      // Force l'init du provider (le listen() ne lit pas le state si
+      // on ne fait rien d'autre).
+    });
+    final shareSvc = ref.read(shareIntentServiceProvider);
+    shareSvc.addressStream.listen((shared) async {
+      // Cherche une tournee active (en_cours OU date=aujourd'hui).
+      final current = ref.read(currentTourneeProvider).asData?.value;
+      final nav = _navigatorKey.currentState;
+      if (nav == null) return;
+      // nav.context est stable (le Navigator survit aux awaits, c'est
+      // un GlobalKey). L'analyseur ne peut pas le prouver, on ignore
+      // le warning use_build_context_synchronously.
+      // ignore: use_build_context_synchronously
+      final messenger = ScaffoldMessenger.of(nav.context);
+      if (current == null) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Adresse recue mais pas de tournee aujourd\'hui. '
+              'Cree-en une d\'abord puis re-partage.',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+      // Pre-remplit avec le nom et / ou l'URL recue. Le BulkPasteScreen
+      // ne sait pas encore parser l'URL Google Maps pour en extraire
+      // coords, mais pour l'instant on push le nom + URL en 2 lignes ;
+      // l'utilisateur peut ajuster avant import.
+      final lines = <String>[
+        if (shared.name != null) shared.name!,
+        if (shared.sourceUrl != null) shared.sourceUrl!,
+      ];
+      await nav.push(
+        MaterialPageRoute<void>(
+          builder: (_) => BulkPasteScreen(
+            tourneeId: current.id,
+            initialText: lines.join('\n'),
+          ),
+        ),
+      );
+    });
+
     ref.listen(cloudUserProvider, (prev, next) {
       final user = next.value;
       if (user == null) return;
@@ -122,6 +191,7 @@ class OptiRouteApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'opti_route',
+      navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(preset: preset),
       darkTheme: buildAppThemeDark(preset: preset),

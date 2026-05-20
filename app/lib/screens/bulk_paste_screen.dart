@@ -29,17 +29,26 @@ import '../theme/app_tokens.dart';
 /// hors-ligne (texte brut, GPS manquant). L'utilisateur peut les
 /// re-geocoder plus tard via le bouton "Re-geo" de la tournee.
 class BulkPasteScreen extends ConsumerStatefulWidget {
-  const BulkPasteScreen({super.key, required this.tourneeId});
+  const BulkPasteScreen({
+    super.key,
+    required this.tourneeId,
+    this.initialText,
+  });
 
   /// Tournee cible : les arrets importes y sont ajoutes.
   final int tourneeId;
+
+  /// Texte pre-rempli dans la textarea (cas : ouverture via share
+  /// intent Google Maps avec un nom + URL deja captures).
+  final String? initialText;
 
   @override
   ConsumerState<BulkPasteScreen> createState() => _BulkPasteScreenState();
 }
 
 class _BulkPasteScreenState extends ConsumerState<BulkPasteScreen> {
-  final _textCtrl = TextEditingController();
+  late final TextEditingController _textCtrl =
+      TextEditingController(text: widget.initialText ?? '');
   bool _importing = false;
   int _progress = 0;
   int _total = 0;

@@ -69,6 +69,16 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Reception de partages depuis Google Maps / SMS / mail
+                 etc. Quand l'utilisateur fait 'Partager -> opti_route',
+                 on recoit le texte (souvent une URL Google Maps + nom)
+                 via receive_sharing_intent et on parse pour ajouter
+                 directement un arret a une tournee. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
