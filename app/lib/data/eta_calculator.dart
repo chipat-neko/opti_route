@@ -1,4 +1,5 @@
 import 'database.dart';
+import 'geo_utils.dart';
 
 /// Calcule des temps d'arrivee estimes (ETA) pour chaque arret restant
 /// d'une tournee.
@@ -60,5 +61,94 @@ class EtaCalculator {
     final h = eta.hour.toString().padLeft(2, '0');
     final m = eta.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+
+  /// Calcule pour chaque stop (par id) la distance + duree estimee
+  /// du segment PRECEDENT (depuis le stop precedent OU depuis le
+  /// depot pour le 1er stop).
+  ///
+  /// Heuristique simple : haversine (vol d'oiseau) + vitesse moyenne
+  /// urbaine de 30 km/h (compromise entre boulevard 50 et centre-ville
+  /// 15). Pour de la livraison reelle, +20-30% vs reelle. Suffisant
+  /// pour donner "ah c'est juste a cote / loin" en un coup d'oeil
+  /// dans la liste (style Spoke route planner).
+  ///
+  /// Skip les stops sans coords (return: pas de cle pour ces ids).
+  /// Skip aussi les stops deja livre / echec (segment historique sans
+  /// interet maintenant).
+  ///
+  /// [depotLat] / [depotLng] : point de depart de la tournee, sert au
+  /// segment du 1er stop pending. Si null, le 1er stop n'a pas de
+  /// segment calcule.
+  static Map<int, SegmentInfo> computeSegments({
+    required List<Stop> orderedStops,
+    required double depotLat,
+    required double depotLng,
+    double avgSpeedKmh = 30,
+  }) {
+    final out = <int, SegmentInfo>{};
+    // Le point d'origine pour le 1er stop pending = depot.
+    var prevLat = depotLat;
+    var prevLng = depotLng;
+    var primed = false;
+    for (final s in orderedStops) {
+      if (s.statutLivraison != 'a_livrer') continue;
+      if (s.lat == null || s.lng == null) continue;
+      // Si on n'a pas encore d'origine valide (premier passage), on
+      // utilise depot. Apres on cumule.
+      final lat = s.lat!;
+      final lng = s.lng!;
+      final meters = GeoUtils.haversineMeters(
+        lat1: prevLat,
+        lon1: prevLng,
+        lat2: lat,
+        lon2: lng,
+      );
+      final durationSec = (meters / 1000.0 / avgSpeedKmh * 3600).round();
+      out[s.id] = SegmentInfo(
+        meters: meters.round(),
+        duration: Duration(seconds: durationSec),
+        fromDepot: !primed,
+      );
+      prevLat = lat;
+      prevLng = lng;
+      primed = true;
+    }
+    return out;
+  }
+}
+
+/// Info de segment (depuis le stop precedent vers ce stop).
+class SegmentInfo {
+  const SegmentInfo({
+    required this.meters,
+    required this.duration,
+    required this.fromDepot,
+  });
+
+  /// Distance vol d'oiseau en metres.
+  final int meters;
+
+  /// Duree estimee a vitesse moyenne urbaine.
+  final Duration duration;
+
+  /// Vrai si ce segment part du depot (premier stop pending de la
+  /// tournee). Sert a l'UI pour afficher un libelle different
+  /// ('Depuis depart' vs 'Depuis stop precedent').
+  final bool fromDepot;
+
+  /// Format compact "1.2 km" ou "850 m" pour les courtes distances.
+  String get distanceLabel {
+    if (meters < 1000) return '$meters m';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  /// Format compact "15 min" ou "1h05" pour les longs trajets.
+  String get durationLabel {
+    final mins = duration.inMinutes;
+    if (mins < 60) return '$mins min';
+    final h = mins ~/ 60;
+    final m = mins % 60;
+    return '${h}h${m.toString().padLeft(2, '0')}';
   }
 }

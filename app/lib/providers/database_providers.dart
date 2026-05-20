@@ -281,6 +281,27 @@ final etasParStopProvider =
   );
 });
 
+/// Segments (distance + duree estimee) PAR STOP de la tournee. Sert
+/// au badge "8 km · 15 min" affiche dans chaque [StopRow] (style
+/// Spoke route planner). Watche le stream tournees pour re-calculer
+/// quand l'ordre change.
+final segmentsParStopProvider =
+    FutureProvider.family<Map<int, SegmentInfo>, int>(
+        (ref, tourneeId) async {
+  final tournees =
+      ref.watch(tourneesStreamProvider).asData?.value ?? const [];
+  final tournee =
+      tournees.where((t) => t.id == tourneeId).firstOrNull;
+  if (tournee == null) return const {};
+  final stops =
+      await ref.read(stopsRepositoryProvider).getByTournee(tourneeId);
+  return EtaCalculator.computeSegments(
+    orderedStops: stops,
+    depotLat: tournee.pointDepartLat,
+    depotLng: tournee.pointDepartLng,
+  );
+});
+
 /// Compteur d'optimisations OpenRouteService consommees aujourd'hui.
 /// Reset auto au passage minuit (gere dans le repo). Affiche dans
 /// Parametres pour qu'on voie ou on en est par rapport au quota

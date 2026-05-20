@@ -115,6 +115,15 @@ class StopRow extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
+                    // Segment km + duree (style Spoke) : "8 km · 15 min
+                    // depuis precedent". Affiche seulement sur les
+                    // stops a_livrer (info utile = ce qui reste a
+                    // faire, pas le passe).
+                    if (!isLivre && !isEchec)
+                      SegmentBadge(
+                        tourneeId: stop.tourneeId,
+                        stopId: stop.id,
+                      ),
                     if (isEchec) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -644,6 +653,58 @@ class EtaBadge extends ConsumerWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Badge "8 km · 15 min" affiche en bas du primaire d'un StopRow.
+/// Indique la distance + duree estimee du segment PRECEDENT (depuis
+/// le stop precedent OU depuis le depot pour le 1er stop pending).
+///
+/// Inspire de Spoke route planner ("15 min, 8 km jusqu'au prochain
+/// arret"). Aide Noah a savoir d'un coup d'oeil si c'est juste a cote
+/// ou loin sans avoir a calculer.
+///
+/// Pas affiche si le stop est deja livre/echec OU si pas de coords.
+class SegmentBadge extends ConsumerWidget {
+  const SegmentBadge({
+    super.key,
+    required this.tourneeId,
+    required this.stopId,
+  });
+
+  final int tourneeId;
+  final int stopId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final segments =
+        ref.watch(segmentsParStopProvider(tourneeId)).asData?.value;
+    final seg = segments?[stopId];
+    if (seg == null) return const SizedBox.shrink();
+    final origin = seg.fromDepot ? 'depart' : 'precedent';
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.straighten,
+            size: 11,
+            color: p.textMute,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            '${seg.distanceLabel} · ${seg.durationLabel} depuis $origin',
+            style: appMonoStyle(
+              fontSize: 10,
+              color: p.textMute,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
