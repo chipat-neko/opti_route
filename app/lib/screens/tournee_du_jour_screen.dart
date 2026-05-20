@@ -16,6 +16,7 @@ import '../providers/supabase_providers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/drawer_badge_icon.dart';
 import 'ajout_arret_screen.dart';
+import 'bulk_paste_screen.dart';
 import 'carte_screen.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/cloud_actions.dart';
@@ -243,6 +244,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         _onUndoLastStatusPressed();
       case PlusAction.retryGeocode:
         _onRetryGeocodePressed();
+      case PlusAction.bulkPasteAddresses:
+        _onBulkPasteAddressesPressed();
       case PlusAction.duplicatePlus7:
         _onDuplicatePlus7Pressed();
       case PlusAction.shareText:
@@ -417,6 +420,19 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         ref: ref,
         tournee: widget.tournee,
       );
+
+  /// Ouvre l'ecran [BulkPasteScreen] qui prend un texte multiligne
+  /// d'adresses (depuis Google Maps / SMS / mail / etc.) et les
+  /// importe en bulk dans la tournee courante apres geocodage en
+  /// parallele. Workflow inspire de la demande Noah "transferer mes
+  /// favoris Google Maps".
+  Future<void> _onBulkPasteAddressesPressed() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BulkPasteScreen(tourneeId: widget.tournee.id),
+      ),
+    );
+  }
 }
 
 /// Petit indicateur discret dans l'AppBar qui montre l'etat de
