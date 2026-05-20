@@ -7,46 +7,49 @@ import 'package:opti_route/data/photon_service.dart';
 import 'package:opti_route/data/recherche_entreprises_service.dart';
 
 void main() {
-  group('FranceGeocodingService.search - ordre des sources', () {
-    test('query commence par un nombre (adresse) : ordre BAN, Photon, '
-        'SIRENE et arret precoce sur BAN si numero', () async {
+  group('FranceGeocodingService.search - parallel cascade', () {
+    test('query adresse : toutes les sources appelees en parallele, '
+        'BAN en tete pour la pertinence', () async {
+      // Strategie 2026-05-20 (Spoke parity) : on lance les 3 sources
+      // en parallele meme si BAN trouve un resultat precis, pour
+      // accelerer la latence perçue (max au lieu de somme des 3).
       final ban = _StubBan(returns: [_precise('12 rue X')]);
-      final entr = _StubEntreprises();
-      final photon = _StubPhoton();
+      final entr = _StubEntreprises(returns: [_poi('Marque')]);
+      final photon = _StubPhoton(returns: [_poi('OSM Result')]);
       final svc = FranceGeocodingService(
         ban: ban,
         entreprises: entr,
         photon: photon,
       );
-      await svc.search('12 rue X');
+      final r = await svc.search('12 rue X');
+      // Toutes appelees (vs ancienne cascade avec arret precoce).
       expect(ban.called, isTrue);
-      // Adresse precise -> on s'arrete a BAN, les autres ne sont pas
-      // sollicites.
-      expect(photon.called, isFalse);
-      expect(entr.called, isFalse);
+      expect(photon.called, isTrue);
+      expect(entr.called, isTrue);
+      // BAN result doit etre en 1er (priorityOrder pour adresse).
+      expect(r.first.houseNumber, '12');
     });
 
-    test('query nom d\'entreprise : ordre SIRENE, Photon, BAN', () async {
-      final ban = _StubBan();
+    test('query nom d\'entreprise : toutes appelees, SIRENE en tete',
+        () async {
+      final ban = _StubBan(returns: [_imprecise('rue Carrefour')]);
       final entr = _StubEntreprises(returns: [_poi('Carrefour Dreux')]);
-      final photon = _StubPhoton();
+      final photon = _StubPhoton(returns: [_poi('Carrefour OSM')]);
       final svc = FranceGeocodingService(
         ban: ban,
         entreprises: entr,
         photon: photon,
       );
-      await svc.search('Carrefour Dreux');
+      final r = await svc.search('Carrefour Dreux');
+      expect(ban.called, isTrue);
+      expect(photon.called, isTrue);
       expect(entr.called, isTrue);
-      // POI precis -> on s'arrete a SIRENE
-      expect(photon.called, isFalse);
-      expect(ban.called, isFalse);
+      // SIRENE en 1er pour les noms d'entreprise.
+      expect(r.first.poiName, 'Carrefour Dreux');
     });
 
-    test('source 1 sans resultat precis : tente la 2eme + 3eme + dedupe',
-        () async {
-      // BAN renvoie une rue sans numero (non precise) — coords A
+    test('agregation et dedupe par coords arrondies', () async {
       final ban = _StubBan(returns: [_imprecise('rue X', lat: 48.0, lon: 1.0)]);
-      // Photon renvoie un POI a des coords differentes — coords B
       final photon = _StubPhoton(
         returns: [_poi('Magasin Y', lat: 48.5, lon: 1.5)],
       );
@@ -56,12 +59,7 @@ void main() {
         entreprises: entr,
         photon: photon,
       );
-      // Query "14 rue X" -> ordre BAN, Photon, SIRENE
       final r = await svc.search('14 rue X');
-      expect(ban.called, isTrue);
-      expect(photon.called, isTrue);
-      // POI precis sur Photon -> arret avant SIRENE
-      expect(entr.called, isFalse);
       // 2 resultats distincts agreges (coords differentes -> pas dedup)
       expect(r.length, 2);
     });
@@ -116,8 +114,9 @@ void main() {
       expect(() => svc.close(), returnsNormally);
     });
 
-    test('source 1 vide + source 2 echec : tente la 3eme', () async {
-      // BAN vide, Photon throw, SIRENE retourne quelque chose.
+    test('une source echoue : les autres sont quand meme retournees',
+        () async {
+      // En parallel mode, un echec ne stoppe pas les autres.
       final ban = _StubBan(returns: const []);
       final photon = _StubPhoton(throwsError: true);
       final entr = _StubEntreprises(returns: [_poi('Final POI')]);

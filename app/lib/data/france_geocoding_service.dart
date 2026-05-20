@@ -43,44 +43,47 @@ class FranceGeocodingService implements GeocodingService {
     int limit = 10,
     String acceptLanguage = 'fr-FR',
   }) async {
+    // Strategie 2026-05-20 (style Spoke) : lance les 3 sources EN
+    // PARALLELE plutot qu'en cascade sequentielle. Gain de vitesse
+    // perçue 2-3x car la latence totale = max(t_ban, t_sirene,
+    // t_photon) au lieu de t_ban + t_sirene + t_photon.
+    //
+    // Trade-off : on consomme 3 quotas API au lieu d'1 en moyenne.
+    // Acceptable car les 3 APIs sont gratuites et tres genereuses
+    // (BAN gov.fr no limit officiel, SIRENE gov.fr, Photon Komoot
+    // 5 req/s).
+    //
+    // Le `looksLikeAddress` reste utilise pour TRIER les resultats :
+    // l'ordre privilegie BAN si requete commence par chiffre, sinon
+    // entreprises en tete. Ca preserve la pertinence sans attendre
+    // la fin du 1er appel.
     final looksLikeAddress = _looksLikeAddress(query);
-
-    final order = looksLikeAddress
+    final primaryOrder = looksLikeAddress
         ? <GeocodingService>[ban, photon, entreprises]
         : <GeocodingService>[entreprises, photon, ban];
 
-    final accumulated = <AddressSuggestion>[];
-
-    for (var i = 0; i < order.length; i++) {
-      final source = order[i];
+    // Lance les 3 en parallele. Chaque future swallow ses erreurs
+    // pour ne pas couler le Future.wait global.
+    Future<List<AddressSuggestion>> safe(GeocodingService s) async {
       try {
-        final results = await source.search(query, limit: limit);
-        accumulated.addAll(results);
-
-        // Arret precoce : si la source courante a deja trouve du precis,
-        // pas besoin d'interroger les suivantes.
-        if (results.any(_isPrecise)) {
-          return _dedupe(accumulated);
-        }
+        return await s.search(query, limit: limit);
       } catch (_) {
-        // Erreur reseau ou parsing : on tente la suivante en silencieux.
+        return const <AddressSuggestion>[];
       }
     }
+    final results = await Future.wait(primaryOrder.map(safe));
 
-    if (accumulated.isEmpty) {
-      return const [];
+    // Concatene dans l'ordre de priorite (results[0] = source la plus
+    // pertinente pour ce type de query) puis dedupe par coords.
+    final accumulated = <AddressSuggestion>[];
+    for (final r in results) {
+      accumulated.addAll(r);
     }
     return _dedupe(accumulated);
   }
 
   bool _looksLikeAddress(String query) {
     return RegExp(r'^\s*\d', caseSensitive: false).hasMatch(query);
-  }
-
-  bool _isPrecise(AddressSuggestion s) {
-    if (s.isPoi) return true;
-    final n = s.houseNumber;
-    return n != null && n.isNotEmpty;
   }
 
   List<AddressSuggestion> _dedupe(List<AddressSuggestion> all) {
