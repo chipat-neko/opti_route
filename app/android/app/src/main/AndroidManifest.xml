@@ -9,6 +9,19 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
 
+    <!-- Reconnaissance vocale on-device pour la dictee d'adresse
+         (style Spoke). Le plugin speech_to_text utilise le moteur
+         systeme Google qui exige RECORD_AUDIO. Permission demandee
+         en runtime au premier tap sur le bouton micro. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <queries>
+      <!-- Necessaire Android 11+ pour pouvoir interroger le service
+           de reconnaissance vocale Google installe. -->
+      <intent>
+        <action android:name="android.speech.RecognitionService" />
+      </intent>
+    </queries>
+
     <!-- GPS : pour le mode 'tournee en cours' (distance restante temps
          reel jusqu'au prochain arret). FINE = haute precision, COARSE
          = fallback si l'utilisateur refuse FINE. -->
