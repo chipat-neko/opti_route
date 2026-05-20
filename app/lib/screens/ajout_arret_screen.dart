@@ -540,6 +540,12 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
         await ref
             .read(tourneesRepositoryProvider)
             .invalidateOptimization(widget.tourneeId);
+        // Auto-reorder local apres edit : si l'utilisateur a change
+        // l'adresse (donc les coords), la position dans l'ordre NN
+        // doit etre recalculee.
+        await ref
+            .read(localReorderServiceProvider)
+            .reorder(widget.tourneeId);
       } else {
         // Pre-remplit le coequipier par defaut de la tournee s'il y en
         // a un (mode chef d'equipe : "tous les arrets de cette tournee
@@ -568,6 +574,13 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
         await ref
             .read(tourneesRepositoryProvider)
             .invalidateOptimization(widget.tourneeId);
+        // Auto-reorder local apres ajout : maintient l'ordre "du plus
+        // proche au plus loin depuis le depart" a jour, comme Spoke.
+        // Le bug 2026-05-20 : cet appel manquait, donc la liste
+        // gardait l'ordre d'insertion (chronologique) au lieu du NN.
+        await ref
+            .read(localReorderServiceProvider)
+            .reorder(widget.tourneeId);
       }
 
       // Carnet d'adresses : seulement si on a des coords (sinon
