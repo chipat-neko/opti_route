@@ -22,6 +22,7 @@ enum PlusAction {
   batchLivre,
   undoLast,
   retryGeocode,
+  bulkPasteAddresses,
   duplicatePlus7,
   shareText,
   shareToCoequipier,
@@ -103,6 +104,18 @@ class PlusMenu extends StatelessWidget {
             title: Text('Geolocaliser hors-ligne'),
             subtitle: Text(
               'Re-tente le GPS pour les arrets sans coords',
+              style: TextStyle(fontSize: 11),
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: PlusAction.bulkPasteAddresses,
+          child: ListTile(
+            leading: Icon(Icons.content_paste),
+            title: Text('Coller plusieurs adresses'),
+            subtitle: Text(
+              'Import bulk depuis Google Maps, SMS, mail...',
               style: TextStyle(fontSize: 11),
             ),
             contentPadding: EdgeInsets.zero,
