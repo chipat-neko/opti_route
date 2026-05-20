@@ -23,6 +23,7 @@ enum PlusAction {
   undoLast,
   retryGeocode,
   bulkPasteAddresses,
+  nearbyPoi,
   duplicatePlus7,
   shareText,
   shareToCoequipier,
@@ -116,6 +117,18 @@ class PlusMenu extends StatelessWidget {
             title: Text('Coller plusieurs adresses'),
             subtitle: Text(
               'Import bulk depuis Google Maps, SMS, mail...',
+              style: TextStyle(fontSize: 11),
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: PlusAction.nearbyPoi,
+          child: ListTile(
+            leading: Icon(Icons.store_outlined),
+            title: Text('Commerces a proximite'),
+            subtitle: Text(
+              'Pharmacies, supermarches, restaurants...',
               style: TextStyle(fontSize: 11),
             ),
             contentPadding: EdgeInsets.zero,
