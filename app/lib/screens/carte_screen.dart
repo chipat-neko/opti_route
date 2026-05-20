@@ -277,6 +277,18 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
               ),
             ),
           ),
+        // Sprint 2C Spoke parity : panel retractable en bas qui
+        // contient la liste numerotee des stops, drag-drop reorderable.
+        // Tap row = anime la carte vers ce stop. L'utilisateur peut
+        // reorganiser la tournee depuis la carte tout en voyant
+        // l'impact visuel des pins se renumeroter.
+        _ReorderablePanel(
+          tourneeId: widget.tournee.id,
+          stops: stopsGeoreferenced,
+          onTapStop: (stop) {
+            _mapController.move(LatLng(stop.lat!, stop.lng!), 16);
+          },
+        ),
       ],
     );
   }
@@ -475,6 +487,244 @@ class _LiveMembersLayer extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Panel retractable en bas de la carte qui montre la liste numerotee
+/// des stops avec drag-drop reorderable (Sprint 2C Spoke parity).
+///
+/// - Drag a partir du handle pour ouvrir/fermer (0.12 a 0.55 du screen)
+/// - ReorderableListView pour reorganiser via long-press + drag
+/// - Tap sur un row -> callback pour centrer la carte sur ce stop
+///
+/// La persistance du nouvel ordre se fait via
+/// `StopsRepository.applyOptimizedOrder` (meme API que le tri NN+2-opt
+/// et VROOM), ce qui declenche l'invalidation des providers en cascade
+/// et rafraichit auto les pins / la polyline sur la carte.
+class _ReorderablePanel extends ConsumerStatefulWidget {
+  const _ReorderablePanel({
+    required this.tourneeId,
+    required this.stops,
+    required this.onTapStop,
+  });
+
+  final int tourneeId;
+  final List<Stop> stops;
+  final ValueChanged<Stop> onTapStop;
+
+  @override
+  ConsumerState<_ReorderablePanel> createState() =>
+      _ReorderablePanelState();
+}
+
+class _ReorderablePanelState extends ConsumerState<_ReorderablePanel> {
+  late List<Stop> _local;
+  bool _dragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _local = List.of(widget.stops);
+  }
+
+  @override
+  void didUpdateWidget(_ReorderablePanel old) {
+    super.didUpdateWidget(old);
+    if (!_dragging) _local = List.of(widget.stops);
+  }
+
+  Future<void> _onReorder(int oldIndex, int newIndex) async {
+    final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
+    setState(() {
+      final item = _local.removeAt(oldIndex);
+      _local.insert(adjusted, item);
+    });
+    HapticFeedback.mediumImpact();
+    await ref
+        .read(stopsRepositoryProvider)
+        .applyOptimizedOrder(_local.map((s) => s.id).toList());
+    _dragging = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.stops.isEmpty) return const SizedBox.shrink();
+    final p = context.palette;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.12,
+      minChildSize: 0.12,
+      maxChildSize: 0.55,
+      snap: true,
+      snapSizes: const [0.12, 0.55],
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: p.paper,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.r22),
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 8,
+                offset: Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Handle drag visuel
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: p.inkLine,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x14,
+                  vertical: AppSpacing.x4,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.list_alt_outlined,
+                        size: 16, color: p.textMute),
+                    const SizedBox(width: AppSpacing.x6),
+                    Text(
+                      '${_local.length} arrets · maintien long pour reorganiser',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: p.textMute,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ReorderableListView.builder(
+                  scrollController: scrollController,
+                  itemCount: _local.length,
+                  onReorderStart: (_) {
+                    _dragging = true;
+                    HapticFeedback.selectionClick();
+                  },
+                  onReorder: _onReorder,
+                  itemBuilder: (context, i) {
+                    final s = _local[i];
+                    return _CompactStopTile(
+                      key: ValueKey('panel-stop-${s.id}'),
+                      stop: s,
+                      index: i + 1,
+                      onTap: () => widget.onTapStop(s),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CompactStopTile extends StatelessWidget {
+  const _CompactStopTile({
+    super.key,
+    required this.stop,
+    required this.index,
+    required this.onTap,
+  });
+
+  final Stop stop;
+  final int index;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final primary = (stop.nomClient?.isNotEmpty ?? false)
+        ? stop.nomClient!
+        : stop.adresseBrute.split(',').first.trim();
+    final secondary = stop.adresseNormalisee ?? stop.adresseBrute;
+    final isLivre = stop.statutLivraison == 'livre';
+    final isEchec = stop.statutLivraison == 'echec';
+    final chipColor = isLivre
+        ? AppColors.emerald
+        : isEchec
+            ? AppColors.red
+            : p.paper;
+    final chipFg = (isLivre || isEchec) ? AppColors.paper : p.ink;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x14,
+          vertical: AppSpacing.x10,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: chipColor,
+                border: Border.all(color: p.ink, width: 1.2),
+                borderRadius: BorderRadius.circular(AppRadius.r8),
+              ),
+              alignment: Alignment.center,
+              child: isLivre
+                  ? Icon(Icons.check, color: chipFg, size: 18)
+                  : isEchec
+                      ? Icon(Icons.close, color: chipFg, size: 18)
+                      : Text(
+                          '$index',
+                          style: appMonoStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: chipFg,
+                          ),
+                        ),
+            ),
+            const SizedBox(width: AppSpacing.x10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    primary,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: p.ink,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    secondary,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: p.textMute,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.drag_handle, color: p.textFaint, size: 18),
+          ],
+        ),
+      ),
     );
   }
 }
