@@ -85,6 +85,14 @@ dependencies:
   # dans la colonne `cloud_id` Drift -- ca rend le re-push idempotent
   # et permet a 2 phones de generer en parallele sans collision.
   uuid: ^4.5.1
+  # receive_sharing_intent : intercepte les partages Android (ACTION_SEND
+  # text/plain) pour quand l'utilisateur fait "Partager -> opti_route"
+  # depuis Google Maps app, SMS, mail, etc. On parse le texte recu pour
+  # ajouter directement un arret a une tournee.
+  # v1.8.0 (mai 2024) : Kotlin compile en JVM 17 (compatible avec
+  # notre app), pas JVM 21 comme la v1.8.1+ qui casse la build avec
+  # 'Inconsistent JVM-target compatibility'.
+  receive_sharing_intent: 1.8.0
   # speech_to_text : reconnaissance vocale on-device pour ajouter
   # une adresse a la voix en cours de tournee (mains libres au volant,
   # style Spoke route planner). Utilise le moteur Google Speech sur

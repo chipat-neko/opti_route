@@ -37,6 +37,10 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // Note : le forcing JVM 17 sur les sous-projets (plugins Kotlin
+    // tiers comme receive_sharing_intent) est fait au niveau root
+    // dans android/build.gradle.kts pour s'appliquer a tous.
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.optiroute.opti_route"
