@@ -688,7 +688,6 @@ class SegmentBadge extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.straighten,
@@ -696,12 +695,21 @@ class SegmentBadge extends ConsumerWidget {
             color: p.textMute,
           ),
           const SizedBox(width: 3),
-          Text(
-            '${seg.distanceLabel} · ${seg.durationLabel} depuis $origin',
-            style: appMonoStyle(
-              fontSize: 10,
-              color: p.textMute,
-              fontWeight: FontWeight.w600,
+          // Flexible + ellipsis : sans ca, sur les longs segments
+          // ('13 km · 1h05 depuis precedent') le Text depassait
+          // a droite et Flutter affichait 'RIGHT OVERFLOWED BY N
+          // PIXELS' en texte rouge vertical (vu sur Xiaomi Noah
+          // 2026-05-21 : bande rouge qui traverse l'ecran).
+          Flexible(
+            child: Text(
+              '${seg.distanceLabel} · ${seg.durationLabel} depuis $origin',
+              style: appMonoStyle(
+                fontSize: 10,
+                color: p.textMute,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
