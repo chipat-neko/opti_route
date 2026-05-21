@@ -160,6 +160,14 @@ class _StopsListState extends ConsumerState<StopsList> {
     // false` car on positionne nous-meme le `ReorderableDragStartListener`
     // sur la poignee `drag_handle` dans `StopRow` (pour eviter que le
     // tap sur la card declenche un drag).
+    //
+    // En plus du reorder intra-tournee (handle drag), chaque ligne est
+    // wrappee dans un LongPressDraggable pour permettre de la deplacer
+    // vers une autre tournee du jour (drop sur le banner
+    // AutresTourneesDuJourBanner qui sert de DragTarget). axis:vertical
+    // limite le drag a la verticale pour ne pas conflicter avec le
+    // Dismissible horizontal du StopRow. Delay 600ms pour ne pas
+    // declencher au tap court.
     return Container(
       decoration: BoxDecoration(
         color: p.paper,
@@ -181,12 +189,22 @@ class _StopsListState extends ConsumerState<StopsList> {
         onReorder: _onReorder,
         itemBuilder: (context, i) {
           final stop = _local[i];
-          return StopRow(
+          final row = StopRow(
             key: ValueKey('stop-${stop.id}'),
             stop: stop,
             index: i + 1,
             dragIndex: i,
             onDelete: () => _confirmDelete(context, ref, stop),
+          );
+          return LongPressDraggable<Stop>(
+            key: ValueKey('drag-stop-${stop.id}'),
+            data: stop,
+            axis: Axis.vertical,
+            delay: const Duration(milliseconds: 600),
+            hapticFeedbackOnStart: true,
+            feedback: _DragFeedback(stop: stop),
+            childWhenDragging: Opacity(opacity: 0.35, child: row),
+            child: row,
           );
         },
       ),
@@ -259,5 +277,70 @@ class _StopsListState extends ConsumerState<StopsList> {
           .read(localReorderServiceProvider)
           .reorder(stop.tourneeId);
     }
+  }
+}
+
+/// Aperçu visuel qui suit le doigt pendant un drag inter-tournee.
+/// Card lime compacte avec icone deplacer + nom de l'arret. Volontairement
+/// court (pas de tags, pas de stats) pour rester lisible meme sur petit
+/// ecran. Material avec elevation pour qu'il flotte au-dessus du contenu.
+class _DragFeedback extends StatelessWidget {
+  const _DragFeedback({required this.stop});
+
+  final Stop stop;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = stop.nomClient?.isNotEmpty == true
+        ? stop.nomClient!
+        : stop.adresseBrute;
+    return Material(
+      color: Colors.transparent,
+      elevation: 8,
+      borderRadius: BorderRadius.circular(AppRadius.r14),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 280),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x14,
+            vertical: AppSpacing.x10,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.lime,
+            borderRadius: BorderRadius.circular(AppRadius.r14),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.swap_horiz,
+                color: AppColors.ink,
+                size: 18,
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
