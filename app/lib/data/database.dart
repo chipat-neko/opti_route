@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import 'tables/coequipiers.dart';
+import 'tables/frais.dart';
 import 'tables/geocode_cache.dart';
 import 'tables/parametres.dart';
 import 'tables/saved_destinations.dart';
@@ -15,6 +16,7 @@ import 'tables/tournees.dart';
 // `import 'database.dart'` puissent continuer a utiliser
 // `TourneesCompanion`, `Stop`, etc. sans changer leurs imports.
 export 'tables/coequipiers.dart';
+export 'tables/frais.dart';
 export 'tables/geocode_cache.dart';
 export 'tables/parametres.dart';
 export 'tables/saved_destinations.dart';
@@ -37,6 +39,7 @@ part 'database.g.dart';
     StopHistory,
     Coequipiers,
     TourneeMembres,
+    Frais,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -66,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 32;
+  int get schemaVersion => 33;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -284,6 +287,13 @@ class AppDatabase extends _$AppDatabase {
             // mais sur Drift Web la colonne n'existait meme pas car
             // l'ALTER TABLE de v25 avait silencieusement echoue. Cf
             // bloc v32 ci-dessous pour la vraie correction.)
+          }
+          if (from < 33) {
+            // Nouvelle table `frais` pour les notes de frais
+            // (carburant / peages / parking / repas / autre).
+            // 100% local en Phase 1. Cf tables/frais.dart pour le
+            // detail des colonnes et le cas d'usage.
+            await m.createTable(frais);
           }
           if (from < 32) {
             // ════════════════════════════════════════════════════════
