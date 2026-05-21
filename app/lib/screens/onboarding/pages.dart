@@ -614,6 +614,18 @@ class PageNouveautes extends StatelessWidget {
           'en campagne ou en sous-sol.',
     ),
     (
+      Icons.mic_none_outlined,
+      'Dictee vocale mains-libres',
+      'Ajoute un arret ou cherche une adresse en parlant. Bouton '
+          'micro disponible dans la recherche, le carnet et le coller-massif.',
+    ),
+    (
+      Icons.content_paste_go_outlined,
+      'Import massif + partage Google Maps',
+      'Colle une liste d\'adresses (1/ligne) ou partage depuis Maps '
+          'vers opti_route : la tournee se cree toute seule.',
+    ),
+    (
       Icons.lock_outline,
       'Verrouillage PIN + biometrie',
       'Protege les donnees clients (carnet, codes interphones) si tu '
