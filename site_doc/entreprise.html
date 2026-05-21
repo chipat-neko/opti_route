@@ -133,6 +133,132 @@
   .compare-table .yes { color: var(--emerald); font-weight: 700; }
   .compare-table .no { color: var(--text-faint); }
   .compare-table .partial { color: var(--amber); }
+
+  /* Grille tarifaire freemium (4 plans) */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-14);
+    margin: var(--space-22) 0;
+  }
+  @media (max-width: 920px) { .pricing-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .price-card {
+    background: var(--paper);
+    border-radius: var(--radius-18);
+    padding: var(--space-22);
+    border: 1px solid var(--divider);
+    display: flex;
+    flex-direction: column;
+    transition: transform 200ms, box-shadow 200ms;
+  }
+  .price-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card);
+  }
+  .price-card.featured {
+    border: 2px solid var(--lime);
+    box-shadow: 0 0 0 4px rgba(184, 242, 74, 0.18);
+    position: relative;
+  }
+  .price-card.featured::before {
+    content: 'Le plus populaire';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--lime);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: var(--radius-6);
+    white-space: nowrap;
+  }
+  .price-tier {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    font-weight: 800;
+    margin-bottom: var(--space-8);
+  }
+  .price-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: var(--space-4);
+    line-height: 1.1;
+  }
+  .price-amount small {
+    font-size: 0.8rem;
+    color: var(--text-mute);
+    font-weight: 600;
+    display: block;
+    margin-top: 2px;
+  }
+  .price-card.featured .price-amount { color: var(--emerald); }
+  .price-target {
+    font-size: 0.85rem;
+    color: var(--text-mute);
+    margin: var(--space-10) 0 var(--space-14);
+    line-height: 1.4;
+  }
+  .price-feats {
+    list-style: none;
+    padding: 0;
+    margin-top: auto;
+    border-top: 1px solid var(--divider);
+    padding-top: var(--space-12);
+  }
+  .price-feats li {
+    font-size: 0.88rem;
+    padding: 5px 0;
+    color: var(--text);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .price-feats li::before {
+    content: '+';
+    color: var(--emerald);
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .price-cta {
+    margin-top: var(--space-14);
+    text-align: center;
+    font-size: 0.78rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 800;
+    color: var(--text-mute);
+    padding: var(--space-8) 0;
+  }
+  .price-card.featured .price-cta {
+    background: rgba(184, 242, 74, 0.12);
+    color: var(--ink);
+    border-radius: var(--radius-10);
+    margin-bottom: -10px;
+  }
+  .price-availability {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--amber);
+    font-weight: 800;
+    margin-top: var(--space-6);
+  }
+  .price-card .price-availability.live { color: var(--emerald); }
 </style>
 </head>
 <body>
@@ -242,6 +368,82 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- ===== TARIFICATION FREEMIUM ===== -->
+  <section style="margin-bottom: var(--space-64);">
+    <span class="eyebrow">Tarification</span>
+    <h2 style="margin-bottom: var(--space-18);">4 plans, choisis le tien</h2>
+    <p style="margin-bottom: var(--space-22); max-width: 720px;">
+      Phase 1 (Free) reste perpetuellement gratuite. Les plans payants
+      s'activent quand le backend cloud Phase 2 sera deploye (Q3 2026).
+      Pas de carte bancaire requise tant que tu n'as pas besoin de la sync
+      temps reel.
+    </p>
+
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">0 EUR<small>par mois, pour toujours</small></div>
+        <div class="price-target">Livreur solo, 1 phone, Phase 1 complete</div>
+        <ul class="price-feats">
+          <li>Optimisation VROOM (500/jour)</li>
+          <li>Scan bordereaux OCR FR</li>
+          <li>Mode chef d'equipe local</li>
+          <li>Exports PDF / CSV / vCard</li>
+          <li>4 palettes + mode XL</li>
+        </ul>
+        <div class="price-availability live">Disponible aujourd'hui</div>
+      </div>
+
+      <div class="price-card">
+        <div class="price-tier">Solo+</div>
+        <div class="price-amount">9 EUR<small>par mois</small></div>
+        <div class="price-target">Independant avec besoin SMS auto et backup</div>
+        <ul class="price-feats">
+          <li>Tout Free, plus :</li>
+          <li>ETA SMS auto destinataire</li>
+          <li>Backup cloud chiffre</li>
+          <li>Stats illimitees (5 ans+)</li>
+          <li>Support email prioritaire</li>
+        </ul>
+        <div class="price-availability">Phase 2 &mdash; Q3 2026</div>
+      </div>
+
+      <div class="price-card featured">
+        <div class="price-tier">Equipe</div>
+        <div class="price-amount">19 EUR<small>par mois, 1 a 10 chauffeurs</small></div>
+        <div class="price-target">Chef + livreurs sur leurs propres phones</div>
+        <ul class="price-feats">
+          <li>Tout Solo+, plus :</li>
+          <li>Sync temps reel chef &harr; livreurs</li>
+          <li>Suivi GPS live de l'equipe</li>
+          <li>Chat intra-equipe integre</li>
+          <li>Notifications push cross-app</li>
+          <li>Affectation drag-and-drop</li>
+        </ul>
+        <div class="price-availability">Phase 2 &mdash; Q3 2026</div>
+      </div>
+
+      <div class="price-card">
+        <div class="price-tier">Entreprise</div>
+        <div class="price-amount">99 EUR<small>+ 15 EUR/livreur supplementaire</small></div>
+        <div class="price-target">Multi-depots, ERP, 10+ livreurs</div>
+        <ul class="price-feats">
+          <li>Tout Equipe, plus :</li>
+          <li>Multi-depots / multi-equipes</li>
+          <li>API publique + webhooks</li>
+          <li>Facturation TVA + export Sage / Pennylane</li>
+          <li>SLA + dedicated success manager</li>
+        </ul>
+        <div class="price-availability">Phase 3 &mdash; sur devis</div>
+      </div>
+    </div>
+
+    <p style="font-size: 0.85rem; color: var(--text-mute); font-style: italic; margin-top: var(--space-14);">
+      Le passage payant ne casse jamais la Phase 1. Si tu te desabonnes, tu retombes sur le plan Free
+      avec tes donnees intactes (le backup cloud reste lisible 90 jours).
+    </p>
   </section>
 
   <!-- ===== TABLEAU COMPARATIF P1 / P2 ===== -->
