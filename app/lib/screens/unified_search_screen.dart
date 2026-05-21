@@ -8,6 +8,7 @@ import '../data/unified_search_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/voice_input_button.dart';
 import 'carnet_adresses_screen.dart';
 import 'carnet_edit_screen.dart';
 import 'parametres_screen.dart';
@@ -136,6 +137,24 @@ class _UnifiedSearchScreenState extends ConsumerState<UnifiedSearchScreen> {
         _selectedIndex = -1;
       });
     });
+  }
+
+  /// Callback du VoiceInputButton : remplit le champ avec le texte
+  /// dicte, place le curseur en fin, et lance la recherche sans
+  /// debounce (l'utilisateur attend deja le retour vocal).
+  void _applyVoiceResult(String spoken) {
+    final cleaned = spoken.trim();
+    if (cleaned.isEmpty) return;
+    _controller.text = cleaned;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: cleaned.length),
+    );
+    _debounceTimer?.cancel();
+    setState(() {
+      _debouncedQuery = cleaned;
+      _selectedIndex = -1;
+    });
+    _focusNode.requestFocus();
   }
 
   /// Tap sur un chip "recherche recente" : pre-remplit le champ, met
@@ -301,6 +320,12 @@ class _UnifiedSearchScreenState extends ConsumerState<UnifiedSearchScreen> {
           },
         ),
         actions: [
+          // Dictee vocale : remplit le champ de recherche en parlant
+          // (mains-libres au volant). Inspire Spoke route planner.
+          VoiceInputButton(
+            tooltip: 'Dicter la recherche',
+            onResult: _applyVoiceResult,
+          ),
           if (_controller.text.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.close),

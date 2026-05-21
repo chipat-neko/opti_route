@@ -12,6 +12,7 @@ import '../data/database.dart';
 import '../data/saved_destinations_repository.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/voice_input_button.dart';
 import 'carnet_adresses/carnet_tile.dart';
 import 'carnet_adresses/filter_chips.dart';
 import 'carnet_adresses/providers.dart';
@@ -28,12 +29,34 @@ class CarnetAdressesScreen extends ConsumerStatefulWidget {
 }
 
 class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
+  /// Controller du champ recherche : indispensable pour que la dictee
+  /// vocale puisse pousser son texte (sans controller le TextField ne
+  /// peut pas etre rempli programmatiquement).
+  final _searchCtrl = TextEditingController();
   String _query = '';
   /// Filtre couleur actif (`colorTag`). Null = tous. 'favoris' = uniquement
   /// les `isFavori = true` (cas special pour faciliter le tri).
   String? _colorFilter;
   /// Filtre tag libre (`tagsJson`). Null = aucun filtre tag.
   String? _tagFilter;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Applique le texte dicte : remplit le champ + lance la recherche
+  /// immediatement (sans debounce, l'user attend deja le retour vocal).
+  void _applyVoiceResult(String spoken) {
+    final cleaned = spoken.trim();
+    if (cleaned.isEmpty) return;
+    _searchCtrl.text = cleaned;
+    _searchCtrl.selection = TextSelection.fromPosition(
+      TextPosition(offset: cleaned.length),
+    );
+    setState(() => _query = cleaned.toLowerCase());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,9 +126,16 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
               AppSpacing.x4,
             ),
             child: TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
                 hintText: 'Rechercher un client / une adresse',
+                // Bouton micro mains-libres : dicte la recherche au
+                // volant. Aligne sur le pattern Spoke route planner.
+                suffixIcon: VoiceInputButton(
+                  tooltip: 'Dicter la recherche',
+                  onResult: _applyVoiceResult,
+                ),
               ),
               onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
             ),
