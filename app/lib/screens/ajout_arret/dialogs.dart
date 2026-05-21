@@ -19,7 +19,11 @@ Future<String?> showOfflineAddressDialog(
   String? initial,
 }) {
   final ctrl = TextEditingController(text: initial ?? '');
-  return showDialog<String>(
+  // whenComplete : on dispose le controller que le dialog soit valide
+  // (pop avec value) OU annule (pop sans value) OU dismissed (back
+  // gesture). Sans ca, fuite memoire a chaque ouverture (bug audit
+  // 2026-05-21).
+  final future = showDialog<String>(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
@@ -60,4 +64,6 @@ Future<String?> showOfflineAddressDialog(
       );
     },
   );
+  future.whenComplete(ctrl.dispose);
+  return future;
 }

@@ -110,7 +110,6 @@ class FacturationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.palette;
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -162,12 +161,17 @@ class FacturationCard extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      // AppColors.cream (constant) au lieu de p.cream :
+                      // sur fond gradient emerald fixe, on veut TOUJOURS
+                      // un texte clair. p.cream s'inverse en mode dark
+                      // (devient ink-noir) -> noir sur emerald sombre
+                      // = invisible (bug audit 2026-05-21).
+                      const Text(
                         'Calculer ton recap facturable',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          color: p.cream,
+                          color: AppColors.cream,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -181,7 +185,7 @@ class FacturationCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward, color: p.cream),
+                const Icon(Icons.arrow_forward, color: AppColors.cream),
               ],
             ),
           ),
