@@ -8,6 +8,7 @@ import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/voice_input_button.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Import bulk d'adresses (copier-coller) dans une tournee.
@@ -58,6 +59,23 @@ class _BulkPasteScreenState extends ConsumerState<BulkPasteScreen> {
   void dispose() {
     _textCtrl.dispose();
     super.dispose();
+  }
+
+  /// Appende le texte dicte au contenu existant. Si le champ est vide,
+  /// pose le texte directement ; sinon ajoute un saut de ligne avant
+  /// (1 adresse par ligne, regle du parser). Place le curseur en fin
+  /// pour que la prochaine dictee s'ajoute apres.
+  void _applyVoiceResult(String spoken) {
+    final cleaned = spoken.trim();
+    if (cleaned.isEmpty) return;
+    final current = _textCtrl.text;
+    final separator = (current.isEmpty || current.endsWith('\n')) ? '' : '\n';
+    final next = '$current$separator$cleaned';
+    _textCtrl.text = next;
+    _textCtrl.selection = TextSelection.fromPosition(
+      TextPosition(offset: next.length),
+    );
+    setState(() {}); // refresh compteur "X adresses detectees"
   }
 
   /// Parse le texte multiligne : 1 adresse par ligne, trim, filter
@@ -203,6 +221,28 @@ class _BulkPasteScreenState extends ConsumerState<BulkPasteScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.x14),
+              // Dictee vocale : chaque dictee = une nouvelle ligne dans
+              // le champ ci-dessous. Cas d'usage chef d'equipe : il
+              // recoit une liste d'adresses par telephone et les
+              // enchaine au volant sans avoir a taper.
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Tu peux aussi dicter chaque adresse :',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: p.textMute,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x8),
+                  VoiceInputButtonOutlined(
+                    onResult: _applyVoiceResult,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x10),
               Expanded(
                 child: TextField(
                   controller: _textCtrl,
