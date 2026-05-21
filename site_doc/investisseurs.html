@@ -25,10 +25,13 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 
 <style>
-  /* ===== INVESTOR PAGE ===== */
+  /* ===== INVESTOR PAGE =====
+   * Hero / contact-cta utilisent --ink-bg/fg (toujours sombre)
+   * pour preserver l'effet "carte sombre elegante" dans toutes
+   * les palettes et meme en mode dark. */
   .inv-hero {
-    background: var(--ink);
-    color: var(--bg);
+    background: var(--ink-bg);
+    color: var(--ink-fg);
     border-radius: var(--radius-28);
     padding: var(--space-64) var(--space-40);
     margin-bottom: var(--space-64);
@@ -48,12 +51,12 @@
   }
   .inv-hero .eyebrow { color: var(--lime); }
   .inv-hero h1 {
-    color: var(--bg);
+    color: var(--ink-fg);
     max-width: 800px;
     margin-bottom: var(--space-22);
   }
   .inv-hero .lead {
-    color: rgba(245, 243, 238, 0.78);
+    color: var(--ink-fg-mute);
     font-size: 1.15rem;
     max-width: 720px;
     margin-bottom: var(--space-40);
@@ -78,7 +81,8 @@
   }
   .inv-badge.solid {
     background: var(--lime);
-    color: var(--ink);
+    /* Sur fond lime, le texte doit rester sombre quelle que soit la palette */
+    color: var(--ink-bg);
     border-color: var(--lime);
   }
 
@@ -473,10 +477,11 @@
   }
   .risk-card .mitig strong { color: var(--emerald); }
 
-  /* Contact final */
+  /* Contact final (bloc inverse comme inv-hero : reste sombre meme en
+     mode dark, sinon texte cream sur fond cream = invisible). */
   .contact-cta {
-    background: var(--ink);
-    color: var(--bg);
+    background: var(--ink-bg);
+    color: var(--ink-fg);
     border-radius: var(--radius-28);
     padding: var(--space-64) var(--space-40);
     text-align: center;
@@ -495,9 +500,9 @@
     background: radial-gradient(circle, rgba(184, 242, 74, 0.14) 0%, transparent 70%);
     pointer-events: none;
   }
-  .contact-cta h2 { color: var(--bg); margin-bottom: var(--space-14); }
+  .contact-cta h2 { color: var(--ink-fg); margin-bottom: var(--space-14); }
   .contact-cta p {
-    color: rgba(245, 243, 238, 0.75);
+    color: var(--ink-fg-mute);
     max-width: 580px;
     margin: 0 auto var(--space-28);
     font-size: 1.05rem;
@@ -523,12 +528,13 @@
   .contact-link:hover { transform: translateY(-2px); text-decoration: none; }
   .contact-link.primary {
     background: var(--lime);
-    color: var(--ink);
+    /* Reste sombre sur fond lime, peu importe la palette/mode */
+    color: var(--ink-bg);
   }
   .contact-link.ghost {
     background: transparent;
-    color: var(--bg);
-    border: 1px solid rgba(245, 243, 238, 0.3);
+    color: var(--ink-fg);
+    border: 1px solid var(--ink-fg-line);
   }
 
   /* TOC sticky */

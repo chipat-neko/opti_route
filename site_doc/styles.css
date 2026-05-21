@@ -41,6 +41,20 @@
   --amber: #F2A341;
   --red: #D9483B;
 
+  /* Bloc "inverse" (CTA sombre, hero investor, contact CTA, btn-primary)
+   * RESTE TOUJOURS SOMBRE meme en mode dark, pour preserver l'effet
+   * visuel "carte sombre elegante". Sans ces variables, en mode dark
+   * la regle `background: var(--ink)` se retrouvait avec --ink=clair
+   * et le texte hardcoded cream devenait invisible (bug Noah 2026-05-21).
+   *
+   * Varie par palette mais PAS par data-theme. */
+  --ink-bg: #0E1410;
+  --ink-bg-soft: #1A211C;
+  --ink-fg: #F5F3EE;
+  --ink-fg-mute: rgba(245, 243, 238, 0.75);
+  --ink-fg-faint: rgba(245, 243, 238, 0.55);
+  --ink-fg-line: rgba(245, 243, 238, 0.30);
+
   /* Echelles */
   --space-4: 4px;
   --space-6: 6px;
@@ -93,6 +107,13 @@
   --text: #0E2A3A;
   --text-mute: #5C7080;
   --text-faint: #8AA0B0;
+  /* Bloc inverse (toujours sombre) Ocean */
+  --ink-bg: #0E2A3A;
+  --ink-bg-soft: #1A3849;
+  --ink-fg: #EEF4F7;
+  --ink-fg-mute: rgba(238, 244, 247, 0.75);
+  --ink-fg-faint: rgba(238, 244, 247, 0.55);
+  --ink-fg-line: rgba(238, 244, 247, 0.30);
 }
 [data-palette='ocean'][data-theme='dark'] {
   --bg: #0E2A3A;
@@ -119,6 +140,13 @@
   --text: #2D1B0E;
   --text-mute: #6E5240;
   --text-faint: #9A8268;
+  /* Bloc inverse (toujours sombre) Terracotta */
+  --ink-bg: #2D1B0E;
+  --ink-bg-soft: #3D2818;
+  --ink-fg: #F6EDDF;
+  --ink-fg-mute: rgba(246, 237, 223, 0.75);
+  --ink-fg-faint: rgba(246, 237, 223, 0.55);
+  --ink-fg-line: rgba(246, 237, 223, 0.30);
 }
 [data-palette='terracotta'][data-theme='dark'] {
   --bg: #1F1410;
@@ -145,6 +173,13 @@
   --text: #111111;
   --text-mute: #555555;
   --text-faint: #8A8A8A;
+  /* Bloc inverse (toujours sombre) Mono */
+  --ink-bg: #111111;
+  --ink-bg-soft: #1F1F1F;
+  --ink-fg: #FAFAFA;
+  --ink-fg-mute: rgba(250, 250, 250, 0.75);
+  --ink-fg-faint: rgba(250, 250, 250, 0.55);
+  --ink-fg-line: rgba(250, 250, 250, 0.30);
 }
 [data-palette='mono'][data-theme='dark'] {
   --bg: #0A0A0A;
@@ -334,7 +369,7 @@ section {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--ink);
+  background: var(--ink-bg);
   display: grid;
   place-items: center;
 }
@@ -394,7 +429,7 @@ section {
 .btn:active { transform: translateY(0); }
 
 .btn-primary {
-  background: var(--ink);
+  background: var(--ink-bg);
   color: var(--lime);
   box-shadow: var(--shadow-fab);
 }
@@ -403,12 +438,13 @@ section {
 
 .btn-secondary {
   background: var(--lime);
-  color: var(--ink);
+  /* Reste sombre sur fond lime quelle que soit la palette/mode */
+  color: var(--ink-bg);
 }
 
 .btn-ghost {
   background: transparent;
-  color: var(--ink);
+  color: var(--text);
   border: 1px solid var(--ink-line);
 }
 
@@ -598,7 +634,7 @@ section {
   position: absolute;
   top: -16px;
   left: var(--space-22);
-  background: var(--ink);
+  background: var(--ink-bg);
   color: var(--lime);
   width: 32px;
   height: 32px;
@@ -612,18 +648,21 @@ section {
 .step h3 { font-size: 1rem; margin: var(--space-10) 0 var(--space-6); }
 .step p { font-size: 0.9rem; }
 
-/* ===== CTA SECTION ===== */
+/* ===== CTA SECTION =====
+ * Bloc sombre elegant qui reste sombre dans tous les modes/palettes
+ * (utilise --ink-bg/fg au lieu de --ink/--bg pour eviter l'inversion
+ * en mode dark qui rendait le texte invisible). */
 .cta {
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--ink-bg);
+  color: var(--ink-fg);
   border-radius: var(--radius-28);
   padding: var(--space-64) var(--space-40);
   text-align: center;
   margin: var(--space-40) auto;
 }
 
-.cta h2 { color: var(--bg); }
-.cta p { color: rgba(245, 243, 238, 0.7); max-width: 480px; margin: var(--space-18) auto var(--space-22); }
+.cta h2 { color: var(--ink-fg); }
+.cta p { color: var(--ink-fg-mute); max-width: 480px; margin: var(--space-18) auto var(--space-22); }
 
 /* ===== FOOTER ===== */
 .site-footer {
