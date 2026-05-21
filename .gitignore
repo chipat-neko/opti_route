@@ -36,3 +36,6 @@ bordereaux_test/
 screenshots_v8/
 
 # Le sous-projet app/ a son propre .gitignore (Flutter)
+
+# Dossier recherche prive (notes pre-pitch investisseur)
+recherche/
