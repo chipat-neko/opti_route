@@ -157,7 +157,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         leading: const DrawerBadgeIcon(),
         title: Row(
           children: [
-            const Text('Tournee du jour'),
+            // Flexible + ellipsis : sans ca, sur petits ecrans /
+            // densite system >100% le Text + AutoPushBadge depassent
+            // l'espace AppBar restant (apres leading + 4 IconButtons
+            // + PlusMenu) -> 'RIGHT OVERFLOWED BY N PIXELS' en
+            // texte rouge vertical (bug Noah 2026-05-21).
+            const Flexible(
+              child: Text(
+                'Tournee du jour',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(width: 8),
             const _AutoPushBadge(),
           ],
