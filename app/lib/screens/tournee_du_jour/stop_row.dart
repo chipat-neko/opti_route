@@ -397,7 +397,7 @@ class StopRow extends ConsumerWidget {
         fg: AppColors.ink,
       ));
     }
-    final priority = _priorityTag(s.priorite);
+    final priority = _priorityTag(s.priorite, p);
     if (priority != null) out.add(priority);
     // Stop sans coordonnees (mode hors-ligne, geocodage echoue) : tag
     // amber bien visible "GPS manquant" pour rappeler que cet arret ne
@@ -422,14 +422,19 @@ class StopRow extends ConsumerWidget {
       out.add(StopTag(
         label: '$start -> $end',
         bg: const Color(0x33F2A341),
-        fg: const Color(0xFF7A4F0E),
+        fg: p.ink,
         mono: true,
       ));
     }
     return out;
   }
 
-  Widget? _priorityTag(String priorite) {
+  /// p: palette context-aware passee par le caller (build context).
+  /// Necessaire pour le tag "Eviter" qui a un fond amber translucide
+  /// laissant passer la couleur de la card par transparence -> le fg
+  /// doit s'inverser en mode dark, sinon texte noir invisible sur
+  /// fond sombre (bug audit 2026-05-21).
+  Widget? _priorityTag(String priorite, AppPalette p) {
     return switch (priorite) {
       'obligatoire_premier' => const StopTag(
           label: 'En 1er',
@@ -444,7 +449,7 @@ class StopRow extends ConsumerWidget {
       'eviter_si_possible' => StopTag(
           label: 'Eviter',
           bg: AppColors.amber.withValues(alpha: 0.25),
-          fg: const Color(0xFF7A4F0E),
+          fg: p.ink,
         ),
       _ => null,
     };
