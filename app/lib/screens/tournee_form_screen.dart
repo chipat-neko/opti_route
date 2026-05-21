@@ -12,6 +12,7 @@ import '../providers/database_providers.dart';
 import '../providers/supabase_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
+import 'tournee_du_jour_screen.dart';
 import 'tournee_form/form_widgets.dart';
 
 class TourneeFormScreen extends ConsumerStatefulWidget {
@@ -91,6 +92,12 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x18),
           children: [
+            // Raccourci "Demarrer depuis un template" : visible UNIQUEMENT
+            // en mode creation (pas edit) et seulement s'il y a au moins
+            // 1 tournee marquee isTemplate dans la base. Permet de partir
+            // d'une tournee recurrente (ex: meme circuit chaque lundi)
+            // sans avoir a re-saisir nom + adresse + capacite + arrets.
+            if (!_isEdit) _StartFromTemplateBanner(onPicked: _onPickedTemplate),
             TextFormField(
               controller: _nomCtrl,
               decoration: const InputDecoration(
@@ -423,6 +430,213 @@ class _TourneeFormScreenState extends ConsumerState<TourneeFormScreen> {
                 'Erreur lors de l\'enregistrement : ${humanizeAnyError(e)}')),
       );
     }
+  }
+
+  /// Callback du banner "Demarrer depuis un template" : un template +
+  /// une date ont ete choisis dans la sheet, on duplique en base et on
+  /// pushReplacement vers la nouvelle tournee (l'utilisateur saute le
+  /// formulaire actuel qui devient inutile).
+  Future<void> _onPickedTemplate(Tournee template, DateTime date) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      final repo = ref.read(tourneesRepositoryProvider);
+      final newId = await repo.duplicate(template.id, targetDate: date);
+      final newTournee = await repo.getById(newId);
+      if (!mounted || newTournee == null) return;
+      HapticFeedback.mediumImpact();
+      navigator.pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => TourneeDuJourScreen(tournee: newTournee),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+              'Erreur duplication template : ${humanizeAnyError(e)}'),
+        ),
+      );
+    }
+  }
+}
+
+/// Banner cliquable affiche en haut du [TourneeFormScreen] quand au
+/// moins 1 tournee est marquee `isTemplate`. Tap -> bottom sheet
+/// listant les templates + date picker. Permet de partir d'un modele
+/// recurrent au lieu de remplir tout le formulaire a la main.
+class _StartFromTemplateBanner extends ConsumerWidget {
+  const _StartFromTemplateBanner({required this.onPicked});
+
+  /// Appele quand le user a choisi un template + une date dans la sheet.
+  final void Function(Tournee template, DateTime date) onPicked;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final all = ref.watch(tourneesStreamProvider).asData?.value ?? const [];
+    final templates = all.where((t) => t.isTemplate).toList();
+    if (templates.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x14),
+      child: Material(
+        color: AppColors.lime.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+          onTap: () => _pickTemplate(context, templates),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: AppColors.lime,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.star,
+                    color: AppColors.ink,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Demarrer depuis un template',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: p.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        templates.length == 1
+                            ? '1 template disponible'
+                            : '${templates.length} templates disponibles',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: p.textMute,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: p.textMute),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Ouvre la bottom sheet de selection : 1 ListTile par template.
+  /// Tap -> ouvre un date picker pour choisir la date cible -> appelle
+  /// [onPicked] avec le template + la date.
+  Future<void> _pickTemplate(
+    BuildContext context,
+    List<Tournee> templates,
+  ) async {
+    final p = context.palette;
+    final picked = await showModalBottomSheet<Tournee>(
+      context: context,
+      backgroundColor: p.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x18,
+            AppSpacing.x14,
+            AppSpacing.x18,
+            AppSpacing.x18,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x14),
+                  decoration: BoxDecoration(
+                    color: p.inkLine,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Choisir un template',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              for (final t in templates) ...[
+                Material(
+                  color: p.paper,
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    onTap: () => Navigator.of(sheetContext).pop(t),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.x12),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: AppColors.amber,
+                            size: 18,
+                          ),
+                          const SizedBox(width: AppSpacing.x10),
+                          Expanded(
+                            child: Text(
+                              t.nom,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: p.textMute),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x8),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('fr', 'FR'),
+      helpText: 'Date de la nouvelle tournee',
+    );
+    if (pickedDate == null) return;
+    onPicked(picked, pickedDate);
   }
 }
 
