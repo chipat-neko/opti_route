@@ -599,8 +599,10 @@
       opti_route est une app mobile de planification de tournees pour les
       <strong>livreurs independants et les chefs d'equipe</strong> (1 a 20 chauffeurs).
       Construite par un livreur en activite, avec une vraie comprehension du
-      terrain. <strong>MVP live, payant en Phase 2 (Q3 2026)</strong>. On leve
-      pour accelerer la mise en marche du backend cloud et la traction commerciale.
+      terrain. <strong>MVP live sur Android</strong>. On leve pour
+      <strong>publier l'app sur les stores officiels (Play Store + App Store), s'equiper
+      du materiel iOS necessaire (Mac + iPhone)</strong>, et debloquer le developpement
+      des <strong>Phases 2 (cloud temps reel) et 3 (GPS turn-by-turn, multi-vehicules)</strong>.
     </p>
     <div class="inv-badges">
       <span class="inv-badge solid">Seed 100&ndash;250 k EUR</span>
@@ -934,27 +936,87 @@
     </div>
   </section>
 
-  <!-- ============ USE OF FUNDS ============ -->
+  <!-- ============ POURQUOI CETTE LEVEE ============ -->
   <section class="inv-section" id="funds">
+    <span class="eyebrow">Objectif de la levee</span>
+    <h2>Pourquoi cette levee : 3 deblocages cles</h2>
+
+    <p style="max-width: 720px; margin-bottom: var(--space-22);">
+      Le MVP Android est en production. Trois leviers concrets necessitent
+      du capital pour faire passer le projet du statut d'app perso a celui
+      de produit SaaS disponible nationalement.
+    </p>
+
+    <div class="probsol-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="probsol-card sol" style="background: linear-gradient(135deg, rgba(184, 242, 74, 0.08) 0%, var(--paper) 60%);">
+        <h3 style="font-size: 1rem;">1. Publication App Store + Play Store</h3>
+        <p style="font-size: 0.92rem; color: var(--text); margin-bottom: var(--space-10);">
+          Aujourd'hui, l'app se distribue en APK side-load (Android uniquement).
+          Pour atteindre les livreurs du grand public, il faut etre <strong>indexe
+          sur Play Store</strong> (Android, 25 USD one-time) et surtout sur
+          <strong>App Store</strong> (iOS, 99 USD/an).
+        </p>
+        <p style="font-size: 0.88rem; color: var(--text-mute);">
+          Frais admin + setup screenshots, fiches FR, conformite stores.
+        </p>
+      </div>
+
+      <div class="probsol-card sol" style="background: linear-gradient(135deg, rgba(14, 124, 90, 0.08) 0%, var(--paper) 60%);">
+        <h3 style="font-size: 1rem;">2. Materiel de test iOS</h3>
+        <p style="font-size: 0.92rem; color: var(--text); margin-bottom: var(--space-10);">
+          <strong>Apple impose un Mac</strong> (Xcode) pour compiler une app iOS,
+          et un iPhone physique reel pour valider l'UX sur device. Le fondateur
+          ne possede aujourd'hui que du materiel Android.
+        </p>
+        <p style="font-size: 0.88rem; color: var(--text-mute);">
+          Mac mini M2 (~700 EUR) + iPhone SE de test (~600 EUR) + cables / accessoires.
+        </p>
+      </div>
+
+      <div class="probsol-card sol" style="background: linear-gradient(135deg, rgba(242, 163, 65, 0.10) 0%, var(--paper) 60%);">
+        <h3 style="font-size: 1rem;">3. Phase 2 + Phase 3</h3>
+        <p style="font-size: 0.92rem; color: var(--text); margin-bottom: var(--space-10);">
+          <strong>Phase 2</strong> : backend cloud (Supabase), sync chef &harr; livreurs
+          temps reel, GPS live equipe, push cross-app, ETA SMS auto.<br>
+          <strong>Phase 3</strong> : GPS turn-by-turn integre (Mapbox), multi-vehicules,
+          Android Auto / CarPlay, integration ERP.
+        </p>
+        <p style="font-size: 0.88rem; color: var(--text-mute);">
+          C'est ce qui rend possible la monetisation (plans Equipe / Entreprise).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ USE OF FUNDS ============ -->
+  <section class="inv-section">
     <span class="eyebrow">Utilisation des fonds</span>
-    <h2>Comment seront utilises les 150 k EUR (point median)</h2>
+    <h2>Repartition des 150 k EUR (point median)</h2>
 
     <div class="funds-list">
       <div class="fund-item">
         <div class="fund-row">
-          <span class="fund-label">Recrutement &mdash; 1 dev backend Phase 2</span>
-          <span class="fund-value">60 k EUR</span>
+          <span class="fund-label">Developpement Phases 2 &amp; 3</span>
+          <span class="fund-value">70 k EUR</span>
         </div>
-        <div class="fund-bar"><div class="fund-fill" style="width: 40%;"></div></div>
-        <div class="fund-sub">Profil Flutter / Supabase, mission 12 mois : finir Phase 2 (sync multi-device, GPS live equipe, push cross-app, ETA SMS Twilio).</div>
+        <div class="fund-bar"><div class="fund-fill" style="width: 47%;"></div></div>
+        <div class="fund-sub">Backend Supabase, sync temps reel, GPS live equipe, push cross-app, ETA SMS Twilio, puis lancement Phase 3 (GPS turn-by-turn, multi-vehicules). Realise par le fondateur en plein temps + missions freelance ponctuelles (UI iOS, audit secu).</div>
       </div>
       <div class="fund-item">
         <div class="fund-row">
-          <span class="fund-label">Acquisition &mdash; marketing B2B + content SEO</span>
-          <span class="fund-value">40 k EUR</span>
+          <span class="fund-label">Marketing B2B + acquisition</span>
+          <span class="fund-value">30 k EUR</span>
         </div>
-        <div class="fund-bar"><div class="fund-fill" style="width: 27%;"></div></div>
-        <div class="fund-sub">Partenariats federations transport (FNTR, OTRE), webinars chef d'equipe, content SEO blog (guide TVA, RGPD, optimisation tournees).</div>
+        <div class="fund-bar"><div class="fund-fill" style="width: 20%;"></div></div>
+        <div class="fund-sub">Partenariats federations transport (FNTR, OTRE), webinars chef d'equipe, content SEO blog (guide TVA, RGPD, optimisation tournees), publicite ciblee Google / LinkedIn.</div>
+      </div>
+      <div class="fund-item">
+        <div class="fund-row">
+          <span class="fund-label">Salaire fondateur (12 mois)</span>
+          <span class="fund-value">20 k EUR</span>
+        </div>
+        <div class="fund-bar"><div class="fund-fill" style="width: 13%;"></div></div>
+        <div class="fund-sub">SMIC + charges sur 12 mois pour permettre la transition livreur &rarr; founder plein temps sur le produit.</div>
       </div>
       <div class="fund-item">
         <div class="fund-row">
@@ -962,31 +1024,23 @@
           <span class="fund-value">15 k EUR</span>
         </div>
         <div class="fund-bar"><div class="fund-fill" style="width: 10%;"></div></div>
-        <div class="fund-sub">Audit RGPD pro, CGU/CGV avocat, expert-comptable, statuts SAS, immatriculations.</div>
+        <div class="fund-sub">Audit RGPD pro, CGU/CGV avocat, expert-comptable, statuts SAS, immatriculations, marque deposee opti_route.</div>
       </div>
       <div class="fund-item">
         <div class="fund-row">
-          <span class="fund-label">Infrastructure cloud + APIs payantes</span>
+          <span class="fund-label">Infrastructure cloud + APIs</span>
           <span class="fund-value">10 k EUR</span>
         </div>
         <div class="fund-bar"><div class="fund-fill" style="width: 7%;"></div></div>
-        <div class="fund-sub">Supabase region UE (~30 EUR/mois &times; 12), ORS premium (10K+ optim./mois), Twilio SMS (0,008 USD/SMS), Play Store one-time 25 USD.</div>
+        <div class="fund-sub">Supabase region UE (~30 EUR/mois &times; 12), ORS premium (10K+ optim./mois), Twilio SMS (0,008 USD/SMS), Mapbox SDK (Phase 3).</div>
       </div>
       <div class="fund-item">
         <div class="fund-row">
-          <span class="fund-label">Salaire fondateur</span>
-          <span class="fund-value">20 k EUR</span>
-        </div>
-        <div class="fund-bar"><div class="fund-fill" style="width: 13%;"></div></div>
-        <div class="fund-sub">SMIC + charges sur 12 mois pour permettre la transition livreur &rarr; founder time-time.</div>
-      </div>
-      <div class="fund-item">
-        <div class="fund-row">
-          <span class="fund-label">Reserve / contingence</span>
+          <span class="fund-label">Materiel iOS + publication stores</span>
           <span class="fund-value">5 k EUR</span>
         </div>
         <div class="fund-bar"><div class="fund-fill" style="width: 3%;"></div></div>
-        <div class="fund-sub">Buffer pour opportunites (event, materiel test, devices supplementaires).</div>
+        <div class="fund-sub">Mac mini M2 (~700 EUR), iPhone SE de test (~600 EUR), Apple Developer Program (99 USD/an), Google Play Console (25 USD one-time), cables / accessoires, marge pour iPad de demo.</div>
       </div>
     </div>
   </section>
@@ -994,38 +1048,26 @@
   <!-- ============ EQUIPE ============ -->
   <section class="inv-section" id="equipe">
     <span class="eyebrow">Equipe</span>
-    <h2>Founder &amp; recrutement</h2>
+    <h2>Founder</h2>
 
     <div class="team-card">
       <div class="team-avatar">NC</div>
       <div class="team-info">
         <h3>Noah CALOTE</h3>
-        <div class="role">Founder &amp; Product</div>
+        <div class="role">Founder, Product &amp; Tech</div>
         <p>
           Chauffeur-livreur en activite. Genese du projet : la frustration
           quotidienne des bordereaux papier et de l'optimisation manuelle
           des tournees. Auto-formation Flutter en 2026 avec assistance IA,
           puis developpement integral de l'app (181+ PRs, 459 tests, schema
-          Drift v21 stable).
+          Drift v21 stable, infrastructure Phase 2 deja codee).
         </p>
         <p style="color: var(--text-mute); font-size: 0.88rem;">
           <strong>Unfair advantage :</strong> chaque journee de travail est un round de
           user research natif. Pas de friction entre l'utilisateur cible et
-          le designer du produit.
-        </p>
-      </div>
-    </div>
-
-    <div class="team-card hire">
-      <div class="team-avatar">?</div>
-      <div class="team-info">
-        <h3>Recrutement Y1 &mdash; CTO / Lead Backend</h3>
-        <div class="role">A pourvoir &mdash; 60 k EUR sur 12 mois</div>
-        <p>
-          Profil senior Flutter / Supabase / TypeScript pour le scale de la
-          Phase 2 (sync temps reel, push cross-app, observabilite, audit secu).
-          Idealement avec experience SaaS B2B et appetence pour le metier
-          terrain.
+          le designer du produit. Le fondateur execute lui-meme l'ensemble de
+          la roadmap technique et produit avec une velocite eprouvee
+          (~22 PR/mois depuis le lancement).
         </p>
       </div>
     </div>
@@ -1064,9 +1106,10 @@
       <div class="risk-card">
         <h4>Dependance fondateur unique</h4>
         <p class="mitig">
-          Si Noah s'arrete, le projet s'arrete. <strong>Mitigation :</strong>
-          recrutement CTO en Y1 (financier prevu dans le use of funds), code
-          documente et tests automatises, journaux d'architecture publies.
+          Si Noah s'arrete, le projet ralentit. <strong>Mitigation :</strong>
+          code documente, 459 tests automatises, journaux d'architecture
+          publies, infrastructure prete a etre reprise par un freelance ou
+          un futur associe technique le moment venu.
         </p>
       </div>
       <div class="risk-card">

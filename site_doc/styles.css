@@ -8,9 +8,19 @@
  * Typographie : Manrope (UI) + JetBrains Mono (chiffres / labels mono).
  */
 
-/* ===== TOKENS — palette LIME (defaut) ===== */
+/* ===== TOKENS — palettes (Lime defaut + Ocean + Terracotta + Mono) =====
+ * Synchro avec l'app Flutter (`app/lib/theme/app_tokens.dart`).
+ * Les ACCENTS (lime/emerald/amber/red) restent IDENTIQUES sur toutes
+ * les palettes pour preserver la coherence des signaux metier
+ * (vert=succes, rouge=echec, amber=warning). Seules les SURFACES
+ * (cream/ink/paper/textes) changent.
+ *
+ * Toggle :
+ *   <html data-palette="lime|ocean|terracotta|mono" data-theme="dark|<vide>">
+ * Defaut : palette=lime, mode=light (i.e. aucun attribut).
+ */
 :root {
-  /* Surfaces (mode clair) */
+  /* Surfaces (Lime light = defaut) */
   --bg: #F5F3EE;          /* cream */
   --bg-soft: #EFEAE0;     /* creamSoft */
   --paper: #FFFFFF;
@@ -22,7 +32,7 @@
   --text-mute: #5C6660;
   --text-faint: #8A9089;
 
-  /* Accents — identiques en sombre */
+  /* Accents — identiques sur toutes les palettes et les 2 modes */
   --lime: #B8F24A;
   --lime-dark: #86C72A;
   --emerald: #0E7C5A;
@@ -57,7 +67,7 @@
   --shadow-fab: 0 4px 14px rgba(14, 20, 16, 0.14);
 }
 
-/* Mode sombre */
+/* Mode sombre (Lime dark, defaut quand pas de data-palette specifie) */
 [data-theme='dark'] {
   --bg: #0E1410;
   --bg-soft: #1A211C;
@@ -69,6 +79,134 @@
   --text: #F5F3EE;
   --text-mute: rgba(245, 243, 238, 0.70);
   --text-faint: rgba(245, 243, 238, 0.50);
+}
+
+/* ===== Palette OCEAN (bleus apaisants) ===== */
+[data-palette='ocean'] {
+  --bg: #EEF4F7;
+  --bg-soft: #DDE9EE;
+  --paper: #FAFCFD;
+  --ink: #0E2A3A;
+  --ink-soft: #1A3849;
+  --ink-line: #C4D8E5;
+  --divider: rgba(14, 42, 58, 0.08);
+  --text: #0E2A3A;
+  --text-mute: #5C7080;
+  --text-faint: #8AA0B0;
+}
+[data-palette='ocean'][data-theme='dark'] {
+  --bg: #0E2A3A;
+  --bg-soft: #1A3849;
+  --paper: #1A3849;
+  --ink: #EEF4F7;
+  --ink-soft: #DDE9EE;
+  --ink-line: rgba(238, 244, 247, 0.20);
+  --divider: rgba(238, 244, 247, 0.10);
+  --text: #EEF4F7;
+  --text-mute: rgba(238, 244, 247, 0.70);
+  --text-faint: rgba(238, 244, 247, 0.50);
+}
+
+/* ===== Palette TERRACOTTA (chauds, terre cuite) ===== */
+[data-palette='terracotta'] {
+  --bg: #F6EDDF;
+  --bg-soft: #EBDFCC;
+  --paper: #FFFAF1;
+  --ink: #2D1B0E;
+  --ink-soft: #3D2818;
+  --ink-line: #E0D0B8;
+  --divider: rgba(45, 27, 14, 0.08);
+  --text: #2D1B0E;
+  --text-mute: #6E5240;
+  --text-faint: #9A8268;
+}
+[data-palette='terracotta'][data-theme='dark'] {
+  --bg: #1F1410;
+  --bg-soft: #2D2014;
+  --paper: #2D2014;
+  --ink: #F6EDDF;
+  --ink-soft: #EBDFCC;
+  --ink-line: rgba(246, 237, 223, 0.20);
+  --divider: rgba(246, 237, 223, 0.10);
+  --text: #F6EDDF;
+  --text-mute: rgba(246, 237, 223, 0.70);
+  --text-faint: rgba(246, 237, 223, 0.50);
+}
+
+/* ===== Palette MONO (epuree, noir et blanc) ===== */
+[data-palette='mono'] {
+  --bg: #FAFAFA;
+  --bg-soft: #F0F0F0;
+  --paper: #FFFFFF;
+  --ink: #111111;
+  --ink-soft: #1F1F1F;
+  --ink-line: #E0E0E0;
+  --divider: rgba(17, 17, 17, 0.08);
+  --text: #111111;
+  --text-mute: #555555;
+  --text-faint: #8A8A8A;
+}
+[data-palette='mono'][data-theme='dark'] {
+  --bg: #0A0A0A;
+  --bg-soft: #1A1A1A;
+  --paper: #1A1A1A;
+  --ink: #FAFAFA;
+  --ink-soft: #F0F0F0;
+  --ink-line: rgba(250, 250, 250, 0.20);
+  --divider: rgba(250, 250, 250, 0.10);
+  --text: #FAFAFA;
+  --text-mute: rgba(250, 250, 250, 0.70);
+  --text-faint: rgba(250, 250, 250, 0.50);
+}
+
+/* ===== SELECTEUR DE PALETTE (header) =====
+ * 4 dots colorees injectees dynamiquement par script.js dans
+ * `.nav-links` avant le `#themeToggle`. Permet a l'utilisateur de
+ * basculer entre les 4 palettes (Lime / Ocean / Terracotta / Mono)
+ * sans recharger la page. Le choix est persiste dans localStorage.
+ */
+.palette-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: var(--space-8);
+  padding-right: var(--space-8);
+  border-right: 1px solid var(--divider);
+}
+.palette-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 150ms ease, border-color 150ms ease,
+              box-shadow 150ms ease;
+  position: relative;
+}
+.palette-dot:hover {
+  transform: scale(1.18);
+}
+.palette-dot.active {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.palette-dot[data-palette-name='lime']        { background: #B8F24A; }
+.palette-dot[data-palette-name='ocean']       { background: #2196F3; }
+.palette-dot[data-palette-name='terracotta']  { background: #E67E22; }
+.palette-dot[data-palette-name='mono']        {
+  background: linear-gradient(135deg, #FAFAFA 0%, #FAFAFA 50%, #111111 50%, #111111 100%);
+}
+/* Mode sombre : la dot Mono doit rester visible meme sur fond noir */
+[data-theme='dark'] .palette-dot[data-palette-name='mono'] {
+  border-color: var(--ink-line);
+}
+
+/* Mobile : sur petits ecrans, le picker prend trop de place. On le
+ * cache, l'utilisateur garde acces au toggle dark/light + au menu
+ * burger qui pourrait l'embarquer plus tard. */
+@media (max-width: 720px) {
+  .palette-picker { display: none; }
 }
 
 /* ===== RESET / BASE ===== */

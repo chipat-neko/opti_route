@@ -1,20 +1,32 @@
 /*
- * Script commun : toggle thème clair/sombre + animations légères.
+ * Script commun : toggle thème clair/sombre + sélecteur de palette
+ * (Lime / Ocean / Terracotta / Mono) + animations légères.
  */
 
-// ---------- THEME TOGGLE ----------
+// ---------- THEME (clair/sombre) + PALETTE (Lime/Ocean/Terracotta/Mono) ----------
 (function () {
   const root = document.documentElement;
-  const btn = document.getElementById('themeToggle');
-  const icon = document.getElementById('themeIcon');
+  const THEME_KEY = 'opti_route_theme';
+  const PALETTE_KEY = 'opti_route_palette';
+  const PALETTES = ['lime', 'ocean', 'terracotta', 'mono'];
 
-  const STORAGE_KEY = 'opti_route_theme';
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved === 'dark') {
+  // ----- Boot : appliquer le thème + palette sauvegardés -----
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme === 'dark') {
     root.setAttribute('data-theme', 'dark');
-  } else if (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  } else if (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     root.setAttribute('data-theme', 'dark');
   }
+
+  const savedPalette = localStorage.getItem(PALETTE_KEY);
+  if (savedPalette && PALETTES.includes(savedPalette) && savedPalette !== 'lime') {
+    // Lime = défaut implicite (pas d'attribut), pour les autres on set.
+    root.setAttribute('data-palette', savedPalette);
+  }
+
+  // ----- Toggle dark/light (bouton lune/soleil) -----
+  const btn = document.getElementById('themeToggle');
+  const icon = document.getElementById('themeIcon');
 
   function updateIcon() {
     const isDark = root.getAttribute('data-theme') === 'dark';
@@ -36,9 +48,73 @@
       } else {
         root.removeAttribute('data-theme');
       }
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(THEME_KEY, next);
       updateIcon();
     });
+  }
+
+  // ----- Sélecteur de palette : injecté dynamiquement dans chaque
+  //       header (.nav-links) juste avant #themeToggle. Comme ça,
+  //       toutes les pages héritent du picker sans modif HTML
+  //       page-par-page. -----
+  function injectPalettePicker() {
+    // Quelle .nav-links contient le #themeToggle ? (sécurité si on a
+    // plusieurs nav-links, on cible le parent direct du toggle).
+    const target = btn ? btn.parentElement : document.querySelector('.nav-links');
+    if (!target) return;
+    // Si déjà présent (hot-reload, double-init), on ne ré-injecte pas.
+    if (target.querySelector('.palette-picker')) return;
+
+    const picker = document.createElement('div');
+    picker.className = 'palette-picker';
+    picker.setAttribute('role', 'group');
+    picker.setAttribute('aria-label', 'Choisir la palette de couleurs');
+
+    const currentPalette =
+      root.getAttribute('data-palette') ||
+      localStorage.getItem(PALETTE_KEY) ||
+      'lime';
+
+    PALETTES.forEach((name) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'palette-dot' + (name === currentPalette ? ' active' : '');
+      dot.setAttribute('data-palette-name', name);
+      dot.setAttribute(
+        'aria-label',
+        'Palette ' + name.charAt(0).toUpperCase() + name.slice(1)
+      );
+      dot.setAttribute('title',
+        'Palette ' + name.charAt(0).toUpperCase() + name.slice(1)
+      );
+      dot.addEventListener('click', () => {
+        if (name === 'lime') {
+          root.removeAttribute('data-palette');
+        } else {
+          root.setAttribute('data-palette', name);
+        }
+        localStorage.setItem(PALETTE_KEY, name);
+        // Mise à jour visuelle des dots
+        picker
+          .querySelectorAll('.palette-dot')
+          .forEach((d) => d.classList.remove('active'));
+        dot.classList.add('active');
+      });
+      picker.appendChild(dot);
+    });
+
+    // Insertion avant #themeToggle si présent, sinon en début.
+    if (btn) {
+      target.insertBefore(picker, btn);
+    } else {
+      target.prepend(picker);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectPalettePicker);
+  } else {
+    injectPalettePicker();
   }
 })();
 
