@@ -72,9 +72,11 @@
     border-color: var(--emerald);
     box-shadow: 0 0 0 3px rgba(14, 124, 90, 0.15);
   }
+  /* Carte resultat ROI : reste toujours sombre (--ink-bg/fg) sinon le
+     texte cream hardcoded devenait invisible en mode dark. */
   .roi-results {
-    background: var(--ink);
-    color: var(--bg);
+    background: var(--ink-bg);
+    color: var(--ink-fg);
     border-radius: var(--radius-18);
     padding: var(--space-22);
   }
@@ -91,14 +93,14 @@
   }
   .roi-result-label {
     font-size: 0.85rem;
-    color: rgba(245, 243, 238, 0.7);
+    color: var(--ink-fg-mute);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 700;
   }
   .roi-result-detail {
     font-size: 0.75rem;
-    color: rgba(245, 243, 238, 0.5);
+    color: var(--ink-fg-faint);
     margin-top: 4px;
   }
 
@@ -359,7 +361,7 @@
             <div class="roi-result-label">EUR economises / an</div>
             <div class="roi-result-detail">Sur la base de 12 mois</div>
           </div>
-          <p style="font-size: 0.8rem; color: rgba(245, 243, 238, 0.5); margin-top: var(--space-14); font-style: italic;">
+          <p style="font-size: 0.8rem; color: var(--ink-fg-faint); margin-top: var(--space-14); font-style: italic;">
             Estimation indicative. Les vrais gains dependent de la
             geographie, du type de colis et de la formation des
             livreurs. Phase 1 (gratuit, local) ou Phase 2 (~25-50
