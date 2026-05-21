@@ -58,14 +58,52 @@ class StopRow extends ConsumerWidget {
     final isEchec = stop.statutLivraison == 'echec';
     return Dismissible(
       key: ValueKey('stop-${stop.id}'),
-      direction: DismissDirection.endToStart,
+      // Si l'arret est deja livre, on n'autorise que le swipe vers la
+      // gauche (suppression). Sinon on autorise les 2 sens :
+      // - gauche -> droite (startToEnd) : marquer livre, vert
+      // - droite -> gauche (endToStart) : supprimer, rouge
+      direction: isLivre
+          ? DismissDirection.endToStart
+          : DismissDirection.horizontal,
+      // background = visible quand swipe gauche -> droite (startToEnd).
+      // Vert "Marquer livre" avec icone check, aligne a gauche.
       background: Container(
+        color: AppColors.emerald.withValues(alpha: 0.18),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x22),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.check_circle_outline, color: AppColors.emerald),
+            SizedBox(width: AppSpacing.x8),
+            Text(
+              'Livre',
+              style: TextStyle(
+                color: AppColors.emerald,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+      // secondaryBackground = visible quand swipe droite -> gauche
+      // (endToStart). Rouge "Supprimer" avec icone delete, aligne a droite.
+      secondaryBackground: Container(
         color: AppColors.red.withValues(alpha: 0.12),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x22),
         child: const Icon(Icons.delete_outline, color: AppColors.red),
       ),
-      confirmDismiss: (_) async {
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          // Swipe gauche -> droite : marque livre + capture GPS + haptic +
+          // SnackBar. Retourne false pour ne pas dismiss le widget (le
+          // refresh de la liste vient du watch Drift).
+          await _swipeMarkLivre(context, ref);
+          return false;
+        }
+        // Swipe droite -> gauche : delegue au parent qui ouvre la
+        // confirmation de suppression.
         onDelete();
         return false;
       },
@@ -175,6 +213,36 @@ class StopRow extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Marque l'arret livre depuis un swipe gauche -> droite. Meme logique
+  /// que [MarkLivreAction] dans [_onTap] (capture GPS + markLivre +
+  /// haptic + SnackBar + check fin de tournee), centralise ici pour ne
+  /// pas dupliquer.
+  Future<void> _swipeMarkLivre(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = ref.read(stopsRepositoryProvider);
+    final tourneesRepo = ref.read(tourneesRepositoryProvider);
+    final pos = await _captureGpsPosition();
+    await repo.markLivre(stop.id, position: pos);
+    if (!context.mounted) return;
+    unawaited(HapticFeedback.mediumImpact());
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          '${_primaryLine(stop)} '
+          'marque ${stopActionVerbParticipe(stop.type)}',
+        ),
+        backgroundColor: AppColors.emerald,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Photo preuve',
+          textColor: AppColors.ink,
+          onPressed: () => _capturerPreuve(ref, stop.id),
+        ),
+      ),
+    );
+    await _maybeFinishTournee(repo, tourneesRepo, stop.tourneeId);
   }
 
   Future<void> _onTap(BuildContext context, WidgetRef ref) async {
