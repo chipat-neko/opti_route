@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
+import '../screens/frais_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/stats_screen.dart';
 import '../screens/tableau_bord_equipe_screen.dart';
@@ -136,6 +137,22 @@ class AppDrawer extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const StatsScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Notes de frais'),
+              subtitle: const Text(
+                'Carburant, peages, parking',
+                style: TextStyle(fontSize: 11),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const FraisScreen(),
                   ),
                 );
               },

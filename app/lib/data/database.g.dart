@@ -6506,6 +6506,630 @@ class TourneeMembresCompanion extends UpdateCompanion<TourneeMembre> {
   }
 }
 
+class $FraisTable extends Frais with TableInfo<$FraisTable, Frai> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FraisTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 20,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montantCentimesMeta = const VerificationMeta(
+    'montantCentimes',
+  );
+  @override
+  late final GeneratedColumn<int> montantCentimes = GeneratedColumn<int>(
+    'montant_centimes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _libelleMeta = const VerificationMeta(
+    'libelle',
+  );
+  @override
+  late final GeneratedColumn<String> libelle = GeneratedColumn<String>(
+    'libelle',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 80,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tourneeIdMeta = const VerificationMeta(
+    'tourneeId',
+  );
+  @override
+  late final GeneratedColumn<int> tourneeId = GeneratedColumn<int>(
+    'tournee_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _photoPathMeta = const VerificationMeta(
+    'photoPath',
+  );
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+    'photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    date,
+    type,
+    montantCentimes,
+    libelle,
+    notes,
+    tourneeId,
+    photoPath,
+    creeLe,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'frais';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Frai> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('montant_centimes')) {
+      context.handle(
+        _montantCentimesMeta,
+        montantCentimes.isAcceptableOrUnknown(
+          data['montant_centimes']!,
+          _montantCentimesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantCentimesMeta);
+    }
+    if (data.containsKey('libelle')) {
+      context.handle(
+        _libelleMeta,
+        libelle.isAcceptableOrUnknown(data['libelle']!, _libelleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_libelleMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('tournee_id')) {
+      context.handle(
+        _tourneeIdMeta,
+        tourneeId.isAcceptableOrUnknown(data['tournee_id']!, _tourneeIdMeta),
+      );
+    }
+    if (data.containsKey('photo_path')) {
+      context.handle(
+        _photoPathMeta,
+        photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Frai map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Frai(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      montantCentimes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_centimes'],
+      )!,
+      libelle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}libelle'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      tourneeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tournee_id'],
+      ),
+      photoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_path'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $FraisTable createAlias(String alias) {
+    return $FraisTable(attachedDatabase, alias);
+  }
+}
+
+class Frai extends DataClass implements Insertable<Frai> {
+  final int id;
+
+  /// Date de la depense (jour, pas heure precise). Stocke en DateTime
+  /// pour faciliter les filtres par mois / annee.
+  final DateTime date;
+
+  /// Type : 'carburant', 'peage', 'parking', 'repas', 'autre'.
+  /// String libre (pas un enum Drift) pour permettre l'evolution sans
+  /// migration de schema.
+  final String type;
+
+  /// Montant en CENTIMES (entier). Evite les imprecisions float
+  /// (`15.30` -> `15.299999...`). 1235 = 12,35 EUR.
+  final int montantCentimes;
+
+  /// Libelle court (ex: "Station Total Luce", "Peage A11 sortie 4").
+  /// Max 80 chars pour rester lisible dans la liste sans wrap excessif.
+  final String libelle;
+
+  /// Notes complementaires optionnelles (numero de facture, contexte,
+  /// "remboursable par client X", etc.).
+  final String? notes;
+
+  /// Rattachement optionnel a une tournee. Null = depense generale
+  /// (carburant maison, parking permanent, etc.).
+  final int? tourneeId;
+
+  /// Chemin local de la photo du justificatif (ticket / facture).
+  /// Null si pas de photo. Stocke en
+  /// `getApplicationDocumentsDirectory()/frais_photos/<id>.jpg`.
+  final String? photoPath;
+  final DateTime creeLe;
+  final DateTime updatedAt;
+  const Frai({
+    required this.id,
+    required this.date,
+    required this.type,
+    required this.montantCentimes,
+    required this.libelle,
+    this.notes,
+    this.tourneeId,
+    this.photoPath,
+    required this.creeLe,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['date'] = Variable<DateTime>(date);
+    map['type'] = Variable<String>(type);
+    map['montant_centimes'] = Variable<int>(montantCentimes);
+    map['libelle'] = Variable<String>(libelle);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || tourneeId != null) {
+      map['tournee_id'] = Variable<int>(tourneeId);
+    }
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  FraisCompanion toCompanion(bool nullToAbsent) {
+    return FraisCompanion(
+      id: Value(id),
+      date: Value(date),
+      type: Value(type),
+      montantCentimes: Value(montantCentimes),
+      libelle: Value(libelle),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      tourneeId: tourneeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tourneeId),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
+      creeLe: Value(creeLe),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Frai.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Frai(
+      id: serializer.fromJson<int>(json['id']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      type: serializer.fromJson<String>(json['type']),
+      montantCentimes: serializer.fromJson<int>(json['montantCentimes']),
+      libelle: serializer.fromJson<String>(json['libelle']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      tourneeId: serializer.fromJson<int?>(json['tourneeId']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'date': serializer.toJson<DateTime>(date),
+      'type': serializer.toJson<String>(type),
+      'montantCentimes': serializer.toJson<int>(montantCentimes),
+      'libelle': serializer.toJson<String>(libelle),
+      'notes': serializer.toJson<String?>(notes),
+      'tourneeId': serializer.toJson<int?>(tourneeId),
+      'photoPath': serializer.toJson<String?>(photoPath),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Frai copyWith({
+    int? id,
+    DateTime? date,
+    String? type,
+    int? montantCentimes,
+    String? libelle,
+    Value<String?> notes = const Value.absent(),
+    Value<int?> tourneeId = const Value.absent(),
+    Value<String?> photoPath = const Value.absent(),
+    DateTime? creeLe,
+    DateTime? updatedAt,
+  }) => Frai(
+    id: id ?? this.id,
+    date: date ?? this.date,
+    type: type ?? this.type,
+    montantCentimes: montantCentimes ?? this.montantCentimes,
+    libelle: libelle ?? this.libelle,
+    notes: notes.present ? notes.value : this.notes,
+    tourneeId: tourneeId.present ? tourneeId.value : this.tourneeId,
+    photoPath: photoPath.present ? photoPath.value : this.photoPath,
+    creeLe: creeLe ?? this.creeLe,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Frai copyWithCompanion(FraisCompanion data) {
+    return Frai(
+      id: data.id.present ? data.id.value : this.id,
+      date: data.date.present ? data.date.value : this.date,
+      type: data.type.present ? data.type.value : this.type,
+      montantCentimes: data.montantCentimes.present
+          ? data.montantCentimes.value
+          : this.montantCentimes,
+      libelle: data.libelle.present ? data.libelle.value : this.libelle,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      tourneeId: data.tourneeId.present ? data.tourneeId.value : this.tourneeId,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Frai(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('type: $type, ')
+          ..write('montantCentimes: $montantCentimes, ')
+          ..write('libelle: $libelle, ')
+          ..write('notes: $notes, ')
+          ..write('tourneeId: $tourneeId, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    date,
+    type,
+    montantCentimes,
+    libelle,
+    notes,
+    tourneeId,
+    photoPath,
+    creeLe,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Frai &&
+          other.id == this.id &&
+          other.date == this.date &&
+          other.type == this.type &&
+          other.montantCentimes == this.montantCentimes &&
+          other.libelle == this.libelle &&
+          other.notes == this.notes &&
+          other.tourneeId == this.tourneeId &&
+          other.photoPath == this.photoPath &&
+          other.creeLe == this.creeLe &&
+          other.updatedAt == this.updatedAt);
+}
+
+class FraisCompanion extends UpdateCompanion<Frai> {
+  final Value<int> id;
+  final Value<DateTime> date;
+  final Value<String> type;
+  final Value<int> montantCentimes;
+  final Value<String> libelle;
+  final Value<String?> notes;
+  final Value<int?> tourneeId;
+  final Value<String?> photoPath;
+  final Value<DateTime> creeLe;
+  final Value<DateTime> updatedAt;
+  const FraisCompanion({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.type = const Value.absent(),
+    this.montantCentimes = const Value.absent(),
+    this.libelle = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.tourneeId = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  FraisCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime date,
+    required String type,
+    required int montantCentimes,
+    required String libelle,
+    this.notes = const Value.absent(),
+    this.tourneeId = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : date = Value(date),
+       type = Value(type),
+       montantCentimes = Value(montantCentimes),
+       libelle = Value(libelle);
+  static Insertable<Frai> custom({
+    Expression<int>? id,
+    Expression<DateTime>? date,
+    Expression<String>? type,
+    Expression<int>? montantCentimes,
+    Expression<String>? libelle,
+    Expression<String>? notes,
+    Expression<int>? tourneeId,
+    Expression<String>? photoPath,
+    Expression<DateTime>? creeLe,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (date != null) 'date': date,
+      if (type != null) 'type': type,
+      if (montantCentimes != null) 'montant_centimes': montantCentimes,
+      if (libelle != null) 'libelle': libelle,
+      if (notes != null) 'notes': notes,
+      if (tourneeId != null) 'tournee_id': tourneeId,
+      if (photoPath != null) 'photo_path': photoPath,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  FraisCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? date,
+    Value<String>? type,
+    Value<int>? montantCentimes,
+    Value<String>? libelle,
+    Value<String?>? notes,
+    Value<int?>? tourneeId,
+    Value<String?>? photoPath,
+    Value<DateTime>? creeLe,
+    Value<DateTime>? updatedAt,
+  }) {
+    return FraisCompanion(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      type: type ?? this.type,
+      montantCentimes: montantCentimes ?? this.montantCentimes,
+      libelle: libelle ?? this.libelle,
+      notes: notes ?? this.notes,
+      tourneeId: tourneeId ?? this.tourneeId,
+      photoPath: photoPath ?? this.photoPath,
+      creeLe: creeLe ?? this.creeLe,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (montantCentimes.present) {
+      map['montant_centimes'] = Variable<int>(montantCentimes.value);
+    }
+    if (libelle.present) {
+      map['libelle'] = Variable<String>(libelle.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (tourneeId.present) {
+      map['tournee_id'] = Variable<int>(tourneeId.value);
+    }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FraisCompanion(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('type: $type, ')
+          ..write('montantCentimes: $montantCentimes, ')
+          ..write('libelle: $libelle, ')
+          ..write('notes: $notes, ')
+          ..write('tourneeId: $tourneeId, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6519,6 +7143,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StopHistoryTable stopHistory = $StopHistoryTable(this);
   late final $CoequipiersTable coequipiers = $CoequipiersTable(this);
   late final $TourneeMembresTable tourneeMembres = $TourneeMembresTable(this);
+  late final $FraisTable frais = $FraisTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6533,6 +7158,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     stopHistory,
     coequipiers,
     tourneeMembres,
+    frais,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -10186,6 +10812,290 @@ typedef $$TourneeMembresTableProcessedTableManager =
       TourneeMembre,
       PrefetchHooks Function()
     >;
+typedef $$FraisTableCreateCompanionBuilder =
+    FraisCompanion Function({
+      Value<int> id,
+      required DateTime date,
+      required String type,
+      required int montantCentimes,
+      required String libelle,
+      Value<String?> notes,
+      Value<int?> tourneeId,
+      Value<String?> photoPath,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+    });
+typedef $$FraisTableUpdateCompanionBuilder =
+    FraisCompanion Function({
+      Value<int> id,
+      Value<DateTime> date,
+      Value<String> type,
+      Value<int> montantCentimes,
+      Value<String> libelle,
+      Value<String?> notes,
+      Value<int?> tourneeId,
+      Value<String?> photoPath,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+    });
+
+class $$FraisTableFilterComposer extends Composer<_$AppDatabase, $FraisTable> {
+  $$FraisTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantCentimes => $composableBuilder(
+    column: $table.montantCentimes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get libelle => $composableBuilder(
+    column: $table.libelle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tourneeId => $composableBuilder(
+    column: $table.tourneeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FraisTableOrderingComposer
+    extends Composer<_$AppDatabase, $FraisTable> {
+  $$FraisTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantCentimes => $composableBuilder(
+    column: $table.montantCentimes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get libelle => $composableBuilder(
+    column: $table.libelle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tourneeId => $composableBuilder(
+    column: $table.tourneeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FraisTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FraisTable> {
+  $$FraisTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get montantCentimes => $composableBuilder(
+    column: $table.montantCentimes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get libelle =>
+      $composableBuilder(column: $table.libelle, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get tourneeId =>
+      $composableBuilder(column: $table.tourneeId, builder: (column) => column);
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$FraisTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FraisTable,
+          Frai,
+          $$FraisTableFilterComposer,
+          $$FraisTableOrderingComposer,
+          $$FraisTableAnnotationComposer,
+          $$FraisTableCreateCompanionBuilder,
+          $$FraisTableUpdateCompanionBuilder,
+          (Frai, BaseReferences<_$AppDatabase, $FraisTable, Frai>),
+          Frai,
+          PrefetchHooks Function()
+        > {
+  $$FraisTableTableManager(_$AppDatabase db, $FraisTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FraisTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FraisTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FraisTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<int> montantCentimes = const Value.absent(),
+                Value<String> libelle = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int?> tourneeId = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => FraisCompanion(
+                id: id,
+                date: date,
+                type: type,
+                montantCentimes: montantCentimes,
+                libelle: libelle,
+                notes: notes,
+                tourneeId: tourneeId,
+                photoPath: photoPath,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime date,
+                required String type,
+                required int montantCentimes,
+                required String libelle,
+                Value<String?> notes = const Value.absent(),
+                Value<int?> tourneeId = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => FraisCompanion.insert(
+                id: id,
+                date: date,
+                type: type,
+                montantCentimes: montantCentimes,
+                libelle: libelle,
+                notes: notes,
+                tourneeId: tourneeId,
+                photoPath: photoPath,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FraisTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FraisTable,
+      Frai,
+      $$FraisTableFilterComposer,
+      $$FraisTableOrderingComposer,
+      $$FraisTableAnnotationComposer,
+      $$FraisTableCreateCompanionBuilder,
+      $$FraisTableUpdateCompanionBuilder,
+      (Frai, BaseReferences<_$AppDatabase, $FraisTable, Frai>),
+      Frai,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10208,4 +11118,6 @@ class $AppDatabaseManager {
       $$CoequipiersTableTableManager(_db, _db.coequipiers);
   $$TourneeMembresTableTableManager get tourneeMembres =>
       $$TourneeMembresTableTableManager(_db, _db.tourneeMembres);
+  $$FraisTableTableManager get frais =>
+      $$FraisTableTableManager(_db, _db.frais);
 }

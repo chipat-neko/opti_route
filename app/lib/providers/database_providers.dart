@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
+import '../data/frais_repository.dart';
 import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
@@ -89,6 +90,33 @@ final savedDestinationsRepositoryProvider =
 
 final coequipiersRepositoryProvider = Provider<CoequipiersRepository>((ref) {
   return CoequipiersRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Repository des notes de frais (carburant / peages / parking / repas /
+/// autre). Voir `tables/frais.dart` pour le schema.
+final fraisRepositoryProvider = Provider<FraisRepository>((ref) {
+  return FraisRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Stream de tous les frais, du plus recent au plus ancien. Sert a
+/// l'ecran liste principal.
+final fraisAllProvider = StreamProvider<List<Frai>>((ref) {
+  return ref.watch(fraisRepositoryProvider).watchAll();
+});
+
+/// Stream des frais d'un mois donne (year, month 1-12). Famille de
+/// providers pour permettre plusieurs filtres mois simultanes en cache.
+final fraisByMonthProvider =
+    StreamProvider.family<List<Frai>, (int, int)>((ref, ym) {
+  final (year, month) = ym;
+  return ref.watch(fraisRepositoryProvider).watchByMonth(year, month);
+});
+
+/// Stream des frais rattaches a une tournee specifique. Pour la card
+/// "Frais imputes" dans l'ecran d'une tournee.
+final fraisByTourneeProvider =
+    StreamProvider.family<List<Frai>, int>((ref, tourneeId) {
+  return ref.watch(fraisRepositoryProvider).watchByTournee(tourneeId);
 });
 
 /// Coequipiers actifs (visibles dans le selecteur d'affectation).
