@@ -13,10 +13,25 @@ import 'database_providers.dart';
 /// service non configure). Sert aux ecrans cloud (sync, partage equipe)
 /// pour montrer le bon CTA "Se connecter" ou "Se deconnecter".
 ///
-/// Emit immediatement [SupabaseService.currentUser] au mount, puis a
-/// chaque AuthState change.
+/// Emit immediatement [SupabaseService.currentUser] apres avoir attendu
+/// la fin de l'init Supabase, puis a chaque AuthState change.
+///
+/// **Bug history (fix 2026-05-21)** : sans le `await svc.init()`, le
+/// provider etait cree au boot AVANT que `unawaited(init())` dans
+/// main.dart ne termine. `_initialized` etait alors false, donc :
+///   - `svc.currentUser` -> null (init pas finie)
+///   - `svc.authStateChanges` -> Stream.empty() (se termine
+///     immediatement, le `await for` sort tout de suite)
+/// Resultat : le user qui validait son code OTP voyait son auth
+/// reussir cote API, mais le StreamProvider restait fige a `null` -> le
+/// `_SignInTile` restait affiche au lieu de `_SignedInTile`. La page de
+/// connexion semblait "revenir comme avant" apres OTP.
+///
+/// Le `await svc.init()` est idempotent (early-return si deja init),
+/// donc safe a appeler ici.
 final cloudUserProvider = StreamProvider<User?>((ref) async* {
   final svc = SupabaseService.instance;
+  await svc.init();
   yield svc.currentUser;
   await for (final event in svc.authStateChanges) {
     yield event.session?.user;
