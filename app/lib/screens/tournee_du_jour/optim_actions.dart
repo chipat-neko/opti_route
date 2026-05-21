@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
+import '../../data/local_reorder_service.dart';
 import '../../data/tile_prefetch_service.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/optimization_providers.dart';
@@ -379,6 +380,58 @@ class OptimTourneeActions {
     await ref
         .read(stopsRepositoryProvider)
         .applyOrdrePriorite(orderedIds);
+  }
+
+  /// Tri rapide local (NN haversine + 2-opt) : du plus proche au plus
+  /// loin depuis le depart, instantane, sans cle ORS. Style Spoke route
+  /// planner.
+  ///
+  /// Workflow :
+  ///   1. Charge les stops actuels (dry-run, sans modifier)
+  ///   2. Compute le nouvel ordre via [LocalReorderService.computeOrder]
+  ///   3. Affiche [OptimPreviewDialog] avec distance avant/apres
+  ///   4. Si user accepte, applique l'ordre + haptic + SnackBar
+  ///   5. Si refuse ou < 2 stops, no-op silencieux
+  ///
+  /// Extrait du screen (refactor 2026-05-21 phase 5) pour homogeneiser
+  /// avec [optimize] et [duplicatePlus7]. No-op si stops < 2.
+  static Future<void> quickSort({
+    required BuildContext context,
+    required WidgetRef ref,
+    required Tournee tournee,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final stops = await ref
+        .read(stopsRepositoryProvider)
+        .getByTournee(tournee.id);
+    if (stops.length < 2) return;
+    final proposed = LocalReorderService.computeOrder(
+      tournee: tournee,
+      stops: stops,
+    );
+    if (!context.mounted) return;
+    final accepted = await OptimPreviewDialog.show(
+      context: context,
+      tournee: tournee,
+      stops: stops,
+      proposedOrder: proposed,
+      title: 'Tri rapide : apercu',
+    );
+    if (accepted != true || !context.mounted) return;
+    await ref
+        .read(stopsRepositoryProvider)
+        .applyOptimizedOrder(proposed);
+    if (!context.mounted) return;
+    HapticFeedback.mediumImpact();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Liste triee : du plus proche au plus loin depuis ton depart',
+        ),
+        backgroundColor: AppColors.emerald,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   static String _formatDuration(int totalSeconds) {
