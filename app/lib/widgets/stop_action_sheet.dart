@@ -199,7 +199,13 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
     final hasStatut = isLivre || isEchec;
 
     return SafeArea(
-      child: Padding(
+      // SingleChildScrollView : depuis qu'on a ajoute 'Convertir en
+      // ramasse' (PR #156) la sheet depassait la hauteur disponible
+      // sur certains devices (Xiaomi Noah : BOTTOM OVERFLOWED BY 32
+      // PIXELS). On la rend scrollable pour eviter l'overflow et
+      // garantir que tous les boutons sont accessibles meme en mode
+      // paysage / petit ecran.
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.x18,
           AppSpacing.x14,
