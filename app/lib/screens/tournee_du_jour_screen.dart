@@ -2,14 +2,11 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../data/address_suggestion.dart';
-import '../data/cloud_auto_push_service.dart';
 import '../data/database.dart';
-import '../data/local_reorder_service.dart';
 import '../data/supabase_service.dart';
 import '../data/tournee_realtime_service.dart';
 import '../theme/app_tokens.dart';
@@ -22,13 +19,13 @@ import 'ajout_arret_screen.dart';
 import 'bulk_paste_screen.dart';
 import 'carte_screen.dart';
 import 'nearby_poi_screen.dart';
+import 'tournee_du_jour/auto_push_badge.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/cloud_actions.dart';
 import 'tournee_du_jour/export_actions.dart';
 import 'tournee_du_jour/fabs.dart';
 import 'tournee_du_jour/lifecycle_actions.dart';
 import 'tournee_du_jour/optim_actions.dart';
-import 'tournee_du_jour/optim_preview_dialog.dart';
 import 'tournee_du_jour/plus_menu.dart';
 import 'tournee_du_jour/stops_bulk_actions.dart';
 import 'tournee_form_screen.dart';
@@ -170,7 +167,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const _AutoPushBadge(),
+            const AutoPushBadge(),
           ],
         ),
         actions: [
@@ -410,47 +407,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         },
       );
 
-  /// Tri rapide local (NN haversine + 2-opt) : du plus proche au plus
-  /// loin depuis le depart, instantane, sans cle ORS. Style Spoke
-  /// route planner.
-  ///
-  /// Sprint 1E : montre un dialog de preview avec distance avant/apres
-  /// avant d'appliquer. Le user voit le gain potentiel et confirme.
-  Future<void> _onQuickSortPressed() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final stops = await ref
-        .read(stopsRepositoryProvider)
-        .getByTournee(widget.tournee.id);
-    if (stops.length < 2) return;
-    // Compute le nouvel ordre SANS l'appliquer (dry-run).
-    final proposed = LocalReorderService.computeOrder(
-      tournee: widget.tournee,
-      stops: stops,
-    );
-    if (!mounted) return;
-    final accepted = await OptimPreviewDialog.show(
-      context: context,
-      tournee: widget.tournee,
-      stops: stops,
-      proposedOrder: proposed,
-      title: 'Tri rapide : aperçu',
-    );
-    if (accepted != true || !mounted) return;
-    await ref
-        .read(stopsRepositoryProvider)
-        .applyOptimizedOrder(proposed);
-    if (!mounted) return;
-    HapticFeedback.mediumImpact();
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Liste triee : du plus proche au plus loin depuis ton depart',
-        ),
-        backgroundColor: AppColors.emerald,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
+  Future<void> _onQuickSortPressed() => OptimTourneeActions.quickSort(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
+      );
 
   Future<void> _onPrefetchTuilesPressed() =>
       OptimTourneeActions.prefetchTuiles(
@@ -552,52 +513,6 @@ extension _IterableLastWhereOrNull<E> on Iterable<E> {
   }
 }
 
-/// Petit indicateur discret dans l'AppBar qui montre l'etat de
-/// l'auto-push :
-/// - idle : invisible (SizedBox.shrink)
-/// - pending : icone ⟳ statique amber (debounce 5s en cours)
-/// - pushing : icone ⟳ tournant emerald (HTTP en cours)
-///
-/// Sert a rassurer Noah que ses modifs sont en cours de sauvegarde
-/// cloud sans pollution visuelle quand rien ne se passe.
-class _AutoPushBadge extends ConsumerWidget {
-  const _AutoPushBadge();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final service = ref.watch(cloudAutoPushServiceProvider);
-    return StreamBuilder<AutoPushState>(
-      stream: service.stateStream,
-      initialData: service.currentState,
-      builder: (context, snap) {
-        final state = snap.data ?? AutoPushState.idle;
-        switch (state) {
-          case AutoPushState.idle:
-            return const SizedBox.shrink();
-          case AutoPushState.pending:
-            return Tooltip(
-              message: 'Sauvegarde cloud dans 5s...',
-              child: Icon(
-                Icons.cloud_sync_outlined,
-                size: 16,
-                color: AppColors.amber.withValues(alpha: 0.7),
-              ),
-            );
-          case AutoPushState.pushing:
-            return const Tooltip(
-              message: 'Sauvegarde cloud en cours...',
-              child: SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.emerald,
-                ),
-              ),
-            );
-        }
-      },
-    );
-  }
-}
+// _AutoPushBadge -> extrait dans tournee_du_jour/auto_push_badge.dart
+// (refactor 2026-05-21 : public AutoPushBadge reutilisable).
 
