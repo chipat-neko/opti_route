@@ -898,7 +898,10 @@ table.dashboard-table {
 .badge-terminee { background: var(--bg-soft); color: var(--text-mute); }
 .badge-encours  { background: var(--lime); color: var(--ink); }
 .badge-optimisee { background: var(--emerald-soft); color: var(--emerald-dark); }
-.badge-brouillon { background: var(--ink-line); color: var(--ink); }
+/* Badge brouillon : utilise bg-soft (subtil) + text-mute pour rester
+   lisible en light ET en dark (sinon en dark : fond cream-translucide
+   + texte cream = invisible). */
+.badge-brouillon { background: var(--bg-soft); color: var(--text-mute); }
 
 .chart-wrap {
   background: var(--paper);
@@ -997,7 +1000,7 @@ table.dashboard-table {
   background: rgba(242, 161, 74, 0.32);
   transform: translateY(-1px);
 }
-body.dark .kofi-link {
+[data-theme='dark'] .kofi-link {
   color: var(--lime) !important;
 }
 
