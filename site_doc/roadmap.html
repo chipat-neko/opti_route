@@ -66,7 +66,10 @@
   }
   .phase-status.live { background: var(--emerald); color: var(--ink-fg); }
   .phase-status.next { background: var(--amber); color: var(--ink); }
-  .phase-status.later { background: var(--ink-line); color: var(--ink); }
+  /* Badge "PLUS TARD" : bg-soft + text-mute pour rester lisible en
+     light ET en dark (la version originale ink-line + ink rendait le
+     texte invisible en mode sombre : cream sur cream-translucide). */
+  .phase-status.later { background: var(--bg-soft); color: var(--text-mute); }
 
   .phase h3 { font-size: 1.4rem; margin-bottom: 2px; }
   .phase-meta { font-size: 0.85rem; color: var(--text-mute); }
