@@ -1,4 +1,5 @@
 import 'bordereau_extraction.dart';
+import 'ocr_service.dart' show OcrBlock;
 
 /// Parser pour extraire automatiquement les champs cles d'un bordereau
 /// de livraison a partir des lignes OCR.
@@ -56,6 +57,138 @@ class BordereauParser {
   );
   static final _cpRegex = RegExp(r'\b(\d{5})\b');
   static final _telRegex = RegExp(r'\b(0\d[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2})\b');
+
+  /// Parse en ciblant le GROS encadre visuel du bordereau (typiquement
+  /// celui qui contient le nom + adresse de ramasse / destinataire).
+  ///
+  /// Utilise les bounding boxes ML Kit pour :
+  /// 1. Detecter le format global (ENLEVEMENT/LIVRAISON) sur toutes les
+  ///    lignes concatenees
+  /// 2. Trouver le bloc qui contient le label prioritaire ('enlever
+  ///    chez' / 'estinataire' / 'destination') selon le format
+  /// 3. Si plusieurs blocs candidats : prendre celui qui a la plus
+  ///    grande SURFACE (= le gros encadre central visuel)
+  /// 4. Construire la "zone de scan" = ce bloc + tous les blocs qui
+  ///    chevauchent verticalement avec lui (overlap Y > 30%)
+  /// 5. Appeler [parse] sur cette zone uniquement -> elimine la
+  ///    pollution des blocs voisins (en-tete, footer, conditions
+  ///    generales)
+  ///
+  /// Si aucun bloc candidat n'est trouve (pas de label dans les blocs),
+  /// fallback sur [parse] avec toutes les lignes (comportement actuel).
+  BordereauExtraction parseFromBlocks(List<OcrBlock> blocks) {
+    if (blocks.isEmpty) return parse(const []);
+
+    // Detection format sur l'ensemble des lignes.
+    final allLines = <String>[];
+    for (final b in blocks) {
+      allLines.addAll(b.lines);
+    }
+    final format = _detectFormat(allLines);
+
+    // Ordre de priorite des marqueurs en mode bbox. ATTENTION : on
+    // EXCLUT 'destination' sur ENLEVEMENT car ce label pointe vers
+    // l'adresse de destination FINALE (Alliance PR a Voivres) et non
+    // vers le lieu de ramasse. En mode parse() plat, ML Kit melange
+    // les blocs et 'destination' tombe par chance sur le bon bloc,
+    // mais en mode bbox c'est isole donc on a la mauvaise adresse.
+    // Si 'enlever chez' et 'estinataire' echouent, on fallback sur
+    // parse(allLines) qui sait gerer le melange.
+    final markerPriority = format == BordereauFormat.enlevement
+        ? const ['enlever chez', 'estinataire']
+        : const ['estinataire', 'destination', 'enlever chez'];
+
+    // Pour chaque marqueur dans l'ordre, on cherche les blocs qui
+    // contiennent ce label (ou sont ADJACENTS verticalement a un bloc
+    // qui le contient).
+    for (final marker in markerPriority) {
+      final hits = <OcrBlock>[];
+      for (final b in blocks) {
+        for (final line in b.lines) {
+          final lower = line.toLowerCase().trim();
+          if (marker == 'estinataire') {
+            if (!lower.contains('estinataire')) continue;
+            if (lower.contains('contact')) continue;
+            if (lower.contains('ref')) continue;
+            hits.add(b);
+            break;
+          }
+          if (marker == 'destination') {
+            if (lower == 'destination' || lower.startsWith('destination ')) {
+              hits.add(b);
+              break;
+            }
+            continue;
+          }
+          if (lower.contains(marker)) {
+            hits.add(b);
+            break;
+          }
+        }
+      }
+      if (hits.isEmpty) continue;
+
+      // Plusieurs blocs contiennent le label : on prend le GROS (plus
+      // grande surface). C'est le critere visuel de Noah : "toujours
+      // dans le gros encadre".
+      hits.sort((a, b) => b.area.compareTo(a.area));
+      final anchor = hits.first;
+
+      // Zone de scan = anchor + blocs adjacents verticalement (chevauche
+      // sur l'axe Y, donc meme bande horizontale). Filtre les blocs
+      // tres petits (surface < 5% de l'anchor) qui sont du bruit.
+      final zone = <OcrBlock>[anchor];
+      for (final b in blocks) {
+        if (identical(b, anchor)) continue;
+        if (b.area < anchor.area * 0.05) continue;
+        if (_verticalOverlap(anchor, b) < 0.3) continue;
+        zone.add(b);
+      }
+      // Trier par X (gauche -> droite) puis Y (haut -> bas) pour avoir
+      // un ordre de lecture naturel.
+      zone.sort((a, b) {
+        final dx = a.left.compareTo(b.left);
+        if (dx != 0) return dx;
+        return a.top.compareTo(b.top);
+      });
+      final zoneLines = <String>[];
+      for (final b in zone) {
+        zoneLines.addAll(b.lines);
+      }
+      // On delegue a parse() qui sait deja faire le reste (filtres,
+      // fallback, format, etc) -- mais sur un sous-ensemble cible.
+      final zoneResult = parse(zoneLines);
+      // Validation du resultat cible : si le nom extrait est solide
+      // (2+ mots OU >= 8 chars), on garde. Sinon, le ciblage bbox a
+      // probablement isole un bloc parasite (header tableau, footer)
+      // et on fallback sur le parse classique de toutes les lignes
+      // qui s'en sort mieux dans ces cas-la.
+      final nom = zoneResult.nomDestinataire;
+      if (nom != null) {
+        final wordCount = nom.split(RegExp(r'\s+')).length;
+        if (wordCount >= 2 || nom.length >= 8) {
+          return zoneResult;
+        }
+      }
+      // Resultat fragment : on essaie le marqueur suivant.
+      continue;
+    }
+
+    // Aucun marqueur n'a donne un resultat solide : fallback complet.
+    return parse(allLines);
+  }
+
+  /// Ratio de chevauchement vertical entre 2 blocs (0 = aucun, 1 =
+  /// totalement contenu). Calcule par rapport au plus petit des deux.
+  static double _verticalOverlap(OcrBlock a, OcrBlock b) {
+    final overlapTop = a.top > b.top ? a.top : b.top;
+    final overlapBottom = a.bottom < b.bottom ? a.bottom : b.bottom;
+    final overlap = overlapBottom - overlapTop;
+    if (overlap <= 0) return 0;
+    final smaller = a.height < b.height ? a.height : b.height;
+    if (smaller <= 0) return 0;
+    return overlap / smaller;
+  }
 
   BordereauExtraction parse(List<String> rawLines) {
     final lines = rawLines
@@ -630,6 +763,14 @@ class BordereauParser {
       'contact',
       'a enlever',
       'à enlever',
+      // Labels transporteur Eure et Loir Acheminement (bordereau MESEXP
+      // retour) : "enleveur", "transpoteur" (typo OCR), "agence remettante"
+      'enleveur',
+      'transpoteur',
+      'transporteur',
+      'remettante',
+      'expediteur',
+      'expéditeur',
       // Labels secondaires observes 2026-05-22 (page_33-34).
       'poids',
       ' kg',

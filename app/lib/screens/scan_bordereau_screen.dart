@@ -367,7 +367,14 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         extraction = ColissimoBordereauParser().parse(result.lines);
         parserUsed = 'colissimo';
       } else {
-        extraction = BordereauParser().parse(result.lines);
+        // parseFromBlocks cible le gros encadre visuel via les bounding
+        // boxes ML Kit. Sur les MESEXP retour ou l'OCR melange l'en-tete,
+        // le tableau et les conditions generales, ca isole le bloc qui
+        // contient le nom + adresse de ramasse. Fallback parse() si pas
+        // de blocks (image trop pauvre).
+        extraction = result.blocks.isNotEmpty
+            ? BordereauParser().parseFromBlocks(result.blocks)
+            : BordereauParser().parse(result.lines);
         parserUsed = 'mesexp';
       }
       // Validation BAN post-OCR : si l'extraction a une adresse, on
