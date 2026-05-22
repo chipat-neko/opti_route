@@ -77,39 +77,45 @@ class BordereauParser {
     final colisIdx = _findIndex(lines, _markersTotalColis);
     final contactIdx = _findIndex(lines, _markersContact);
 
-    // Strategie 1 : bloc destinataire structure. On scanne jusqu'a
-    // 6 lignes du bloc apres le marqueur pour trouver le 1er candidat
-    // valide (skip labels, rues, CP/ville).
+    // Strategie 1 : bloc destinataire structure.
     //
-    // Note : le format ENLEVEMENT est detecte (cf [format]) mais on
-    // utilise la MEME logique d'extraction (1 marqueur prioritaire :
-    // estinataire > destination > enlever chez). Raison : sur les
-    // MESEXP retour observes (2026-05-22), "à enlever chez" pointe
-    // souvent vers la destination FINALE (Alliance PR) a cause de
-    // l'ordre OCR chaotique, alors que "destination" pointe vers le
-    // vrai lieu de ramasse (Garage Lanctin). Le format sert juste
-    // a etiqueter l'UI (badge RAMASSE vs LIVRAISON).
+    // Sur ENLEVEMENT (ramasse), Noah veut EXPLICITEMENT l'adresse
+    // "à enlever chez" (= lieu de ramasse), pas "destination" (= lieu
+    // de livraison finale). On essaie donc les marqueurs dans cet
+    // ordre de priorite :
+    //   1. ENLEVEMENT : "enlever chez" > "estinataire" > "destination"
+    //   2. LIVRAISON  : "estinataire" > "destination"
+    // Pour chaque marqueur, on tente l'extraction. Si le candidat
+    // trouve est solide (2+ mots OU >= 8 chars), on garde directement.
+    // Sinon on essaie le marqueur suivant ; on garde a la fin le
+    // meilleur candidat trouve (1-mot court mieux que rien).
+    final markerPriority = format == BordereauFormat.enlevement
+        ? const ['enlever chez', 'estinataire', 'destination']
+        : const ['estinataire', 'destination', 'enlever chez'];
     String? nomDest;
     String? rue;
-    if (destIdx >= 0) {
-      final endIdx = _findNextStopIndex(lines, destIdx + 1);
-      final block = lines.sublist(destIdx + 1, endIdx);
-      final maxScan = block.length < 6 ? block.length : 6;
-      int nomIdxInBlock = -1;
-      for (var i = 0; i < maxScan; i++) {
-        final candidate = block[i].trim();
-        if (_looksUnreliable(candidate)) continue;
-        if (_isObviousLabel(candidate)) continue;
-        if (_lineIsStreet(candidate)) continue;
-        if (_looksLikeStreet(candidate)) continue;
-        if (_cpRegex.hasMatch(candidate)) continue;
-        nomDest = candidate;
-        nomIdxInBlock = i;
+    ({String name, String? rue, int score})? bestFallback;
+    for (final marker in markerPriority) {
+      final cand = _tryExtractFromMarker(lines, marker);
+      if (cand == null) continue;
+      final wordCount = cand.name.split(RegExp(r'\s+')).length;
+      final isSolid = wordCount >= 2 || cand.name.length >= 8;
+      if (isSolid) {
+        nomDest = cand.name;
+        rue = cand.rue;
         break;
       }
-      if (nomDest != null && block.length > nomIdxInBlock + 1) {
-        rue = block.skip(nomIdxInBlock + 1).join(' · ');
+      // Fragment (T10, PARE, AUTO) : on garde comme fallback si rien
+      // de mieux n'arrive. Score = nb_mots * 100 + length pour
+      // departager 2 fragments entre eux.
+      final score = wordCount * 100 + cand.name.length;
+      if (bestFallback == null || score > bestFallback.score) {
+        bestFallback = (name: cand.name, rue: cand.rue, score: score);
       }
+    }
+    if (nomDest == null && bestFallback != null) {
+      nomDest = bestFallback.name;
+      rue = bestFallback.rue;
     }
 
     // Extraire l'ensemble des villes mentionnees dans le doc (sert a
@@ -282,6 +288,66 @@ class BordereauParser {
       }
     }
     return -1;
+  }
+
+  /// Cherche le 1er bloc adjacent a [marker] dans [lines] et tente d'y
+  /// trouver un candidat nom destinataire valide (skip labels, rues,
+  /// CP/ville). Retourne null si le marqueur n'est pas trouve ou si
+  /// aucun candidat valide n'est dans le bloc.
+  ///
+  /// [marker] : sous-chaine lowercase a chercher. Cas speciaux pour
+  /// "estinataire" (exclut "contact" / "ref") et "destination" (match
+  /// strict pour eviter "document d'expedition").
+  static ({String name, String? rue})? _tryExtractFromMarker(
+    List<String> lines,
+    String marker,
+  ) {
+    int idx = -1;
+    for (var i = 0; i < lines.length; i++) {
+      final lower = lines[i].toLowerCase().trim();
+      if (marker == 'estinataire') {
+        if (!lower.contains('estinataire')) continue;
+        if (lower.contains('contact')) continue;
+        if (lower.contains('ref')) continue;
+        idx = i;
+        break;
+      }
+      if (marker == 'destination') {
+        if (lower == 'destination' || lower.startsWith('destination ')) {
+          idx = i;
+          break;
+        }
+        continue;
+      }
+      if (lower.contains(marker)) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx < 0) return null;
+    final endIdx = _findNextStopIndex(lines, idx + 1);
+    final block = lines.sublist(idx + 1, endIdx);
+    final maxScan = block.length < 6 ? block.length : 6;
+    String? cand;
+    int nomIdxInBlock = -1;
+    for (var i = 0; i < maxScan; i++) {
+      final c = block[i].trim();
+      if (_looksUnreliable(c)) continue;
+      if (_isObviousLabel(c)) continue;
+      if (_lineIsStreet(c)) continue;
+      if (_looksLikeStreet(c)) continue;
+      if (_cpRegex.hasMatch(c)) continue;
+      cand = c;
+      nomIdxInBlock = i;
+      break;
+    }
+    if (cand == null) return null;
+    return (
+      name: cand,
+      rue: block.length > nomIdxInBlock + 1
+          ? block.skip(nomIdxInBlock + 1).join(' · ')
+          : null,
+    );
   }
 
   /// Detecte si le bordereau est un ENLEVEMENT (ramasse) ou une
