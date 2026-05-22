@@ -55,6 +55,8 @@ class AutoDetectionCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+              const Spacer(),
+              _FormatBadge(format: extraction.format),
             ],
           ),
           const SizedBox(height: AppSpacing.x10),
@@ -145,6 +147,8 @@ class UncertainDetectionCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+              const Spacer(),
+              _FormatBadge(format: extraction.format),
             ],
           ),
           const SizedBox(height: AppSpacing.x8),
@@ -259,6 +263,38 @@ class ExtractedRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Badge "RAMASSE" (ENLEVEMENT) ou "LIVRAISON" affiche en haut a droite
+/// des cartes de detection. Sur un bordereau ENLEVEMENT (Eure et Loir
+/// Acheminement), l'adresse extraite est le lieu de RAMASSE (= ou Noah
+/// va collecter le colis), pas un destinataire final. Le badge previent
+/// la confusion utilisateur.
+class _FormatBadge extends StatelessWidget {
+  const _FormatBadge({required this.format});
+
+  final BordereauFormat format;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnlevement = format == BordereauFormat.enlevement;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        isEnlevement ? 'RAMASSE' : 'LIVRAISON',
+        style: appMonoStyle(
+          fontSize: 10,
+          color: isEnlevement ? AppColors.lime : AppColors.cream,
+          letterSpacing: 0.6,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
