@@ -47,7 +47,9 @@ class AutoDetectionCard extends StatelessWidget {
               const Icon(Icons.auto_awesome, color: AppColors.ink, size: 18),
               const SizedBox(width: AppSpacing.x8),
               Text(
-                'DETECTION AUTOMATIQUE',
+                extraction.source == ExtractionSource.llmGemini
+                    ? 'DETECTION IA'
+                    : 'DETECTION AUTOMATIQUE',
                 style: appMonoStyle(
                   fontSize: 11,
                   color: AppColors.ink,

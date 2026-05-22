@@ -1,0 +1,11 @@
+# Configuration Supabase locale (auto-generee par `supabase init` puis
+# adaptee). Sert principalement de schema pour le deploiement des
+# Edge Functions. Le projet remote est wipxgcnpiaecpcipqnpl.
+
+project_id = "wipxgcnpiaecpcipqnpl"
+
+[functions.ocr-enhance]
+verify_jwt = true
+# verify_jwt = true : l'app doit envoyer son JWT user dans le header
+# Authorization pour appeler la function. Empeche l'abus de quota
+# Gemini par des bots qui auraient l'URL publique.

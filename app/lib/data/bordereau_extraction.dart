@@ -12,12 +12,18 @@ class BordereauExtraction {
     this.nbColis,
     this.confidence = ExtractionConfidence.high,
     this.format = BordereauFormat.livraison,
+    this.source = ExtractionSource.parserLocal,
   });
 
   /// Type de bordereau detecte. En ENLEVEMENT (ramasse), le nom et
   /// l'adresse extraits correspondent au lieu OU Noah va collecter
   /// le colis ("à enlever chez"), pas au destinataire final.
   final BordereauFormat format;
+
+  /// Provenance de l'extraction : parser local (rapide, offline) ou
+  /// LLM cloud Gemini via Supabase Edge Function (plus precis mais
+  /// requiert connexion). Sert au badge UI "Validé par IA".
+  final ExtractionSource source;
 
   /// Niveau de confiance dans le parsing.
   /// - high : tous les marqueurs trouves, donnees cross-verifiees.
@@ -79,3 +85,9 @@ enum ExtractionConfidence { high, low, none }
 ///   est "à enlever chez", pas "destination" (qui est la destination
 ///   finale ulterieure).
 enum BordereauFormat { livraison, enlevement }
+
+/// Provenance du resultat d'extraction.
+/// - `parserLocal` : parser heuristique Dart on-device (rapide, offline)
+/// - `llmGemini`   : Edge Function Supabase + Gemini Flash (plus precis,
+///                   requiert connexion + free tier 1500 req/jour)
+enum ExtractionSource { parserLocal, llmGemini }
