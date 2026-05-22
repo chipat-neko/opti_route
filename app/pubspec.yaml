@@ -103,6 +103,13 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # integration_test : permet de lancer des tests sur device reel
+  # (Android/iOS) qui peuvent utiliser les plugins comme
+  # google_mlkit_text_recognition. Indispensable pour le harness de
+  # batch eval OCR qui boucle sur N images reelles via ML Kit.
+  # Tournees via : `flutter test integration_test/<file>.dart -d <device>`.
+  integration_test:
+    sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -177,6 +184,12 @@ flutter:
   # Total : ~350 KB d'APK.
   assets:
     - assets/fonts/
+    # Fixtures pour le harness de batch eval OCR (integration_test).
+    # 38 bordereaux MESEXP/ENLEVEMENT scannes par Noah le 2026-05-22,
+    # bundles dans l'APK debug pour contourner les restrictions
+    # scoped storage Android 16. **ATTENTION** : ~14 MB d'images,
+    # a NE PAS inclure dans le build release Play Store.
+    - assets/test_bordereaux/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

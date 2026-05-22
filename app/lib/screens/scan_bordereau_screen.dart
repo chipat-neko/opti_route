@@ -409,6 +409,12 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         validationScore: validationScore,
         durationMs:
             DateTime.now().difference(scanStarted).inMilliseconds,
+        // Phase mesure terrain (mai 2026) : on logue aussi les champs
+        // extraits pour pouvoir mesurer le win rate par champ
+        // (destinataire + nb_colis) et identifier les patterns
+        // d'echec specifiques au-dela du score global.
+        extraction: extraction,
+        imageFilename: file.path.split(Platform.pathSeparator).last,
       ));
       if (!mounted) return;
       setState(() {
