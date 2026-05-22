@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentation technique — opti_route</title>
+<meta name="description" content="Architecture interne d'opti_route : Flutter, Drift, Riverpod, ML Kit, pipeline OCR bordereaux, services et conventions.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Documentation technique — opti_route">
+<meta property="og:description" content="Architecture interne d'opti_route : Flutter, Drift, Riverpod, ML Kit, pipeline OCR bordereaux.">
+<meta property="og:image" content="assets/og-cover.png">
+<meta property="og:url" content="https://chipat-neko.github.io/opti_route/site/dev.html">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0E1410">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-18);
+    margin: var(--space-22) 0;
+  }
+  .module-card {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-14);
+    padding: var(--space-18);
+  }
+  .module-card h3 {
+    margin: 0 0 var(--space-8);
+    font-size: 0.95rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--emerald);
+  }
+  .module-card p {
+    margin: 0;
+    color: var(--text-mute);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .module-card .lines {
+    display: inline-block;
+    margin-top: var(--space-8);
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg-soft);
+    color: var(--text-mute);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+  .module-card a {
+    color: var(--emerald);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .module-card a:hover { text-decoration: underline; }
+  pre.ascii {
+    background: var(--bg-soft);
+    border-radius: var(--radius-14);
+    padding: var(--space-18);
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--ink);
+    border: 1px solid var(--divider);
+  }
+  .stack-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--space-22) 0;
+  }
+  .stack-table th, .stack-table td {
+    text-align: left;
+    padding: var(--space-10) var(--space-14);
+    border-bottom: 1px solid var(--divider);
+  }
+  .stack-table th {
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 0.85rem;
+    background: var(--bg-soft);
+  }
+  .stack-table td {
+    color: var(--text-mute);
+    font-size: 0.9rem;
+  }
+  .stack-table td code {
+    background: var(--bg-soft);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .badge.green { background: var(--lime); color: var(--ink); }
+  .badge.amber { background: var(--amber); color: var(--ink); }
+  .badge.red { background: #ff6b6b; color: white; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B8F24A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z"/>
+        </svg>
+      </span>
+      opti_route
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="features.html">Features</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="dashboard.html">Dashboard</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding: var(--space-64) 0; max-width: 980px;">
+
+  <span class="eyebrow">Documentation technique</span>
+  <h1>Sous le capot.</h1>
+  <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-28);">
+    Architecture d'opti_route : 100% Flutter, 100% local par defaut.
+    Page destinee aux devs qui veulent comprendre comment ca marche
+    pour contribuer ou auditer le code.
+  </p>
+
+  <h2 style="margin-top: var(--space-44);">Stack</h2>
+  <table class="stack-table">
+    <thead>
+      <tr><th>Couche</th><th>Techno</th><th>Pourquoi</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>UI</td><td><code>Flutter</code> + Riverpod 3</td><td>Cross-platform, hot reload, ecosysteme mature</td></tr>
+      <tr><td>DB locale</td><td><code>Drift 2.33</code> (SQLite)</td><td>ORM type-safe, schema v34, migrations versionnees</td></tr>
+      <tr><td>OCR</td><td><code>google_mlkit_text_recognition</code></td><td>On-device, gratuit, marche hors-ligne</td></tr>
+      <tr><td>Code-barre</td><td><code>mobile_scanner 7</code></td><td>Camera live, detection auto Code128/EAN13/CODE39</td></tr>
+      <tr><td>Routing</td><td><code>OpenRouteService API</code></td><td>VROOM optimization, 500 req/jour gratuit</td></tr>
+      <tr><td>Geocoding</td><td><code>API BAN</code> (France) + cache</td><td>30k req/jour gratuit, adresses francaises officielles</td></tr>
+      <tr><td>Cloud (opt-in)</td><td><code>Supabase</code></td><td>Auth + Storage + Edge Functions (sync chef/livreurs)</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top: var(--space-44);">Pattern : Data / Provider / UI</h2>
+  <p>Regle d'or : un screen ne fait pas de SQL direct. Il passe par un
+  repository via un provider Riverpod. Cela rend les screens testables
+  sans DB.</p>
+  <pre class="ascii">
+┌──────────────────────────────────────────────────────────┐
+│  UI (screens/, widgets/)                                 │
+│    ref.watch(xxxProvider) -> AsyncValue&lt;T&gt;                │
+│    ref.read(xxxRepoProvider).method()                    │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+┌────────────────────▼─────────────────────────────────────┐
+│  Providers (providers/)                                  │
+│    final xxxRepoProvider = Provider&lt;XxxRepo&gt;(...);        │
+│    final xxxStreamProvider = StreamProvider&lt;List&lt;T&gt;&gt;(...) │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+┌────────────────────▼─────────────────────────────────────┐
+│  Data (data/)                                            │
+│    XxxRepository : CRUD pur sur 1 table Drift            │
+│    XxxService    : logique composee (plusieurs tables    │
+│                     + APIs externes + calculs)           │
+│    AppDatabase   : singleton Drift, gere migrations      │
+└──────────────────────────────────────────────────────────┘
+  </pre>
+
+  <h2 style="margin-top: var(--space-44);">Pipeline OCR bordereaux</h2>
+  <p>Le pipeline d'extraction OCR des bordereaux papier est le morceau
+  le plus sophistique. Refactore en Sprint 1 + 2 (mai 2026) en plusieurs
+  modules avec single responsibility.</p>
+
+  <div class="module-grid">
+    <div class="module-card">
+      <h3>bordereau_patterns.dart</h3>
+      <p>Regex centralisees pour CP, ville, telephone, rues, tracking, etc.
+      Source unique de verite partagee par les 3 parseurs.</p>
+      <span class="lines">110 L</span>
+      <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/bordereau_patterns.dart">Voir le code →</a>
+    </div>
+    <div class="module-card">
+      <h3>bordereau_text_filters.dart</h3>
+      <p>Helpers de rejet : isObviousLabel, looksLikeStreet, looksLikeCity,
+      looksUnreliable (30+ labels metier observes sur les bordereaux Eure
+      et Loir Acheminement).</p>
+      <span class="lines">226 L</span>
+      <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/bordereau_text_filters.dart">Voir le code →</a>
+    </div>
+    <div class="module-card">
+      <h3>bordereau_format_detector.dart</h3>
+      <p>Detection automatique ENLEVEMENT vs LIVRAISON sur 5 cles
+      (label majuscules, "enlever chez", "d'enlevement", etc).</p>
+      <span class="lines">41 L</span>
+      <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/bordereau_format_detector.dart">Voir le code →</a>
+    </div>
+    <div class="module-card">
+      <h3>bordereau_parser.dart</h3>
+      <p>Orchestration multi-marqueurs + ciblage du gros encadre via
+      les bounding boxes ML Kit (parseFromBlocks).</p>
+      <span class="lines">749 L</span>
+      <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/bordereau_parser.dart">Voir le code →</a>
+    </div>
+    <div class="module-card">
+      <h3>image_preprocess_service.dart</h3>
+      <p>Bake EXIF orientation + boost contraste + auto-crop bordereau +
+      detection de flou (variance Laplacien Sprint 2.C).</p>
+      <span class="lines">~240 L</span>
+      <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/image_preprocess_service.dart">Voir le code →</a>
+    </div>
+    <div class="module-card">
+      <h3>client_memory_service.dart</h3>
+      <p>Fuzzy match Levenshtein contre le carnet d'adresses local.
+      Sur les clients deja livres, remplace nom + adresse OCR par les
+      donnees validees du carnet (Sprint 2.A).</p>
+      <span class="lines">152 L</span>
+      <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/client_memory_service.dart">Voir le code →</a>
+    </div>
+    <div class="module-card">
+      <h3>ocr_llm_enhance_service.dart</h3>
+      <p>Edge Function Supabase + Gemini Flash pour les cas difficiles.
+      <span class="badge amber">Optionnel</span> Free tier 1500 req/jour.
+      PR #202 mergee mais pas encore deployee.</p>
+      <span class="lines">~150 L</span>
+      <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/ocr_llm_enhance_service.dart">Voir le code →</a>
+    </div>
+  </div>
+
+  <h2 style="margin-top: var(--space-44);">Modes de detection (provenance UI)</h2>
+  <p>Selon la source, l'UI affiche un badge different sur la carte de
+  detection :</p>
+  <table class="stack-table">
+    <thead>
+      <tr><th>Badge</th><th>Source</th><th>Quand</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge green">DETECTION AUTOMATIQUE</span></td><td>parser local</td><td>Defaut, 100% offline</td></tr>
+      <tr><td><span class="badge green">MEMOIRE CLIENT</span></td><td>carnet adresses</td><td>Match fuzzy sur client deja livre</td></tr>
+      <tr><td><span class="badge green">DETECTION IA</span></td><td>Gemini cloud</td><td>Online, si Edge Function deployee</td></tr>
+      <tr><td><span class="badge amber">DETECTION INCERTAINE</span></td><td>parser local low conf</td><td>Donnees partielles ou fragments OCR</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top: var(--space-44);">Tests</h2>
+  <table class="stack-table">
+    <thead>
+      <tr><th>Type</th><th>Couverture</th><th>Fichiers</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Unit (data)</td><td><span class="badge green">73%</span></td><td>48/66 fichiers</td></tr>
+      <tr><td>Integration (flow)</td><td><span class="badge amber">2%</span></td><td>tournee + bordereau_scan</td></tr>
+      <tr><td>Integration_test (camera reelle)</td><td>1</td><td>bordereau_batch_eval (38 images)</td></tr>
+      <tr><td>Widget</td><td><span class="badge red">3%</span></td><td>3/81 ecrans (axe priorite)</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.9rem; color: var(--text-mute);">
+    Lancer tous les tests :
+    <code>cd app &amp;&amp; flutter test</code>
+    (<strong>810/810 verts</strong> au 2026-05-22).
+  </p>
+
+  <h2 style="margin-top: var(--space-44);">Pour aller plus loin</h2>
+  <ul style="line-height: 1.8;">
+    <li>📖 <a href="https://github.com/chipat-neko/opti_route/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> sur GitHub (version complete avec migrations Drift, conventions, etc)</li>
+    <li>📋 <a href="roadmap.html">Roadmap</a> des features a venir</li>
+    <li>🔧 <a href="features.html">Liste des features</a> deployees</li>
+    <li>💾 <a href="https://github.com/chipat-neko/opti_route/blob/main/docs/supabase-schema.sql">Schema cloud Supabase</a></li>
+    <li>🤝 <a href="https://github.com/chipat-neko/opti_route">Repo GitHub</a> (issues, PRs)</li>
+  </ul>
+
+  <p style="margin-top: var(--space-44); font-size: 0.85rem; color: var(--text-mute); border-top: 1px solid var(--divider); padding-top: var(--space-22);">
+    Page generee dans le cadre du Sprint 3.D du refactor d'audit du 2026-05-22.
+    Le projet evolue vite — verifie la date des PRs sur GitHub pour le contenu a jour.
+  </p>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-copy">
+      <a href="index.html">opti_route</a> · Phase 1 gratuit ·
+      <a href="mentions-legales.html">Mentions legales</a> ·
+      <span class="mono">© CALOTE Noah, 2026</span> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
+    </p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
