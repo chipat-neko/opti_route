@@ -83,6 +83,73 @@ class ImagePreprocessService {
     return _writeTemp(encoded);
   }
 
+  /// Detecte si une image est trop FLOUE pour donner un OCR fiable.
+  ///
+  /// Methode : variance du Laplacien. On convolutionne l'image
+  /// grayscale avec un kernel Laplacien 3x3, puis on calcule la
+  /// variance des valeurs resultantes. Une image nette a beaucoup de
+  /// transitions abruptes (bords) -> haute variance. Une image floue
+  /// a des gradients lisses -> faible variance.
+  ///
+  /// Seuils typiques (sur image 1080p) :
+  /// - variance > 200 : tres net (OCR optimal)
+  /// - variance 50-200 : acceptable (OCR fonctionne)
+  /// - variance < 50 : trop floue (OCR va probablement rater)
+  ///
+  /// Retourne la valeur de variance (0 = uniforme, ~1000+ = tres
+  /// net). Le caller decide du seuil ([blurThreshold] default 50).
+  ///
+  /// Cout : ~50-200ms pour une image 1080p (downsamplee en interne
+  /// a 480p pour accelerer). Best-effort : si decode echoue, retourne
+  /// double.maxFinite (= net, ne bloque pas le flow OCR).
+  ///
+  /// Sprint 2.C audit refactor 2026-05-22.
+  Future<double> detectBlur(File source) async {
+    try {
+      final bytes = await source.readAsBytes();
+      var decoded = img.decodeImage(bytes);
+      if (decoded == null) return double.maxFinite;
+      decoded = img.bakeOrientation(decoded);
+      // Downsample a 480 px de large max pour rapidite. La variance
+      // du Laplacien est relativement robuste au downscale.
+      if (decoded.width > 480) {
+        decoded = img.copyResize(decoded, width: 480);
+      }
+      final gray = img.grayscale(decoded);
+      final w = gray.width;
+      final h = gray.height;
+      // Kernel Laplacien 3x3 : [0,1,0;1,-4,1;0,1,0]. On parcourt
+      // l'interieur (1..w-2, 1..h-2) et on accumule les valeurs.
+      final values = <double>[];
+      for (var y = 1; y < h - 1; y++) {
+        for (var x = 1; x < w - 1; x++) {
+          final c = gray.getPixel(x, y).luminance;
+          final up = gray.getPixel(x, y - 1).luminance;
+          final down = gray.getPixel(x, y + 1).luminance;
+          final left = gray.getPixel(x - 1, y).luminance;
+          final right = gray.getPixel(x + 1, y).luminance;
+          final lap = up + down + left + right - 4 * c;
+          values.add(lap.toDouble());
+        }
+      }
+      if (values.isEmpty) return double.maxFinite;
+      // Variance = moyenne des (x - mean)^2.
+      var sum = 0.0;
+      for (final v in values) {
+        sum += v;
+      }
+      final mean = sum / values.length;
+      var sq = 0.0;
+      for (final v in values) {
+        final d = v - mean;
+        sq += d * d;
+      }
+      return sq / values.length;
+    } catch (_) {
+      return double.maxFinite; // ne bloque pas le flow OCR
+    }
+  }
+
   /// Version "exif-only" : ne fait QUE baker l'orientation EXIF.
   /// Utile en preview (preview a 0 cout) avant decider d'enhancer plus.
   Future<File> bakeExifOnly(File source) async {

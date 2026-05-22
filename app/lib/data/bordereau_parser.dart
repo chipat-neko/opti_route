@@ -383,7 +383,7 @@ class BordereauParser {
     // - high : on a un nom + au moins (rue ou cp+ville)
     // - low : on a quelque chose mais c'est partiel ou ambigu
     // - none : aucun champ utile
-    final ExtractionConfidence confidence;
+    ExtractionConfidence confidence;
     final hasNom = nomDest != null && nomDest.isNotEmpty;
     final hasRue = rue != null && rue.isNotEmpty;
     final hasVille = (cp != null && cp.isNotEmpty) ||
@@ -398,6 +398,18 @@ class BordereauParser {
       confidence = ExtractionConfidence.none;
     }
 
+    // Heuristique Sprint 2.B : si le nom est un fragment 1-mot court
+    // (PEINTURE, TUBE, AUTO, BRANLY...), c'est presque toujours un
+    // mot decoupe par ML Kit, pas le vrai nom client. On retrograde
+    // a "low" pour que l'UI affiche la carte orange "incertain" plutot
+    // qu'une carte verte trompeuse. Whitelist pour les vrais noms
+    // courts d'entreprise (cas baseline_test NOVA).
+    if (confidence == ExtractionConfidence.high && nomDest != null) {
+      if (_isLikelyOcrFragment(nomDest)) {
+        confidence = ExtractionConfidence.low;
+      }
+    }
+
     return BordereauExtraction(
       nomDestinataire: nomDest,
       rue: rue,
@@ -408,6 +420,27 @@ class BordereauParser {
       confidence: confidence,
       format: format,
     );
+  }
+
+  /// Vrai si [name] ressemble a un fragment OCR plutot qu'a un vrai
+  /// nom d'entreprise : 1 seul mot court (< 10 chars) qui n'est PAS
+  /// dans la whitelist des noms courts connus (NOVA, IBM, BIC, etc).
+  ///
+  /// Heuristique Sprint 2.B : sur les bordereaux mal cadres, ML Kit
+  /// extrait souvent juste un fragment du nom (ex: "PEINTURE" au lieu
+  /// de "BROSSE PEINTURE", "AUTO" au lieu de "GS AUTO"). Plutot que
+  /// d'afficher une carte verte trompeuse, on retrograde a "low" pour
+  /// inviter l'utilisateur a verifier.
+  static bool _isLikelyOcrFragment(String name) {
+    final trimmed = name.trim();
+    if (trimmed.contains(' ')) return false; // multi-mots = OK
+    if (trimmed.length >= 10) return false; // mot long = sans doute OK
+    const knownShortNames = {
+      'NOVA', 'IBM', 'BMW', 'BIC', 'FA45', 'EDF', 'GDF',
+      'SNCF', 'RATP', 'LIDL', 'IKEA', 'ZARA', 'FNAC',
+    };
+    if (knownShortNames.contains(trimmed.toUpperCase())) return false;
+    return true;
   }
 
   static int _findIndex(List<String> lines, List<String> markers) {

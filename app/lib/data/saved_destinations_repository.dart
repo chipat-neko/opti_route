@@ -151,6 +151,19 @@ class SavedDestinationsRepository {
     return buf.toString();
   }
 
+  /// Renvoie tout le carnet en une fois (pour les services qui font
+  /// du fuzzy matching en memoire comme [ClientMemoryService]). Trie
+  /// favoris > useCount > lastUsedAt comme [watchAll].
+  Future<List<SavedDestination>> getAll() {
+    final select = _db.select(_db.savedDestinations)
+      ..orderBy([
+        (d) => OrderingTerm.desc(d.isFavori),
+        (d) => OrderingTerm.desc(d.useCount),
+        (d) => OrderingTerm.desc(d.lastUsedAt),
+      ]);
+    return select.get();
+  }
+
   Stream<List<SavedDestination>> watchAll() {
     final select = _db.select(_db.savedDestinations)
       ..orderBy([

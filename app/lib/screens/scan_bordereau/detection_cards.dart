@@ -47,9 +47,7 @@ class AutoDetectionCard extends StatelessWidget {
               const Icon(Icons.auto_awesome, color: AppColors.ink, size: 18),
               const SizedBox(width: AppSpacing.x8),
               Text(
-                extraction.source == ExtractionSource.llmGemini
-                    ? 'DETECTION IA'
-                    : 'DETECTION AUTOMATIQUE',
+                _sourceLabel(extraction.source),
                 style: appMonoStyle(
                   fontSize: 11,
                   color: AppColors.ink,
@@ -267,6 +265,22 @@ class ExtractedRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Libelle du badge "source" affiche en haut des cartes detection.
+/// Distingue d'ou vient le resultat extrait :
+/// - "DETECTION AUTOMATIQUE" : parser heuristique local
+/// - "MEMOIRE CLIENT"        : carnet d'adresses local (fuzzy match)
+/// - "DETECTION IA"          : Gemini Flash via Edge Function Supabase
+String _sourceLabel(ExtractionSource source) {
+  switch (source) {
+    case ExtractionSource.clientMemory:
+      return 'MEMOIRE CLIENT';
+    case ExtractionSource.llmGemini:
+      return 'DETECTION IA';
+    case ExtractionSource.parserLocal:
+      return 'DETECTION AUTOMATIQUE';
   }
 }
 
