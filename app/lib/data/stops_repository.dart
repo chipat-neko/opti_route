@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import 'database.dart';
@@ -67,6 +69,72 @@ class StopsRepository {
   Future<int> setCoequipier(int stopId, int? coequipierId) {
     return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
         .write(StopsCompanion(coequipierId: Value(coequipierId)));
+  }
+
+  /// Incremente le compteur `nbColis` de [delta] (typiquement +1 quand
+  /// Noah scanne un code-barre supplementaire pour un client existant)
+  /// ET append le numero de tracking a la liste JSON `tracking_numbers`
+  /// si fourni. Idempotent sur le tracking : si le numero est deja
+  /// present dans la liste, on n'incremente PAS (anti-double-scan).
+  ///
+  /// Retourne true si l'arret a effectivement ete incremente, false si
+  /// le tracking etait deja present (donc no-op).
+  Future<bool> incrementColisWithTracking(
+    int stopId, {
+    required String trackingNumber,
+    int delta = 1,
+  }) async {
+    final stop = await getById(stopId);
+    if (stop == null) return false;
+    final existing = _parseTrackingList(stop.trackingNumbers);
+    if (existing.contains(trackingNumber)) return false;
+    existing.add(trackingNumber);
+    await (_db.update(_db.stops)..where((s) => s.id.equals(stopId))).write(
+      StopsCompanion(
+        nbColis: Value(stop.nbColis + delta),
+        trackingNumbers: Value(_encodeTrackingList(existing)),
+      ),
+    );
+    return true;
+  }
+
+  /// Cherche dans tous les stops de [tourneeId] celui qui contient deja
+  /// [trackingNumber] dans sa liste JSON tracking_numbers. Retourne null
+  /// si aucun stop ne le contient. Utile pour decider entre incrementer
+  /// un stop existant ou en creer un nouveau au scan code-barre.
+  Future<Stop?> findByTrackingInTournee(
+    int tourneeId,
+    String trackingNumber,
+  ) async {
+    final stops = await getByTournee(tourneeId);
+    for (final s in stops) {
+      final list = _parseTrackingList(s.trackingNumbers);
+      if (list.contains(trackingNumber)) return s;
+    }
+    return null;
+  }
+
+  /// Parse la liste JSON de tracking numbers d'un stop. Format
+  /// `["FA28...","FA28..."]`. Tolere null / format casse en retournant
+  /// liste vide.
+  static List<String> _parseTrackingList(String? raw) {
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded
+            .whereType<String>()
+            .where((s) => s.isNotEmpty)
+            .toList();
+      }
+    } catch (_) {
+      // Format casse : on traite comme liste vide.
+    }
+    return [];
+  }
+
+  static String _encodeTrackingList(List<String> items) {
+    return jsonEncode(items);
   }
 
   /// Bascule le type d'un arret entre 'livraison' et 'ramasse'. Sert au

@@ -22,12 +22,14 @@ class Fabs extends StatelessWidget {
     required this.onAjouter,
     required this.onDemarrer,
     required this.onArreter,
+    required this.onScannerColis,
   });
 
   final Tournee tournee;
   final VoidCallback onAjouter;
   final VoidCallback onDemarrer;
   final VoidCallback onArreter;
+  final VoidCallback onScannerColis;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +65,18 @@ class Fabs extends StatelessWidget {
             ),
           ),
         if (isOptimisee || isEnCours) const SizedBox(height: AppSpacing.x10),
+        // Mini FAB scanner code-barre colis. Place au-dessus du FAB
+        // principal "Ajouter un arret" pour acces rapide en plein
+        // workflow (Noah scanne plusieurs colis a la suite).
+        FloatingActionButton.small(
+          heroTag: 'fab-scanner-colis',
+          backgroundColor: AppColors.lime,
+          foregroundColor: p.ink,
+          onPressed: onScannerColis,
+          tooltip: 'Scanner code-barre colis',
+          child: const Icon(Icons.qr_code_scanner_outlined),
+        ),
+        const SizedBox(height: AppSpacing.x10),
         FloatingActionButton.extended(
           heroTag: 'fab-ajouter',
           onPressed: onAjouter,
