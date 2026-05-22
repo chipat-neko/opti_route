@@ -128,7 +128,12 @@ void main() {
             continue;
           }
 
-          final extraction = parser.parse(rotated.result.lines);
+          // parseFromBlocks utilise les bounding boxes ML Kit pour
+          // cibler le gros encadre visuel (vs parse sur toutes les
+          // lignes a plat). Fallback transparent si pas de blocks.
+          final extraction = rotated.result.blocks.isNotEmpty
+              ? parser.parseFromBlocks(rotated.result.blocks)
+              : parser.parse(rotated.result.lines);
           final raw = rotated.result.lines.take(5).join(' | ');
 
           csvLines.add([

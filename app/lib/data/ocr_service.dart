@@ -22,21 +22,39 @@ class OcrService {
   /// Reconnait le texte dans une image et retourne :
   ///   - `fullText` : tout le texte detecte concatene
   ///   - `lines` : liste des lignes individuelles (pour selection UI)
+  ///   - `blocks` : groupes de lignes visuellement adjacentes (avec leur
+  ///     bounding box). Permet au parser bordereau de cibler le GROS
+  ///     encadre central qui contient le nom + adresse de ramasse.
   Future<OcrResult> extractFromFile(File image) async {
     final input = InputImage.fromFile(image);
     final recognized = await _recognizer.processImage(input);
 
     final lines = <String>[];
+    final blocks = <OcrBlock>[];
     for (final block in recognized.blocks) {
+      final blockLines = <String>[];
       for (final line in block.lines) {
         final text = line.text.trim();
-        if (text.isNotEmpty) lines.add(text);
+        if (text.isNotEmpty) {
+          lines.add(text);
+          blockLines.add(text);
+        }
+      }
+      if (blockLines.isNotEmpty) {
+        blocks.add(OcrBlock(
+          lines: blockLines,
+          left: block.boundingBox.left,
+          top: block.boundingBox.top,
+          right: block.boundingBox.right,
+          bottom: block.boundingBox.bottom,
+        ));
       }
     }
 
     return OcrResult(
       fullText: recognized.text,
       lines: lines,
+      blocks: blocks,
     );
   }
 
@@ -182,10 +200,44 @@ class OcrService {
 
 /// Resultat brut d'un OCR (sortie de [OcrService.extractFromFile]).
 class OcrResult {
-  const OcrResult({required this.fullText, required this.lines});
+  const OcrResult({
+    required this.fullText,
+    required this.lines,
+    this.blocks = const [],
+  });
 
   final String fullText;
   final List<String> lines;
+
+  /// Groupes de lignes visuellement adjacentes detectes par ML Kit,
+  /// avec leur bounding box dans l'image source. Sert au parser
+  /// bordereau pour cibler le GROS encadre central (par surface ou
+  /// par presence du label "à enlever chez" / "destination") et
+  /// ignorer le reste (en-tete, footer, blocs voisins).
+  final List<OcrBlock> blocks;
+}
+
+/// Bloc visuel detecte par ML Kit : un groupe de lignes adjacentes
+/// (typiquement une colonne ou un encadre du bordereau) + sa position
+/// dans l'image source en pixels.
+class OcrBlock {
+  const OcrBlock({
+    required this.lines,
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+  });
+
+  final List<String> lines;
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+
+  double get width => right - left;
+  double get height => bottom - top;
+  double get area => width * height;
 }
 
 /// Resultat enrichi de [OcrService.extractFromFileWithRotations] :
