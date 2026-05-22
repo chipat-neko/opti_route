@@ -1654,6 +1654,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _trackingNumbersMeta = const VerificationMeta(
+    'trackingNumbers',
+  );
+  @override
+  late final GeneratedColumn<String> trackingNumbers = GeneratedColumn<String>(
+    'tracking_numbers',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1683,6 +1694,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     cloudId,
     cloudPhotoPath,
     updatedAt,
+    trackingNumbers,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1892,6 +1904,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('tracking_numbers')) {
+      context.handle(
+        _trackingNumbersMeta,
+        trackingNumbers.isAcceptableOrUnknown(
+          data['tracking_numbers']!,
+          _trackingNumbersMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2009,6 +2030,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      trackingNumbers: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tracking_numbers'],
+      ),
     );
   }
 
@@ -2100,6 +2125,19 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// Voir `Tournees.updatedAt` pour le pattern complet (trigger SQLite
   /// + last-write-wins au pull).
   final DateTime updatedAt;
+
+  /// Numeros de tracking (codes-barres) des colis scannes pour cet arret.
+  /// Format JSON list de strings, ex: `["FA280000440358","FA280000440359"]`.
+  /// Null = aucun colis scanne (creation manuelle / via bordereau OCR).
+  ///
+  /// Workflow : sur ScanColisScreen, chaque scan code-barre cherche les
+  /// arrets de la tournee active dont ce numero est deja dans la liste.
+  /// Si trouve -> +1 colis sur cet arret. Sinon -> nouvel arret cree avec
+  /// le code comme 1er element + nb_colis = 1.
+  ///
+  /// Sert aussi a eviter les doublons : un meme code-barre ne peut pas
+  /// etre compte 2x meme si Noah scanne le meme colis 2 fois par erreur.
+  final String? trackingNumbers;
   const Stop({
     required this.id,
     required this.tourneeId,
@@ -2128,6 +2166,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.cloudId,
     this.cloudPhotoPath,
     required this.updatedAt,
+    this.trackingNumbers,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2193,6 +2232,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       map['cloud_photo_path'] = Variable<String>(cloudPhotoPath);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || trackingNumbers != null) {
+      map['tracking_numbers'] = Variable<String>(trackingNumbers);
+    }
     return map;
   }
 
@@ -2255,6 +2297,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ? const Value.absent()
           : Value(cloudPhotoPath),
       updatedAt: Value(updatedAt),
+      trackingNumbers: trackingNumbers == null && nullToAbsent
+          ? const Value.absent()
+          : Value(trackingNumbers),
     );
   }
 
@@ -2293,6 +2338,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       cloudId: serializer.fromJson<String?>(json['cloudId']),
       cloudPhotoPath: serializer.fromJson<String?>(json['cloudPhotoPath']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      trackingNumbers: serializer.fromJson<String?>(json['trackingNumbers']),
     );
   }
   @override
@@ -2326,6 +2372,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'cloudId': serializer.toJson<String?>(cloudId),
       'cloudPhotoPath': serializer.toJson<String?>(cloudPhotoPath),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'trackingNumbers': serializer.toJson<String?>(trackingNumbers),
     };
   }
 
@@ -2357,6 +2404,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<String?> cloudId = const Value.absent(),
     Value<String?> cloudPhotoPath = const Value.absent(),
     DateTime? updatedAt,
+    Value<String?> trackingNumbers = const Value.absent(),
   }) => Stop(
     id: id ?? this.id,
     tourneeId: tourneeId ?? this.tourneeId,
@@ -2395,6 +2443,9 @@ class Stop extends DataClass implements Insertable<Stop> {
         ? cloudPhotoPath.value
         : this.cloudPhotoPath,
     updatedAt: updatedAt ?? this.updatedAt,
+    trackingNumbers: trackingNumbers.present
+        ? trackingNumbers.value
+        : this.trackingNumbers,
   );
   Stop copyWithCompanion(StopsCompanion data) {
     return Stop(
@@ -2449,6 +2500,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ? data.cloudPhotoPath.value
           : this.cloudPhotoPath,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      trackingNumbers: data.trackingNumbers.present
+          ? data.trackingNumbers.value
+          : this.trackingNumbers,
     );
   }
 
@@ -2481,7 +2535,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('creeLe: $creeLe, ')
           ..write('cloudId: $cloudId, ')
           ..write('cloudPhotoPath: $cloudPhotoPath, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('trackingNumbers: $trackingNumbers')
           ..write(')'))
         .toString();
   }
@@ -2515,6 +2570,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     cloudId,
     cloudPhotoPath,
     updatedAt,
+    trackingNumbers,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2546,7 +2602,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.creeLe == this.creeLe &&
           other.cloudId == this.cloudId &&
           other.cloudPhotoPath == this.cloudPhotoPath &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.trackingNumbers == this.trackingNumbers);
 }
 
 class StopsCompanion extends UpdateCompanion<Stop> {
@@ -2577,6 +2634,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<String?> cloudId;
   final Value<String?> cloudPhotoPath;
   final Value<DateTime> updatedAt;
+  final Value<String?> trackingNumbers;
   const StopsCompanion({
     this.id = const Value.absent(),
     this.tourneeId = const Value.absent(),
@@ -2605,6 +2663,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.cloudId = const Value.absent(),
     this.cloudPhotoPath = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.trackingNumbers = const Value.absent(),
   });
   StopsCompanion.insert({
     this.id = const Value.absent(),
@@ -2634,6 +2693,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.cloudId = const Value.absent(),
     this.cloudPhotoPath = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.trackingNumbers = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
   static Insertable<Stop> custom({
@@ -2664,6 +2724,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<String>? cloudId,
     Expression<String>? cloudPhotoPath,
     Expression<DateTime>? updatedAt,
+    Expression<String>? trackingNumbers,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2693,6 +2754,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (cloudId != null) 'cloud_id': cloudId,
       if (cloudPhotoPath != null) 'cloud_photo_path': cloudPhotoPath,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (trackingNumbers != null) 'tracking_numbers': trackingNumbers,
     });
   }
 
@@ -2724,6 +2786,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<String?>? cloudId,
     Value<String?>? cloudPhotoPath,
     Value<DateTime>? updatedAt,
+    Value<String?>? trackingNumbers,
   }) {
     return StopsCompanion(
       id: id ?? this.id,
@@ -2753,6 +2816,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       cloudId: cloudId ?? this.cloudId,
       cloudPhotoPath: cloudPhotoPath ?? this.cloudPhotoPath,
       updatedAt: updatedAt ?? this.updatedAt,
+      trackingNumbers: trackingNumbers ?? this.trackingNumbers,
     );
   }
 
@@ -2840,6 +2904,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (trackingNumbers.present) {
+      map['tracking_numbers'] = Variable<String>(trackingNumbers.value);
+    }
     return map;
   }
 
@@ -2872,7 +2939,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('creeLe: $creeLe, ')
           ..write('cloudId: $cloudId, ')
           ..write('cloudPhotoPath: $cloudPhotoPath, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('trackingNumbers: $trackingNumbers')
           ..write(')'))
         .toString();
   }
@@ -7869,6 +7937,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<String?> cloudId,
       Value<String?> cloudPhotoPath,
       Value<DateTime> updatedAt,
+      Value<String?> trackingNumbers,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
     StopsCompanion Function({
@@ -7899,6 +7968,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<String?> cloudId,
       Value<String?> cloudPhotoPath,
       Value<DateTime> updatedAt,
+      Value<String?> trackingNumbers,
     });
 
 final class $$StopsTableReferences
@@ -8095,6 +8165,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackingNumbers => $composableBuilder(
+    column: $table.trackingNumbers,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8311,6 +8386,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get trackingNumbers => $composableBuilder(
+    column: $table.trackingNumbers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TourneesTableOrderingComposer get tourneeId {
     final $$TourneesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8446,6 +8526,11 @@ class $$StopsTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  GeneratedColumn<String> get trackingNumbers => $composableBuilder(
+    column: $table.trackingNumbers,
+    builder: (column) => column,
+  );
+
   $$TourneesTableAnnotationComposer get tourneeId {
     final $$TourneesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -8579,6 +8664,7 @@ class $$StopsTableTableManager
                 Value<String?> cloudId = const Value.absent(),
                 Value<String?> cloudPhotoPath = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> trackingNumbers = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
                 tourneeId: tourneeId,
@@ -8607,6 +8693,7 @@ class $$StopsTableTableManager
                 cloudId: cloudId,
                 cloudPhotoPath: cloudPhotoPath,
                 updatedAt: updatedAt,
+                trackingNumbers: trackingNumbers,
               ),
           createCompanionCallback:
               ({
@@ -8637,6 +8724,7 @@ class $$StopsTableTableManager
                 Value<String?> cloudId = const Value.absent(),
                 Value<String?> cloudPhotoPath = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> trackingNumbers = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
                 tourneeId: tourneeId,
@@ -8665,6 +8753,7 @@ class $$StopsTableTableManager
                 cloudId: cloudId,
                 cloudPhotoPath: cloudPhotoPath,
                 updatedAt: updatedAt,
+                trackingNumbers: trackingNumbers,
               ),
           withReferenceMapper: (p0) => p0
               .map(

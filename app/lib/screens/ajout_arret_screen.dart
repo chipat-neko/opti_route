@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
@@ -36,10 +38,17 @@ class AjoutArretScreen extends ConsumerStatefulWidget {
     super.key,
     required this.tourneeId,
     this.initial,
+    this.trackingInitial,
   });
 
   final int tourneeId;
   final Stop? initial;
+
+  /// Numero de tracking (code-barre) pre-rempli si l'ecran est ouvert
+  /// depuis le scanner colis sans match dans la tournee. Le code sera
+  /// stocke dans `tracking_numbers` au save du nouvel arret + ajoute
+  /// au champ Notes pour visibilite.
+  final String? trackingInitial;
 
   @override
   ConsumerState<AjoutArretScreen> createState() => _AjoutArretScreenState();
@@ -614,6 +623,12 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
             .read(tourneesRepositoryProvider)
             .getById(widget.tourneeId);
         final defautCoId = tournee?.coequipierDefautId;
+        // Si l'ecran a ete ouvert via le scanner colis, on persiste le
+        // numero de tracking dans la colonne JSON pour qu'un scan
+        // ulterieur du meme code +1 colis (vs creer un doublon).
+        final trackingJson = widget.trackingInitial != null
+            ? jsonEncode([widget.trackingInitial!])
+            : null;
         final companion = StopsCompanion.insert(
           tourneeId: widget.tourneeId,
           adresseBrute: adresseBrute,
@@ -629,6 +644,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           notes: Value(_orNull(_notesCtrl.text)),
           nomClient: Value(_orNull(_nomClientCtrl.text)),
           coequipierId: Value(defautCoId),
+          trackingNumbers: Value(trackingJson),
         );
         await repo.create(companion);
         await ref

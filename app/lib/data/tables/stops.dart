@@ -89,4 +89,17 @@ class Stops extends Table {
   /// + last-write-wins au pull).
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime)();
+
+  /// Numeros de tracking (codes-barres) des colis scannes pour cet arret.
+  /// Format JSON list de strings, ex: `["FA280000440358","FA280000440359"]`.
+  /// Null = aucun colis scanne (creation manuelle / via bordereau OCR).
+  ///
+  /// Workflow : sur ScanColisScreen, chaque scan code-barre cherche les
+  /// arrets de la tournee active dont ce numero est deja dans la liste.
+  /// Si trouve -> +1 colis sur cet arret. Sinon -> nouvel arret cree avec
+  /// le code comme 1er element + nb_colis = 1.
+  ///
+  /// Sert aussi a eviter les doublons : un meme code-barre ne peut pas
+  /// etre compte 2x meme si Noah scanne le meme colis 2 fois par erreur.
+  TextColumn get trackingNumbers => text().nullable()();
 }

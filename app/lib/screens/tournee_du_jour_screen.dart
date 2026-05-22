@@ -19,6 +19,7 @@ import 'ajout_arret_screen.dart';
 import 'bulk_paste_screen.dart';
 import 'carte_screen.dart';
 import 'nearby_poi_screen.dart';
+import 'scan_colis_screen.dart';
 import 'tournee_du_jour/auto_push_badge.dart';
 import 'tournee_du_jour/body.dart';
 import 'tournee_du_jour/cloud_actions.dart';
@@ -239,6 +240,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         ),
         onDemarrer: _onDemarrerPressed,
         onArreter: _onArreterPressed,
+        onScannerColis: _onScannerColisPressed,
       ),
     );
   }
@@ -397,6 +399,47 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         ref: ref,
         tournee: widget.tournee,
       );
+
+  /// Ouvre le scanner code-barre colis. Si le code matche un arret
+  /// existant de la tournee, [ScanColisScreen] a deja incremente +1
+  /// colis et on affiche un toast confirmation. Sinon on ouvre l'ecran
+  /// "Nouvel arret" avec le code pre-rempli en tracking initial.
+  Future<void> _onScannerColisPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await Navigator.of(context).push<ScanColisResult?>(
+      MaterialPageRoute(builder: (_) => const ScanColisScreen()),
+    );
+    if (result == null || !mounted) return;
+    final matched = result.matchedStop;
+    if (matched != null) {
+      final nom = matched.nomClient ?? matched.adresseBrute;
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.lime,
+          content: Text(
+            '+1 colis ajoute a $nom (${matched.nbColis + 1} au total)',
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    } else {
+      // Pas de match : on ouvre Nouvel arret avec le code pre-rempli
+      // pour que Noah complete l'adresse manuellement (ou re-scanne le
+      // bordereau).
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => AjoutArretScreen(
+            tourneeId: widget.tournee.id,
+            trackingInitial: result.trackingNumber,
+          ),
+        ),
+      );
+    }
+  }
 
   Future<void> _onOptimizePressed() => OptimTourneeActions.optimize(
         context: context,

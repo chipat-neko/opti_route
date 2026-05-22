@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 33;
+  int get schemaVersion => 34;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -294,6 +294,13 @@ class AppDatabase extends _$AppDatabase {
             // 100% local en Phase 1. Cf tables/frais.dart pour le
             // detail des colonnes et le cas d'usage.
             await m.createTable(frais);
+          }
+          if (from < 34) {
+            // Colonne `tracking_numbers` (TEXT JSON list nullable) sur
+            // stops : numeros de codes-barres scannes pour cet arret.
+            // Sert au workflow ScanColisScreen pour matcher un scan a
+            // un arret existant (-> +1 colis) ou creer un nouvel arret.
+            await m.addColumn(stops, stops.trackingNumbers);
           }
           if (from < 32) {
             // ════════════════════════════════════════════════════════

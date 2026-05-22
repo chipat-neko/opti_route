@@ -99,6 +99,14 @@ dependencies:
   # Android (gratuit, on-device). Pas de cle API, pas de cout.
   # Permissions iOS/Android auto-declarees par le plugin.
   speech_to_text: ^7.3.0
+  # mobile_scanner : caméra live + détection automatique des codes-barres
+  # 1D (Code128, EAN13, CODE39 utilisés par MESEXP/Colissimo/Chronopost)
+  # et 2D (QR, DataMatrix). Plus fluide que photo + ML Kit car analyse
+  # le flux vidéo en continu. Workflow Noah : scanner les étiquettes
+  # colis pour ajouter directement à la tournée (matching automatique
+  # si plusieurs colis pour le même client via numéro de tracking).
+  # Pas de cle API ni cout. ~2 MB overhead APK.
+  mobile_scanner: ^7.0.0
 
 dev_dependencies:
   flutter_test:
