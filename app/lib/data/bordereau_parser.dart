@@ -16,8 +16,21 @@ class BordereauParser {
   static const _markersLieuLivraison = [
     'lieu de livraison',
     'lieu livraison',
+    // ENLEVEMENT (Eure et Loir Acheminement) : bloc "destination" en
+    // colonne, le nom client + rue + CP/ville sont a cote du label.
+    'destination',
+    'a enlever chez',
+    'à enlever chez',
   ];
-  static const _markersTotalColis = ['total colis', 'colis :'];
+  static const _markersTotalColis = [
+    'total colis',
+    'colis :',
+    // ENLEVEMENT : la colonne du tableau s'appelle "U.M."
+    // (Unites de Manutention). La valeur 1/2/3... est sur la ligne
+    // d'apres ou meme cellule.
+    'u.m.',
+    'u m ',
+  ];
   static const _markersContact = ['contact destinataire'];
 
   static const _stopMarkers = [
@@ -57,19 +70,57 @@ class BordereauParser {
 
     // Strategie 1 : bloc destinataire structure (label "Destinataire"
     // suivi du contenu). Marche quand l'OCR retourne les lignes dans
-    // un ordre logique. **Tout ou rien** : si le nom de la strategie
-    // 1 est suspect (label technique), on rejette aussi sa rue (elle
-    // vient du meme bloc fautif).
+    // un ordre logique.
+    //
+    // Pour ENLEVEMENT (label "destination" ou "à enlever chez"), l'ordre
+    // OCR est chaotique : le bloc adjacent commence souvent par d'autres
+    // labels ("donneur d'ordre", "Messagerie Express", "Ref. exp.",
+    // "ENLEVEMENT") avant le vrai nom client. On scanne donc les premieres
+    // lignes du bloc et on prend la 1ere ligne qui ressemble a un nom
+    // valide (skip labels, rues seules, CP/ville).
     String? nomDest;
     String? rue;
     if (destIdx >= 0) {
       final endIdx = _findNextStopIndex(lines, destIdx + 1);
       final block = lines.sublist(destIdx + 1, endIdx);
-      if (block.isNotEmpty && !_looksUnreliable(block.first)) {
-        nomDest = block.first;
-        if (block.length > 1) {
-          rue = block.skip(1).join(' · ');
-        }
+      // Scanner jusqu'a 6 lignes pour trouver le 1er candidat valide.
+      // (Au-dela c'est tres probablement deborde sur l'expediteur.)
+      final maxScan = block.length < 6 ? block.length : 6;
+      int nomIdxInBlock = -1;
+      for (var i = 0; i < maxScan; i++) {
+        final candidate = block[i].trim();
+        if (_looksUnreliable(candidate)) continue;
+        if (_isObviousLabel(candidate)) continue;
+        if (_lineIsStreet(candidate)) continue;
+        // Rue sans numero initial (ex: "AVENUE DU VAL DE L EURE PARC")
+        if (_looksLikeStreet(candidate)) continue;
+        if (_cpRegex.hasMatch(candidate)) continue;
+        nomDest = candidate;
+        nomIdxInBlock = i;
+        break;
+      }
+      if (nomDest != null && block.length > nomIdxInBlock + 1) {
+        rue = block.skip(nomIdxInBlock + 1).join(' · ');
+      }
+    }
+
+    // Extraire l'ensemble des villes mentionnees dans le doc (sert a
+    // exclure ces noms de villes du candidate set du _findNomByOccurrences
+    // ci-dessous). Cas reel observe sur les bordereaux ENLEVEMENT
+    // 2026-05-22 : "COURVILLE SUR EURE" est imprime EN GROS dans le
+    // bloc destination + apparait 2x au total. La strategie 2 prenait
+    // "COURVILLE SUR" comme nom destinataire au lieu de "GARAGE LANCTIN
+    // DAMIEN".
+    final cityWords = <String>{};
+    for (final line in lines) {
+      final m = _cpVilleRegex.firstMatch(line);
+      if (m == null) continue;
+      final ville = (m.group(2) ?? '').toUpperCase().trim();
+      if (ville.length >= 4) cityWords.add(ville);
+      // Ajouter aussi chaque mot ville >= 4 chars pour matcher les
+      // sous-strings (ex "COURVILLE" dans "COURVILLE SUR EURE").
+      for (final w in ville.split(RegExp(r'\s+'))) {
+        if (w.length >= 4) cityWords.add(w);
       }
     }
 
@@ -78,7 +129,7 @@ class BordereauParser {
     // "Contact destinataire" + dans le bloc Destinataire), alors que
     // l'expediteur est mentionne 1 fois.
     if (nomDest == null) {
-      nomDest = _findNomByOccurrences(lines);
+      nomDest = _findNomByOccurrences(lines, cityWords);
       // Si on bascule sur le fallback, on cherche la rue par adjacence
       // au nom (la rue de la strategie 1 vient du meme bloc fautif et
       // doit etre ignoree -- mais elle est deja a null grace au reset
@@ -148,15 +199,30 @@ class BordereauParser {
     int? nbColis;
     if (colisIdx >= 0) {
       final lineColis = lines[colisIdx];
+      // Format LIVRAISON : "Total colis : 3" tout sur la meme ligne.
       final inSame = RegExp(r'colis\s*:?\s*(\d+)', caseSensitive: false)
           .firstMatch(lineColis);
       if (inSame != null) {
         nbColis = int.tryParse(inSame.group(1) ?? '');
-      } else if (colisIdx + 1 < lines.length) {
-        final m = _cpRegex.firstMatch(lines[colisIdx + 1]);
-        if (m == null) {
-          final n = RegExp(r'\b(\d+)\b').firstMatch(lines[colisIdx + 1]);
-          nbColis = n != null ? int.tryParse(n.group(1) ?? '') : null;
+      } else {
+        // Format ENLEVEMENT (U.M.) : la valeur est sur une ligne plus
+        // bas dans le tableau. L'OCR peut intercaler "Client", "Date",
+        // "1.0" ou la valeur reelle. On scanne les 12 lignes suivantes
+        // pour trouver le 1er nombre 1-99 (entier ou decimal X.0) qui
+        // n'est PAS un CP (5 chiffres).
+        for (var i = colisIdx + 1;
+            i < lines.length && i <= colisIdx + 12;
+            i++) {
+          final line = lines[i].trim();
+          // Skip lignes contenant un CP (eviter 28190 etc).
+          if (_cpRegex.hasMatch(line)) continue;
+          // Match "1", "1.0", "1,0" en debut ou isole sur la ligne.
+          final m = RegExp(r'^\s*(\d{1,2})(?:[.,]0+)?\s*$').firstMatch(line);
+          if (m != null) {
+            nbColis = int.tryParse(m.group(1) ?? '');
+            if (nbColis != null && nbColis > 0 && nbColis < 100) break;
+            nbColis = null;
+          }
         }
       }
     }
@@ -213,14 +279,28 @@ class BordereauParser {
   /// est un autre marqueur dans le format MESEXP. Tolerance OCR :
   /// accepte aussi "desinataire" (sans le 't') que ML Kit produit
   /// parfois.
+  ///
+  /// Aussi : reconnait le format ENLEVEMENT (Eure et Loir Acheminement)
+  /// qui utilise "destination" (lowercase) ou "a enlever chez" en
+  /// header de colonne tableau. Sur ce format, le bloc destinataire
+  /// est cote a cote avec le label en mode tableau, l'ordre des lignes
+  /// OCR est chaotique.
   static int _findDestinataireIndex(List<String> lines) {
     for (var i = 0; i < lines.length; i++) {
       final lower = lines[i].toLowerCase().trim();
-      // Tolerance OCR : "destinataire" ou "desinataire" (sans 't')
-      if (!lower.contains('estinataire')) continue;
-      if (lower.contains('contact')) continue;
-      if (lower.contains('ref')) continue; // "Ref. dest."
-      return i;
+      // Format LIVRAISON : "destinataire" ou "desinataire" (sans 't')
+      if (lower.contains('estinataire')) {
+        if (lower.contains('contact')) continue;
+        if (lower.contains('ref')) continue; // "Ref. dest."
+        return i;
+      }
+      // Format ENLEVEMENT : "destination" (lowercase, header colonne).
+      // Exclure les variations "document d'expedition" ou autres.
+      if (lower == 'destination' || lower.startsWith('destination ')) {
+        return i;
+      }
+      // Format ENLEVEMENT : "a enlever chez" ou "à enlever chez"
+      if (lower.contains('enlever chez')) return i;
     }
     return -1;
   }
@@ -239,7 +319,10 @@ class BordereauParser {
   ///   complete est une rue numerotee (ex: "LOUIS PASTEUR" dans
   ///   "24 AVENUE LOUIS PASTEUR" est juste un nom de saint, pas un
   ///   destinataire).
-  static String? _findNomByOccurrences(List<String> lines) {
+  static String? _findNomByOccurrences(
+    List<String> lines, [
+    Set<String> cityWords = const <String>{},
+  ]) {
     final pattern = RegExp(r"([A-Z][A-Z\-']+(?:\s+[A-Z][A-Z\-']+)+)");
     final candidates = <String>{};
     for (final line in lines) {
@@ -249,6 +332,7 @@ class BordereauParser {
         if (_isObviousLabel(s)) continue;
         if (_looksLikeStreet(s)) continue;
         if (_looksLikeTransporter(s)) continue;
+        if (_looksLikeCity(s, cityWords)) continue;
         candidates.add(s);
       }
     }
@@ -319,6 +403,44 @@ class BordereauParser {
     return false;
   }
 
+  /// Vrai si le candidat est en realite un nom de VILLE (ou un fragment
+  /// d'une ville detectee). Sert a eviter que _findNomByOccurrences
+  /// extraie "COURVILLE SUR" comme nom du destinataire alors que c'est
+  /// la ville imprimee EN GROS dans le bloc destination ENLEVEMENT.
+  ///
+  /// 3 regles cumulatives :
+  ///   1. Exact match : candidate == une ville detectee
+  ///   2. Prefixe strict avec espace : "COURVILLE SUR" prefixe
+  ///      "COURVILLE SUR EURE" (avec espace de delimitation pour
+  ///      eviter "COUR" qui match "COURVILLE")
+  ///   3. Tous les mots significatifs (>= 4 chars) de la candidate
+  ///      sont dans cityWords. Cas "NOGENT LE ROTROU" : NOGENT et
+  ///      ROTROU dans cityWords -> exclu. Mais "THEODORE CHARTRES"
+  ///      garde car THEODORE n'est pas dans cityWords.
+  static bool _looksLikeCity(String candidate, Set<String> cityWords) {
+    if (cityWords.isEmpty) return false;
+    final upper = candidate.toUpperCase().trim();
+    // Regle 1 : exact match
+    if (cityWords.contains(upper)) return true;
+    // Regle 2 : prefixe strict avec espace de delimitation
+    for (final city in cityWords) {
+      if (city.length > upper.length &&
+          city.startsWith('$upper ')) {
+        return true;
+      }
+    }
+    // Regle 3 : tous les mots >= 4 chars sont des cityWords
+    final words = upper
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length >= 4)
+        .toList();
+    if (words.isEmpty) return false;
+    for (final w in words) {
+      if (!cityWords.contains(w)) return false;
+    }
+    return true;
+  }
+
   /// Vrai si le candidat ressemble a un nom de transporteur courant.
   /// Evite de prendre "EURE ET LOIR ACHEMINEMENT" ou "FA45 TRANSPORTS"
   /// comme destinataire.
@@ -346,6 +468,21 @@ class BordereauParser {
   static bool _looksUnreliable(String? name) {
     if (name == null || name.isEmpty) return true;
     if (name.length < 3) return true;
+    // Numero de reference (FA280000..., 72070741, etc) : pas d'espace
+    // et au moins 4 chiffres -> ce n'est pas un nom d'entreprise.
+    // Cas reels observes 2026-05-22 : sur les bordereaux ENLEVEMENT
+    // mal cadres, OCR remonte la moitie basse + numero ref en debut
+    // du bloc destination. Le filtre garde "NOVA" (0 chiffres) mais
+    // rejette "FA280000440358" (12 chiffres).
+    if (!name.contains(' ')) {
+      final digits = name.replaceAll(RegExp(r'[^0-9]'), '').length;
+      if (digits >= 4) return true;
+    }
+    // Code tracking avec slash (ex: "270521 /6552AGNCMVZ04L").
+    if (name.contains('/') &&
+        RegExp(r'[A-Z]\d|\d[A-Z]').hasMatch(name)) {
+      return true;
+    }
     final lower = name.toLowerCase();
     const technicalWords = [
       'lettre',
@@ -359,6 +496,40 @@ class BordereauParser {
       'tel',
       'facture',
       'colis',
+      // Labels ENLEVEMENT (Eure et Loir Acheminement) frequents en
+      // 1ere ligne du bloc "destination" a cause de l'ordre OCR chaotique.
+      'donneur',
+      "donneur d'ordre",
+      'ordre',
+      'messagerie',
+      'express',
+      'ref.',
+      'ref ',
+      'enlevement',
+      'enlèvement',
+      'exemplaire',
+      'travee',
+      'travée',
+      'alpr',
+      'retour',
+      'régime',
+      'regime',
+      'nature',
+      'ligne',
+      'dangereuses',
+      'mesexp',
+      'destination',
+      'contact',
+      'a enlever',
+      'à enlever',
+      // Labels secondaires observes 2026-05-22 (page_33-34).
+      'poids',
+      ' kg',
+      'pads',
+      ' km',
+      'date',
+      'periode',
+      'période',
     ];
     for (final w in technicalWords) {
       if (lower.contains(w)) return true;

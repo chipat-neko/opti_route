@@ -29,12 +29,28 @@ class OcrStatsLog {
   OcrStatsLog._();
 
   static const _filename = 'ocr_stats.csv';
+
+  /// Header v2 (2026-05-22) : ajout des champs extraits pour mesurer
+  /// le win rate **par champ** (destinataire + nb_colis) et pas
+  /// uniquement le score global de confidence.
+  ///
+  /// Back-compat : les anciennes lignes (v1, 8 colonnes) restent
+  /// lisibles par [computeBaseline] qui ne touche qu'a la colonne 2
+  /// (confidence). Les nouvelles colonnes apparaissent vides au parse.
   static const _header =
-      'timestamp,parser,confidence,rotation_deg,attempts,ban_validated,validation_score,duration_ms';
+      'timestamp,parser,confidence,rotation_deg,attempts,'
+      'ban_validated,validation_score,duration_ms,'
+      'nom_destinataire,rue,code_postal,ville,nb_colis,telephone,'
+      'image_filename';
 
   /// Enregistre une ligne pour un scan. Best-effort : si l'I/O echoue
   /// (disque plein, permission denied, etc.), on swallow car ce n'est
   /// pas une feature critique pour le scan lui-meme.
+  ///
+  /// Si [extraction] est fourni, les champs extraits sont logues
+  /// (nom_destinataire, rue, cp, ville, nb_colis, telephone). Sert
+  /// pour le batch eval : comparer ground truth vs extraction pour
+  /// calculer le win rate par champ.
   Future<void> log({
     required String parser,
     required ExtractionConfidence confidence,
@@ -43,6 +59,8 @@ class OcrStatsLog {
     required bool banValidated,
     double? validationScore,
     required int durationMs,
+    BordereauExtraction? extraction,
+    String? imageFilename,
   }) async {
     try {
       final file = await _getOrCreateFile();
@@ -55,9 +73,27 @@ class OcrStatsLog {
         banValidated.toString(),
         validationScore?.toStringAsFixed(3) ?? '',
         durationMs.toString(),
+        _csvEscape(extraction?.nomDestinataire),
+        _csvEscape(extraction?.rue),
+        _csvEscape(extraction?.codePostal),
+        _csvEscape(extraction?.ville),
+        _csvEscape(extraction?.nbColis?.toString()),
+        _csvEscape(extraction?.telephone),
+        _csvEscape(imageFilename),
       ].join(',');
       await file.writeAsString('$line\n', mode: FileMode.append);
     } catch (_) {/* best-effort, jamais bloquant */}
+  }
+
+  /// Echappement CSV RFC 4180 : si le champ contient une virgule, un
+  /// guillemet ou un saut de ligne, on l'entoure de guillemets et on
+  /// double les guillemets internes. Champ vide -> chaine vide.
+  static String _csvEscape(String? v) {
+    if (v == null || v.isEmpty) return '';
+    if (v.contains(',') || v.contains('"') || v.contains('\n') || v.contains('\r')) {
+      return '"${v.replaceAll('"', '""')}"';
+    }
+    return v;
   }
 
   /// Compte le nombre d'entrees (hors header). Retourne 0 si le fichier
