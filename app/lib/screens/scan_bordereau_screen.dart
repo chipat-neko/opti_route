@@ -9,6 +9,7 @@ import '../data/bordereau_extraction.dart';
 import '../data/bordereau_parser.dart';
 import '../data/chronopost_bordereau_parser.dart';
 import '../data/colissimo_bordereau_parser.dart';
+import '../data/ocr_llm_enhance_service.dart';
 import '../data/ocr_service.dart';
 import '../data/ocr_stats_log.dart';
 import '../providers/ocr_provider.dart';
@@ -402,6 +403,24 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       } catch (_) {
         // best-effort : on garde l'extraction non validee
       }
+      // Boost LLM cloud : appel parallele a l'Edge Function Supabase
+      // (Gemini Flash, free tier 1500 req/jour). Best-effort silent :
+      // si pas connecte / quota depasse / timeout, on garde le resultat
+      // local. Si Gemini retourne quelque chose de SOLIDE, on bascule
+      // dessus pour avoir une carte verte avec badge "IA".
+      try {
+        final enhanced = await OcrLlmEnhanceService().enhance(
+          ocrLines: result.lines,
+          formatHint: extraction.format,
+          parserUsed: parserUsed,
+        );
+        if (enhanced != null && _isBetterThan(enhanced, extraction)) {
+          extraction = enhanced;
+          debugPrint('OCRDUMP === LLM ENHANCE OK (Gemini) ===');
+        }
+      } catch (_) {
+        // silent : on garde l'extraction locale (offline-first)
+      }
       // Log stats baseline (best-effort, swallow toute erreur I/O).
       // Sert a mesurer le taux de "carte verte" reel sur les scans
       // Noah avant de demarrer la Phase B OCR (pre-traitement image).
@@ -446,6 +465,38 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         _errorMessage = 'Echec de la lecture : $e';
       });
     }
+  }
+
+  /// Vrai si [enhanced] (typiquement renvoyee par le LLM Gemini)
+  /// apporte plus d'info utile que [local] (parser heuristique).
+  /// Criteres :
+  /// - Si enhanced a un nom + adresse complete (rue OU cp+ville) ET
+  ///   local n'a pas, c'est mieux.
+  /// - Si confidence enhanced > local, c'est mieux (high > low > none).
+  /// - Si confidence egale + score "champs remplis" superieur, c'est
+  ///   mieux.
+  /// Sinon on garde local (offline-first, parser deja valide).
+  bool _isBetterThan(BordereauExtraction enhanced, BordereauExtraction local) {
+    final order = {
+      ExtractionConfidence.high: 2,
+      ExtractionConfidence.low: 1,
+      ExtractionConfidence.none: 0,
+    };
+    final ec = order[enhanced.confidence] ?? 0;
+    final lc = order[local.confidence] ?? 0;
+    if (ec > lc) return true;
+    if (ec < lc) return false;
+    int score(BordereauExtraction e) {
+      var n = 0;
+      if (e.nomDestinataire?.isNotEmpty ?? false) n += 3;
+      if (e.rue?.isNotEmpty ?? false) n += 2;
+      if (e.codePostal?.isNotEmpty ?? false) n += 1;
+      if (e.ville?.isNotEmpty ?? false) n += 1;
+      if (e.nbColis != null) n += 1;
+      if (e.telephone?.isNotEmpty ?? false) n += 1;
+      return n;
+    }
+    return score(enhanced) > score(local);
   }
 
   void _retake() {
