@@ -64,14 +64,20 @@ class OcrLlmEnhanceService {
               ? jsonDecode(response.data as String) as Map<String, dynamic>
               : null);
       if (data == null || data.containsKey('error')) return null;
-      return _toExtraction(data);
+      return parseResponse(data);
     } catch (_) {
       // Timeout / network / parsing / quota : silent fallback.
       return null;
     }
   }
 
-  BordereauExtraction _toExtraction(Map<String, dynamic> data) {
+  /// Convertit la reponse JSON de l'Edge Function en
+  /// [BordereauExtraction]. Public + statique pour permettre les tests
+  /// sans dependance Supabase (cf [ocr_llm_enhance_service_test.dart]).
+  ///
+  /// Tolere les champs manquants / mal types : retombe sur null /
+  /// confidence low / format livraison plutot que de throw.
+  static BordereauExtraction parseResponse(Map<String, dynamic> data) {
     final confStr = data['confidence'] as String? ?? 'low';
     final formatStr = data['format'] as String? ?? 'livraison';
     final confidence = ExtractionConfidence.values.firstWhere(
@@ -103,7 +109,7 @@ class OcrLlmEnhanceService {
     );
   }
 
-  String? _str(dynamic v) {
+  static String? _str(dynamic v) {
     if (v == null) return null;
     final s = v.toString().trim();
     return s.isEmpty ? null : s;

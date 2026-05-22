@@ -1,4 +1,5 @@
 import 'bordereau_extraction.dart';
+import 'bordereau_patterns.dart';
 
 /// Parser pour les bordereaux **Chronopost**.
 ///
@@ -24,17 +25,12 @@ import 'bordereau_extraction.dart';
 /// souvent un bloc "EXPEDITEUR :" AVANT le destinataire, et le N° de
 /// tracking suit le pattern `XR\d{9}FR` ou `XE\d{9}FR`.
 class ChronopostBordereauParser {
-  static final _cpVilleRegex = RegExp(
-    "\\b(\\d{5})\\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\\s\\-']+)",
-  );
-  static final _cpRegex = RegExp(r'\b(\d{5})\b');
-  static final _telRegex = RegExp(
-    r'\b(0\d[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2})\b',
-  );
-  static final _trackingRegex = RegExp(
-    r'\b[XR][A-Z]\d{9}FR\b',
-    caseSensitive: false,
-  );
+  // Patterns deplaces dans BordereauPatterns (audit 2026-05-22) pour
+  // eliminer la triple duplication entre les 3 parseurs.
+  static final _cpVilleRegex = BordereauPatterns.cpVilleSimpleRegex;
+  static final _cpRegex = BordereauPatterns.cpRegex;
+  static final _telRegex = BordereauPatterns.telRegex;
+  static final _trackingRegex = BordereauPatterns.chronopostTrackingRegex;
 
   /// Marqueur destinataire (tolerant a casse, accents, espacements).
   static final _destMarker = RegExp(
