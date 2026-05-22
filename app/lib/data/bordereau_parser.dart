@@ -1,4 +1,7 @@
 import 'bordereau_extraction.dart';
+import 'bordereau_format_detector.dart';
+import 'bordereau_patterns.dart';
+import 'bordereau_text_filters.dart';
 import 'ocr_service.dart' show OcrBlock;
 
 /// Parser pour extraire automatiquement les champs cles d'un bordereau
@@ -48,15 +51,11 @@ class BordereauParser {
     'ref dest',
   ];
 
-  static final _cpVilleRegex = RegExp(
-    // \b en debut pour eviter de matcher au milieu d'un long numero
-    // (ex: "0237911586 THEODORE CHARTRES" matchait "11586 THEODORE").
-    // [\s\-]+ accepte aussi le format "FR-CP-VILLE" ou "FR - CP - VILLE"
-    // des etiquettes colis Transports France Alliance.
-    r"\b(\d{5})[\s\-]+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-']+)",
-  );
-  static final _cpRegex = RegExp(r'\b(\d{5})\b');
-  static final _telRegex = RegExp(r'\b(0\d[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2})\b');
+  // Patterns regex deplaces dans BordereauPatterns (audit 2026-05-22)
+  // pour eliminer la triple duplication entre les 3 parseurs.
+  static final _cpVilleRegex = BordereauPatterns.cpVilleRegex;
+  static final _cpRegex = BordereauPatterns.cpRegex;
+  static final _telRegex = BordereauPatterns.telRegex;
 
   /// Parse en ciblant le GROS encadre visuel du bordereau (typiquement
   /// celui qui contient le nom + adresse de ramasse / destinataire).
@@ -84,7 +83,7 @@ class BordereauParser {
     for (final b in blocks) {
       allLines.addAll(b.lines);
     }
-    final format = _detectFormat(allLines);
+    final format = BordereauFormatDetector.detect(allLines);
 
     // Ordre de priorite des marqueurs en mode bbox. ATTENTION : on
     // EXCLUT 'destination' sur ENLEVEMENT car ce label pointe vers
@@ -165,7 +164,7 @@ class BordereauParser {
       // qui s'en sort mieux dans ces cas-la.
       final nom = zoneResult.nomDestinataire;
       if (nom != null) {
-        final wordCount = nom.split(RegExp(r'\s+')).length;
+        final wordCount = nom.split(BordereauPatterns.whitespaceRegex).length;
         if (wordCount >= 2 || nom.length >= 8) {
           return zoneResult;
         }
@@ -203,7 +202,7 @@ class BordereauParser {
     // Tres important pour Noah : sur un enlevement, on ne veut PAS
     // l'adresse "destination" (= destinataire final ulterieur), on
     // veut "à enlever chez" (= le lieu OU il va ramasser).
-    final format = _detectFormat(lines);
+    final format = BordereauFormatDetector.detect(lines);
 
     final destIdx = _findDestinataireIndex(lines, format);
     final lieuIdx = _findIndex(lines, _markersLieuLivraison);
@@ -231,7 +230,7 @@ class BordereauParser {
     for (final marker in markerPriority) {
       final cand = _tryExtractFromMarker(lines, marker);
       if (cand == null) continue;
-      final wordCount = cand.name.split(RegExp(r'\s+')).length;
+      final wordCount = cand.name.split(BordereauPatterns.whitespaceRegex).length;
       final isSolid = wordCount >= 2 || cand.name.length >= 8;
       if (isSolid) {
         nomDest = cand.name;
@@ -266,7 +265,7 @@ class BordereauParser {
       if (ville.length >= 4) cityWords.add(ville);
       // Ajouter aussi chaque mot ville >= 4 chars pour matcher les
       // sous-strings (ex "COURVILLE" dans "COURVILLE SUR EURE").
-      for (final w in ville.split(RegExp(r'\s+'))) {
+      for (final w in ville.split(BordereauPatterns.whitespaceRegex)) {
         if (w.length >= 4) cityWords.add(w);
       }
     }
@@ -331,8 +330,7 @@ class BordereauParser {
       if (cp != null) {
         for (final line in lines) {
           if (line.contains(cp)) {
-            final m = RegExp(r"(\d{5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-']+)")
-                .firstMatch(line);
+            final m = BordereauPatterns.cpVilleSimpleRegex.firstMatch(line);
             if (m != null && m.group(1) == cp) {
               ville = _cleanVille(m.group(2));
               break;
@@ -347,8 +345,7 @@ class BordereauParser {
     if (colisIdx >= 0) {
       final lineColis = lines[colisIdx];
       // Format LIVRAISON : "Total colis : 3" tout sur la meme ligne.
-      final inSame = RegExp(r'colis\s*:?\s*(\d+)', caseSensitive: false)
-          .firstMatch(lineColis);
+      final inSame = BordereauPatterns.colisSameLineRegex.firstMatch(lineColis);
       if (inSame != null) {
         nbColis = int.tryParse(inSame.group(1) ?? '');
       } else {
@@ -364,7 +361,7 @@ class BordereauParser {
           // Skip lignes contenant un CP (eviter 28190 etc).
           if (_cpRegex.hasMatch(line)) continue;
           // Match "1", "1.0", "1,0" en debut ou isole sur la ligne.
-          final m = RegExp(r'^\s*(\d{1,2})(?:[.,]0+)?\s*$').firstMatch(line);
+          final m = BordereauPatterns.unitColisLineRegex.firstMatch(line);
           if (m != null) {
             nbColis = int.tryParse(m.group(1) ?? '');
             if (nbColis != null && nbColis > 0 && nbColis < 100) break;
@@ -379,7 +376,7 @@ class BordereauParser {
     if (contactIdx >= 0) {
       final candidates = lines.skip(contactIdx).take(2).join(' ');
       final m = _telRegex.firstMatch(candidates);
-      telephone = m?.group(1)?.replaceAll(RegExp(r'[\s.\-]'), '');
+      telephone = m?.group(1)?.replaceAll(BordereauPatterns.telSepRegex, '');
     }
 
     // Score de confiance :
@@ -465,10 +462,10 @@ class BordereauParser {
     int nomIdxInBlock = -1;
     for (var i = 0; i < maxScan; i++) {
       final c = block[i].trim();
-      if (_looksUnreliable(c)) continue;
-      if (_isObviousLabel(c)) continue;
-      if (_lineIsStreet(c)) continue;
-      if (_looksLikeStreet(c)) continue;
+      if (BordereauTextFilters.looksUnreliable(c)) continue;
+      if (BordereauTextFilters.isObviousLabel(c)) continue;
+      if (BordereauTextFilters.lineIsStreet(c)) continue;
+      if (BordereauTextFilters.looksLikeStreet(c)) continue;
       if (_cpRegex.hasMatch(c)) continue;
       cand = c;
       nomIdxInBlock = i;
@@ -483,31 +480,8 @@ class BordereauParser {
     );
   }
 
-  /// Detecte si le bordereau est un ENLEVEMENT (ramasse) ou une
-  /// LIVRAISON classique. Cles de detection ENLEVEMENT (n'importe
-  /// laquelle suffit) :
-  /// - label "ENLEVEMENT" en gros (souvent imprime 1-2 fois)
-  /// - header de colonne "à enlever chez" / "a enlever chez"
-  /// - mention "Contact et lieu d'enlèvement" en bas
-  /// - "période d'enlèvement" / "date d'enlèvement" en haut du tableau
-  /// - "Exemplaire à laisser sur le lieu d'enlèvement" en footer
-  static BordereauFormat _detectFormat(List<String> lines) {
-    for (final l in lines) {
-      final lower = l.toLowerCase();
-      if (lower.contains('enlever chez')) return BordereauFormat.enlevement;
-      if (lower.contains("d'enlèvement") ||
-          lower.contains("d'enlevement")) {
-        return BordereauFormat.enlevement;
-      }
-      // "ENLEVEMENT" tout seul en majuscules (label en gros sur la
-      // moitie haute du bordereau). On match meme entoure d'espaces
-      // pour eviter de matcher "enlevement" dans une phrase libre.
-      if (RegExp(r'\bENLEVEMENT\b').hasMatch(l)) {
-        return BordereauFormat.enlevement;
-      }
-    }
-    return BordereauFormat.livraison;
-  }
+  // _detectFormat migre vers [BordereauFormatDetector.detect]
+  // (audit refactor 2026-05-22).
 
   /// "Destinataire" tout seul, en excluant "Contact destinataire" qui
   /// est un autre marqueur dans le format MESEXP. Tolerance OCR :
@@ -564,16 +538,16 @@ class BordereauParser {
     List<String> lines, [
     Set<String> cityWords = const <String>{},
   ]) {
-    final pattern = RegExp(r"([A-Z][A-Z\-']+(?:\s+[A-Z][A-Z\-']+)+)");
+    final pattern = BordereauPatterns.upperCaseSequenceRegex;
     final candidates = <String>{};
     for (final line in lines) {
       for (final m in pattern.allMatches(line)) {
         final s = m.group(1)!.trim();
         if (s.length < 10) continue;
-        if (_isObviousLabel(s)) continue;
-        if (_looksLikeStreet(s)) continue;
-        if (_looksLikeTransporter(s)) continue;
-        if (_looksLikeCity(s, cityWords)) continue;
+        if (BordereauTextFilters.isObviousLabel(s)) continue;
+        if (BordereauTextFilters.looksLikeStreet(s)) continue;
+        if (BordereauTextFilters.looksLikeTransporter(s)) continue;
+        if (BordereauTextFilters.looksLikeCity(s, cityWords)) continue;
         candidates.add(s);
       }
     }
@@ -586,7 +560,7 @@ class BordereauParser {
         if (!line.contains(cand)) continue;
         // Si l'occurrence est dans une ligne qui est manifestement
         // une rue numerotee, on ne la compte pas.
-        if (_lineIsStreet(line)) continue;
+        if (BordereauTextFilters.lineIsStreet(line)) continue;
         count++;
       }
       if (count > bestCount ||
@@ -601,190 +575,20 @@ class BordereauParser {
     return bestCount >= 2 ? best : null;
   }
 
-  /// Vrai si la ligne entiere est une rue numerotee (commence par un
-  /// chiffre suivi d'un mot de voirie). Sert a ignorer les occurrences
-  /// d'un candidat dans une rue (ex: "LOUIS PASTEUR" dans "24 AVENUE
-  /// LOUIS PASTEUR").
-  static final _streetLineRegex = RegExp(
-    r"^\d+\s*(?:bis|ter|quater)?\s+(?:RUE|AVENUE|AV\.?|BD|BOULEVARD|CHEMIN|PLACE|IMPASSE|ALL[EÉ]E|VOIE|ROUTE|RTE|QUAI|COURS|PASSAGE|FAUBOURG|FBG)\b",
-    caseSensitive: false,
-  );
+  // _lineIsStreet migre vers [BordereauTextFilters.lineIsStreet]
+  // (audit refactor 2026-05-22).
 
-  static bool _lineIsStreet(String line) {
-    return _streetLineRegex.hasMatch(line.trim());
-  }
+  // _looksLikeStreet migre vers [BordereauTextFilters.looksLikeStreet]
+  // (audit refactor 2026-05-22).
 
-  /// Vrai si le candidat ressemble a une rue (commence ou contient un
-  /// mot de rue francais). Evite de prendre "AVENUE LOUIS PASTEUR"
-  /// comme nom d'entreprise.
-  static bool _looksLikeStreet(String s) {
-    final lower = s.toLowerCase();
-    const streetWords = [
-      'rue ',
-      'avenue ',
-      'boulevard ',
-      ' bd ',
-      'impasse ',
-      'place ',
-      'chemin ',
-      'voie ',
-      'route ',
-      'allee ',
-      'allée ',
-      'cours ',
-      'quai ',
-      'passage ',
-      'faubourg ',
-      'fbg ',
-    ];
-    final padded = ' ${lower.toLowerCase()} ';
-    for (final w in streetWords) {
-      if (padded.contains(w)) return true;
-    }
-    return false;
-  }
+  // _looksLikeCity migre vers [BordereauTextFilters.looksLikeCity]
+  // (audit refactor 2026-05-22).
 
-  /// Vrai si le candidat est en realite un nom de VILLE (ou un fragment
-  /// d'une ville detectee). Sert a eviter que _findNomByOccurrences
-  /// extraie "COURVILLE SUR" comme nom du destinataire alors que c'est
-  /// la ville imprimee EN GROS dans le bloc destination ENLEVEMENT.
-  ///
-  /// 3 regles cumulatives :
-  ///   1. Exact match : candidate == une ville detectee
-  ///   2. Prefixe strict avec espace : "COURVILLE SUR" prefixe
-  ///      "COURVILLE SUR EURE" (avec espace de delimitation pour
-  ///      eviter "COUR" qui match "COURVILLE")
-  ///   3. Tous les mots significatifs (>= 4 chars) de la candidate
-  ///      sont dans cityWords. Cas "NOGENT LE ROTROU" : NOGENT et
-  ///      ROTROU dans cityWords -> exclu. Mais "THEODORE CHARTRES"
-  ///      garde car THEODORE n'est pas dans cityWords.
-  static bool _looksLikeCity(String candidate, Set<String> cityWords) {
-    if (cityWords.isEmpty) return false;
-    final upper = candidate.toUpperCase().trim();
-    // Regle 1 : exact match
-    if (cityWords.contains(upper)) return true;
-    // Regle 2 : prefixe strict avec espace de delimitation
-    for (final city in cityWords) {
-      if (city.length > upper.length &&
-          city.startsWith('$upper ')) {
-        return true;
-      }
-    }
-    // Regle 3 : tous les mots >= 4 chars sont des cityWords
-    final words = upper
-        .split(RegExp(r'\s+'))
-        .where((w) => w.length >= 4)
-        .toList();
-    if (words.isEmpty) return false;
-    for (final w in words) {
-      if (!cityWords.contains(w)) return false;
-    }
-    return true;
-  }
+  // _looksLikeTransporter migre vers [BordereauTextFilters.looksLikeTransporter]
+  // (audit refactor 2026-05-22).
 
-  /// Vrai si le candidat ressemble a un nom de transporteur courant.
-  /// Evite de prendre "EURE ET LOIR ACHEMINEMENT" ou "FA45 TRANSPORTS"
-  /// comme destinataire.
-  static bool _looksLikeTransporter(String s) {
-    final lower = s.toLowerCase();
-    const transporterWords = [
-      'acheminement',
-      'transports',
-      'transporteur',
-      'logistique',
-      'messagerie',
-    ];
-    for (final w in transporterWords) {
-      if (lower.contains(w)) return true;
-    }
-    return false;
-  }
-
-  /// Vrai si le nom semble peu fiable (trop court, ou contient un
-  /// libelle technique).
-  ///
-  /// Seuil de longueur fixe a 3 caracteres pour accepter les noms
-  /// courts mais legitimes : "NOVA" (4), "IBM", "BMW", "FA45". Le
-  /// filtre principal est la liste de mots techniques.
-  static bool _looksUnreliable(String? name) {
-    if (name == null || name.isEmpty) return true;
-    if (name.length < 3) return true;
-    // Numero de reference (FA280000..., 72070741, etc) : pas d'espace
-    // et au moins 4 chiffres -> ce n'est pas un nom d'entreprise.
-    // Cas reels observes 2026-05-22 : sur les bordereaux ENLEVEMENT
-    // mal cadres, OCR remonte la moitie basse + numero ref en debut
-    // du bloc destination. Le filtre garde "NOVA" (0 chiffres) mais
-    // rejette "FA280000440358" (12 chiffres).
-    if (!name.contains(' ')) {
-      final digits = name.replaceAll(RegExp(r'[^0-9]'), '').length;
-      if (digits >= 4) return true;
-    }
-    // Code tracking avec slash (ex: "270521 /6552AGNCMVZ04L").
-    if (name.contains('/') &&
-        RegExp(r'[A-Z]\d|\d[A-Z]').hasMatch(name)) {
-      return true;
-    }
-    final lower = name.toLowerCase();
-    const technicalWords = [
-      'lettre',
-      'voiture',
-      'matieres',
-      'matières',
-      'marchandise',
-      'transporteur',
-      'commissionnaire',
-      'siret',
-      'tel',
-      'facture',
-      'colis',
-      // Labels ENLEVEMENT (Eure et Loir Acheminement) frequents en
-      // 1ere ligne du bloc "destination" a cause de l'ordre OCR chaotique.
-      'donneur',
-      "donneur d'ordre",
-      'ordre',
-      'messagerie',
-      'express',
-      'ref.',
-      'ref ',
-      'enlevement',
-      'enlèvement',
-      'exemplaire',
-      'travee',
-      'travée',
-      'alpr',
-      'retour',
-      'régime',
-      'regime',
-      'nature',
-      'ligne',
-      'dangereuses',
-      'mesexp',
-      'destination',
-      'contact',
-      'a enlever',
-      'à enlever',
-      // Labels transporteur Eure et Loir Acheminement (bordereau MESEXP
-      // retour) : "enleveur", "transpoteur" (typo OCR), "agence remettante"
-      'enleveur',
-      'transpoteur',
-      'transporteur',
-      'remettante',
-      'expediteur',
-      'expéditeur',
-      // Labels secondaires observes 2026-05-22 (page_33-34).
-      'poids',
-      ' kg',
-      'pads',
-      ' km',
-      'date',
-      'periode',
-      'période',
-    ];
-    for (final w in technicalWords) {
-      if (lower.contains(w)) return true;
-    }
-    return false;
-  }
+  // _looksUnreliable migre vers [BordereauTextFilters.looksUnreliable]
+  // (audit refactor 2026-05-22).
 
   /// Cherche le CP+ville du destinataire par adjacence au nom dans le
   /// flux OCR, avec un **bonus** si le nom de ville apparait dans le
@@ -802,7 +606,7 @@ class BordereauParser {
     if (nomIndices.isEmpty) return null;
 
     final nomWords = nomDest
-        .split(RegExp(r'\s+'))
+        .split(BordereauPatterns.whitespaceRegex)
         .where((w) => w.length >= 4)
         .map((w) => w.toLowerCase())
         .toList();
@@ -861,11 +665,8 @@ class BordereauParser {
   /// du nom (rayon 1, puis 2, ..., 8 pour la BP). On prend la 1ere rue
   /// trouvee et on accole la BP si elle est proche aussi.
   static String? _findRueAdjacenteNom(List<String> lines, String nomDest) {
-    final ruePattern = RegExp(
-      r"^\d+\s*(?:bis|ter|quater)?\s+(?:RUE|AVENUE|AV\.?|BD|BOULEVARD|CHEMIN|PLACE|IMPASSE|ALLEE|ALL[EÉ]E|VOIE|ROUTE|RTE|QUAI|COURS|PASSAGE|FAUBOURG|FBG)\b",
-      caseSensitive: false,
-    );
-    final bpPattern = RegExp(r"^BP\s*\d+", caseSensitive: false);
+    final ruePattern = BordereauPatterns.ruePattern;
+    final bpPattern = BordereauPatterns.bpPattern;
 
     final nomIndices = <int>[];
     for (var i = 0; i < lines.length; i++) {
@@ -904,31 +705,8 @@ class BordereauParser {
     return [?rue, ?bp].join(' · ');
   }
 
-  static bool _isObviousLabel(String s) {
-    final lower = s.toLowerCase();
-    const labels = [
-      'lettre de voiture',
-      'matieres dangereuses',
-      'matières dangereuses',
-      'transporteur',
-      'commissionnaire',
-      'instruction de livraison',
-      'document de suivi',
-      'lieu de livraison',
-      'contact destinataire',
-      'expediteur',
-      'expéditeur',
-      'destinataire',
-      'desinataire',
-      'mesexp',
-      'messagerie express',
-      'nature de la marchandise',
-    ];
-    for (final l in labels) {
-      if (lower.contains(l)) return true;
-    }
-    return false;
-  }
+  // _isObviousLabel migre vers [BordereauTextFilters.isObviousLabel]
+  // (audit refactor 2026-05-22).
 
   static int _findNextStopIndex(List<String> lines, int from) {
     for (var i = from; i < lines.length; i++) {
