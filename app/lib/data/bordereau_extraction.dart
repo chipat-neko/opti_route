@@ -11,7 +11,13 @@ class BordereauExtraction {
     this.telephone,
     this.nbColis,
     this.confidence = ExtractionConfidence.high,
+    this.format = BordereauFormat.livraison,
   });
+
+  /// Type de bordereau detecte. En ENLEVEMENT (ramasse), le nom et
+  /// l'adresse extraits correspondent au lieu OU Noah va collecter
+  /// le colis ("à enlever chez"), pas au destinataire final.
+  final BordereauFormat format;
 
   /// Niveau de confiance dans le parsing.
   /// - high : tous les marqueurs trouves, donnees cross-verifiees.
@@ -65,3 +71,11 @@ class BordereauExtraction {
 }
 
 enum ExtractionConfidence { high, low, none }
+
+/// Type de bordereau :
+/// - `livraison` : Noah depose un colis chez le destinataire final
+/// - `enlevement` : Noah va RAMASSER un colis chez un fournisseur pour
+///   le ramener au depot ou le faire suivre. L'adresse interessante
+///   est "à enlever chez", pas "destination" (qui est la destination
+///   finale ulterieure).
+enum BordereauFormat { livraison, enlevement }

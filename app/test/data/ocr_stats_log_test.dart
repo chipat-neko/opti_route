@@ -43,7 +43,7 @@ void main() {
     final lines = await file.readAsLines();
     expect(lines, hasLength(2)); // header + 1 entree
     expect(lines.first,
-        'timestamp,parser,confidence,rotation_deg,attempts,ban_validated,validation_score,duration_ms');
+        'timestamp,parser,confidence,rotation_deg,attempts,ban_validated,validation_score,duration_ms,nom_destinataire,rue,code_postal,ville,nb_colis,telephone,image_filename');
     expect(lines[1], contains('mesexp'));
     expect(lines[1], contains('high'));
     expect(lines[1], contains('0.950'));
@@ -82,9 +82,12 @@ void main() {
     );
     final file = File('${fake.docsDir.path}/ocr_stats.csv');
     final lines = await file.readAsLines();
-    // Format : timestamp,parser,confidence,rot,att,ban,score,dur
-    // score doit etre vide entre deux virgules.
-    expect(lines[1], matches(RegExp(r',false,,500$')));
+    // Format : timestamp,parser,confidence,rot,att,ban,score,dur,
+    //          nom,rue,cp,ville,nb_colis,tel,filename
+    // score doit etre vide entre deux virgules. Les 7 colonnes
+    // extraction additionnelles sont vides quand on log sans
+    // extraction (cas ici).
+    expect(lines[1], matches(RegExp(r',false,,500,,,,,,,?$')));
   });
 
   test('count : 0 si fichier inexistant (apres clear)', () async {

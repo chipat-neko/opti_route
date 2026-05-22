@@ -63,28 +63,37 @@ class BordereauParser {
         .where((l) => l.isNotEmpty)
         .toList(growable: false);
 
-    final destIdx = _findDestinataireIndex(lines);
+    // Detection du format : ENLEVEMENT si on voit un des marqueurs
+    // specifiques (label "ENLEVEMENT" en gros sur le bordereau,
+    // "à enlever chez" en header de colonne, "Contact et lieu
+    // d'enlèvement" en bas, ou "période/date d'enlèvement" en haut).
+    // Tres important pour Noah : sur un enlevement, on ne veut PAS
+    // l'adresse "destination" (= destinataire final ulterieur), on
+    // veut "à enlever chez" (= le lieu OU il va ramasser).
+    final format = _detectFormat(lines);
+
+    final destIdx = _findDestinataireIndex(lines, format);
     final lieuIdx = _findIndex(lines, _markersLieuLivraison);
     final colisIdx = _findIndex(lines, _markersTotalColis);
     final contactIdx = _findIndex(lines, _markersContact);
 
-    // Strategie 1 : bloc destinataire structure (label "Destinataire"
-    // suivi du contenu). Marche quand l'OCR retourne les lignes dans
-    // un ordre logique.
+    // Strategie 1 : bloc destinataire structure. On scanne jusqu'a
+    // 6 lignes du bloc apres le marqueur pour trouver le 1er candidat
+    // valide (skip labels, rues, CP/ville).
     //
-    // Pour ENLEVEMENT (label "destination" ou "à enlever chez"), l'ordre
-    // OCR est chaotique : le bloc adjacent commence souvent par d'autres
-    // labels ("donneur d'ordre", "Messagerie Express", "Ref. exp.",
-    // "ENLEVEMENT") avant le vrai nom client. On scanne donc les premieres
-    // lignes du bloc et on prend la 1ere ligne qui ressemble a un nom
-    // valide (skip labels, rues seules, CP/ville).
+    // Note : le format ENLEVEMENT est detecte (cf [format]) mais on
+    // utilise la MEME logique d'extraction (1 marqueur prioritaire :
+    // estinataire > destination > enlever chez). Raison : sur les
+    // MESEXP retour observes (2026-05-22), "à enlever chez" pointe
+    // souvent vers la destination FINALE (Alliance PR) a cause de
+    // l'ordre OCR chaotique, alors que "destination" pointe vers le
+    // vrai lieu de ramasse (Garage Lanctin). Le format sert juste
+    // a etiqueter l'UI (badge RAMASSE vs LIVRAISON).
     String? nomDest;
     String? rue;
     if (destIdx >= 0) {
       final endIdx = _findNextStopIndex(lines, destIdx + 1);
       final block = lines.sublist(destIdx + 1, endIdx);
-      // Scanner jusqu'a 6 lignes pour trouver le 1er candidat valide.
-      // (Au-dela c'est tres probablement deborde sur l'expediteur.)
       final maxScan = block.length < 6 ? block.length : 6;
       int nomIdxInBlock = -1;
       for (var i = 0; i < maxScan; i++) {
@@ -92,7 +101,6 @@ class BordereauParser {
         if (_looksUnreliable(candidate)) continue;
         if (_isObviousLabel(candidate)) continue;
         if (_lineIsStreet(candidate)) continue;
-        // Rue sans numero initial (ex: "AVENUE DU VAL DE L EURE PARC")
         if (_looksLikeStreet(candidate)) continue;
         if (_cpRegex.hasMatch(candidate)) continue;
         nomDest = candidate;
@@ -262,6 +270,7 @@ class BordereauParser {
       telephone: telephone,
       nbColis: nbColis,
       confidence: confidence,
+      format: format,
     );
   }
 
@@ -275,27 +284,60 @@ class BordereauParser {
     return -1;
   }
 
+  /// Detecte si le bordereau est un ENLEVEMENT (ramasse) ou une
+  /// LIVRAISON classique. Cles de detection ENLEVEMENT (n'importe
+  /// laquelle suffit) :
+  /// - label "ENLEVEMENT" en gros (souvent imprime 1-2 fois)
+  /// - header de colonne "à enlever chez" / "a enlever chez"
+  /// - mention "Contact et lieu d'enlèvement" en bas
+  /// - "période d'enlèvement" / "date d'enlèvement" en haut du tableau
+  /// - "Exemplaire à laisser sur le lieu d'enlèvement" en footer
+  static BordereauFormat _detectFormat(List<String> lines) {
+    for (final l in lines) {
+      final lower = l.toLowerCase();
+      if (lower.contains('enlever chez')) return BordereauFormat.enlevement;
+      if (lower.contains("d'enlèvement") ||
+          lower.contains("d'enlevement")) {
+        return BordereauFormat.enlevement;
+      }
+      // "ENLEVEMENT" tout seul en majuscules (label en gros sur la
+      // moitie haute du bordereau). On match meme entoure d'espaces
+      // pour eviter de matcher "enlevement" dans une phrase libre.
+      if (RegExp(r'\bENLEVEMENT\b').hasMatch(l)) {
+        return BordereauFormat.enlevement;
+      }
+    }
+    return BordereauFormat.livraison;
+  }
+
   /// "Destinataire" tout seul, en excluant "Contact destinataire" qui
   /// est un autre marqueur dans le format MESEXP. Tolerance OCR :
   /// accepte aussi "desinataire" (sans le 't') que ML Kit produit
   /// parfois.
   ///
-  /// Aussi : reconnait le format ENLEVEMENT (Eure et Loir Acheminement)
-  /// qui utilise "destination" (lowercase) ou "a enlever chez" en
-  /// header de colonne tableau. Sur ce format, le bloc destinataire
-  /// est cote a cote avec le label en mode tableau, l'ordre des lignes
-  /// OCR est chaotique.
-  static int _findDestinataireIndex(List<String> lines) {
+  /// Parcours **lineaire** : on prend le 1er marqueur trouve dans
+  /// l'ordre des lignes OCR, peu importe le type (destinataire /
+  /// destination / enlever chez). Raison : sur les MESEXP retour,
+  /// ML Kit peut placer "destination" AVANT "à enlever chez" et le
+  /// 1er bloc adjacent est typiquement le bon. Si on priorise un
+  /// marqueur particulier (cf historique git), on tombe sur les
+  /// fragments header tableau (T10, PARE, AGGLO) du mauvais bloc.
+  ///
+  /// Le [format] passe par cohérence d'API mais n'influe pas sur
+  /// le choix du marqueur ici (il sert juste a etiqueter l'UI).
+  static int _findDestinataireIndex(
+    List<String> lines,
+    BordereauFormat format,
+  ) {
     for (var i = 0; i < lines.length; i++) {
       final lower = lines[i].toLowerCase().trim();
       // Format LIVRAISON : "destinataire" ou "desinataire" (sans 't')
       if (lower.contains('estinataire')) {
         if (lower.contains('contact')) continue;
-        if (lower.contains('ref')) continue; // "Ref. dest."
+        if (lower.contains('ref')) continue;
         return i;
       }
       // Format ENLEVEMENT : "destination" (lowercase, header colonne).
-      // Exclure les variations "document d'expedition" ou autres.
       if (lower == 'destination' || lower.startsWith('destination ')) {
         return i;
       }
