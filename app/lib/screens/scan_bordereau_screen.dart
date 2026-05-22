@@ -8,10 +8,13 @@ import 'package:image_picker/image_picker.dart';
 import '../data/bordereau_extraction.dart';
 import '../data/bordereau_parser.dart';
 import '../data/chronopost_bordereau_parser.dart';
+import '../data/client_memory_service.dart';
 import '../data/colissimo_bordereau_parser.dart';
+import '../data/image_preprocess_service.dart';
 import '../data/ocr_llm_enhance_service.dart';
 import '../data/ocr_service.dart';
 import '../data/ocr_stats_log.dart';
+import '../providers/database_providers.dart';
 import '../providers/ocr_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -336,6 +339,28 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       }
 
       final file = File(picked.path);
+      // Sprint 2.C : detection de flou en amont. Variance du Laplacien
+      // sur l'image downsamplee a 480 px. Si trop floue (< 50), on
+      // affiche un avertissement non-bloquant pour que Noah puisse
+      // reprendre la photo. L'OCR est tente quand meme.
+      try {
+        final blur = await ImagePreprocessService().detectBlur(file);
+        if (blur < 50 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: AppColors.amber,
+              content: Text(
+                'Photo un peu floue, OCR moins fiable. Tu peux reprendre.',
+                style: TextStyle(color: AppColors.ink),
+              ),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        debugPrint('OCRDUMP === BLUR variance: ${blur.toStringAsFixed(1)}');
+      } catch (_) {
+        // silent : pas critique
+      }
       // OCR robuste : si le 1er essai donne un score qualite faible
       // (image scannee dans le mauvais sens / floutee), on retente
       // automatiquement avec rotations 90/180/270 et on garde le
@@ -402,6 +427,21 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         }
       } catch (_) {
         // best-effort : on garde l'extraction non validee
+      }
+      // Sprint 2.A : memoire clients (carnet d'adresses local).
+      // Si le nom OCR matche un client deja connu (fuzzy Levenshtein
+      // distance <= 3 OU ratio >= 0.85), on remplace nom + adresse
+      // par les infos validees du carnet. 100% offline.
+      try {
+        final repo = ref.read(savedDestinationsRepositoryProvider);
+        final memory = ClientMemoryService(repo);
+        final enriched = await memory.enrichWithMemory(extraction);
+        if (enriched.source == ExtractionSource.clientMemory) {
+          extraction = enriched;
+          debugPrint('OCRDUMP === CLIENT MEMORY MATCH ===');
+        }
+      } catch (_) {
+        // silent : carnet vide ou erreur DB, on garde extraction OCR
       }
       // Boost LLM cloud : appel parallele a l'Edge Function Supabase
       // (Gemini Flash, free tier 1500 req/jour). Best-effort silent :

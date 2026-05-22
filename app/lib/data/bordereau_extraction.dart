@@ -87,7 +87,9 @@ enum ExtractionConfidence { high, low, none }
 enum BordereauFormat { livraison, enlevement }
 
 /// Provenance du resultat d'extraction.
-/// - `parserLocal` : parser heuristique Dart on-device (rapide, offline)
-/// - `llmGemini`   : Edge Function Supabase + Gemini Flash (plus precis,
-///                   requiert connexion + free tier 1500 req/jour)
-enum ExtractionSource { parserLocal, llmGemini }
+/// - `parserLocal`  : parser heuristique Dart on-device (rapide, offline)
+/// - `clientMemory` : enrichi via carnet d'adresses local (fuzzy match
+///                    nom + adresse exacte du carnet, 100% offline)
+/// - `llmGemini`    : Edge Function Supabase + Gemini Flash (plus precis,
+///                    requiert connexion + free tier 1500 req/jour)
+enum ExtractionSource { parserLocal, clientMemory, llmGemini }
