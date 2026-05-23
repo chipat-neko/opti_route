@@ -511,27 +511,47 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     if (extraction.nbColis != null && extraction.nbColis! > 0) {
       _nbColisCtrl.text = extraction.nbColis!.toString();
     }
+    // Sprint 2026-05-23 (Noah feedback) : propager le format ENLEVEMENT
+    // au type d'arret. Avant : type restait 'livraison' meme si le
+    // bordereau etait ENLEVEMENT -> badge incorrect dans la tournee.
+    if (extraction.format == BordereauFormat.enlevement) {
+      _type = kStopTypeRamasse;
+    }
 
-    // Recherche d'adresse en 2 temps (demande explicite de Noah) :
-    // 1) D'abord par nom d'entreprise + ville (SIRENE, Photon).
-    // 2) Si rien, fallback sur l'adresse postale (BAN).
+    // Recherche d'adresse : on tente les 2 strategies en parallele
+    // et on garde la PLUS PRECISE (qui a une `road` = vraie rue).
+    // Avant : on prenait la 1ere reussie meme si c'etait juste une
+    // commune -> cas "Arcisses" seule sans la rue RN 23 AVENUE DE
+    // PARIS, alors que BAN aurait trouve l'adresse complete.
     AddressSuggestion? found;
     final service = ref.read(geocodingServiceProvider);
 
+    final results = <AddressSuggestion>[];
     final nomQuery = extraction.rechercheParNom;
     if (nomQuery != null && nomQuery.length >= 3) {
       try {
         final r = await service.search(nomQuery);
-        if (r.isNotEmpty) found = r.first;
+        results.addAll(r);
       } catch (_) {/* on tente l'adresse */}
     }
-
     final addrQuery = extraction.adressePostale;
-    if (found == null && addrQuery != null && addrQuery.length >= 3) {
+    if (addrQuery != null && addrQuery.length >= 3) {
       try {
         final r = await service.search(addrQuery);
-        if (r.isNotEmpty) found = r.first;
+        results.addAll(r);
       } catch (_) {/* tant pis */}
+    }
+    if (results.isNotEmpty) {
+      // Score : POI (entreprise nommee) = 3, rue complete + numero = 3,
+      // rue sans numero = 2, juste commune = 1.
+      int score(AddressSuggestion a) {
+        if (a.isPoi) return 3;
+        if (a.road != null && a.houseNumber != null) return 3;
+        if (a.road != null) return 2;
+        return 1;
+      }
+      results.sort((a, b) => score(b).compareTo(score(a)));
+      found = results.first;
     }
 
     if (!mounted) return;
