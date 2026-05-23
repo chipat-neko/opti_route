@@ -288,8 +288,17 @@ class BordereauParser {
       if (BordereauPatterns.unitColisLineRegex.hasMatch(line)) {
         continue;
       }
+      // Sprint v9 (logs Noah 2026-05-23) : strip prefixe telephone
+      // ("el:0661250794 HYDRO ALUMINIUM..." -> "HYDRO ALUMINIUM...").
+      // Garde le nom sans tel collé.
+      final cleanedLine = _stripPhonePrefix(line);
+      // Filtre transporteur : "FA45 TRANSPORTS", "TRANSMANUCENTRE",
+      // "ABC TRANSPORTS" -> rejet (ce ne sont pas des destinataires).
+      if (BordereauTextFilters.looksLikeTransporter(cleanedLine)) {
+        continue;
+      }
       // Tout le reste = candidat nom potentiel
-      nameCandidates.add(line);
+      nameCandidates.add(cleanedLine);
     }
 
     // Choisir le nom : prefere une ligne 100% MAJUSCULES (>= 2 mots OU
@@ -343,6 +352,27 @@ class BordereauParser {
 
   // _horizontalOverlap supprime v3 Sprint 2026-05-23 : remplace par
   // distance Euclidienne centre-a-centre dans parseFromBlocksSpatial.
+
+  /// Strip un prefixe telephone collé en début de ligne. Cas reel
+  /// observe : "el:0661250794 HYDRO ALUMINIUM..." où le "el:tel"
+  /// (tel) precede le nom client. ML Kit colle ces 2 elements
+  /// dans la même ligne OCR. Sans strip, le scoring nom prefere
+  /// d'autres candidats 100% majuscules.
+  ///
+  /// Patterns matches en debut de ligne :
+  ///  - `el:0123456789 ` ou `tel:...` ou `tél:...`
+  ///  - `0123456789 ` (tel direct sans prefixe)
+  static String _stripPhonePrefix(String line) {
+    final pattern = RegExp(
+      r'^(?:(?:e?l|t[ée]l)\s*[:.]?\s*)?0\d[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}\s+',
+      caseSensitive: false,
+    );
+    final match = pattern.firstMatch(line);
+    if (match != null) {
+      return line.substring(match.end).trim();
+    }
+    return line;
+  }
 
   /// Extrait les mots-cles significatifs (>= 4 chars, hors mots-vides
   /// adresse francais) du label adresse du depot Noah. Sert au filtre
