@@ -29,6 +29,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:opti_route/data/bordereau_extraction.dart';
 import 'package:opti_route/data/bordereau_parser.dart';
 import 'package:opti_route/data/ocr_service.dart';
 import 'package:path_provider/path_provider.dart';
@@ -128,10 +129,19 @@ void main() {
             continue;
           }
 
-          // parseFromBlocks utilise les bounding boxes ML Kit pour
-          // cibler le gros encadre visuel (vs parse sur toutes les
-          // lignes a plat). Fallback transparent si pas de blocks.
-          final extraction = rotated.result.blocks.isNotEmpty
+          // Sprint v9 (2026-05-23) : utiliser parseFromBlocksSpatial
+          // (nouvelle approche pure geometrique) avec depotAddress
+          // simule = adresse depot Noah. Fallback parseFromBlocks puis
+          // parse(lines).
+          const depotAddress = '24 Avenue Louis Pasteur 28630 Gellainville';
+          BordereauExtraction? extraction;
+          if (rotated.result.blocks.isNotEmpty) {
+            extraction = parser.parseFromBlocksSpatial(
+              rotated.result.blocks,
+              depotAddress: depotAddress,
+            );
+          }
+          extraction ??= rotated.result.blocks.isNotEmpty
               ? parser.parseFromBlocks(rotated.result.blocks)
               : parser.parse(rotated.result.lines);
           final raw = rotated.result.lines.take(5).join(' | ');
