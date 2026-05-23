@@ -145,7 +145,7 @@ class BordereauParser {
     // restants comme contenu destinataire.
     final labelCenterX = (labelBlock.left + labelBlock.right) / 2;
     final labelCenterY = (labelBlock.top + labelBlock.bottom) / 2;
-    final candidates = <({OcrBlock block, double distance})>[];
+    final candidates = <({OcrBlock block, double distance, int cpRank})>[];
     for (final b in blocks) {
       if (identical(b, labelBlock)) continue;
       // Filtre 1 : bloc qui contient un autre label tableau ou parasite
@@ -165,11 +165,39 @@ class BordereauParser {
       final dx = bCenterX - labelCenterX;
       final dy = bCenterY - labelCenterY;
       final dist = (dx * dx + dy * dy);
-      candidates.add((block: b, distance: dist));
+      // Sprint v5 (feedback Noah 2026-05-23) : ranking par CP. Le bloc
+      // contenant un CP du dpt prefere (28) gagne TOUJOURS contre un
+      // bloc avec CP hors-zone (ex 45 Loiret). Cas reel : HYDRO
+      // ALUMINIUM 28110 LUCE doit etre pris vs TRANSMANUCENTRE 45140
+      // SAINT JEAN DE LA RUELLE (bloc transporteur).
+      // cpRank : 0 = CP prefere, 1 = zone elargie, 2 = aucun CP ou hors-zone
+      int cpRank = 2;
+      for (final line in b.lines) {
+        final m = BordereauPatterns.cpRegex.firstMatch(line);
+        if (m != null) {
+          final cp = m.group(1)!;
+          if (cp.startsWith(kCodePostalPrefere)) {
+            cpRank = 0;
+            break;
+          }
+          for (final d in kCodePostalPreferes) {
+            if (d != kCodePostalPrefere && cp.startsWith(d)) {
+              if (cpRank > 1) cpRank = 1;
+              break;
+            }
+          }
+        }
+      }
+      candidates.add((block: b, distance: dist, cpRank: cpRank));
     }
     if (candidates.isEmpty) return null;
-    // Trier par distance croissante
-    candidates.sort((a, b) => a.distance.compareTo(b.distance));
+    // Trier : d'abord par cpRank croissant (prefere CP 28 > zone > hors),
+    // puis par distance Euclidienne croissante a egalite.
+    candidates.sort((a, b) {
+      final r = a.cpRank.compareTo(b.cpRank);
+      if (r != 0) return r;
+      return a.distance.compareTo(b.distance);
+    });
 
     // Prendre les 5 plus proches puis filtrer ceux dont les lignes
     // sont des fragments parasites (juste un mot court, juste un
