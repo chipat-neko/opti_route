@@ -448,6 +448,9 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       // si pas connecte / quota depasse / timeout, on garde le resultat
       // local. Si Gemini retourne quelque chose de SOLIDE, on bascule
       // dessus pour avoir une carte verte avec badge "IA".
+      // Gemini en pause : on garde l'appel best-effort silent (au cas
+      // ou l'utilisateur active a nouveau plus tard) mais on ne pollue
+      // pas l'UI avec des SnackBars debug.
       try {
         final enhanced = await OcrLlmEnhanceService().enhance(
           ocrLines: result.lines,

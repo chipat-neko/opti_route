@@ -1,3 +1,4 @@
+import 'app_constants.dart';
 import 'bordereau_extraction.dart';
 import 'bordereau_format_detector.dart';
 import 'bordereau_patterns.dart';
@@ -85,6 +86,19 @@ class BordereauParser {
     }
     final format = BordereauFormatDetector.detect(allLines);
 
+    // Sprint 2026-05-23 : pre-filtre des blocs PARASITES qui sont
+    // manifestement des blocs "transporteur" / "conditions generales"
+    // / "footer". Si on les inclut dans le ciblage bbox, le parser
+    // peut extraire des noms parasites (ex "Eure et Loir Acheminement"
+    // au lieu du destinataire). On les exclut tot pour cibler les
+    // blocs metier.
+    final usableBlocks = blocks.where((b) {
+      return !_isParasiteBlock(b);
+    }).toList();
+    // Si tous les blocs sont marques parasites (rare, image tres
+    // bizarre), on retombe sur tous les blocs pour ne pas tout perdre.
+    final blocksToUse = usableBlocks.isEmpty ? blocks : usableBlocks;
+
     // Ordre de priorite des marqueurs en mode bbox. ATTENTION : on
     // EXCLUT 'destination' sur ENLEVEMENT car ce label pointe vers
     // l'adresse de destination FINALE (Alliance PR a Voivres) et non
@@ -102,7 +116,7 @@ class BordereauParser {
     // qui le contient).
     for (final marker in markerPriority) {
       final hits = <OcrBlock>[];
-      for (final b in blocks) {
+      for (final b in blocksToUse) {
         for (final line in b.lines) {
           final lower = line.toLowerCase().trim();
           if (marker == 'estinataire') {
@@ -136,8 +150,9 @@ class BordereauParser {
       // Zone de scan = anchor + blocs adjacents verticalement (chevauche
       // sur l'axe Y, donc meme bande horizontale). Filtre les blocs
       // tres petits (surface < 5% de l'anchor) qui sont du bruit.
+      // On exclut aussi les blocs parasites identifies au pre-filtre.
       final zone = <OcrBlock>[anchor];
-      for (final b in blocks) {
+      for (final b in blocksToUse) {
         if (identical(b, anchor)) continue;
         if (b.area < anchor.area * 0.05) continue;
         if (_verticalOverlap(anchor, b) < 0.3) continue;
@@ -175,6 +190,58 @@ class BordereauParser {
 
     // Aucun marqueur n'a donne un resultat solide : fallback complet.
     return parse(allLines);
+  }
+
+  /// Vrai si le bloc est manifestement un bloc PARASITE (transporteur,
+  /// footer conditions generales, en-tete MESEXP, etc) qui ne contient
+  /// pas le destinataire et qui pollue le ciblage si on le garde.
+  ///
+  /// Heuristique : on regarde si plus de 30% des lignes du bloc
+  /// contiennent un mot-cle parasite. Le seuil 30% (au lieu de 1
+  /// ligne) evite de rejeter les blocs destinataire qui auraient juste
+  /// le mot "destination" comme header.
+  static bool _isParasiteBlock(OcrBlock block) {
+    if (block.lines.isEmpty) return false;
+    const parasiteKeywords = [
+      // Transporteur Eure et Loir Acheminement
+      'eure et loir',
+      'eure-et-loir',
+      'acheminement',
+      'siret:',
+      'siret ',
+      // Footer conditions generales
+      'avril 1999',
+      'décret du 6',
+      'decret du 6',
+      'commerce',
+      'recommandee',
+      'recommandée',
+      'conditions générales',
+      'conditions generales',
+      'art l133',
+      'art |133',
+      'art 1133',
+      'art i133',
+      'l133-3',
+      // En-tete MESEXP / labels secondaires
+      'agence remettante',
+      'documents de suivi',
+      'document de suivi',
+      'cachet de l\'expéditeur',
+      'cachet de l\'expediteur',
+    ];
+    var hits = 0;
+    for (final line in block.lines) {
+      final lower = line.toLowerCase();
+      for (final kw in parasiteKeywords) {
+        if (lower.contains(kw)) {
+          hits++;
+          break;
+        }
+      }
+    }
+    // > 30 % des lignes contiennent un mot-cle parasite = bloc parasite
+    return hits / block.lines.length > 0.3;
   }
 
   /// Ratio de chevauchement vertical entre 2 blocs (0 = aucun, 1 =
@@ -499,6 +566,10 @@ class BordereauParser {
       if (BordereauTextFilters.isObviousLabel(c)) continue;
       if (BordereauTextFilters.lineIsStreet(c)) continue;
       if (BordereauTextFilters.looksLikeStreet(c)) continue;
+      // Sprint 2026-05-23 : exclure les headers de tableau (Vol U.M.
+      // Poids Client Date) qui sont parfois mal segmentes par ML Kit
+      // et passent les autres filtres.
+      if (BordereauTextFilters.isTableHeaderLine(c)) continue;
       if (_cpRegex.hasMatch(c)) continue;
       cand = c;
       nomIdxInBlock = i;
@@ -678,6 +749,22 @@ class BordereauParser {
         if (villeLower.contains(w)) {
           score -= 1000;
           break;
+        }
+      }
+      // Bonus heuristique departement prefere (Sprint 2026-05-23) :
+      // si Noah travaille en 28, on prefere les CP commencant par 28
+      // (-500). Cas typique MESEXP retour : 2 adresses dans le bloc,
+      // 28190 COURVILLE (ramasse) et 72210 VOIVRES (destination
+      // finale). On veut le 28.
+      if (c.cp.startsWith(kCodePostalPrefere)) {
+        score -= 500;
+      } else {
+        // Bonus moindre pour les autres dpts de la zone elargie.
+        for (final dept in kCodePostalPreferes) {
+          if (dept != kCodePostalPrefere && c.cp.startsWith(dept)) {
+            score -= 100;
+            break;
+          }
         }
       }
       if (score < bestScore) {

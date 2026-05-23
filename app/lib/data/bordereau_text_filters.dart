@@ -26,17 +26,26 @@ abstract final class BordereauTextFilters {
       'matières dangereuses',
       'transporteur',
       'commissionnaire',
-      'instruction de livraison',
+      'instruction',
+      'instruc tion',
+      'ins truction',
       'document de suivi',
       'lieu de livraison',
       'contact destinataire',
       'expediteur',
       'expéditeur',
+      'expedi teur',
       'destinataire',
       'desinataire',
       'mesexp',
       'messagerie express',
       'nature de la marchandise',
+      // Ajouts Sprint 2026-05-23
+      'recep.',
+      'recep:',
+      'agence remettante',
+      'france alliance',
+      'allonnes',
     ];
     for (final l in labels) {
       if (lower.contains(l)) return true;
@@ -114,6 +123,39 @@ abstract final class BordereauTextFilters {
       if (!cityWords.contains(w)) return false;
     }
     return true;
+  }
+
+  /// Vrai si la ligne est un HEADER DE TABLEAU (contient 2+ mots-cles
+  /// types "Vol", "Poids", "U.M.", "Code", "Regime", "Client", "Date").
+  /// Cas typique : ligne "Vol/lg Poids U.M. Client Date" sur les
+  /// bordereaux MESEXP retour. Sert a exclure les candidats noms qui
+  /// sont en fait des headers de colonnes mal segmentees par ML Kit.
+  static bool isTableHeaderLine(String line) {
+    final lower = line.toLowerCase();
+    const headers = [
+      'vol/',
+      'vol /',
+      'vol ',
+      'poids',
+      'u.m',
+      'um.',
+      'um ',
+      'regime',
+      'régime',
+      'client',
+      'periode',
+      'période',
+      'date',
+      'code',
+      'ligne',
+      'nature',
+    ];
+    var matches = 0;
+    for (final h in headers) {
+      if (lower.contains(h)) matches++;
+      if (matches >= 2) return true;
+    }
+    return false;
   }
 
   /// Vrai si le candidat ressemble a un nom de transporteur courant.
@@ -217,6 +259,49 @@ abstract final class BordereauTextFilters {
       'date',
       'periode',
       'période',
+      // Labels tableau MESEXP retour ajoutes 2026-05-23 (feedback Noah)
+      'alpr retour',
+      'alprret',
+      'ref d.o',
+      'ref d.o.',
+      'ref. exp',
+      'ref exp',
+      'd.o.',
+      'u.m',
+      'um.',
+      'vol/lg',
+      'vol / lg',
+      'vol /lg',
+      'vol/ lg',
+      'instruction',
+      'conditions',
+      'recevables',
+      'reception',
+      'rception',
+      'recep.',
+      'recep:',
+      'recep ',
+      'travee',
+      'document',
+      'lieu',
+      'agence',
+      'remettante',
+      'eure et loir',
+      'eure-et-loir',
+      'alliance pr',
+      'pare brise',
+      // Codes regime / type marchandise
+      ' t10',
+      ' to1',
+      ' to7',
+      ' t07',
+      // Defaults inscrits sur les bordereaux conditions generales
+      'avril 1999',
+      'decret du 6',
+      'décret du 6',
+      'commerce',
+      'recommandee',
+      'recommandée',
     ];
     for (final w in technicalWords) {
       if (lower.contains(w)) return true;
