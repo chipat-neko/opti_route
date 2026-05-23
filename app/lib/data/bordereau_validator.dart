@@ -163,6 +163,11 @@ class BordereauValidator {
       telephone: extraction.telephone,
       nbColis: extraction.nbColis,
       confidence: ExtractionConfidence.high,
+      // Bug fix 2026-05-23 (logs Noah) : preserver format + source.
+      // Avant : ces 2 champs reset aux defaults (livraison / parserLocal)
+      // ce qui faisait perdre l'info ENLEVEMENT detectee en amont.
+      format: extraction.format,
+      source: extraction.source,
     );
 
     return BordereauValidationResult(
