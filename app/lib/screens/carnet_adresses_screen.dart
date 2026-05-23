@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/cloud_error_humanizer.dart';
+import '../data/carnet_backfill_service.dart';
 import '../data/carnet_export_service.dart';
 import '../data/carnet_import_service.dart';
 import '../data/carnet_vcard_export_service.dart';
 import '../data/database.dart';
 import '../data/saved_destinations_repository.dart';
 import '../providers/database_providers.dart';
+import '../providers/geocoding_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/voice_input_button.dart';
 import 'carnet_adresses/carnet_tile.dart';
@@ -75,10 +77,52 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
               ),
             ),
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.file_upload_outlined),
-            tooltip: 'Importer un CSV',
-            onPressed: _onImportPressed,
+            tooltip: 'Importer / peupler',
+            onSelected: (value) {
+              if (value == 'csv') _onImportPressed();
+              if (value == 'csv_geo') _onImportGeocodePressed();
+              if (value == 'backfill') _onBackfillPressed();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'csv',
+                child: ListTile(
+                  leading: Icon(Icons.upload_file_outlined),
+                  title: Text('Importer CSV complet'),
+                  subtitle: Text(
+                    'CSV avec lat/lng (export precedent)',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'csv_geo',
+                child: ListTile(
+                  leading: Icon(Icons.add_location_outlined),
+                  title: Text('Importer CSV simplifie'),
+                  subtitle: Text(
+                    'Nom + adresse, geocodage auto BAN',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'backfill',
+                child: ListTile(
+                  leading: Icon(Icons.history_outlined),
+                  title: Text('Depuis l\'historique'),
+                  subtitle: Text(
+                    'Tous mes arrets deja faits',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share),
@@ -309,6 +353,144 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Erreur a l\'import : ${humanizeAnyError(e)}')),
+      );
+    }
+  }
+
+  /// Import CSV simplifie : accepte un CSV minimal (nom_client, rue,
+  /// code_postal, ville) sans lat/lng et geocode automatiquement via
+  /// BAN. Idem que [_onImportPressed] mais le constructeur du service
+  /// recoit un geocoder.
+  Future<void> _onImportGeocodePressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final path = picked.files.first.path;
+    if (path == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Fichier illisible')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final shouldImport = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Import simplifie ?'),
+        content: Text(
+          'Le CSV doit avoir au moins les colonnes nom_client, rue, '
+          'code_postal, ville. L\'app geocode chaque ligne via BAN '
+          '(France) -- compte ~1 seconde par client.\n\n'
+          'Les doublons (meme nom ou meme position) seront fusionnes.\n\n'
+          '${picked.files.first.name}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Importer'),
+          ),
+        ],
+      ),
+    );
+    if (shouldImport != true || !mounted) return;
+
+    // Spinner non-bloquant pendant le geocodage (peut prendre 1-2 min
+    // pour 100 lignes).
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Geocodage en cours, patiente...'),
+        duration: Duration(seconds: 120),
+      ),
+    );
+    try {
+      final service = CarnetImportService(
+        ref.read(savedDestinationsRepositoryProvider),
+        geocoder: ref.read(geocodingServiceProvider),
+      );
+      final result = await service.importFromFile(File(path));
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      final summary = [
+        if (result.created > 0) '${result.created} ajoutee(s)',
+        if (result.merged > 0) '${result.merged} fusionnee(s)',
+        if (result.rejected > 0) '${result.rejected} non geocodee(s)',
+      ].join(' · ');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(summary.isEmpty ? 'Aucune entree' : summary),
+          backgroundColor:
+              result.rejected > 0 ? AppColors.amber : AppColors.emerald,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'import : ${humanizeAnyError(e)}')),
+      );
+    }
+  }
+
+  /// Backfill du carnet depuis l'historique des arrets deja faits dans
+  /// toutes les tournees (cf [CarnetBackfillService]). Idempotent.
+  Future<void> _onBackfillPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final shouldRun = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Peupler depuis l\'historique ?'),
+        content: const Text(
+          'L\'app va scanner toutes les tournees deja faites et ajouter '
+          'chaque adresse au carnet. Les doublons sont fusionnes (pas '
+          'de duplication).\n\n'
+          'Operation locale, instantanee, idempotente (rejouable).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Lancer'),
+          ),
+        ],
+      ),
+    );
+    if (shouldRun != true || !mounted) return;
+    try {
+      final service = CarnetBackfillService(
+        ref.read(appDatabaseProvider),
+        ref.read(savedDestinationsRepositoryProvider),
+      );
+      final result = await service.backfillFromStops();
+      if (!mounted) return;
+      final summary = [
+        '${result.totalStops} arret(s) scanne(s)',
+        if (result.created > 0) '${result.created} ajoutee(s)',
+        if (result.merged > 0) '${result.merged} fusionnee(s)',
+        if (result.skipped > 0) '${result.skipped} skipped',
+      ].join(' · ');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(summary),
+          backgroundColor:
+              result.created > 0 ? AppColors.emerald : AppColors.amber,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur backfill : ${humanizeAnyError(e)}')),
       );
     }
   }
