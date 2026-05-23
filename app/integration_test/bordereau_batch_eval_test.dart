@@ -56,10 +56,12 @@ void main() {
         // (path connu `/data/data/<pkg>/app_flutter/`), accessible via
         // `adb shell run-as com.optiroute.opti_route cat <path>`.
         const assetPrefix = 'assets/test_bordereaux/';
-        // Liste statique des 38 pages (gen via :
+        // Liste statique des 68 pages (gen via :
         //   ls assets/test_bordereaux/ | sort).
+        // Sprint 2026-05-23 : +30 nouvelles images (page 39-68) ajoutees
+        // par Noah, resize a 1600px qualite 75 (~8 MB total).
         final assetNames = [
-          for (int i = 1; i <= 38; i++)
+          for (int i = 1; i <= 68; i++)
             'page_${i.toString().padLeft(2, '0')}.jpg',
         ];
 
