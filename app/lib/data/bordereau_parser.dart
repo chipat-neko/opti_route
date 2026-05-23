@@ -172,11 +172,13 @@ class BordereauParser {
     // Prendre les 5 plus proches puis filtrer ceux dont les lignes
     // sont des fragments parasites (juste un mot court, juste un
     // numero, etc).
-    // Prendre les 5 plus proches blocs (apres filtre parasite) et
+    // Prendre les 10 plus proches blocs (apres filtre parasite) et
     // ASSEMBLER leurs lignes en preservant l'ordre de proximite.
     // Le bloc le plus proche fournit en general le nom, les suivants
     // l'adresse. _buildExtractionFromContentLines fera le tri.
-    final nearby = candidates.take(5).map((c) => c.block).toList();
+    // 10 (vs 5 v4) pour aussi capturer le CP+ville qui est souvent
+    // un peu plus loin du label "à enlever chez" sur les MESEXP retour.
+    final nearby = candidates.take(10).map((c) => c.block).toList();
     final assembledLines = <String>[];
     for (final b in nearby) {
       for (final line in b.lines) {
