@@ -512,11 +512,10 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       _nbColisCtrl.text = extraction.nbColis!.toString();
     }
     // Sprint 2026-05-23 (Noah feedback) : propager le format ENLEVEMENT
-    // au type d'arret. Avant : type restait 'livraison' meme si le
-    // bordereau etait ENLEVEMENT -> badge incorrect dans la tournee.
-    if (extraction.format == BordereauFormat.enlevement) {
-      _type = kStopTypeRamasse;
-    }
+    // au type d'arret. Debug print pour valider que le format remonte
+    // bien jusqu'ici.
+    debugPrint('OCRDUMP === ajout_arret recu extraction.format = '
+        '${extraction.format.name}, nomDest = ${extraction.nomDestinataire}');
 
     // Recherche d'adresse : on tente les 2 strategies en parallele
     // et on garde la PLUS PRECISE (qui a une `road` = vraie rue).
@@ -556,6 +555,11 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
 
     if (!mounted) return;
     setState(() {
+      // Propager le format ENLEVEMENT au type d'arret. Inclus DANS le
+      // setState pour garantir le rebuild du SegmentedButton.
+      if (extraction.format == BordereauFormat.enlevement) {
+        _type = kStopTypeRamasse;
+      }
       if (found != null) {
         // Adresse validee directement : on a les coordonnees + le label.
         _address = found;
