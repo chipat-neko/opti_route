@@ -68,6 +68,16 @@ abstract final class BordereauTextFilters {
       'sapiniere',
       'sapinière',
       'blaise pascal', // rue de zone industrielle Sarthe
+      // Labels expediteurs Sarthe (Alliance PR) frequents sur les
+      // MESEXP retour observes 2026-05-23. Specifique au workflow Noah.
+      'champ du chataignier',
+      'chataignier',
+      'châtaignier',
+      'voivres',
+      'voivres les le mans',
+      'le mans',
+      'alliance pr',
+      'allianc pr',
     ];
     for (final l in labels) {
       if (lower.contains(l)) return true;
