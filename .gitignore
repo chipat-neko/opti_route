@@ -35,6 +35,26 @@ strip_const.ps1
 bordereaux_test/
 screenshots_v8/
 
+# Donnees ML clients (noms, adresses, telephones reels extraits des
+# bordereaux OCRises) -> JAMAIS commit. Regenerables via
+# integration_test/bordereau_batch_eval_test.dart.
+training_data*.csv
+
+# Modeles ML entraines sur ces donnees + reports d'accuracy.
+# Regenerables via tools/train_classifier.py.
+*.onnx
+tools/_classifier_report.txt
+
+# Screenshots / dumps debug temporaires (ADB / UI dumps)
+noah_screen*.png
+noah_scan_logs.txt
+ui_dump.xml
+
+# Supabase CLI state local (linked-project.json contient le ref qui
+# est deja public dans cloud.env.json mais le dossier est regenere par
+# `supabase link` donc non versionne)
+supabase/.temp/
+
 # Le sous-projet app/ a son propre .gitignore (Flutter)
 
 # Dossier recherche prive (notes pre-pitch investisseur)

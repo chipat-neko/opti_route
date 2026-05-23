@@ -198,6 +198,11 @@ flutter:
     # scoped storage Android 16. **ATTENTION** : ~14 MB d'images,
     # a NE PAS inclure dans le build release Play Store.
     - assets/test_bordereaux/
+    # Modeles ML embarques (Random Forest ONNX) pour classer les lignes
+    # OCR des bordereaux en NOM_CLIENT/RUE/CP_VILLE/TEL/REF/PARASITE.
+    # Genere par tools/train_classifier.py + features.json pour
+    # reproduire les features cote Dart.
+    - assets/ml/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -103,6 +103,13 @@ void main() {
               'telephone,confidence,rotation_deg,attempts,duration_ms,'
               'raw_first_5_lines',
         ];
+        // Sprint 2026-05-23 (option A ML) : 2eme CSV pour le training
+        // data du futur classifier ML. 1 ligne par ligne OCR detectee :
+        // image,block_id,line_idx,line_text,left,top,right,bottom
+        final trainingLines = <String>[
+          'image,block_id,line_idx,line_text,left,top,right,bottom,'
+              'block_width,block_height',
+        ];
 
         int idx = 0;
         for (final file in files) {
@@ -148,6 +155,27 @@ void main() {
               : parser.parse(rotated.result.lines);
           final raw = rotated.result.lines.take(5).join(' | ');
 
+          // Sprint option A ML : dump toutes les lignes OCR avec
+          // positions pour le futur classifier. 1 ligne CSV par ligne
+          // OCR. Sera labellise via Gemini ensuite (script Python).
+          for (var b = 0; b < rotated.result.blocks.length; b++) {
+            final block = rotated.result.blocks[b];
+            for (var l = 0; l < block.lines.length; l++) {
+              trainingLines.add([
+                _esc(name),
+                b.toString(),
+                l.toString(),
+                _esc(block.lines[l]),
+                block.left.toInt().toString(),
+                block.top.toInt().toString(),
+                block.right.toInt().toString(),
+                block.bottom.toInt().toString(),
+                block.width.toInt().toString(),
+                block.height.toInt().toString(),
+              ].join(','));
+            }
+          }
+
           csvLines.add([
             _esc(name),
             _esc(extraction.nomDestinataire),
@@ -185,6 +213,36 @@ void main() {
           debugPrint('CSV: $line');
         }
         debugPrint('=== END CSV ===');
+
+        // Sprint option A ML : 2eme CSV training data avec toutes les
+        // lignes OCR + positions. Sera labellise via Gemini puis
+        // utilise pour entrainer le classifier.
+        final trainingCsv = '${docsDir.path}/training_data.csv';
+        await File(trainingCsv).writeAsString(trainingLines.join('\n'));
+        debugPrint('=== TRAINING CSV written : $trainingCsv '
+            '(${trainingLines.length} lignes)');
+        // Aussi copier dans le storage externe accessible sans run-as
+        // (Android 10- scoped storage permet aux apps d'ecrire dans
+        // /sdcard/Android/data/<pkg>/files/ sans permission). Le path
+        // est lisible via adb pull sans run-as, et survit jusqu'au
+        // desinstall du package par flutter integration_test cleanup.
+        try {
+          final extDir = await getExternalStorageDirectory();
+          if (extDir != null) {
+            final extCsv = '${extDir.path}/training_data.csv';
+            await File(extCsv).writeAsString(trainingLines.join('\n'));
+            debugPrint('=== TRAINING CSV (ext) : $extCsv');
+          }
+        } catch (e) {
+          debugPrint('=== TRAINING CSV ext failed : $e');
+        }
+        // Sleep 90s pour laisser le temps de adb pull AVANT que
+        // flutter integration_test desinstalle le package. Sans ca,
+        // tous les debugPrint sont throttles par logcat et on perd
+        // les 2000+ lignes de training data.
+        debugPrint('=== SLEEP 120s : pull le CSV maintenant ===');
+        await Future.delayed(const Duration(seconds: 120));
+        debugPrint('=== WAKE UP, fin du test ===');
 
         // Resume console : breakdown par confidence.
         int high = 0, low = 0, none = 0, error = 0;
