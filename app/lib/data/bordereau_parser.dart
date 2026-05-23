@@ -349,26 +349,34 @@ class BordereauParser {
   /// `_isParasiteBlock` pour rejeter les blocs OCR qui contiennent
   /// l'adresse du transporteur Noah.
   ///
+  /// **Important** (Sprint v8 Noah 2026-05-23) : le 1er element est
+  /// TOUJOURS le numero de rue (extrait via regex `^\s*(\d+)`), suivi
+  /// des autres mots-cles. Cela permet de distinguer le depot d'un
+  /// vrai client dans la meme rue mais autre numero. Si pas de numero,
+  /// 1er element = chaine vide.
+  ///
   /// Ex : "24 Avenue Louis Pasteur 28630 Gellainville"
-  ///   -> ["louis", "pasteur", "28630", "gellainville"]
-  /// (les mots-vides adresse 'avenue'/'rue'/'de'/'la' sont stripes)
+  ///   -> ["24", "louis", "pasteur", "28630", "gellainville"]
   static List<String> _extractDepotKeywords(String? depotAddress) {
     if (depotAddress == null || depotAddress.trim().isEmpty) {
       return const [];
     }
+    // Extraire le numero de rue (1er element, peut etre chaine vide)
+    final numMatch = RegExp(r'^\s*(\d+)').firstMatch(depotAddress);
+    final streetNum = numMatch?.group(1) ?? '';
     const stopWords = {
       'rue', 'avenue', 'route', 'boulevard', 'chemin', 'place',
       'impasse', 'allee', 'allée', 'voie', 'quai', 'cours', 'passage',
       'la', 'le', 'les', 'de', 'du', 'des', 'au', 'aux', 'et', 'a',
       'à', 'en', 'sur', 'sous', 'pour', 'par',
     };
-    final words = depotAddress
+    final otherWords = depotAddress
         .toLowerCase()
         .split(RegExp(r'[\s,;.]+'))
         .where((w) => w.length >= 4)
         .where((w) => !stopWords.contains(w))
         .toList();
-    return words;
+    return [streetNum, ...otherWords];
   }
 
   /// Parse en ciblant le GROS encadre visuel du bordereau (typiquement
@@ -554,24 +562,33 @@ class BordereauParser {
     List<String> depotKeywords = const [],
   }) {
     if (block.lines.isEmpty) return false;
-    // Sprint v7 (feedback Noah 2026-05-23) : un bloc qui contient
-    // l'adresse du DEPOT de la tournee (rue + ville/CP) est presque
-    // toujours le bloc transporteur, pas le destinataire. Si au moins
-    // 2 mots-cles significatifs du label depot apparaissent dans le
-    // bloc, on le marque parasite.
+    // Sprint v8 (feedback Noah 2026-05-23 raffine) : un bloc est
+    // parasite UNIQUEMENT s'il contient :
+    //  1. Le NUMERO DE RUE EXACT du depot (1er element de depotKeywords)
+    //  2. ET au moins 2 autres mots-cles (rue + ville)
     //
-    // Seuil 2 (pas 1) pour eviter les faux positifs : si Noah livre
-    // un vrai client rue "Louis Pasteur" dans une AUTRE ville, le
-    // bloc contiendra "louis pasteur" (1 keyword) mais pas le nom
-    // de la ville du depot -> garde.
-    if (depotKeywords.isNotEmpty) {
-      var hits = 0;
-      final blockText =
-          block.lines.join(' ').toLowerCase();
-      for (final kw in depotKeywords) {
-        if (blockText.contains(kw)) {
-          hits++;
-          if (hits >= 2) return true;
+    // Le numero est obligatoire pour distinguer le depot d'un vrai
+    // client dans la meme rue/ville mais autre numero. Ex :
+    // - Depot "24 Avenue Louis Pasteur 28630 Gellainville" -> 24, 4 kw
+    // - Bloc depot "24 AVENUE | 28630 GELLAINVILLE" : a 24 + 2 kw -> parasite
+    // - Vrai client "30 AVENUE LOUIS PASTEUR 28630 GELLAINVILLE" : a
+    //   4 kw mais PAS 24 -> garde (pas parasite, c'est un vrai client)
+    if (depotKeywords.length >= 2) {
+      final streetNum = depotKeywords.first;
+      final otherKeywords = depotKeywords.skip(1).toList();
+      final blockText = block.lines.join(' ').toLowerCase();
+      // Verifie le numero comme MOT INDEPENDANT (entoure de non-chiffres
+      // ou debut/fin), pas dans un sous-mot du genre "1240".
+      if (streetNum.isNotEmpty) {
+        final numPattern = RegExp(r'(?<!\d)' + RegExp.escape(streetNum) + r'(?!\d)');
+        if (numPattern.hasMatch(blockText)) {
+          var otherHits = 0;
+          for (final kw in otherKeywords) {
+            if (blockText.contains(kw)) {
+              otherHits++;
+              if (otherHits >= 2) return true;
+            }
+          }
         }
       }
     }
