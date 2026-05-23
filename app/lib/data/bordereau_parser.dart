@@ -80,8 +80,16 @@ class BordereauParser {
   ///
   /// Retourne null si aucun label trouve ou aucun bloc en dessous
   /// detecte -> le caller fallback sur [parseFromBlocks].
-  BordereauExtraction? parseFromBlocksSpatial(List<OcrBlock> blocks) {
+  BordereauExtraction? parseFromBlocksSpatial(
+    List<OcrBlock> blocks, {
+    String? depotAddress,
+  }) {
     if (blocks.isEmpty) return null;
+    // Sprint v7 (feedback Noah 2026-05-23) : extraire les mots-cles
+    // de l'adresse du depot pour filtrer les blocs qui contiennent
+    // l'adresse du transporteur Noah. Plus generique que hardcoder
+    // 'louis pasteur'/'gellainville'.
+    final depotKeywords = _extractDepotKeywords(depotAddress);
     // Debug : log la structure des blocs pour analyse sur les cas
     // pathologiques (filtrer dans logcat via grep OCRDUMP-SPATIAL).
     for (var i = 0; i < blocks.length; i++) {
@@ -159,6 +167,10 @@ class BordereauParser {
         }
       }
       if (isHeaderBlock) continue;
+      // Filtre depot (v7 Sprint 2026-05-23) : si le bloc contient
+      // l'adresse du DEPOT de la tournee (rue + ville), c'est le
+      // bloc transporteur, pas le destinataire -> exclu.
+      if (_isParasiteBlock(b, depotKeywords: depotKeywords)) continue;
       // Distance Euclidienne entre centres
       final bCenterX = (b.left + b.right) / 2;
       final bCenterY = (b.top + b.bottom) / 2;
@@ -331,6 +343,33 @@ class BordereauParser {
 
   // _horizontalOverlap supprime v3 Sprint 2026-05-23 : remplace par
   // distance Euclidienne centre-a-centre dans parseFromBlocksSpatial.
+
+  /// Extrait les mots-cles significatifs (>= 4 chars, hors mots-vides
+  /// adresse francais) du label adresse du depot Noah. Sert au filtre
+  /// `_isParasiteBlock` pour rejeter les blocs OCR qui contiennent
+  /// l'adresse du transporteur Noah.
+  ///
+  /// Ex : "24 Avenue Louis Pasteur 28630 Gellainville"
+  ///   -> ["louis", "pasteur", "28630", "gellainville"]
+  /// (les mots-vides adresse 'avenue'/'rue'/'de'/'la' sont stripes)
+  static List<String> _extractDepotKeywords(String? depotAddress) {
+    if (depotAddress == null || depotAddress.trim().isEmpty) {
+      return const [];
+    }
+    const stopWords = {
+      'rue', 'avenue', 'route', 'boulevard', 'chemin', 'place',
+      'impasse', 'allee', 'allée', 'voie', 'quai', 'cours', 'passage',
+      'la', 'le', 'les', 'de', 'du', 'des', 'au', 'aux', 'et', 'a',
+      'à', 'en', 'sur', 'sous', 'pour', 'par',
+    };
+    final words = depotAddress
+        .toLowerCase()
+        .split(RegExp(r'[\s,;.]+'))
+        .where((w) => w.length >= 4)
+        .where((w) => !stopWords.contains(w))
+        .toList();
+    return words;
+  }
 
   /// Parse en ciblant le GROS encadre visuel du bordereau (typiquement
   /// celui qui contient le nom + adresse de ramasse / destinataire).
@@ -510,20 +549,30 @@ class BordereauParser {
   /// contiennent un mot-cle parasite. Le seuil 30% (au lieu de 1
   /// ligne) evite de rejeter les blocs destinataire qui auraient juste
   /// le mot "destination" comme header.
-  static bool _isParasiteBlock(OcrBlock block) {
+  static bool _isParasiteBlock(
+    OcrBlock block, {
+    List<String> depotKeywords = const [],
+  }) {
     if (block.lines.isEmpty) return false;
-    // Sprint v6 (feedback Noah 2026-05-23 sur HYDRO ALUMINIUM) :
-    // l'adresse du transporteur Eure-et-Loir Acheminement (24 AVENUE
-    // LOUIS PASTEUR, 28630 GELLAINVILLE) est dans un bloc qui n'a
-    // pas explicitement "Eure et Loir Acheminement" (juste la rue +
-    // CP+ville). Il passe les autres filtres parasites + cpRank=0
-    // (28630 dpt prefere) et est preferer au vrai destinataire.
-    // On le detecte explicitement.
-    for (final line in block.lines) {
-      final lower = line.toLowerCase();
-      if (lower.contains('louis pasteur') ||
-          lower.contains('gellainville')) {
-        return true;
+    // Sprint v7 (feedback Noah 2026-05-23) : un bloc qui contient
+    // l'adresse du DEPOT de la tournee (rue + ville/CP) est presque
+    // toujours le bloc transporteur, pas le destinataire. Si au moins
+    // 2 mots-cles significatifs du label depot apparaissent dans le
+    // bloc, on le marque parasite.
+    //
+    // Seuil 2 (pas 1) pour eviter les faux positifs : si Noah livre
+    // un vrai client rue "Louis Pasteur" dans une AUTRE ville, le
+    // bloc contiendra "louis pasteur" (1 keyword) mais pas le nom
+    // de la ville du depot -> garde.
+    if (depotKeywords.isNotEmpty) {
+      var hits = 0;
+      final blockText =
+          block.lines.join(' ').toLowerCase();
+      for (final kw in depotKeywords) {
+        if (blockText.contains(kw)) {
+          hits++;
+          if (hits >= 2) return true;
+        }
       }
     }
     // Sprint 2026-05-23 (feedback Noah) : bloc avec "ZA DE" + un CP

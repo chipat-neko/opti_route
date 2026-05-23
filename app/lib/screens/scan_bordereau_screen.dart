@@ -401,9 +401,19 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         // Plus fiable que les heuristiques de contenu. Fallback sur
         // parseFromBlocks (ancien ciblage bbox) si aucun label trouve,
         // puis parse(lines) si pas de blocks du tout.
+        // Sprint v7 (feedback Noah 2026-05-23) : passer l'adresse du
+        // depot de la tournee courante au parser. Le parser exclut
+        // les blocs OCR qui contiennent cette adresse (= bloc
+        // transporteur, pas destinataire).
+        final currentTournee =
+            ref.read(currentTourneeProvider).value;
+        final depotAddress = currentTournee?.pointDepartLabel;
         BordereauExtraction? spatial;
         if (result.blocks.isNotEmpty) {
-          spatial = BordereauParser().parseFromBlocksSpatial(result.blocks);
+          spatial = BordereauParser().parseFromBlocksSpatial(
+            result.blocks,
+            depotAddress: depotAddress,
+          );
         }
         if (spatial != null) {
           extraction = spatial;
