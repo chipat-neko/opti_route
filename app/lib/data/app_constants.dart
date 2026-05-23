@@ -135,3 +135,24 @@ const int kClientMemoryMaxDistance = 3;
 /// Ratio de similarite minimum (0..1) pour matcher 2 noms longs ou
 /// la distance absolue peut etre > 3 sans etre une faute OCR.
 const double kClientMemoryMinRatio = 0.85;
+
+// ════════════════════════════════════════════════════════════════
+// Zone geographique principale de Noah (Eure-et-Loir)
+// ════════════════════════════════════════════════════════════════
+
+/// Prefixe CP du departement principal de Noah (28 = Eure-et-Loir).
+/// Quand le parser bordereau hesite entre 2 adresses (cas typique
+/// MESEXP retour : adresse 28xxx du fournisseur a ramasser VS adresse
+/// 72xxx de la destination finale), on prefere celle qui commence par
+/// ce prefixe.
+///
+/// Si Noah change de zone : modifier cette constante. Pour plusieurs
+/// departements, voir [kCodePostalPreferes].
+const String kCodePostalPrefere = '28';
+
+/// Liste etendue des departements ou Noah livre regulierement, par
+/// ordre de preference. Sert au fallback si [kCodePostalPrefere] ne
+/// match aucune adresse du bordereau scanne.
+/// 28 = Eure-et-Loir (principal), 27 = Eure, 41 = Loir-et-Cher,
+/// 72 = Sarthe, 78 = Yvelines, 91 = Essonne.
+const List<String> kCodePostalPreferes = ['28', '27', '41', '72', '78', '91'];
