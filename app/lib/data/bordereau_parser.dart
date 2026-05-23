@@ -202,6 +202,29 @@ class BordereauParser {
   /// le mot "destination" comme header.
   static bool _isParasiteBlock(OcrBlock block) {
     if (block.lines.isEmpty) return false;
+    // Sprint 2026-05-23 (feedback Noah) : bloc avec "ZA DE" + un CP
+    // hors zone Eure-et-Loir = bloc EXPEDITEUR (Sarthe, Paris, etc).
+    // On le marque parasite pour ne pas extraire son nom comme client.
+    var hasZaKeyword = false;
+    var hasOutOfZoneCp = false;
+    for (final line in block.lines) {
+      final lower = line.toLowerCase();
+      if (lower.contains('za de') ||
+          lower.contains('z.a.') ||
+          lower.contains('zone artisanale') ||
+          lower.contains('zone industrielle')) {
+        hasZaKeyword = true;
+      }
+      final cpMatch = BordereauPatterns.cpRegex.firstMatch(line);
+      if (cpMatch != null) {
+        final cp = cpMatch.group(1)!;
+        final isInZone = kCodePostalPreferes.any((d) => cp.startsWith(d));
+        // Cas typique : CP 72xxx (Sarthe), 75xxx (Paris), etc, dans
+        // un bloc qui contient aussi "ZA DE" = bloc expediteur.
+        if (!isInZone) hasOutOfZoneCp = true;
+      }
+    }
+    if (hasZaKeyword && hasOutOfZoneCp) return true;
     const parasiteKeywords = [
       // Transporteur Eure et Loir Acheminement
       'eure et loir',
@@ -358,22 +381,41 @@ class BordereauParser {
     // Bloc Lieu de livraison : on regarde les 3 lignes suivantes,
     // **une par une** (concatener les lignes ferait deborder la regex
     // ville sur "Nature de la marchandise GALET" par ex).
+    //
+    // Sprint 2026-05-23 : on collecte TOUS les CP/ville candidats du
+    // bloc (au lieu de prendre le 1er) et on prefere ceux du
+    // departement prefere Noah (28). Cas reel observe : bloc destination
+    // contient 72560 CHANGE en 1er ET 28400 NOGENT plus loin -- on
+    // veut le 28400.
     String? cp;
     String? ville;
     if (lieuIdx >= 0) {
+      final blockCandidates = <({String cp, String? ville})>[];
       for (var i = lieuIdx + 1; i < lines.length && i < lieuIdx + 4; i++) {
         final line = lines[i];
         final m = _cpVilleRegex.firstMatch(line);
         if (m != null) {
-          cp = m.group(1);
-          ville = _cleanVille(m.group(2));
-          break;
+          blockCandidates.add((cp: m.group(1)!, ville: _cleanVille(m.group(2))));
+        } else {
+          final cpOnly = _cpRegex.firstMatch(line);
+          if (cpOnly != null) {
+            blockCandidates.add((cp: cpOnly.group(1)!, ville: null));
+          }
         }
-        final cpOnly = _cpRegex.firstMatch(line);
-        if (cpOnly != null && cp == null) {
-          cp = cpOnly.group(1);
-          // La ville sera peut-etre sur la ligne suivante.
+      }
+      // Trie : CP du dpt prefere en 1er, puis dpts elargis, puis autres.
+      // Ordre stable pour les egalites (preserve l'ordre OCR initial).
+      if (blockCandidates.isNotEmpty) {
+        int rank(String c) {
+          if (c.startsWith(kCodePostalPrefere)) return 0;
+          for (var i = 0; i < kCodePostalPreferes.length; i++) {
+            if (c.startsWith(kCodePostalPreferes[i])) return i + 1;
+          }
+          return 99;
         }
+        blockCandidates.sort((a, b) => rank(a.cp).compareTo(rank(b.cp)));
+        cp = blockCandidates.first.cp;
+        ville = blockCandidates.first.ville;
       }
     }
 

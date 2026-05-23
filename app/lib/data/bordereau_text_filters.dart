@@ -46,6 +46,28 @@ abstract final class BordereauTextFilters {
       'agence remettante',
       'france alliance',
       'allonnes',
+      // Ajouts feedback Noah 2026-05-23 (screenshot scan reel) :
+      // les zones d'activite, ZA, ZI, ZAC sont des noms de lieux
+      // industriels, JAMAIS des noms de clients. On les rejette tot.
+      'za de',
+      'za de la',
+      'z.a.',
+      'z.a ',
+      ' za ',
+      'zone artisanale',
+      'zone industrielle',
+      'zone d\'activite',
+      'zone d\'activité',
+      'zac de',
+      'z.i.',
+      'rance alliance',
+      'ranceallian',
+      'rancealliance',
+      'chenardiere',
+      'lachenardiere',
+      'sapiniere',
+      'sapinière',
+      'blaise pascal', // rue de zone industrielle Sarthe
     ];
     for (final l in labels) {
       if (lower.contains(l)) return true;
