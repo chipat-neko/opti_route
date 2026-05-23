@@ -58,8 +58,16 @@ abstract final class BordereauPatterns {
 
   /// Pattern rue Acceptee comme adresse extraite (avec ALLEE non-accentue
   /// en plus, observe sur certains bordereaux).
+  ///
+  /// Sprint 2026-05-23 (Noah) : ajout des routes nationales/departementales
+  /// "RN \d+" et "RD \d+" (cas reel : "RN 23 AVENUE DE PARIS" doit etre
+  /// reconnue comme rue, pas comme nom d'entreprise).
   static final ruePattern = RegExp(
-    r"^\d+\s*(?:bis|ter|quater)?\s+(?:RUE|AVENUE|AV\.?|BD|BOULEVARD|CHEMIN|PLACE|IMPASSE|ALLEE|ALL[EÉ]E|VOIE|ROUTE|RTE|QUAI|COURS|PASSAGE|FAUBOURG|FBG)\b",
+    r"^(?:"
+    r"\d+\s*(?:bis|ter|quater)?\s+(?:RUE|AVENUE|AV\.?|BD|BOULEVARD|CHEMIN|PLACE|IMPASSE|ALLEE|ALL[EÉ]E|VOIE|ROUTE|RTE|QUAI|COURS|PASSAGE|FAUBOURG|FBG)"
+    r"|"
+    r"(?:RN|RD)\s*\d+"
+    r")\b",
     caseSensitive: false,
   );
 
