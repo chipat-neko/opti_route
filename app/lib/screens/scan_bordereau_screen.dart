@@ -393,14 +393,26 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         extraction = ColissimoBordereauParser().parse(result.lines);
         parserUsed = 'colissimo';
       } else {
-        // parseFromBlocks cible le gros encadre visuel via les bounding
-        // boxes ML Kit. Sur les MESEXP retour ou l'OCR melange l'en-tete,
-        // le tableau et les conditions generales, ca isole le bloc qui
-        // contient le nom + adresse de ramasse. Fallback parse() si pas
-        // de blocks (image trop pauvre).
-        extraction = result.blocks.isNotEmpty
-            ? BordereauParser().parseFromBlocks(result.blocks)
-            : BordereauParser().parse(result.lines);
+        // Nouvelle approche spatiale (feedback Noah 2026-05-23) :
+        // 1. trouver le label "destinataire" / "a enlever chez"
+        // 2. prendre le RECTANGLE EN DESSOUS comme contenu
+        // 3. extraire nom + adresse purement par position spatiale
+        //
+        // Plus fiable que les heuristiques de contenu. Fallback sur
+        // parseFromBlocks (ancien ciblage bbox) si aucun label trouve,
+        // puis parse(lines) si pas de blocks du tout.
+        BordereauExtraction? spatial;
+        if (result.blocks.isNotEmpty) {
+          spatial = BordereauParser().parseFromBlocksSpatial(result.blocks);
+        }
+        if (spatial != null) {
+          extraction = spatial;
+          debugPrint('OCRDUMP === SPATIAL OK (label -> bloc dessous) ===');
+        } else if (result.blocks.isNotEmpty) {
+          extraction = BordereauParser().parseFromBlocks(result.blocks);
+        } else {
+          extraction = BordereauParser().parse(result.lines);
+        }
         parserUsed = 'mesexp';
       }
       // Validation BAN post-OCR : si l'extraction a une adresse, on

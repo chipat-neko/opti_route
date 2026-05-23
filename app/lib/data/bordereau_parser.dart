@@ -58,6 +58,205 @@ class BordereauParser {
   static final _cpRegex = BordereauPatterns.cpRegex;
   static final _telRegex = BordereauPatterns.telRegex;
 
+  /// **Approche spatiale pure** (feedback Noah 2026-05-23) :
+  /// 1. Trouve le bloc qui contient le label "destinataire" (LIVRAISON)
+  ///    OU "à enlever chez" (ENLEVEMENT)
+  /// 2. Trouve le bloc PHYSIQUEMENT en dessous (top du contenu > bottom
+  ///    du label, overlap horizontal X > 30%, plus proche verticalement)
+  /// 3. Extrait nom + adresse depuis CE bloc, sans heuristique de contenu
+  ///
+  /// **Hypothese** : sur tous les bordereaux MESEXP / Colissimo /
+  /// Chronopost, le label "destinataire" est en HEADER, le contenu
+  /// (nom + adresse) est dans le rectangle JUSTE EN DESSOUS. C'est ce
+  /// que voit visuellement Noah quand il scanne le bordereau.
+  ///
+  /// **Plus simple et plus fiable** que [parseFromBlocks] qui tentait
+  /// de filtrer le contenu (heuristiques labels, departements, etc).
+  /// Ici on fait juste de la geometrie : le bloc en bas est le bon.
+  ///
+  /// Pour le `nbColis`, on NE l'extrait pas (Noah le saisit a la main).
+  ///
+  /// Retourne null si aucun label trouve ou aucun bloc en dessous
+  /// detecte -> le caller fallback sur [parseFromBlocks].
+  BordereauExtraction? parseFromBlocksSpatial(List<OcrBlock> blocks) {
+    if (blocks.isEmpty) return null;
+
+    // Detection format global pour decider quel label prioriser.
+    final allLines = <String>[];
+    for (final b in blocks) {
+      allLines.addAll(b.lines);
+    }
+    final format = BordereauFormatDetector.detect(allLines);
+
+    // Marqueurs prioritaires selon le format.
+    final markers = format == BordereauFormat.enlevement
+        ? const ['enlever chez', 'estinataire', 'destinataire']
+        : const ['estinataire', 'destinataire', 'enlever chez'];
+
+    // Chercher le bloc qui contient un de ces marqueurs.
+    OcrBlock? labelBlock;
+    String? matchedMarker;
+    for (final marker in markers) {
+      for (final b in blocks) {
+        for (final line in b.lines) {
+          final lower = line.toLowerCase().trim();
+          if (lower.contains(marker)) {
+            // Exclure les faux positifs typiques.
+            if (marker == 'estinataire' &&
+                (lower.contains('contact') || lower.contains('ref'))) {
+              continue;
+            }
+            labelBlock = b;
+            matchedMarker = marker;
+            break;
+          }
+        }
+        if (labelBlock != null) break;
+      }
+      if (labelBlock != null) break;
+    }
+    if (labelBlock == null) return null;
+
+    // Trouver le bloc PHYSIQUEMENT en dessous du label.
+    // Criteres :
+    //  - block.top > labelBlock.top (au moins partiellement en dessous)
+    //  - chevauchement horizontal (overlap X) > 30% du plus petit des 2
+    //  - le plus PROCHE verticalement (min block.top - labelBlock.bottom,
+    //    en valeur positive ; on accepte aussi un overlap partiel en Y
+    //    si le label est dans un bloc plus grand qui contient deja le
+    //    contenu)
+    OcrBlock? contentBlock;
+    double bestVerticalDistance = double.infinity;
+    for (final b in blocks) {
+      if (identical(b, labelBlock)) continue;
+      // Cas 1 : le contenu est ENGLOBE dans le meme bloc que le label
+      // (ex: MESEXP retour ou label + contenu sont dans un seul gros
+      // bloc). On gere ce cas en exploitant directement labelBlock.lines.
+      // Ce cas est traite en fallback ci-dessous.
+      //
+      // Cas 2 : bloc separe en dessous. On verifie alignement X +
+      // distance verticale.
+      final hOverlap = _horizontalOverlap(labelBlock, b);
+      if (hOverlap < 0.3) continue;
+      // Distance verticale : 0 si overlap Y, sinon top du contenu -
+      // bottom du label (positive si vraiment en dessous).
+      final verticalGap = b.top - labelBlock.bottom;
+      if (verticalGap < -labelBlock.height * 0.5) continue; // pas dessus
+      final dist = verticalGap < 0 ? 0.0 : verticalGap;
+      if (dist < bestVerticalDistance) {
+        bestVerticalDistance = dist;
+        contentBlock = b;
+      }
+    }
+
+    // Si pas de bloc separe trouve, le contenu est dans labelBlock
+    // lui-meme (apres la ligne du label). On extrait depuis ce bloc.
+    final lines = <String>[];
+    if (contentBlock != null) {
+      lines.addAll(contentBlock.lines);
+    } else {
+      // Prendre les lignes du labelBlock APRES la ligne qui contient
+      // le marqueur.
+      bool foundMarker = false;
+      for (final line in labelBlock.lines) {
+        if (!foundMarker) {
+          final lower = line.toLowerCase().trim();
+          if (lower.contains(matchedMarker!)) {
+            foundMarker = true;
+          }
+          continue;
+        }
+        lines.add(line);
+      }
+      if (lines.isEmpty) return null;
+    }
+
+    return _buildExtractionFromContentLines(lines, format);
+  }
+
+  /// Construit une [BordereauExtraction] depuis les lignes "contenu"
+  /// du bloc destinataire trouve par [parseFromBlocksSpatial].
+  ///
+  /// Heuristique simple :
+  /// - 1ere ligne non-vide qui n'est PAS un CP/ville/rue -> nomDest
+  /// - ligne avec un numero + voirie (RUE/AVENUE/etc) -> rue
+  /// - ligne avec CP 5 chiffres + ville -> cp + ville
+  /// - reste -> ignore (ou ajoute a rue si rien d'autre)
+  static BordereauExtraction _buildExtractionFromContentLines(
+    List<String> lines,
+    BordereauFormat format,
+  ) {
+    String? nomDest;
+    String? rue;
+    String? cp;
+    String? ville;
+
+    for (final raw in lines) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+      // CP+ville sur la meme ligne
+      final cpVille = BordereauPatterns.cpVilleRegex.firstMatch(line);
+      if (cpVille != null) {
+        cp ??= cpVille.group(1);
+        ville ??= _cleanVille(cpVille.group(2));
+        continue;
+      }
+      // CP seul
+      final cpOnly = BordereauPatterns.cpRegex.firstMatch(line);
+      if (cpOnly != null && cp == null) {
+        cp = cpOnly.group(1);
+        continue;
+      }
+      // Rue numerotee
+      if (BordereauPatterns.ruePattern.hasMatch(line)) {
+        rue ??= line;
+        continue;
+      }
+      // Sinon, candidat nom (si pas encore set)
+      if (nomDest == null) {
+        nomDest = line;
+      } else {
+        rue ??= line; // 2eme ligne valide = complement adresse
+      }
+    }
+
+    final ExtractionConfidence confidence;
+    final hasNom = nomDest != null && nomDest.isNotEmpty;
+    final hasAddr = (rue != null && rue.isNotEmpty) ||
+        (cp != null && cp.isNotEmpty) ||
+        (ville != null && ville.isNotEmpty);
+    if (hasNom && hasAddr) {
+      confidence = ExtractionConfidence.high;
+    } else if (hasNom || hasAddr) {
+      confidence = ExtractionConfidence.low;
+    } else {
+      confidence = ExtractionConfidence.none;
+    }
+
+    return BordereauExtraction(
+      nomDestinataire: nomDest,
+      rue: rue,
+      codePostal: cp,
+      ville: ville,
+      confidence: confidence,
+      format: format,
+    );
+  }
+
+  /// Ratio de chevauchement horizontal (axe X) entre 2 blocs (0..1,
+  /// par rapport au plus petit). Sert au matching label / contenu dans
+  /// [parseFromBlocksSpatial] : les 2 blocs doivent etre sur la meme
+  /// colonne pour qu'on les associe.
+  static double _horizontalOverlap(OcrBlock a, OcrBlock b) {
+    final overlapLeft = a.left > b.left ? a.left : b.left;
+    final overlapRight = a.right < b.right ? a.right : b.right;
+    final overlap = overlapRight - overlapLeft;
+    if (overlap <= 0) return 0;
+    final smaller = a.width < b.width ? a.width : b.width;
+    if (smaller <= 0) return 0;
+    return overlap / smaller;
+  }
+
   /// Parse en ciblant le GROS encadre visuel du bordereau (typiquement
   /// celui qui contient le nom + adresse de ramasse / destinataire).
   ///
