@@ -541,16 +541,57 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       } catch (_) {/* tant pis */}
     }
     if (results.isNotEmpty) {
-      // Score : POI (entreprise nommee) = 3, rue complete + numero = 3,
-      // rue sans numero = 2, juste commune = 1.
-      int score(AddressSuggestion a) {
-        if (a.isPoi) return 3;
-        if (a.road != null && a.houseNumber != null) return 3;
-        if (a.road != null) return 2;
-        return 1;
+      // Sprint 2026-05-23 v2 (Noah) : ne PAS proposer une "supposition"
+      // si elle est dans une AUTRE ville/CP que ce qu'on a sur le
+      // bordereau. Cas reel : BAN trouvait "23 Avenue des Parigaudes,
+      // 28300" pour NOGENT AUTO alors que la vraie adresse est 28400
+      // ARCISSES. Le 28300 c'est Mainvilliers, pas Arcisses.
+      //
+      // On filtre les resultats : garder uniquement ceux dont le CP
+      // ou la ville matche l'extraction (si extraction a un CP/ville).
+      final extractedCp = extraction.codePostal;
+      final extractedVille = extraction.ville?.toLowerCase();
+      final filtered = results.where((r) {
+        // Si pas de CP/ville extrait, on garde tout
+        if (extractedCp == null && extractedVille == null) return true;
+        // Matche CP exact ?
+        if (extractedCp != null && r.postcode != null) {
+          if (r.postcode == extractedCp) return true;
+          // Tolerance : meme departement (2 premiers chars) si meme ville
+          if (extractedVille != null &&
+              r.city != null &&
+              r.postcode!.startsWith(extractedCp.substring(0, 2)) &&
+              r.city!.toLowerCase().contains(extractedVille)) {
+            return true;
+          }
+          // Sinon rejete : CP different = autre ville
+          return false;
+        }
+        // Pas de CP dans le resultat : tolerer si ville matche
+        if (extractedVille != null && r.city != null) {
+          return r.city!.toLowerCase().contains(extractedVille);
+        }
+        return true;
+      }).toList();
+      // Si tout a ete filtre (aucune adresse matche le CP/ville
+      // extrait), on N'AFFICHE PAS de suggestion validee. Noah verra
+      // le texte brut et corrigera manuellement.
+      if (filtered.isEmpty) {
+        debugPrint('OCRDUMP === geocodage : ${results.length} resultats '
+            'rejetes (CP/ville different de "$extractedCp $extractedVille"). '
+            'Pas de validation auto.');
+      } else {
+        // Score : POI (entreprise nommee) = 3, rue complete + numero = 3,
+        // rue sans numero = 2, juste commune = 1.
+        int score(AddressSuggestion a) {
+          if (a.isPoi) return 3;
+          if (a.road != null && a.houseNumber != null) return 3;
+          if (a.road != null) return 2;
+          return 1;
+        }
+        filtered.sort((a, b) => score(b).compareTo(score(a)));
+        found = filtered.first;
       }
-      results.sort((a, b) => score(b).compareTo(score(a)));
-      found = results.first;
     }
 
     if (!mounted) return;
