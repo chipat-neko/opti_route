@@ -103,6 +103,8 @@ class BordereauParser {
       allLines.addAll(b.lines);
     }
     final format = BordereauFormatDetector.detect(allLines);
+    debugPrint('OCRDUMP-SPATIAL detected format = ${format.name} '
+        '(${allLines.length} lignes scannees)');
 
     // Marqueurs prioritaires selon le format.
     final markers = format == BordereauFormat.enlevement
