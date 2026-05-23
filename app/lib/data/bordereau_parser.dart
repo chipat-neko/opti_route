@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show debugPrint;
+
 import 'app_constants.dart';
 import 'bordereau_extraction.dart';
 import 'bordereau_format_detector.dart';
@@ -80,6 +82,20 @@ class BordereauParser {
   /// detecte -> le caller fallback sur [parseFromBlocks].
   BordereauExtraction? parseFromBlocksSpatial(List<OcrBlock> blocks) {
     if (blocks.isEmpty) return null;
+    // Debug : log la structure des blocs pour analyse sur les cas
+    // pathologiques (filtrer dans logcat via grep OCRDUMP-SPATIAL).
+    for (var i = 0; i < blocks.length; i++) {
+      final b = blocks[i];
+      // Logue uniquement le 1er mot de chaque ligne pour rester court.
+      final preview = b.lines.take(3).map((l) {
+        final words = l.split(' ');
+        return words.take(2).join(' ');
+      }).join(' | ');
+      // Position : [left,top,right,bottom]
+      debugPrint(
+          'OCRDUMP-SPATIAL bloc#$i [${b.left.toInt()},${b.top.toInt()},'
+          '${b.right.toInt()},${b.bottom.toInt()}] (${b.lines.length}L): $preview');
+    }
 
     // Detection format global pour decider quel label prioriser.
     final allLines = <String>[];
@@ -95,7 +111,6 @@ class BordereauParser {
 
     // Chercher le bloc qui contient un de ces marqueurs.
     OcrBlock? labelBlock;
-    String? matchedMarker;
     for (final marker in markers) {
       for (final b in blocks) {
         for (final line in b.lines) {
@@ -107,7 +122,6 @@ class BordereauParser {
               continue;
             }
             labelBlock = b;
-            matchedMarker = marker;
             break;
           }
         }
@@ -117,61 +131,68 @@ class BordereauParser {
     }
     if (labelBlock == null) return null;
 
-    // Trouver le bloc PHYSIQUEMENT en dessous du label.
-    // Criteres :
-    //  - block.top > labelBlock.top (au moins partiellement en dessous)
-    //  - chevauchement horizontal (overlap X) > 30% du plus petit des 2
-    //  - le plus PROCHE verticalement (min block.top - labelBlock.bottom,
-    //    en valeur positive ; on accepte aussi un overlap partiel en Y
-    //    si le label est dans un bloc plus grand qui contient deja le
-    //    contenu)
-    OcrBlock? contentBlock;
-    double bestVerticalDistance = double.infinity;
+    // v3 Sprint 2026-05-23 (logs Noah analyses) : sur les bordereaux
+    // MESEXP retour, le label "à enlever chez" est souvent dans un
+    // COIN de la cellule tableau (ex en haut a droite), et le contenu
+    // remplit la cellule (peut etre a GAUCHE ou DESSOUS du label).
+    // L'approche "strictement dessous + overlap X" ratait ces cas.
+    //
+    // Nouvelle strategie : prendre les N blocs les plus PROCHES du
+    // label en distance Euclidienne (centre a centre), filtrer les
+    // parasites (headers tableau, labels), grouper les 3 plus proches
+    // restants comme contenu destinataire.
+    final labelCenterX = (labelBlock.left + labelBlock.right) / 2;
+    final labelCenterY = (labelBlock.top + labelBlock.bottom) / 2;
+    final candidates = <({OcrBlock block, double distance})>[];
     for (final b in blocks) {
       if (identical(b, labelBlock)) continue;
-      // Cas 1 : le contenu est ENGLOBE dans le meme bloc que le label
-      // (ex: MESEXP retour ou label + contenu sont dans un seul gros
-      // bloc). On gere ce cas en exploitant directement labelBlock.lines.
-      // Ce cas est traite en fallback ci-dessous.
-      //
-      // Cas 2 : bloc separe en dessous. On verifie alignement X +
-      // distance verticale.
-      final hOverlap = _horizontalOverlap(labelBlock, b);
-      if (hOverlap < 0.3) continue;
-      // Distance verticale : 0 si overlap Y, sinon top du contenu -
-      // bottom du label (positive si vraiment en dessous).
-      final verticalGap = b.top - labelBlock.bottom;
-      if (verticalGap < -labelBlock.height * 0.5) continue; // pas dessus
-      final dist = verticalGap < 0 ? 0.0 : verticalGap;
-      if (dist < bestVerticalDistance) {
-        bestVerticalDistance = dist;
-        contentBlock = b;
-      }
-    }
-
-    // Si pas de bloc separe trouve, le contenu est dans labelBlock
-    // lui-meme (apres la ligne du label). On extrait depuis ce bloc.
-    final lines = <String>[];
-    if (contentBlock != null) {
-      lines.addAll(contentBlock.lines);
-    } else {
-      // Prendre les lignes du labelBlock APRES la ligne qui contient
-      // le marqueur.
-      bool foundMarker = false;
-      for (final line in labelBlock.lines) {
-        if (!foundMarker) {
-          final lower = line.toLowerCase().trim();
-          if (lower.contains(matchedMarker!)) {
-            foundMarker = true;
-          }
-          continue;
+      // Filtre 1 : bloc qui contient un autre label tableau ou parasite
+      // (Régime, U.M., Vol, Poids, Date, Client, Ligne, Nature, etc).
+      var isHeaderBlock = false;
+      for (final line in b.lines) {
+        if (BordereauTextFilters.isTableHeaderLine(line) ||
+            BordereauTextFilters.isObviousLabel(line)) {
+          isHeaderBlock = true;
+          break;
         }
-        lines.add(line);
       }
-      if (lines.isEmpty) return null;
+      if (isHeaderBlock) continue;
+      // Distance Euclidienne entre centres
+      final bCenterX = (b.left + b.right) / 2;
+      final bCenterY = (b.top + b.bottom) / 2;
+      final dx = bCenterX - labelCenterX;
+      final dy = bCenterY - labelCenterY;
+      final dist = (dx * dx + dy * dy);
+      candidates.add((block: b, distance: dist));
     }
+    if (candidates.isEmpty) return null;
+    // Trier par distance croissante
+    candidates.sort((a, b) => a.distance.compareTo(b.distance));
 
-    return _buildExtractionFromContentLines(lines, format);
+    // Prendre les 5 plus proches puis filtrer ceux dont les lignes
+    // sont des fragments parasites (juste un mot court, juste un
+    // numero, etc).
+    // Prendre les 5 plus proches blocs (apres filtre parasite) et
+    // ASSEMBLER leurs lignes en preservant l'ordre de proximite.
+    // Le bloc le plus proche fournit en general le nom, les suivants
+    // l'adresse. _buildExtractionFromContentLines fera le tri.
+    final nearby = candidates.take(5).map((c) => c.block).toList();
+    final assembledLines = <String>[];
+    for (final b in nearby) {
+      for (final line in b.lines) {
+        final clean = line.trim();
+        if (clean.isEmpty) continue;
+        if (BordereauTextFilters.looksUnreliable(clean)) continue;
+        if (BordereauTextFilters.isTableHeaderLine(clean)) continue;
+        assembledLines.add(clean);
+      }
+    }
+    if (assembledLines.isEmpty) return null;
+    // Debug : afficher l'assemblage final pour audit
+    debugPrint(
+        'OCRDUMP-SPATIAL assembled (${assembledLines.length} lignes): '
+        '${assembledLines.join(" | ")}');
+    return _buildExtractionFromContentLines(assembledLines, format);
   }
 
   /// Construit une [BordereauExtraction] depuis les lignes "contenu"
@@ -191,6 +212,12 @@ class BordereauParser {
     String? cp;
     String? ville;
 
+    // Sprint 2026-05-23 v4 : 2 passes pour pas que le 1er candidat
+    // gagne automatiquement. Pass 1 : extraire CP/ville/rue (assignes
+    // direct). Pass 2 : choisir le meilleur NOM parmi les lignes non
+    // categorisees, en preferant les lignes 100% MAJUSCULES (nom
+    // d'entreprise typique : NOGENT AUTO, GARAGE LANCTIN DAMIEN, etc).
+    final nameCandidates = <String>[];
     for (final raw in lines) {
       final line = raw.trim();
       if (line.isEmpty) continue;
@@ -207,16 +234,43 @@ class BordereauParser {
         cp = cpOnly.group(1);
         continue;
       }
-      // Rue numerotee
+      // Rue : matche pattern rue (numerotee OU RN/RD)
       if (BordereauPatterns.ruePattern.hasMatch(line)) {
         rue ??= line;
         continue;
       }
-      // Sinon, candidat nom (si pas encore set)
-      if (nomDest == null) {
-        nomDest = line;
-      } else {
-        rue ??= line; // 2eme ligne valide = complement adresse
+      // Nombre seul (8.0, 1.0, 2.0...) : skip, c'est probablement un
+      // poids/U.M./quantite parasite.
+      if (BordereauPatterns.unitColisLineRegex.hasMatch(line)) {
+        continue;
+      }
+      // Tout le reste = candidat nom potentiel
+      nameCandidates.add(line);
+    }
+
+    // Choisir le nom : prefere une ligne 100% MAJUSCULES (>= 2 mots OU
+    // >= 4 chars). Sinon fallback : prend la 1ere ligne candidate.
+    String? bestName;
+    int bestScore = -1;
+    for (final cand in nameCandidates) {
+      final upper = cand.toUpperCase() == cand;
+      final wordCount = cand.split(BordereauPatterns.whitespaceRegex).length;
+      final score =
+          (upper ? 100 : 0) + (wordCount >= 2 ? 50 : 0) + cand.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestName = cand;
+      }
+    }
+    nomDest = bestName;
+
+    // Si on n'a pas trouve de rue mais qu'il reste des candidats non
+    // utilises pour le nom, en prendre 1 comme rue (complement adresse).
+    if (rue == null && nameCandidates.length > 1 && nomDest != null) {
+      for (final cand in nameCandidates) {
+        if (cand == nomDest) continue;
+        rue = cand;
+        break;
       }
     }
 
@@ -243,19 +297,8 @@ class BordereauParser {
     );
   }
 
-  /// Ratio de chevauchement horizontal (axe X) entre 2 blocs (0..1,
-  /// par rapport au plus petit). Sert au matching label / contenu dans
-  /// [parseFromBlocksSpatial] : les 2 blocs doivent etre sur la meme
-  /// colonne pour qu'on les associe.
-  static double _horizontalOverlap(OcrBlock a, OcrBlock b) {
-    final overlapLeft = a.left > b.left ? a.left : b.left;
-    final overlapRight = a.right < b.right ? a.right : b.right;
-    final overlap = overlapRight - overlapLeft;
-    if (overlap <= 0) return 0;
-    final smaller = a.width < b.width ? a.width : b.width;
-    if (smaller <= 0) return 0;
-    return overlap / smaller;
-  }
+  // _horizontalOverlap supprime v3 Sprint 2026-05-23 : remplace par
+  // distance Euclidienne centre-a-centre dans parseFromBlocksSpatial.
 
   /// Parse en ciblant le GROS encadre visuel du bordereau (typiquement
   /// celui qui contient le nom + adresse de ramasse / destinataire).
