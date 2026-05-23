@@ -92,9 +92,45 @@ class BordereauParser {
     // peut extraire des noms parasites (ex "Eure et Loir Acheminement"
     // au lieu du destinataire). On les exclut tot pour cibler les
     // blocs metier.
-    final usableBlocks = blocks.where((b) {
+    var usableBlocks = blocks.where((b) {
       return !_isParasiteBlock(b);
     }).toList();
+
+    // Renforcement v2 (feedback Noah 2026-05-23 sur MESEXP retour) :
+    // si AU MOINS UN bloc contient un CP du dpt prefere (28), on exclut
+    // tous les autres blocs qui contiennent UNIQUEMENT des CP hors-zone
+    // (cas type : bloc expediteur "Alliance PR" 72210 VOIVRES, alors
+    // que le destinataire ramasse est "GARAGE LANCTIN" 28190).
+    // Marche pour ENLEVEMENT comme LIVRAISON (sauf si tu vraiment
+    // travailles partout en France -- dans ce cas il faut changer
+    // kCodePostalPrefere).
+    final hasPreferredCpAnywhere = blocks.any((b) =>
+        b.lines.any((l) {
+          final m = BordereauPatterns.cpRegex.firstMatch(l);
+          return m != null && m.group(1)!.startsWith(kCodePostalPrefere);
+        }));
+    if (hasPreferredCpAnywhere) {
+      usableBlocks = usableBlocks.where((b) {
+        // Garder si le bloc N'A AUCUN CP (label seulement, OK) OU
+        // contient un CP du dpt prefere. Exclure les blocs qui ont
+        // SEULEMENT des CP hors-zone (= blocs expediteur typiquement).
+        var hasAnyCp = false;
+        var hasPreferredCp = false;
+        for (final line in b.lines) {
+          final m = BordereauPatterns.cpRegex.firstMatch(line);
+          if (m != null) {
+            hasAnyCp = true;
+            if (m.group(1)!.startsWith(kCodePostalPrefere)) {
+              hasPreferredCp = true;
+              break;
+            }
+          }
+        }
+        if (!hasAnyCp) return true; // bloc sans CP : on garde
+        return hasPreferredCp;
+      }).toList();
+    }
+
     // Si tous les blocs sont marques parasites (rare, image tres
     // bizarre), on retombe sur tous les blocs pour ne pas tout perdre.
     final blocksToUse = usableBlocks.isEmpty ? blocks : usableBlocks;
