@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'geocoding_service.dart';
 import 'saved_destinations_repository.dart';
 
 /// Resultat d'un import CSV : combien de lignes lues, combien creees,
@@ -30,9 +31,16 @@ class CarnetImportResult {
 /// qui detecte automatiquement les doublons (par nomClient case-
 /// insensitive, ou par coords arrondies a ~11m).
 class CarnetImportService {
-  CarnetImportService(this._repo);
+  CarnetImportService(this._repo, {GeocodingService? geocoder})
+      : _geocoder = geocoder;
 
   final SavedDestinationsRepository _repo;
+
+  /// Optionnel : si fourni, l'import auto-geocode les lignes sans
+  /// lat/lng (CSV simplifie type "nom, rue, cp, ville" exporte depuis
+  /// Excel sans avoir geocode au prealable). Construit la query par
+  /// `"$rue, $cp $ville"` et appelle BAN.
+  final GeocodingService? _geocoder;
 
   Future<CarnetImportResult> importFromFile(File file) async {
     final content = await file.readAsString();
@@ -63,15 +71,23 @@ class CarnetImportService {
     final idxLat = header.indexOf('lat');
     final idxLng = header.indexOf('lng');
 
-    if (idxAddr < 0 || idxLat < 0 || idxLng < 0) {
+    // Si geocoder fourni, on tolere les CSV sans lat/lng (on geocode
+    // au vol). Sinon il faut absolument adresse_display + lat + lng.
+    final canGeocode = _geocoder != null;
+    final hasAddressColumn = idxAddr >= 0 ||
+        (idxRue >= 0 && idxVille >= 0); // permet "rue+ville" pour geocode
+    if (!hasAddressColumn || (!canGeocode && (idxLat < 0 || idxLng < 0))) {
       return CarnetImportResult(
         lineCount: lines.length - 1,
         created: 0,
         merged: 0,
         rejected: lines.length - 1,
         errors: [
-          'Header CSV invalide : il faut au moins les colonnes '
-              'adresse_display, lat, lng. Header lu : ${header.join(", ")}.'
+          canGeocode
+              ? 'Header CSV invalide : il faut au moins adresse_display OU '
+                  '(rue + ville). Header lu : ${header.join(", ")}.'
+              : 'Header CSV invalide : il faut au moins adresse_display, lat, '
+                  'lng. Header lu : ${header.join(", ")}.'
         ],
       );
     }
@@ -86,13 +102,47 @@ class CarnetImportService {
       if (raw.isEmpty) continue;
       try {
         final fields = _parseCsvLine(raw);
-        final addr = idxAddr < fields.length ? fields[idxAddr] : '';
-        final lat = idxLat < fields.length
+        var addr = idxAddr >= 0 && idxAddr < fields.length
+            ? fields[idxAddr]
+            : '';
+        final rue =
+            idxRue >= 0 && idxRue < fields.length ? fields[idxRue] : null;
+        final cp = idxCp >= 0 && idxCp < fields.length ? fields[idxCp] : null;
+        final ville = idxVille >= 0 && idxVille < fields.length
+            ? fields[idxVille]
+            : null;
+        double? lat = idxLat >= 0 && idxLat < fields.length
             ? double.tryParse(fields[idxLat])
             : null;
-        final lng = idxLng < fields.length
+        double? lng = idxLng >= 0 && idxLng < fields.length
             ? double.tryParse(fields[idxLng])
             : null;
+
+        // Si adresse_display manque mais on a rue+cp+ville, on
+        // construit l'adresse pour l'affichage et le geocodage.
+        if (addr.isEmpty &&
+            rue != null &&
+            rue.isNotEmpty &&
+            ville != null &&
+            ville.isNotEmpty) {
+          addr = cp != null && cp.isNotEmpty
+              ? '$rue, $cp $ville'
+              : '$rue, $ville';
+        }
+
+        // Si lat/lng manquent et qu'on a un geocoder, on geocode.
+        if ((lat == null || lng == null) && _geocoder != null && addr.isNotEmpty) {
+          try {
+            final results = await _geocoder.search(addr, limit: 1);
+            if (results.isNotEmpty) {
+              lat = results.first.lat;
+              lng = results.first.lon;
+            }
+          } catch (_) {
+            // BAN timeout / hors-ligne : on tombe en rejet ci-dessous
+          }
+        }
+
         if (addr.isEmpty || lat == null || lng == null) {
           rejected++;
           continue;
@@ -103,12 +153,9 @@ class CarnetImportService {
           adresseDisplay: addr,
           lat: lat,
           lng: lng,
-          rue: idxRue >= 0 && idxRue < fields.length ? fields[idxRue] : null,
-          codePostal:
-              idxCp >= 0 && idxCp < fields.length ? fields[idxCp] : null,
-          ville: idxVille >= 0 && idxVille < fields.length
-              ? fields[idxVille]
-              : null,
+          rue: rue,
+          codePostal: cp,
+          ville: ville,
         );
       } catch (e) {
         rejected++;
