@@ -512,6 +512,20 @@ class BordereauParser {
   /// le mot "destination" comme header.
   static bool _isParasiteBlock(OcrBlock block) {
     if (block.lines.isEmpty) return false;
+    // Sprint v6 (feedback Noah 2026-05-23 sur HYDRO ALUMINIUM) :
+    // l'adresse du transporteur Eure-et-Loir Acheminement (24 AVENUE
+    // LOUIS PASTEUR, 28630 GELLAINVILLE) est dans un bloc qui n'a
+    // pas explicitement "Eure et Loir Acheminement" (juste la rue +
+    // CP+ville). Il passe les autres filtres parasites + cpRank=0
+    // (28630 dpt prefere) et est preferer au vrai destinataire.
+    // On le detecte explicitement.
+    for (final line in block.lines) {
+      final lower = line.toLowerCase();
+      if (lower.contains('louis pasteur') ||
+          lower.contains('gellainville')) {
+        return true;
+      }
+    }
     // Sprint 2026-05-23 (feedback Noah) : bloc avec "ZA DE" + un CP
     // hors zone Eure-et-Loir = bloc EXPEDITEUR (Sarthe, Paris, etc).
     // On le marque parasite pour ne pas extraire son nom comme client.
