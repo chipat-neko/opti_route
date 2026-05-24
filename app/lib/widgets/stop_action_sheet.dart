@@ -71,6 +71,13 @@ class ConvertTypeAction extends StopAction {
   final String newType;
 }
 
+/// Copie l'adresse complete du stop dans le presse-papier (pour la
+/// coller dans Google Maps, Waze, SMS au client, etc.). Le caller
+/// appelle `Clipboard.setData` + affiche un SnackBar de confirmation.
+class CopyAdresseAction extends StopAction {
+  const CopyAdresseAction();
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -561,6 +568,13 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       ? 'Refaire la photo preuve'
                       : 'Prendre une photo preuve',
                 ),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: p.ink),
+                onPressed: () => Navigator.of(context)
+                    .pop(const CopyAdresseAction()),
+                icon: const Icon(Icons.content_copy_outlined, size: 18),
+                label: const Text('Copier l\'adresse'),
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
