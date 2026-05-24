@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/database_providers.dart';
 import '../onboarding_screen.dart';
 
 /// ════════════════════════════════════════════════════════════════
-/// Section "Aide" — relancer l'onboarding et acceder aux tutoriels.
+/// Section "Aide" — relancer l'onboarding et reactiver les astuces.
 /// ════════════════════════════════════════════════════════════════
 ///
-/// Expose un point d'entree pour revoir le walkthrough des 6 pages
-/// d'onboarding. Pratique si Noah a oublie comment utiliser une feature
-/// (mode chef, scan, 4 palettes, PIN/biometrie, etc.) -- toutes sont
-/// recapitulees dans l'onboarding.
+/// Expose 2 points d'entree :
 ///
-/// L'onboarding pousse en mode `replayMode: true` ne touche PAS au
-/// flag `onboarding_done` ni a la cle ORS deja en place : juste
-/// `Navigator.pop` quand le user clique "Fermer".
+/// 1. **Revoir le tutoriel** : pousse [OnboardingScreen] en mode
+///    `replayMode: true` (les 6 pages onboarding, sans toucher au
+///    flag onboarding_done ni a la cle ORS).
 ///
-/// Phase 2 (carte Backlog dediee) : ajout d'un toggle "Astuces" qui
-/// reactivera les coach marks contextuels au prochain demarrage de
-/// chaque ecran (Tournee, Scan, Carnet).
-class AideSection extends StatelessWidget {
+/// 2. **Reactiver les astuces** : reset les 4 flags `coach_*_done`
+///    dans ParametresRepository pour que les info-bulles contextuelles
+///    reapparaissent a la prochaine ouverture de chaque ecran
+///    (Tournee du jour, Scan, Parametres, Carnet). Utile si Noah a
+///    cliqué "Passer" sans regarder, ou si un nouveau coequipier
+///    prend le telephone.
+class AideSection extends ConsumerWidget {
   const AideSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -40,6 +42,29 @@ class AideSection extends StatelessWidget {
             Navigator.of(context).push<void>(
               MaterialPageRoute(
                 builder: (_) => const OnboardingScreen(replayMode: true),
+              ),
+            );
+          },
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.tips_and_updates_outlined),
+          title: const Text('Reactiver les astuces'),
+          subtitle: const Text(
+            'Les info-bulles guidees reapparaitront a la prochaine '
+            'ouverture de chaque ecran (Tournee, Scan, Parametres, Carnet)',
+            style: TextStyle(fontSize: 12),
+          ),
+          trailing: const Icon(Icons.refresh),
+          onTap: () async {
+            await ref
+                .read(parametresRepositoryProvider)
+                .resetAllCoachMarks();
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Astuces reactivees. Reouvre les ecrans '
+                    'pour les revoir.'),
               ),
             );
           },

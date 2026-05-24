@@ -23,6 +23,8 @@ class Fabs extends StatelessWidget {
     required this.onDemarrer,
     required this.onArreter,
     required this.onScannerColis,
+    this.scannerColisKey,
+    this.ajouterKey,
   });
 
   final Tournee tournee;
@@ -30,6 +32,9 @@ class Fabs extends StatelessWidget {
   final VoidCallback onDemarrer;
   final VoidCallback onArreter;
   final VoidCallback onScannerColis;
+  // Keys exposes pour les coach marks contextuels (1er lancement)
+  final GlobalKey? scannerColisKey;
+  final GlobalKey? ajouterKey;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +74,7 @@ class Fabs extends StatelessWidget {
         // principal "Ajouter un arret" pour acces rapide en plein
         // workflow (Noah scanne plusieurs colis a la suite).
         FloatingActionButton.small(
+          key: scannerColisKey,
           heroTag: 'fab-scanner-colis',
           backgroundColor: AppColors.lime,
           foregroundColor: p.ink,
@@ -78,6 +84,7 @@ class Fabs extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.x10),
         FloatingActionButton.extended(
+          key: ajouterKey,
           heroTag: 'fab-ajouter',
           onPressed: onAjouter,
           icon: const Icon(Icons.add),
