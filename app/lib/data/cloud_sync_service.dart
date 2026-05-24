@@ -767,12 +767,23 @@ class CloudSyncService {
         'Pour quitter ta propre tournee, utilise "Quitter".',
       );
     }
+    final List<dynamic> deleted;
     try {
-      await client.from('tournee_membres').delete()
+      // .select() pour recuperer les rows supprimees et detecter si la
+      // RLS DELETE a silencieusement bloque (auquel cas .delete() retourne
+      // success sans erreur mais 0 rows affectees). Bug Trello #70.
+      deleted = await client.from('tournee_membres').delete()
           .eq('tournee_id', tournee!.cloudId!)
-          .eq('user_id', memberUserCloudId);
+          .eq('user_id', memberUserCloudId)
+          .select();
     } on Object catch (e) {
       throw CloudSyncException('Echec ejecter coequipier : ${humanizeCloudError(e)}');
+    }
+    if (deleted.isEmpty) {
+      throw const CloudSyncException(
+        'Aucun coequipier ejecte. Verifie que tu es bien le chef de cette '
+        'tournee (la policy RLS DELETE n\'autorise que l\'owner a kick).',
+      );
     }
   }
 

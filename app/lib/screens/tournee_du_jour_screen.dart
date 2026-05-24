@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart' show ContentAlign;
 
 import '../data/address_suggestion.dart';
+import '../data/cloud_sync_service.dart' show TourneeMembreInfo;
 import '../data/database.dart';
 import '../data/supabase_service.dart';
 import '../data/tournee_realtime_service.dart';
@@ -72,6 +73,10 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       // Coach marks 1er lancement : guide vers FAB scan + FAB ajouter.
       // Idempotent : flag coach_tournee_done dans ParametresRepository.
       _maybeShowCoachMarks();
+      // Bug Trello #70 : detecte si on a ete eject de cette tournee
+      // pendant qu'on etait hors ligne (notre row tournee_membres a
+      // ete delete par le chef). Cleanup local Drift + pop si oui.
+      _maybeCheckMembershipOrCleanup();
     });
   }
 
@@ -164,6 +169,64 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         await ref.read(livePresenceServiceProvider).start();
       }
     } on Object {/* best-effort */}
+  }
+
+  /// Bug Trello #70 fix 2A : si le user a ete ejecte de cette tournee
+  /// pendant qu'il etait hors ligne, sa row local Drift est obsolete
+  /// (il n'a plus acces aux donnees Supabase mais l'app continue de les
+  /// afficher). Au lancement de l'ecran tournee partagee, on verifie
+  /// la liste des membres via la RPC `list_tournee_members` (SECURITY
+  /// DEFINER, bypass RLS).
+  ///
+  /// Si je ne suis plus dans la liste :
+  /// - SnackBar "Tu as ete ejecte de cette tournee"
+  /// - DELETE local Drift (tournee + ses stops)
+  /// - Navigator.pop pour fermer l'ecran
+  ///
+  /// Silent en cas d'erreur (reseau, RLS, RPC manquante) : on garde la
+  /// vue actuelle, l'utilisateur peut toujours utiliser le local cache.
+  Future<void> _maybeCheckMembershipOrCleanup() async {
+    final cloudId = widget.tournee.cloudId;
+    if (cloudId == null) return;
+    final svc = SupabaseService.instance;
+    if (!svc.isConfigured || svc.currentUser == null) return;
+    final myUserId = svc.currentUser!.id;
+    final List<TourneeMembreInfo> members;
+    try {
+      members = await ref
+          .read(cloudSyncServiceProvider)
+          .listTourneeMembers(widget.tournee.id);
+    } on Object {
+      return; // silent
+    }
+    if (members.isEmpty) return; // pas de signal fiable
+    final stillMember = members.any((m) => m.userCloudId == myUserId);
+    if (stillMember) return;
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    // Cleanup local : tournee + stops (les FK ON DELETE CASCADE Drift
+    // s'occupent des stops normalement, mais on enleve explicitement
+    // pour etre sur).
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await (db.delete(db.stops)
+            ..where((s) => s.tourneeId.equals(widget.tournee.id)))
+          .go();
+      await (db.delete(db.tournees)
+            ..where((t) => t.id.equals(widget.tournee.id)))
+          .go();
+    } on Object {/* best-effort */}
+    if (!mounted) return;
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Tu as ete ejecte de cette tournee. Donnees locales '
+            'nettoyees.'),
+        backgroundColor: AppColors.amber,
+        duration: Duration(seconds: 4),
+      ),
+    );
+    navigator.pop();
   }
 
   @override
