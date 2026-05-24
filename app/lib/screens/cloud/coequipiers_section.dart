@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/cloud_sync_service.dart';
 import '../../data/database.dart';
 import '../../data/supabase_service.dart';
+import '../../data/tournee_realtime_service.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
 
@@ -30,11 +33,30 @@ class CoequipiersSection extends ConsumerStatefulWidget {
 
 class _CoequipiersSectionState extends ConsumerState<CoequipiersSection> {
   Future<List<TourneeMembreInfo>>? _membersFuture;
+  StreamSubscription<PresenceDelta>? _presenceSub;
 
   @override
   void initState() {
     super.initState();
     _membersFuture = _load();
+    // Bug Trello #70 fix 2B : quand un coequipier quitte la tournee
+    // (leaveTournee) il ferme aussi l'ecran tournee -> presence leave
+    // emis sur le channel Realtime. Auto-reload la liste membres dans
+    // ce cas pour que le chef voie le coequipier disparaitre sans avoir
+    // a faire un restart d'app.
+    _presenceSub = ref
+        .read(tourneeRealtimeServiceProvider)
+        .presenceDeltaStream
+        .listen((delta) {
+      if (!mounted) return;
+      if (!delta.isJoin) _reload();
+    });
+  }
+
+  @override
+  void dispose() {
+    _presenceSub?.cancel();
+    super.dispose();
   }
 
   Future<List<TourneeMembreInfo>> _load() {

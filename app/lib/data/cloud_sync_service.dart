@@ -424,7 +424,7 @@ class CloudSyncService {
   /// reseau / RLS.
   Future<CloudPullResult> pullAllForCurrentUser() async {
     final client = _client();
-    _requireUserId();
+    final userId = _requireUserId();
     // Pas besoin de filtrer par user_id dans les selects : la RLS
     // Supabase fait deja le filtrage (chaque select retourne uniquement
     // les rows ou user_id = auth.uid()).
@@ -436,6 +436,17 @@ class CloudSyncService {
     // Apres les tournees pour que les rows membres aient bien une
     // tournee_cloud_id correspondant a un row tournees deja pulle.
     await _pullTourneeMembres(client);
+    // Bug Trello #68 : avant ce fix, le carnet avait un pull mais pas
+    // de push -> table Supabase vide pour tout le monde, donc le pull
+    // renvoyait toujours 0. On push maintenant les entrees locales du
+    // carnet apres le pull pour amorcer la sync (sign-in initial sur
+    // un device avec un carnet existant -> push retroactif). Silent :
+    // un echec ne casse pas le pull global, on re-tentera plus tard.
+    try {
+      await _pushAllSavedDestinations(client, userId);
+    } on Object catch (e) {
+      debugPrint('[CloudSyncService] Push carnet apres pull echec : $e');
+    }
     return CloudPullResult(
       coequipiers: coequipiers,
       tournees: tournees,
@@ -756,12 +767,23 @@ class CloudSyncService {
         'Pour quitter ta propre tournee, utilise "Quitter".',
       );
     }
+    final List<dynamic> deleted;
     try {
-      await client.from('tournee_membres').delete()
+      // .select() pour recuperer les rows supprimees et detecter si la
+      // RLS DELETE a silencieusement bloque (auquel cas .delete() retourne
+      // success sans erreur mais 0 rows affectees). Bug Trello #70.
+      deleted = await client.from('tournee_membres').delete()
           .eq('tournee_id', tournee!.cloudId!)
-          .eq('user_id', memberUserCloudId);
+          .eq('user_id', memberUserCloudId)
+          .select();
     } on Object catch (e) {
       throw CloudSyncException('Echec ejecter coequipier : ${humanizeCloudError(e)}');
+    }
+    if (deleted.isEmpty) {
+      throw const CloudSyncException(
+        'Aucun coequipier ejecte. Verifie que tu es bien le chef de cette '
+        'tournee (la policy RLS DELETE n\'autorise que l\'owner a kick).',
+      );
     }
   }
 
@@ -1075,6 +1097,70 @@ class CloudSyncService {
     await (_db.update(_db.stops)
           ..where((s) => s.id.equals(task.stopLocalId)))
         .write(StopsCompanion(preuvePhotoPath: Value(resolved)));
+  }
+
+  /// Push toutes les entrees locales du carnet vers Supabase (bug
+  /// Trello #68 : avant ce fix, seul le pull existait). Pattern
+  /// idempotent identique au push tournee : cloud_id null -> generer
+  /// UUID + INSERT + persister localement. cloud_id set -> UPDATE.
+  ///
+  /// User_id envoye uniquement au 1er push (cf [_pushCoequipier]).
+  /// Pas de push de la colonne `photo_path` (chemin local du device
+  /// source, pas valide ailleurs).
+  ///
+  /// Best-effort par row : si une row echoue (RLS, conflit, etc.),
+  /// on log et on continue avec les suivantes plutot que de tout
+  /// arreter.
+  Future<void> _pushAllSavedDestinations(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final locals = await _db.select(_db.savedDestinations).get();
+    for (final s in locals) {
+      final cloudId = s.cloudId ?? _uuid.v4();
+      final isFirstPush = s.cloudId == null;
+      final row = <String, dynamic>{
+        'id': cloudId,
+        if (isFirstPush) 'user_id': userId,
+        'nom_client': s.nomClient,
+        'adresse_display': s.adresseDisplay,
+        'lat': s.lat,
+        'lng': s.lng,
+        'rue': s.rue,
+        'code_postal': s.codePostal,
+        'ville': s.ville,
+        'use_count': s.useCount,
+        'last_used_at': s.lastUsedAt.toIso8601String(),
+        if (isFirstPush) 'cree_le': s.creeLe.toIso8601String(),
+        'is_favori': s.isFavori,
+        'color_tag': s.colorTag,
+        'notes_carnet': s.notesCarnet,
+        'tags_json': s.tagsJson,
+        // photo_path : volontairement non push (chemin local du device).
+        'code_acces': s.codeAcces,
+        'etage_batiment': s.etageBatiment,
+        'updated_at': s.updatedAt.toUtc().toIso8601String(),
+      };
+      try {
+        if (isFirstPush) {
+          await client.from('saved_destinations').insert(row);
+          await (_db.update(_db.savedDestinations)
+                ..where((r) => r.id.equals(s.id)))
+              .write(SavedDestinationsCompanion(cloudId: Value(cloudId)));
+        } else {
+          await client
+              .from('saved_destinations')
+              .update(row)
+              .eq('id', cloudId);
+        }
+      } on Object catch (e) {
+        debugPrint(
+          '[CloudSyncService] Push carnet "${s.nomClient ?? s.adresseDisplay}" '
+          'echec : $e',
+        );
+        // Continue avec les autres rows.
+      }
+    }
   }
 
   Future<CloudPullStats> _pullSavedDestinations(SupabaseClient client) async {
