@@ -334,8 +334,51 @@
     renderTable();
     renderCharts(tournees);
 
+    // Skeleton loaders Chart.js : une fois les 3 charts rendus, marquer
+    // chaque .chart-wrap comme `chart-loaded` -> CSS masque le skeleton
+    // et affiche le canvas. Le delai requestAnimationFrame x2 garantit
+    // que Chart.js a fini son 1er paint avant qu'on swap.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      ['wrapColis', 'wrapStatuts', 'wrapKm'].forEach((id) => {
+        document.getElementById(id)?.classList.add('chart-loaded');
+      });
+    }));
+
     document.getElementById('uploadZone').classList.add('hidden');
     document.getElementById('results').classList.remove('hidden');
+  }
+
+  // ---------- Mode presentation (Fullscreen API) ----------
+  // Bouton "Mode presentation" : passe en plein ecran + agrandit les
+  // stat cards / charts via body.presentation-mode (cf. styles.css).
+  // Pratique en demo client/chef ou pitch investisseur. Echap quitte.
+  const presentationBtn = document.getElementById('presentationToggle');
+  if (presentationBtn) {
+    presentationBtn.addEventListener('click', () => {
+      const isFs = !!document.fullscreenElement;
+      if (isFs) {
+        document.exitFullscreen?.();
+      } else {
+        document.documentElement.requestFullscreen?.().catch(() => {
+          // Fallback : si Fullscreen API refusee (HTTPS only sur certains
+          // browsers), on active quand meme le mode CSS.
+          document.body.classList.add('presentation-mode');
+          updatePresentationLabel(true);
+        });
+      }
+    });
+    // Synchroniser le toggle CSS avec l'etat reel du Fullscreen API
+    // (l'utilisateur peut quitter via Esc -> on doit retirer la classe).
+    document.addEventListener('fullscreenchange', () => {
+      const fs = !!document.fullscreenElement;
+      document.body.classList.toggle('presentation-mode', fs);
+      updatePresentationLabel(fs);
+    });
+  }
+
+  function updatePresentationLabel(active) {
+    const label = document.getElementById('presentationToggleLabel');
+    if (label) label.textContent = active ? 'Quitter' : 'Mode presentation';
   }
 
   // ---------- Wiring tri / filtre (une fois au load) ----------

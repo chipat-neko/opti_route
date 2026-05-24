@@ -914,6 +914,114 @@ table.dashboard-table {
 .chart-wrap h3 { margin-bottom: var(--space-14); font-size: 1rem; }
 .chart-wrap canvas { max-height: 280px; }
 
+/* ════════════════════════════════════════════════════════════════
+   Skeleton loaders Chart.js — placeholder anime visible avant que
+   Chart.js soit charge / render. Evite le flash blanc.
+   ════════════════════════════════════════════════════════════════ */
+.chart-skeleton {
+  height: 240px;
+  border-radius: var(--radius-14);
+  background: linear-gradient(
+    90deg,
+    var(--bg-soft) 0%,
+    var(--divider) 50%,
+    var(--bg-soft) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Skeleton cache des qu'un canvas frere est rendu (.chart-loaded sur
+   le parent .chart-wrap). */
+.chart-wrap.chart-loaded .chart-skeleton { display: none; }
+.chart-wrap:not(.chart-loaded) canvas { display: none; }
+
+/* ════════════════════════════════════════════════════════════════
+   Mode presentation dashboard — fullscreen + stat cards agrandies
+   pour demo chef ou pitch investisseur. Active via body.presentation-
+   mode + Fullscreen API (Esc pour quitter).
+   ════════════════════════════════════════════════════════════════ */
+body.presentation-mode {
+  background: var(--bg);
+}
+
+/* Masque la nav + footer + upload zone + table en mode presentation
+   pour focus uniquement sur les 5 stats + 3 graphes. */
+body.presentation-mode .site-header,
+body.presentation-mode footer,
+body.presentation-mode .upload-zone,
+body.presentation-mode .table-toolbar,
+body.presentation-mode .dashboard-table-wrap,
+body.presentation-mode .muted-banner {
+  display: none !important;
+}
+
+body.presentation-mode main {
+  max-width: 100%;
+  padding: var(--space-22);
+}
+
+/* Stat cards XL en mode presentation (visible de loin) */
+body.presentation-mode .stat-card {
+  padding: var(--space-40);
+}
+
+body.presentation-mode .stat-value {
+  font-size: 4.5rem;
+}
+
+body.presentation-mode .stat-label {
+  font-size: 1rem;
+}
+
+body.presentation-mode .chart-wrap {
+  padding: var(--space-40);
+}
+
+body.presentation-mode .chart-wrap canvas {
+  max-height: 360px;
+}
+
+body.presentation-mode .chart-wrap h3 {
+  font-size: 1.5rem;
+}
+
+/* Bouton "Mode presentation" : visible uniquement quand resultats
+   affiches (donc dans #results). Style discret en haut a droite. */
+.presentation-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  background: var(--paper);
+  color: var(--text);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-10);
+  padding: var(--space-6) var(--space-14);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.presentation-toggle:hover { background: var(--bg-soft); }
+.presentation-toggle:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
+}
+
+/* En mode presentation : bouton flottant en haut a droite pour quitter */
+body.presentation-mode .presentation-toggle {
+  position: fixed;
+  top: var(--space-18);
+  right: var(--space-18);
+  z-index: 1000;
+}
+
 .muted-banner {
   background: var(--emerald-soft);
   color: var(--emerald-dark);
