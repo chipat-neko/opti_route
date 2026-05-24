@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart' show ContentAlign;
 
 import '../data/address_suggestion.dart';
 import '../data/database.dart';
@@ -14,6 +15,7 @@ import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../providers/supabase_providers.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/coach_mark_helper.dart';
 import '../widgets/drawer_badge_icon.dart';
 import 'ajout_arret_screen.dart';
 import 'bulk_paste_screen.dart';
@@ -44,6 +46,10 @@ class TourneeDuJourScreen extends ConsumerStatefulWidget {
 class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   bool _optimizing = false;
   StreamSubscription<PresenceDelta>? _presenceDeltaSub;
+  // Cles cibles pour les coach marks 1er lancement (info-bulles guidees
+  // pointant vers les FAB scan colis + ajouter arret).
+  final GlobalKey _fabScanColisKey = GlobalKey();
+  final GlobalKey _fabAjouterKey = GlobalKey();
 
   @override
   void initState() {
@@ -63,7 +69,38 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       // Jalon 3.E : ecoute les delta presence pour afficher des
       // SnackBar "X a rejoint / quitte la tournee".
       _maybeListenPresenceDeltas();
+      // Coach marks 1er lancement : guide vers FAB scan + FAB ajouter.
+      // Idempotent : flag coach_tournee_done dans ParametresRepository.
+      _maybeShowCoachMarks();
     });
+  }
+
+  void _maybeShowCoachMarks() {
+    final repo = ref.read(parametresRepositoryProvider);
+    CoachMarkHelper.showIfFirstTime(
+      context,
+      alreadyDoneCheck: repo.getCoachTourneeDone,
+      markDone: repo.setCoachTourneeDone,
+      steps: [
+        CoachStep(
+          key: _fabScanColisKey,
+          title: 'Scanner un colis',
+          description:
+              'Scan le code-barre de l\'etiquette pour ajouter rapidement '
+              'l\'arret a ta tournee. Marche avec MESEXP, Colissimo, '
+              'Chronopost.',
+          align: ContentAlign.left,
+        ),
+        CoachStep(
+          key: _fabAjouterKey,
+          title: 'Ajouter un arret',
+          description:
+              'Ajoute un arret manuellement : tape une adresse, choisis '
+              'un client du carnet ou prend une photo du bordereau.',
+          align: ContentAlign.left,
+        ),
+      ],
+    );
   }
 
   @override
@@ -233,6 +270,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       ),
       floatingActionButton: Fabs(
         tournee: tournee,
+        scannerColisKey: _fabScanColisKey,
+        ajouterKey: _fabAjouterKey,
         onAjouter: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => AjoutArretScreen(tourneeId: widget.tournee.id),

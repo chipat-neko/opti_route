@@ -107,6 +107,12 @@ dependencies:
   # si plusieurs colis pour le même client via numéro de tracking).
   # Pas de cle API ni cout. ~2 MB overhead APK.
   mobile_scanner: ^7.0.0
+  # tutorial_coach_mark : info-bulles guidees au 1er lancement de chaque
+  # ecran complexe (tournee_du_jour, scan, parametres, carnet). Pas de
+  # serveur ni cle, 100% local. Flag `coach_*_done` par ecran dans
+  # ParametresRepository pour ne plus re-afficher apres validation.
+  # Reset via Parametres > Aide > Reactiver les astuces.
+  tutorial_coach_mark: ^1.2.11
 
 dev_dependencies:
   flutter_test:

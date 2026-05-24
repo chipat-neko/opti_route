@@ -37,6 +37,14 @@ class ParametresRepository {
   static const _kAutoBackupPeriod = 'auto_backup_period';
   static const _kLastAutoBackupAt = 'last_auto_backup_at';
   static const _kRecentSearches = 'recent_searches_v1';
+  // Sprint Coach marks (2026-05-24) : 1 flag par ecran qui passe a
+  // 'true' une fois que l'utilisateur a vu les info-bulles guidees.
+  // Le toggle "Reactiver les astuces" dans Parametres > Aide reset
+  // les 4 flags en bloc pour que les coach marks reapparaissent.
+  static const _kCoachTourneeDone = 'coach_tournee_done';
+  static const _kCoachScanDone = 'coach_scan_done';
+  static const _kCoachParametresDone = 'coach_parametres_done';
+  static const _kCoachCarnetDone = 'coach_carnet_done';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -515,5 +523,39 @@ class ParametresRepository {
 
   Future<int> _delete(String cle) {
     return (_db.delete(_db.parametres)..where((p) => p.cle.equals(cle))).go();
+  }
+
+  // ─── Coach marks (Sprint 2026-05-24) ─────────────────────────────
+  // Un flag par ecran. true = l'utilisateur a deja vu les info-bulles
+  // de cet ecran, on ne les re-affiche plus. resetAllCoachMarks reset
+  // les 4 d'un coup (utilise par le bouton "Reactiver les astuces"
+  // dans Parametres > Aide).
+
+  Future<bool> getCoachTourneeDone() async =>
+      (await _readKey(_kCoachTourneeDone)) == '1';
+  Future<void> setCoachTourneeDone() =>
+      _write(_kCoachTourneeDone, '1');
+
+  Future<bool> getCoachScanDone() async =>
+      (await _readKey(_kCoachScanDone)) == '1';
+  Future<void> setCoachScanDone() => _write(_kCoachScanDone, '1');
+
+  Future<bool> getCoachParametresDone() async =>
+      (await _readKey(_kCoachParametresDone)) == '1';
+  Future<void> setCoachParametresDone() =>
+      _write(_kCoachParametresDone, '1');
+
+  Future<bool> getCoachCarnetDone() async =>
+      (await _readKey(_kCoachCarnetDone)) == '1';
+  Future<void> setCoachCarnetDone() =>
+      _write(_kCoachCarnetDone, '1');
+
+  /// Reset les 4 flags coach_*_done pour que les info-bulles
+  /// reapparaissent a la prochaine ouverture de chaque ecran.
+  Future<void> resetAllCoachMarks() async {
+    await _delete(_kCoachTourneeDone);
+    await _delete(_kCoachScanDone);
+    await _delete(_kCoachParametresDone);
+    await _delete(_kCoachCarnetDone);
   }
 }
