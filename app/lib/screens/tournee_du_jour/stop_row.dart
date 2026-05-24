@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
@@ -314,6 +314,17 @@ class StopRow extends ConsumerWidget {
         await navigator.push<void>(
           MaterialPageRoute(
             builder: (_) => PreuvePhotoViewerScreen(photoPath: path),
+          ),
+        );
+      case CopyAdresseAction():
+        final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
+        await Clipboard.setData(ClipboardData(text: adresse));
+        unawaited(HapticFeedback.lightImpact());
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Adresse copiee'),
+            backgroundColor: AppColors.emerald,
+            duration: Duration(seconds: 2),
           ),
         );
       case OpenDetailsAction():

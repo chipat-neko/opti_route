@@ -99,10 +99,10 @@ void main() {
   });
 
   group('Sealed types - exhaustivite StopAction', () {
-    /// Ce switch verifie qu'on couvre bien les 8 sous-types. Si on ajoute
-    /// un 9e sous-type a StopAction, Dart fait echouer la compilation
+    /// Ce switch verifie qu'on couvre bien les 9 sous-types. Si on ajoute
+    /// un 10e sous-type a StopAction, Dart fait echouer la compilation
     /// jusqu'a ce qu'on l'ajoute ici aussi (sealed -> switch exhaustif).
-    test('switch exhaustif sur les 8 actions', () {
+    test('switch exhaustif sur les 9 actions', () {
       String label(StopAction a) => switch (a) {
             MarkLivreAction() => 'livre',
             MarkEchecAction() => 'echec',
@@ -110,6 +110,7 @@ void main() {
             OpenDetailsAction() => 'details',
             TakePreuvePhotoAction() => 'preuve_photo',
             ViewPreuvePhotoAction() => 'view_preuve_photo',
+            CopyAdresseAction() => 'copy_adresse',
             MoveToTourneeAction() => 'move',
             ConvertTypeAction() => 'convert_type',
           };
@@ -120,6 +121,7 @@ void main() {
       expect(label(const OpenDetailsAction()), 'details');
       expect(label(const TakePreuvePhotoAction()), 'preuve_photo');
       expect(label(const ViewPreuvePhotoAction()), 'view_preuve_photo');
+      expect(label(const CopyAdresseAction()), 'copy_adresse');
       expect(label(const MoveToTourneeAction(42)), 'move');
       expect(label(const ConvertTypeAction('ramasse')), 'convert_type');
     });
