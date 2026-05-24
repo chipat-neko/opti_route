@@ -30,32 +30,70 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="canonical" href="https://chipat-neko.github.io/opti_route/site/">
 
-<!-- Schema.org JSON-LD pour rich snippets Google -->
+<!-- Schema.org JSON-LD pour rich snippets Google : SoftwareApplication +
+     Organization + BreadcrumbList agreges via @graph (3 entites en 1 bloc). -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "opti_route",
-  "description": "Application Android d'optimisation de tournees de livraison, 100% locale, sans abonnement. Optimisation VROOM, scan bordereaux OCR, gestion d'equipe, statistiques annuelles, facturation indicative.",
-  "url": "https://chipat-neko.github.io/opti_route/site/",
-  "image": "https://chipat-neko.github.io/opti_route/site/assets/og-cover.png",
-  "applicationCategory": "BusinessApplication",
-  "applicationSubCategory": "DeliveryOptimization",
-  "operatingSystem": "Android 5.0+",
-  "inLanguage": "fr-FR",
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "EUR",
-    "availability": "https://schema.org/InStock"
-  },
-  "author": {
-    "@type": "Person",
-    "name": "CALOTE Noah"
-  },
-  "softwareVersion": "1.1.0",
-  "datePublished": "2026-04-09",
-  "license": "https://github.com/chipat-neko/opti_route"
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://chipat-neko.github.io/opti_route/site/#app",
+      "name": "opti_route",
+      "description": "Application Android d'optimisation de tournees de livraison, 100% locale, sans abonnement. Optimisation VROOM, scan bordereaux OCR, gestion d'equipe, statistiques annuelles, facturation indicative.",
+      "url": "https://chipat-neko.github.io/opti_route/site/",
+      "image": "https://chipat-neko.github.io/opti_route/site/assets/og-cover.png",
+      "screenshot": [
+        "https://chipat-neko.github.io/opti_route/site/assets/screenshots/02-tournee-du-jour.png",
+        "https://chipat-neko.github.io/opti_route/site/assets/screenshots/03-carte.png",
+        "https://chipat-neko.github.io/opti_route/site/assets/screenshots/04-carnet.png",
+        "https://chipat-neko.github.io/opti_route/site/assets/screenshots/05-stats.png"
+      ],
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "DeliveryOptimization",
+      "operatingSystem": "Android 5.0+",
+      "inLanguage": "fr-FR",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR",
+        "availability": "https://schema.org/InStock"
+      },
+      "author": {
+        "@id": "https://chipat-neko.github.io/opti_route/site/#org"
+      },
+      "softwareVersion": "1.1.0",
+      "datePublished": "2026-04-09",
+      "license": "https://github.com/chipat-neko/opti_route"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://chipat-neko.github.io/opti_route/site/#org",
+      "name": "opti_route",
+      "url": "https://chipat-neko.github.io/opti_route/site/",
+      "logo": "https://chipat-neko.github.io/opti_route/site/assets/favicon.svg",
+      "founder": {
+        "@type": "Person",
+        "name": "CALOTE Noah"
+      },
+      "foundingDate": "2026-04-09",
+      "sameAs": [
+        "https://github.com/chipat-neko/opti_route",
+        "https://ko-fi.com/chipat"
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Accueil",
+          "item": "https://chipat-neko.github.io/opti_route/site/"
+        }
+      ]
+    }
+  ]
 }
 </script>
 </head>
