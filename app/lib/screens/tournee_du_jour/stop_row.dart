@@ -109,6 +109,7 @@ class StopRow extends ConsumerWidget {
       },
       child: InkWell(
         onTap: () => _onTap(context, ref),
+        onLongPress: () => _showPreviewDialog(context, ref),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.x14,
@@ -437,6 +438,72 @@ class StopRow extends ConsumerWidget {
     final path = await PreuvePhotoService().capturer(stopId: stopId);
     if (path == null) return;
     await ref.read(stopsRepositoryProvider).setPreuvePhoto(stopId, path);
+  }
+
+  /// Carte Trello #96 : preview rapide d'un stop sans engager d'action.
+  /// Long-press sur la row -> dialog modal compact avec nom, adresse,
+  /// nb colis, fenetre horaire, notes. Boutons :
+  /// - "Fermer" : juste pop
+  /// - "Actions" : pop puis ouvre la bottom sheet d'actions classique
+  ///
+  /// Use case : verifier les notes (code interphone) ou l'horaire
+  /// fenetre avant de descendre du vehicule, sans risquer de valider
+  /// un statut par erreur.
+  Future<void> _showPreviewDialog(BuildContext context, WidgetRef ref) async {
+    unawaited(HapticFeedback.lightImpact());
+    final p = context.palette;
+    final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
+    final nom = stop.nomClient?.trim();
+    final fenetreDebut = stop.fenetreDebut;
+    final fenetreFin = stop.fenetreFin;
+    final notes = stop.notes?.trim();
+    final ouvrirActions = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: p.paper,
+        title: Text(
+          (nom != null && nom.isNotEmpty) ? nom : _primaryLine(stop),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PreviewRow(icon: Icons.place_outlined, text: adresse),
+            const SizedBox(height: AppSpacing.x8),
+            _PreviewRow(
+              icon: Icons.inventory_2_outlined,
+              text: '${stop.nbColis} colis '
+                  '(${stop.type == kStopTypeRamasse ? "ramasse" : "livraison"})',
+            ),
+            if (fenetreDebut != null && fenetreFin != null) ...[
+              const SizedBox(height: AppSpacing.x8),
+              _PreviewRow(
+                icon: Icons.schedule_outlined,
+                text: 'Fenetre $fenetreDebut - $fenetreFin',
+              ),
+            ],
+            if (notes != null && notes.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.x8),
+              _PreviewRow(icon: Icons.notes_outlined, text: notes),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Fermer'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Actions'),
+          ),
+        ],
+      ),
+    );
+    if (ouvrirActions == true && context.mounted) {
+      await _onTap(context, ref);
+    }
   }
 
   String _primaryLine(Stop s) {
@@ -787,6 +854,33 @@ class SegmentBadge extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Ligne icone + texte du dialog preview (carte Trello #96). Utilise
+/// pour les infos cles d'un stop (adresse, colis, fenetre, notes).
+class _PreviewRow extends StatelessWidget {
+  const _PreviewRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: p.textMute),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 13, color: p.ink, height: 1.35),
+          ),
+        ),
+      ],
     );
   }
 }
