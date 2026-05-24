@@ -19,6 +19,159 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+
+<!-- Schema.org JSON-LD : FAQPage (rich snippet "people also ask" Google)
+     + BreadcrumbList (chemin hierarchique Accueil > FAQ). Texte des
+     reponses condense en plain text (pas de HTML, Google ignore les balises). -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "https://chipat-neko.github.io/opti_route/site/faq.html#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "L'app est-elle disponible sur le Play Store ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Pas encore en Phase 1. La publication Play Store coute 25 USD (compte developpeur a vie) et necessite une CB. La publication est prevue en Phase 2."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment installer l'APK sans Play Store ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Telecharger le .apk depuis les releases GitHub, autoriser les sources inconnues dans Parametres > Securite, ouvrir le fichier APK et confirmer l'installation. Android previent que l'app vient d'une source inconnue, c'est normal puisque ce n'est pas le Play Store."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quelles versions d'Android sont supportees ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "L'app cible targetSdk 36 (Android 15) et minSdk 21 (Android 5.0, Lollipop). Tout telephone Android datant de moins de 8-9 ans devrait fonctionner."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Et sur iPhone ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Pas en Phase 1. Le projet est ne sur Android. Ajouter iOS demanderait un Mac pour la build, 99 USD/an pour l'App Store, et adapter le code Flutter. C'est un objectif Phase 2-3."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "C'est vraiment gratuit ? Y a-t-il un piege ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, vraiment gratuit en Phase 1. Aucun piege. Le projet est open-source, developpe en parallele d'un emploi de chauffeur-livreur. Aucun cout serveur en Phase 1 (tout est local). Seul cout possible : OpenRouteService au-dela de 500 optimisations/jour (~25 USD/mois) mais largement suffisant pour un livreur solo ou petite equipe."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment va se monetiser l'app en Phase 2 ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Phase 2 ajoute la sync multi-appareils (chef + coequipiers chacun sur son phone), qui demande un backend (~25-50 USD/mois). Cette feature aura une option payante. La Phase 1 actuelle restera gratuite a perpetuite, pas de downgrade force."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne le mode chef d'equipe en Phase 1 ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tout est local au telephone du chef. Le chef cree une tournee, ajoute des arrets, affecte chaque arret a un coequipier, puis partage les fiches via WhatsApp/SMS cible ou PDF individuel. Le coequipier execute la tournee comme il veut, le chef met a jour les statuts sur son phone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quand est-ce que les coequipiers auront leur propre app ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Phase 2. Chaque coequipier aura un compte email/password, recevra ses tournees en temps reel, et le chef verra l'avancement en direct sans partage manuel. Aucune date precise : la Phase 2 demande un budget ~25-50 USD/mois."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Mes donnees clients sont-elles uploadees quelque part ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Non. Toutes les donnees clients (nom, adresse, telephone, codes interphones, notes) restent dans une base SQLite sur le telephone. Aucun serveur opti_route n'existe en Phase 1. Seules les adresses cherchees sont envoyees a des APIs publiques pour le geocodage (BAN, SIRENE, Photon). Pas de nom de client, pas de telephone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment sauvegarder mes donnees ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Exports a faire regulierement : Carnet d'adresses en CSV ou vCard (la vCard s'importe dans les Contacts Android pour double sauvegarde), Stats annuelles en CSV, Tournees PDF individuelles. Conseil : sauvegarde le CSV carnet sur Google Drive 1x/mois."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Si je desinstalle l'app, je perds tout ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, Android efface les donnees privees de l'app a la desinstallation. Faire des exports avant de desinstaller. C'est une limite de la Phase 1 sans backend. En Phase 2, un backup cloud automatique reglerait ca."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Le dashboard web suit-il mes tournees en temps reel ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Non, c'est un viewer statique en Phase 1. Tu exportes un CSV depuis l'app, tu le glisses-deposes sur le dashboard, il affiche les graphes et stats de ce CSV. La vraie sync temps reel demande un backend, prevu en Phase 2."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Mes donnees sont-elles uploadees quand j'utilise le dashboard ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Non. Le dashboard parse ton CSV dans le navigateur, en memoire. Quand tu fermes l'onglet, les donnees disparaissent. Aucun upload, aucun serveur tiers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Pourquoi j'ai besoin d'une cle OpenRouteService ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Pour optimiser l'ordre des arrets, l'app envoie la liste des coordonnees a l'algorithme VROOM via OpenRouteService. Sans cle, impossible d'optimiser : tu peux quand meme ajouter des arrets manuellement et naviguer via Google Maps / Waze. La cle est gratuite (500 optimisations/jour) sur openrouteservice.org/dev, pas de CB requise."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "L'app fonctionne-t-elle sans connexion internet ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Partiellement. Sans internet : creer une tournee, ajouter des arrets manuellement (sans geocoder), marquer livre/echec, photo preuve, exporter -> OK. Autocompletion adresse, optimisation ORS, geocodage du scan bordereau -> KO. Au retour de la connexion, un bouton 'Geolocaliser hors-ligne' rejoint l'adresse aux arrets crees offline."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quels formats de bordereaux sont reconnus par l'OCR ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "En Phase 1 : MESEXP (format generique francais), Colissimo / La Poste (tracking 6A/6L/8L/9N), Chronopost (tracking XR/XE...FR). D'autres transporteurs (UPS, DHL, FedEx) sont prevus. Pour signaler un type non reconnu, ouvrir une issue GitHub avec une photo (visage / numero floutes si besoin)."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://chipat-neko.github.io/opti_route/site/"},
+        {"@type": "ListItem", "position": 2, "name": "FAQ", "item": "https://chipat-neko.github.io/opti_route/site/faq.html"}
+      ]
+    }
+  ]
+}
+</script>
+
 <style>
   /* Accordion details/summary stylé */
   details.faq {
