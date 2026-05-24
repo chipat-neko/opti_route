@@ -17,8 +17,16 @@ import 'onboarding/pages.dart';
 ///
 /// La cle ORS n'est pas obligatoire : l'app fonctionne sans, mais le
 /// bouton "Optimiser" est grise tant qu'on n'a pas saisi la cle.
+///
+/// Mode `replay` (`replayMode: true`) : ouvre l'onboarding depuis
+/// Parametres > Aide pour le revoir, sans toucher au flag
+/// `onboarding_done` ni a la cle ORS (juste un Navigator.pop a la fin
+/// ou si l'utilisateur passe). Permet a Noah de relire les pages plus
+/// tard quand il a oublie une feature.
 class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({super.key, this.replayMode = false});
+
+  final bool replayMode;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -104,7 +112,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   else
                     TextButton(
                       onPressed: _saving ? null : _skip,
-                      child: const Text('Passer'),
+                      child: Text(widget.replayMode ? 'Fermer' : 'Passer'),
                     ),
                   const Spacer(),
                   FilledButton.icon(
@@ -132,7 +140,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 : Icons.check,
                           ),
                     label: Text(
-                      _currentPage < _lastPageIndex ? 'Suivant' : 'Commencer',
+                      _currentPage < _lastPageIndex
+                          ? 'Suivant'
+                          : (widget.replayMode ? 'Fermer' : 'Commencer'),
                     ),
                   ),
                 ],
@@ -150,7 +160,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// plus tard via Parametres > Optimisation. Le HomeScreen watch le
   /// flag onboarding_done et bascule automatiquement vers le contenu
   /// normal des qu'il est mis a true.
+  ///
+  /// En mode replay (relance depuis Parametres > Aide), on ne touche
+  /// pas au flag : juste un Navigator.pop pour revenir aux parametres.
   Future<void> _skip() async {
+    if (widget.replayMode) {
+      Navigator.of(context).pop();
+      return;
+    }
     setState(() => _saving = true);
     await ref.read(parametresRepositoryProvider).setOnboardingDone();
   }
@@ -159,7 +176,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// si l'utilisateur l'a saisie, puis marque l'onboarding comme
   /// termine. Si le champ est vide, on ne touche pas a la cle ORS
   /// (l'utilisateur peut decider de la saisir plus tard).
+  ///
+  /// En mode replay, on ne touche ni a la cle ORS ni au flag
+  /// onboarding_done : juste Navigator.pop. Si l'utilisateur veut
+  /// changer la cle, il a Parametres > Optimisation pour ca.
   Future<void> _finish() async {
+    if (widget.replayMode) {
+      Navigator.of(context).pop();
+      return;
+    }
     setState(() => _saving = true);
     final repo = ref.read(parametresRepositoryProvider);
     final orsKey = _orsKeyCtrl.text.trim();
