@@ -19,6 +19,7 @@ import 'parametres/donnees_section.dart';
 import 'parametres/entreprise_form.dart';
 import 'parametres/ocr_stats_tile.dart';
 import 'parametres/parametres_widgets.dart';
+import 'parametres/aide_section.dart';
 import 'parametres/securite_section.dart';
 
 class ParametresScreen extends ConsumerStatefulWidget {
@@ -668,6 +669,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
           const SizedBox(height: AppSpacing.x18),
           const ParametresSectionTitle('A propos'),
           const SizedBox(height: AppSpacing.x10),
+          const AideSection(),
           ListTile(
             leading: const Icon(Icons.policy_outlined),
             title: const Text('Mentions legales'),
