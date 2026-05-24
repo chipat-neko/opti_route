@@ -44,6 +44,12 @@ class TakePreuvePhotoAction extends StopAction {
   const TakePreuvePhotoAction();
 }
 
+/// Visualise la photo preuve existante (full-screen, pinch-to-zoom).
+/// Le caller push [PreuvePhotoViewerScreen] avec [Stop.preuvePhotoPath].
+class ViewPreuvePhotoAction extends StopAction {
+  const ViewPreuvePhotoAction();
+}
+
 /// Deplace l'arret vers une autre tournee. Le caller appelle
 /// `StopsRepository.moveToTournee` + invalide les optims des 2
 /// tournees + relance l'auto-reorder local.
@@ -527,7 +533,17 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 },
               ),
               // Photo preuve : accessible avant ou apres validation.
-              // Si une photo existe deja, on l'indique discretement.
+              // Si une photo existe deja : 2 boutons separes (Voir + Refaire)
+              // pour que Noah ou un coequipier puisse visualiser sans
+              // risquer d'effacer la photo en relancant la camera.
+              if (widget.stop.preuvePhotoPath != null)
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: p.ink),
+                  onPressed: () => Navigator.of(context)
+                      .pop(const ViewPreuvePhotoAction()),
+                  icon: const Icon(Icons.image_outlined, size: 18),
+                  label: const Text('Voir la photo preuve'),
+                ),
               TextButton.icon(
                 style: TextButton.styleFrom(
                   foregroundColor: p.ink,

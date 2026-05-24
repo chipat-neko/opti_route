@@ -18,6 +18,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/stop_action_sheet.dart';
 import '../ajout_arret_screen.dart';
+import '../preuve_photo_viewer_screen.dart';
 
 /// Ligne d'arret dans la liste de la tournee du jour. Affiche numero,
 /// nom client / adresse, tags (priorite, GPS manquant, nb colis,
@@ -306,6 +307,14 @@ class StopRow extends ConsumerWidget {
         unawaited(HapticFeedback.lightImpact());
       case TakePreuvePhotoAction():
         await _capturerPreuve(ref, stop.id);
+      case ViewPreuvePhotoAction():
+        final path = stop.preuvePhotoPath;
+        if (path == null) return;
+        await navigator.push<void>(
+          MaterialPageRoute(
+            builder: (_) => PreuvePhotoViewerScreen(photoPath: path),
+          ),
+        );
       case OpenDetailsAction():
         await navigator.push<void>(
           MaterialPageRoute(
