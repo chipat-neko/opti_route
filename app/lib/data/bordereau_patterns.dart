@@ -94,8 +94,31 @@ abstract final class BordereauPatterns {
 
   /// Match "total colis : 3" ou "colis: 3" sur la meme ligne (format
   /// LIVRAISON MESEXP / Colissimo).
+  ///
+  /// Sprint OCR B-3 (2026-05-24) : `[:.\s]+` au lieu de `\s*:?\s*`
+  /// pour autoriser separateurs variables ("colis : 3", "colis. 3",
+  /// "colis  3"). `(?!\d)` empeche de capturer un prefixe de nombre
+  /// plus long (ex CP "28190" -> capturer "281" serait faux).
   static final colisSameLineRegex = RegExp(
-    r'colis\s*:?\s*(\d+)',
+    r'(?:total\s+colis|nb\s+colis|colis)\s*[:.\s]+\s*(\d{1,3})(?!\d)',
+    caseSensitive: false,
+  );
+
+  /// Sprint OCR B-3 (2026-05-24) : cas inverse "COLIS TOTAUX: 1"
+  /// observe sur les bordereaux Eure-et-Loir (page_33 / page_34 batch
+  /// eval). `colisSameLineRegex` ne match pas car "TOTAUX" s'intercale
+  /// entre "colis" et le chiffre.
+  static final colisTotauxRegex = RegExp(
+    r'colis\s+totaux\s*[:.\s]+\s*(\d{1,3})(?!\d)',
+    caseSensitive: false,
+  );
+
+  /// Sprint OCR B-3 (2026-05-24) : fallback format ENLEVEMENT MESEXP
+  /// avec "UM: 1/3" -> total colis = denominateur. Quand l'OCR ne
+  /// retrouve pas un nombre seul dans les 12 lignes apres "u.m.",
+  /// on scanne pour ce pattern UM X/Y.
+  static final umFractionRegex = RegExp(
+    r'\bu\.?\s*m\.?\s*[:.\s]*\s*\d+\s*/\s*(\d+)',
     caseSensitive: false,
   );
 
