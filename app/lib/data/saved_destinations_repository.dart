@@ -220,6 +220,7 @@ class SavedDestinationsRepository {
     String? notesCarnet,
     String? codeAcces,
     String? etageBatiment,
+    String? telephone,
   }) {
     return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
         .write(SavedDestinationsCompanion(
@@ -247,6 +248,9 @@ class SavedDestinationsRepository {
       etageBatiment: etageBatiment == null
           ? const Value.absent()
           : Value(etageBatiment.isEmpty ? null : etageBatiment),
+      telephone: telephone == null
+          ? const Value.absent()
+          : Value(telephone.isEmpty ? null : telephone),
     ));
   }
 
