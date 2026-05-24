@@ -239,7 +239,11 @@ class BordereauParser {
     debugPrint(
         'OCRDUMP-SPATIAL assembled (${assembledLines.length} lignes): '
         '${assembledLines.join(" | ")}');
-    return _buildExtractionFromContentLines(assembledLines, format);
+    return _buildExtractionFromContentLines(
+      assembledLines,
+      format,
+      allLines: allLines,
+    );
   }
 
   /// Construit une [BordereauExtraction] depuis les lignes "contenu"
@@ -252,8 +256,9 @@ class BordereauParser {
   /// - reste -> ignore (ou ajoute a rue si rien d'autre)
   static BordereauExtraction _buildExtractionFromContentLines(
     List<String> lines,
-    BordereauFormat format,
-  ) {
+    BordereauFormat format, {
+    List<String> allLines = const [],
+  }) {
     String? nomDest;
     String? rue;
     String? cp;
@@ -343,11 +348,21 @@ class BordereauParser {
       confidence = ExtractionConfidence.none;
     }
 
+    // Sprint OCR B-3 ext (2026-05-24) : extraire nb_colis depuis les
+    // lignes brutes de tous les blocs. Avant, parseFromBlocksSpatial
+    // ne le faisait pas (Noah saisissait a la main). Maintenant on
+    // tente l'auto-extraction avec la cascade de 4 patterns (cf.
+    // [_extractNbColisFromLines]). Reste null si aucun pattern ne
+    // matche, l'UI laissera le champ vide pour saisie manuelle.
+    final colisIdx = _findIndex(allLines, _markersTotalColis);
+    final nbColis = _extractNbColisFromLines(allLines, colisIdx: colisIdx);
+
     return BordereauExtraction(
       nomDestinataire: nomDest,
       rue: rue,
       codePostal: cp,
       ville: ville,
+      nbColis: nbColis,
       confidence: confidence,
       format: format,
     );
@@ -872,63 +887,10 @@ class BordereauParser {
       }
     }
 
-    // Total colis
-    int? nbColis;
-    if (colisIdx >= 0) {
-      final lineColis = lines[colisIdx];
-      // Format LIVRAISON : "Total colis : 3" tout sur la meme ligne.
-      final inSame = BordereauPatterns.colisSameLineRegex.firstMatch(lineColis);
-      if (inSame != null) {
-        nbColis = int.tryParse(inSame.group(1) ?? '');
-      }
-      // Sprint OCR B-3 (2026-05-24) : cas inverse "COLIS TOTAUX: 1"
-      // (Eure-et-Loir, page_33/34). On retente avec un regex separe.
-      if (nbColis == null) {
-        final inverse = BordereauPatterns.colisTotauxRegex.firstMatch(
-          lineColis,
-        );
-        if (inverse != null) {
-          nbColis = int.tryParse(inverse.group(1) ?? '');
-        }
-      }
-      if (nbColis == null) {
-        // Format ENLEVEMENT (U.M.) : la valeur est sur une ligne plus
-        // bas dans le tableau. L'OCR peut intercaler "Client", "Date",
-        // "1.0" ou la valeur reelle. On scanne les 12 lignes suivantes
-        // pour trouver le 1er nombre 1-99 (entier ou decimal X.0) qui
-        // n'est PAS un CP (5 chiffres).
-        for (var i = colisIdx + 1;
-            i < lines.length && i <= colisIdx + 12;
-            i++) {
-          final line = lines[i].trim();
-          // Skip lignes contenant un CP (eviter 28190 etc).
-          if (_cpRegex.hasMatch(line)) continue;
-          // Match "1", "1.0", "1,0" en debut ou isole sur la ligne.
-          final m = BordereauPatterns.unitColisLineRegex.firstMatch(line);
-          if (m != null) {
-            nbColis = int.tryParse(m.group(1) ?? '');
-            if (nbColis != null && nbColis > 0 && nbColis < 100) break;
-            nbColis = null;
-          }
-        }
-      }
-    }
-    // Sprint OCR B-3 : fallback ultime "UM: 1/3" -> 3.
-    // Marche meme si colisIdx n'a pas ete trouve (page_41 a "COLIS"
-    // seul sans label exploitable mais "1/1" sur ligne precedente).
-    // Scan TOUTES les lignes (peu nombreuses, ~50-80 par bordereau).
-    if (nbColis == null) {
-      for (final line in lines) {
-        final m = BordereauPatterns.umFractionRegex.firstMatch(line);
-        if (m != null) {
-          final n = int.tryParse(m.group(1) ?? '');
-          if (n != null && n > 0 && n < 100) {
-            nbColis = n;
-            break;
-          }
-        }
-      }
-    }
+    // Total colis (factorise dans _extractNbColisFromLines pour partage
+    // avec parseFromBlocksSpatial qui ne le faisait pas avant Sprint
+    // OCR B-3 ext 2026-05-24).
+    final nbColis = _extractNbColisFromLines(lines, colisIdx: colisIdx);
 
     // Telephone : depuis "Contact destinataire" si dispo
     String? telephone;
@@ -1357,5 +1319,82 @@ class BordereauParser {
       if (i > 0) s = s.substring(0, i).trim();
     }
     return s.isEmpty ? null : s;
+  }
+
+  /// Extrait le nb_colis depuis une liste de lignes OCR.
+  ///
+  /// Sprint OCR B-3 ext (2026-05-24) : factorisation pour partager la
+  /// logique entre [parse] (fallback) et [parseFromBlocksSpatial]
+  /// (flow principal de scan).
+  ///
+  /// Strategie en cascade :
+  /// 1. Si la ligne ancre (colisIdx) contient `colisSameLineRegex`
+  ///    -> "total colis : 3", "Nb colis 5", "PIECES AUTO. colis: 1"
+  /// 2. Sinon, ancre + `colisTotauxRegex` -> "COLIS TOTAUX: 1"
+  ///    (cas inverse Eure-et-Loir)
+  /// 3. Sinon, scan 12 lignes apres ancre + `unitColisLineRegex`
+  ///    -> "1", "1.0", "2,0" isole (format ENLEVEMENT U.M.)
+  /// 4. Fallback ultime : scan TOUTES les lignes + `umFractionRegex`
+  ///    -> "UM: 1/3" => 3 (denominateur de la fraction)
+  ///
+  /// Marche meme si `colisIdx < 0` (cas page_41 : "COLIS" seul sans
+  /// label exploitable, mais "UM: 1/1" present quelque part).
+  static int? _extractNbColisFromLines(
+    List<String> lines, {
+    required int colisIdx,
+  }) {
+    int? nbColis;
+    if (colisIdx >= 0 && colisIdx < lines.length) {
+      final lineColis = lines[colisIdx];
+      // Cas 1 : "total colis : 3" ou variantes meme ligne
+      final inSame = BordereauPatterns.colisSameLineRegex.firstMatch(
+        lineColis,
+      );
+      if (inSame != null) {
+        nbColis = int.tryParse(inSame.group(1) ?? '');
+      }
+      // Cas 2 : "COLIS TOTAUX: 1" (label inverse Eure-et-Loir)
+      if (nbColis == null) {
+        final inverse = BordereauPatterns.colisTotauxRegex.firstMatch(
+          lineColis,
+        );
+        if (inverse != null) {
+          nbColis = int.tryParse(inverse.group(1) ?? '');
+        }
+      }
+      // Cas 3 : format ENLEVEMENT (U.M.), valeur isolee sur ligne +N
+      if (nbColis == null) {
+        for (var i = colisIdx + 1;
+            i < lines.length && i <= colisIdx + 12;
+            i++) {
+          final line = lines[i].trim();
+          if (_cpRegex.hasMatch(line)) continue;
+          final m = BordereauPatterns.unitColisLineRegex.firstMatch(line);
+          if (m != null) {
+            final n = int.tryParse(m.group(1) ?? '');
+            if (n != null && n > 0 && n < 100) {
+              nbColis = n;
+              break;
+            }
+          }
+        }
+      }
+    }
+    // Cas 4 : fallback "UM: 1/3" sur TOUTES les lignes
+    // (utile meme si colisIdx pas trouve : page_41 "COLIS" seul mais
+    // "1/1" sur ligne precedente).
+    if (nbColis == null) {
+      for (final line in lines) {
+        final m = BordereauPatterns.umFractionRegex.firstMatch(line);
+        if (m != null) {
+          final n = int.tryParse(m.group(1) ?? '');
+          if (n != null && n > 0 && n < 100) {
+            nbColis = n;
+            break;
+          }
+        }
+      }
+    }
+    return nbColis;
   }
 }

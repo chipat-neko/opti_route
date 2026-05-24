@@ -334,8 +334,19 @@ void main() {
       );
     });
 
+    test('Sprint OCR B-3 ext : ne matche pas "75" (2 chiffres = '
+        'probablement dpt/code, pas nb_colis)', () {
+      // Plafond à 1 chiffre pour éviter faux positifs U.M. dans
+      // les tableaux MESEXP où "75" / "28" apparaissent comme
+      // n° département ou autres champs.
+      expect(
+        BordereauPatterns.unitColisLineRegex.hasMatch('75'),
+        isFalse,
+      );
+    });
+
     test('ne matche pas "100" (3 chiffres)', () {
-      // Plafond a 99 pour eviter de matcher des codes / refs.
+      // Plafond a 9 pour eviter de matcher des codes / refs / dpts.
       expect(
         BordereauPatterns.unitColisLineRegex.hasMatch('100'),
         isFalse,

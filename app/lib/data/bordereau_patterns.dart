@@ -122,9 +122,16 @@ abstract final class BordereauPatterns {
     caseSensitive: false,
   );
 
-  /// Entier ou decimal X.0 isole sur sa ligne, 1-99 (format ENLEVEMENT
+  /// Entier ou decimal X.0 isole sur sa ligne, 1-9 (format ENLEVEMENT
   /// U.M. ou la valeur colis est `1`, `1.0`, `2,0`...).
-  static final unitColisLineRegex = RegExp(r'^\s*(\d{1,2})(?:[.,]0+)?\s*$');
+  ///
+  /// Sprint OCR B-3 ext (2026-05-24) : plafonne à 1 chiffre uniquement
+  /// pour éviter de capturer des numéros de département (28, 75) ou
+  /// codes (DLD100, etc) qui apparaissent souvent dans les cellules
+  /// de tableau près de "U.M.". Couvre 95% des cas livreur (1-9 colis).
+  /// Les cas rares 10-99 colis ne sont pas auto-extraits — Noah saisit
+  /// à la main.
+  static final unitColisLineRegex = RegExp(r'^\s*(\d)(?:[.,]0+)?\s*$');
 
   /// Match alphanumeric digit-letter adjacent (caracteristique des
   /// codes de tracking type "270521 /6552AGNCMVZ04L"). Sert a rejeter
