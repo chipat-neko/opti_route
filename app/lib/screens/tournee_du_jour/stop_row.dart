@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
 import '../../data/eta_calculator.dart';
@@ -327,6 +328,13 @@ class StopRow extends ConsumerWidget {
             duration: Duration(seconds: 2),
           ),
         );
+      case OpenInMapsAction():
+        final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
+        final uri = Uri.parse(
+          'https://www.google.com/maps/search/?api=1'
+          '&query=${Uri.encodeComponent(adresse)}',
+        );
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       case OpenDetailsAction():
         await navigator.push<void>(
           MaterialPageRoute(

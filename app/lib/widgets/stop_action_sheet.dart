@@ -78,6 +78,15 @@ class CopyAdresseAction extends StopAction {
   const CopyAdresseAction();
 }
 
+/// Ouvre Google Maps en mode preview (fiche du lieu) sur l'adresse du
+/// stop. Different de `NavigationService.launchGoogleMaps()` qui demarre
+/// une route GPS : ici on veut juste voir le batiment / les avis /
+/// les heures d'ouverture avant d'y aller. Le caller appelle
+/// `launchUrl(https://www.google.com/maps/search/?api=1&query=<adresse>)`.
+class OpenInMapsAction extends StopAction {
+  const OpenInMapsAction();
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -568,6 +577,13 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       ? 'Refaire la photo preuve'
                       : 'Prendre une photo preuve',
                 ),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: p.ink),
+                onPressed: () => Navigator.of(context)
+                    .pop(const OpenInMapsAction()),
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: const Text('Voir sur Maps'),
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: p.ink),
