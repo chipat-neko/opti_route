@@ -325,6 +325,11 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             onAction: _onPlusAction,
           ),
         ],
+        // Carte Trello #93 : bandeau secondaire compact avec le total
+        // km/min restants des stops non livres. Place sous l'AppBar pour
+        // ne pas surcharger le Row title (deja fragile cote overflow,
+        // cf bug Noah 2026-05-21 ligne 158-162). Hidden si tournee finie.
+        bottom: _KmRestantsBanner(tourneeId: widget.tournee.id),
       ),
       body: stopsAsync.when(
         data: (stops) => Body(tournee: tournee, stops: stops),
@@ -660,4 +665,51 @@ extension _IterableLastWhereOrNull<E> on Iterable<E> {
 
 // _AutoPushBadge -> extrait dans tournee_du_jour/auto_push_badge.dart
 // (refactor 2026-05-21 : public AutoPushBadge reutilisable).
+
+/// Bandeau secondaire sous l'AppBar tournee : "12,4 km · 1h05 restants
+/// (8 arrets)". Compact, 24px de haut. Carte Trello #93.
+///
+/// Cache si :
+/// - tournee terminee (tous les stops livres / echec)
+/// - aucun segment calcule (tournee vide / pas encore optimisee)
+///
+/// Implementer PreferredSizeWidget pour pouvoir etre passe en `bottom`
+/// de l'AppBar.
+class _KmRestantsBanner extends ConsumerWidget
+    implements PreferredSizeWidget {
+  const _KmRestantsBanner({required this.tourneeId});
+
+  final int tourneeId;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(24);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final resumeAsync = ref.watch(distanceRestanteProvider(tourneeId));
+    final resume = resumeAsync.asData?.value;
+    if (resume == null) return const SizedBox(height: 24);
+    final km = (resume.meters / 1000).toStringAsFixed(1);
+    final mins = resume.duration.inMinutes;
+    final dureeLabel = mins < 60
+        ? '$mins min'
+        : '${mins ~/ 60}h${(mins % 60).toString().padLeft(2, '0')}';
+    return SizedBox(
+      height: 24,
+      child: Container(
+        alignment: Alignment.center,
+        color: p.cream,
+        child: Text(
+          '$km km · $dureeLabel restants (${resume.countStops} arrets)',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: p.textMute,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
