@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/bordereau_extraction.dart';
 import 'package:opti_route/data/bordereau_parser.dart';
+import 'package:opti_route/data/ocr_service.dart' show OcrBlock;
 
 void main() {
   group('BordereauParser - format MESEXP', () {
@@ -593,6 +594,112 @@ void main() {
       ]);
       // Le CP correct est 75011, pas 11586 extrait de "0237911586"
       expect(result.codePostal, '75011');
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════════
+  // Sprint OCR B-3 + B-3 ext (2026-05-24) : extraction nb_colis sur
+  // les 3 cas observés dans le batch_eval 68 bordereaux Xiaomi qui
+  // n'étaient pas couverts avant.
+  // ════════════════════════════════════════════════════════════════
+  group('BordereauParser - nb_colis Sprint B-3 (Eure-et-Loir + ENLEVEMENT)',
+      () {
+    test('extrait nb_colis=1 depuis "COLIS TOTAUX: 1" (label inversé '
+        'page_33/34 Eure-et-Loir)', () {
+      final result = BordereauParser().parse([
+        'DESTINATAIRE :',
+        'NOGENT AUTO',
+        '31 RUE ARISTIDE BRIAND',
+        '28400 NOGENT LE ROTROU',
+        'COLIS TOTAUX: 1',
+      ]);
+      expect(result.nbColis, 1);
+    });
+
+    test('extrait nb_colis=3 depuis "UM: 1/3" en fallback (format '
+        'ENLEVEMENT MESEXP, page_41/68)', () {
+      // Pas de label "total colis" ou "u.m." sur la ligne ancre :
+      // le fallback ultime umFractionRegex scanne TOUTES les lignes.
+      final result = BordereauParser().parse([
+        'DESTINATAIRE :',
+        'AUTODISTRIBUTION MORIZE LOIRET',
+        'AVENUE DES PRES',
+        '28400 ARCISSES',
+        'PaDs:8 KG UM: 1/3',
+      ]);
+      expect(result.nbColis, 3);
+    });
+
+    test('NE capture PAS "75" isolé comme nb_colis (anti-régression : '
+        'c\'est un dpt parisien, pas un total colis)', () {
+      // Cas réel page_62 : "75" sur sa ligne après "U.M." mais c'est
+      // un numéro de département, pas un nb_colis. La regex plafonne à
+      // 1 chiffre désormais.
+      final result = BordereauParser().parse([
+        'DESTINATAIRE :',
+        'VILLAGE DES ENTREPRISES',
+        'U.M.',
+        'Client',
+        'Date',
+        '75',
+        '1',
+        'total colis : 1',
+      ]);
+      // Le "1" final de "total colis : 1" doit gagner sur le "75" isolé.
+      expect(result.nbColis, 1);
+    });
+
+    test('NE capture PAS "28" isolé comme nb_colis (anti-régression : '
+        'c\'est un dpt Eure-et-Loir)', () {
+      // Cas réel page_42 : "28" seul, "1.0" plus loin.
+      final result = BordereauParser().parse([
+        'DESTINATAIRE :',
+        'GARAGE LANCTIN',
+        'U.M.',
+        '28',
+        '1',
+      ]);
+      // "28" est skippé (regex `^\d$` plafonné à 1 chiffre), "1" gagne.
+      expect(result.nbColis, 1);
+    });
+
+    test('parseFromBlocksSpatial extrait nb_colis depuis allLines '
+        '(B-3 ext 2026-05-24)', () {
+      // Validation E2E light : parseFromBlocksSpatial appelle bien
+      // _extractNbColisFromLines via _buildExtractionFromContentLines
+      // sur TOUTES les lignes de tous les blocs (pas juste celles du
+      // bloc destinataire).
+      final labelBlock = OcrBlock(
+        lines: const ['DESTINATAIRE :'],
+        left: 100,
+        top: 100,
+        right: 250,
+        bottom: 130,
+      );
+      final contentBlock = OcrBlock(
+        lines: const ['GARAGE LANCTIN', '31 RUE ARISTIDE BRIAND',
+            '28190 COURVILLE'],
+        left: 100,
+        top: 140,
+        right: 400,
+        bottom: 250,
+      );
+      // Bloc colis ailleurs dans le bordereau (table tarif typique).
+      final colisBlock = OcrBlock(
+        lines: const ['Total colis : 2'],
+        left: 500,
+        top: 100,
+        right: 700,
+        bottom: 130,
+      );
+      final extraction = BordereauParser().parseFromBlocksSpatial(
+        [labelBlock, contentBlock, colisBlock],
+      );
+      expect(extraction, isNotNull);
+      expect(extraction!.nomDestinataire, 'GARAGE LANCTIN');
+      // Le coeur du test : nb_colis vient bien d'un OTHER bloc, pas
+      // du bloc destinataire trouvé.
+      expect(extraction.nbColis, 2);
     });
   });
 }
