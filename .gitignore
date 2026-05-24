@@ -59,3 +59,4 @@ supabase/.temp/
 
 # Dossier recherche prive (notes pre-pitch investisseur)
 recherche/
+.tmp_screens/
