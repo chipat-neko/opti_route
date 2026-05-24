@@ -330,6 +330,43 @@ final segmentsParStopProvider =
   );
 });
 
+/// Resume des distances/durees restantes d'une tournee (somme des
+/// segments pour les stops non encore livres). Sert au compteur compact
+/// "X km restants" dans l'AppBar de l'ecran Tournee du jour. Carte
+/// Trello #93.
+///
+/// Retourne null si :
+/// - tournee introuvable
+/// - aucun stop non-livre (= tournee terminee)
+/// Sinon record (meters: int, duration: Duration, countStops: int).
+final distanceRestanteProvider =
+    FutureProvider.family<({int meters, Duration duration, int countStops})?,
+        int>((ref, tourneeId) async {
+  final segments =
+      await ref.watch(segmentsParStopProvider(tourneeId).future);
+  if (segments.isEmpty) return null;
+  final stops =
+      await ref.read(stopsRepositoryProvider).getByTournee(tourneeId);
+  var meters = 0;
+  var duration = Duration.zero;
+  var count = 0;
+  for (final s in stops) {
+    // Ne sommer que les stops a livrer (pas les livres ni les echecs
+    // ni les ramasses deja faites). C'est ce qu'on doit "encore
+    // parcourir".
+    if (s.statutLivraison == 'livre' || s.statutLivraison == 'echec') {
+      continue;
+    }
+    final seg = segments[s.id];
+    if (seg == null) continue;
+    meters += seg.meters;
+    duration += seg.duration;
+    count++;
+  }
+  if (count == 0) return null;
+  return (meters: meters, duration: duration, countStops: count);
+});
+
 /// Compteur d'optimisations OpenRouteService consommees aujourd'hui.
 /// Reset auto au passage minuit (gere dans le repo). Affiche dans
 /// Parametres pour qu'on voie ou on en est par rapport au quota
