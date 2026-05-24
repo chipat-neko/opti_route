@@ -572,6 +572,31 @@
       });
     }
 
+    // ---------- Animation de transition des chiffres ROI ----------
+    // Au lieu de changer brutalement le texte d'un total, on interpole
+    // de la valeur precedente vers la nouvelle sur 400ms (ease-out).
+    // Donne un feedback visuel de "ca calcule" plus engageant en demo.
+    const prevValues = new WeakMap();
+    function animateNumber(el, target, formatter, duration = 400) {
+      const from = prevValues.get(el) ?? target;
+      prevValues.set(el, target);
+      if (from === target) {
+        el.textContent = formatter(target);
+        return;
+      }
+      const start = performance.now();
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        // ease-out cubic : rapide au debut, ralentit a la fin
+        const eased = 1 - Math.pow(1 - t, 3);
+        const current = from + (target - from) * eased;
+        el.textContent = formatter(current);
+        if (t < 1) requestAnimationFrame(tick);
+        else el.textContent = formatter(target);
+      }
+      requestAnimationFrame(tick);
+    }
+
     function recalc() {
       const livreurs = +inputs[0].value || 0;
       const arrets = +inputs[1].value || 0;
@@ -591,12 +616,12 @@
       const eurMois = heuresMois * cout;
       const eurAn = eurMois * 12;
 
-      outHeures.textContent = heuresMois.toFixed(1) + ' h';
+      animateNumber(outHeures, heuresMois, (v) => v.toFixed(1) + ' h');
       outHeuresDetail.textContent =
         `${gainEffectifMin.toFixed(0)} min/livreur/jour · ${livreurs} livreur(s) · ${jours} jours`;
-      outEur.textContent = eur(eurMois);
+      animateNumber(outEur, eurMois, eur);
       outEurDetail.textContent = `Sur la base de ${eur(cout)}/h`;
-      outEurAn.textContent = eur(eurAn);
+      animateNumber(outEurAn, eurAn, eur);
     }
 
     inputs.forEach((i) => i.addEventListener('input', recalc));

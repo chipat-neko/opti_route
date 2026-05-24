@@ -82,6 +82,20 @@
       <span><strong id="bannerSummary">N tournees</strong> chargees depuis ton CSV. <a href="#" id="resetBtn" style="color: inherit; text-decoration: underline;">Remplacer le fichier</a></span>
     </div>
 
+    <!-- Bouton mode presentation : utile en demo client/chef ou pitch.
+         Plein ecran + stat cards XL + masque la table et l'upload. -->
+    <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-18);">
+      <button type="button" id="presentationToggle" class="presentation-toggle" aria-label="Activer le mode presentation plein ecran">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+        <span id="presentationToggleLabel">Mode presentation</span>
+      </button>
+    </div>
+
     <!-- Stat cards -->
     <div class="dashboard-stats">
       <div class="stat-card">
@@ -106,20 +120,23 @@
       </div>
     </div>
 
-    <!-- Graphes -->
+    <!-- Graphes : skeleton anime visible avant que Chart.js render -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: var(--space-22); margin-bottom: var(--space-22);">
-      <div class="chart-wrap">
+      <div class="chart-wrap" id="wrapColis">
         <h3>Colis livres par tournee</h3>
+        <div class="chart-skeleton" aria-hidden="true"></div>
         <canvas id="chartColis"></canvas>
       </div>
-      <div class="chart-wrap">
+      <div class="chart-wrap" id="wrapStatuts">
         <h3>Repartition statuts</h3>
+        <div class="chart-skeleton" aria-hidden="true"></div>
         <canvas id="chartStatuts"></canvas>
       </div>
     </div>
 
-    <div class="chart-wrap">
+    <div class="chart-wrap" id="wrapKm">
       <h3>Distance parcourue (km)</h3>
+      <div class="chart-skeleton" aria-hidden="true"></div>
       <canvas id="chartKm"></canvas>
     </div>
 
