@@ -87,6 +87,15 @@ class OpenInMapsAction extends StopAction {
   const OpenInMapsAction();
 }
 
+/// Ouvre Google Street View sur les coordonnees GPS du stop (vue rue
+/// 360° de la facade). Necessite `stop.lat` et `stop.lng` non null
+/// (le caller affiche un SnackBar "Adresse pas encore geocodee" si
+/// null). URL :
+/// `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=<lat>,<lng>`.
+class OpenStreetviewAction extends StopAction {
+  const OpenStreetviewAction();
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -584,6 +593,13 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                     .pop(const OpenInMapsAction()),
                 icon: const Icon(Icons.map_outlined, size: 18),
                 label: const Text('Voir sur Maps'),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: p.ink),
+                onPressed: () => Navigator.of(context)
+                    .pop(const OpenStreetviewAction()),
+                icon: const Icon(Icons.streetview_outlined, size: 18),
+                label: const Text('Street View (vue rue)'),
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: p.ink),

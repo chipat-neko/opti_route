@@ -335,6 +335,26 @@ class StopRow extends ConsumerWidget {
           '&query=${Uri.encodeComponent(adresse)}',
         );
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+      case OpenStreetviewAction():
+        final lat = stop.lat;
+        final lng = stop.lng;
+        if (lat == null || lng == null) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Adresse pas encore geocodee, Street View indisponible',
+              ),
+              backgroundColor: AppColors.amber,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+        final uri = Uri.parse(
+          'https://www.google.com/maps/@?api=1'
+          '&map_action=pano&viewpoint=$lat,$lng',
+        );
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       case OpenDetailsAction():
         await navigator.push<void>(
           MaterialPageRoute(
