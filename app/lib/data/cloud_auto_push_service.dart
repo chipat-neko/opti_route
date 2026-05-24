@@ -137,6 +137,32 @@ class CloudAutoPushService {
     _suppressUntil = DateTime.now().add(duration);
   }
 
+  /// Force un push immediat si un debounce est en cours. Sert au cas
+  /// "le user a fait une action qu'il sait critique et qu'il ne faut
+  /// surtout pas perdre si l'ecran ferme avant 5s" — typiquement la
+  /// photo preuve apres validation livraison (le SnackBar timeout en
+  /// 4s, l'ecran peut etre fermee avant que le debounce 5s tire).
+  ///
+  /// No-op si aucun debounce actif, ou si user pas connecte, ou si on
+  /// est en periode de suppression Realtime.
+  Future<void> flush() async {
+    final tid = _currentTourneeId;
+    if (tid == null || _debounce == null) return;
+    if (_supabase.currentUser == null) return;
+    final until = _suppressUntil;
+    if (until != null && DateTime.now().isBefore(until)) return;
+    _debounce?.cancel();
+    _debounce = null;
+    _setState(AutoPushState.pushing);
+    try {
+      await _sync.pushTournee(tid);
+    } on Object {
+      // Silent : on re-tentera au prochain change.
+    } finally {
+      _setState(AutoPushState.idle);
+    }
+  }
+
   /// Replanifie un push debounced. Annule le timer precedent (si
   /// pas encore tire) et en demarre un nouveau de 5 secondes.
   void _scheduleDebouncedPush(int tourneeId) {

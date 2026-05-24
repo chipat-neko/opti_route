@@ -14,6 +14,7 @@ import '../../data/stop_types.dart';
 import '../../data/stops_repository.dart';
 import '../../data/tournees_repository.dart';
 import '../../providers/database_providers.dart';
+import '../../providers/supabase_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/stop_action_sheet.dart';
@@ -446,6 +447,13 @@ class StopRow extends ConsumerWidget {
     final path = await PreuvePhotoService().capturer(stopId: stopId);
     if (path == null) return;
     await ref.read(stopsRepositoryProvider).setPreuvePhoto(stopId, path);
+    // Bypass du debounce 5s : si Noah ferme l'ecran tournee dans la
+    // foulee (typique apres validation livraison via SnackBar), le
+    // dispose appelle cloudAutoPushService.stop() qui cancel le timer
+    // sans push. Le flush() pousse maintenant pour ne pas perdre la
+    // photo cote cloud (bug Trello #69). No-op si pas connecte ou
+    // si rien en attente.
+    await ref.read(cloudAutoPushServiceProvider).flush();
   }
 
   String _primaryLine(Stop s) {
