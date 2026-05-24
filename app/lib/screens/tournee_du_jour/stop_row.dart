@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
 import '../../data/eta_calculator.dart';
@@ -327,6 +328,33 @@ class StopRow extends ConsumerWidget {
             duration: Duration(seconds: 2),
           ),
         );
+      case OpenInMapsAction():
+        final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
+        final uri = Uri.parse(
+          'https://www.google.com/maps/search/?api=1'
+          '&query=${Uri.encodeComponent(adresse)}',
+        );
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      case OpenStreetviewAction():
+        final lat = stop.lat;
+        final lng = stop.lng;
+        if (lat == null || lng == null) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Adresse pas encore geocodee, Street View indisponible',
+              ),
+              backgroundColor: AppColors.amber,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+        final uri = Uri.parse(
+          'https://www.google.com/maps/@?api=1'
+          '&map_action=pano&viewpoint=$lat,$lng',
+        );
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       case OpenDetailsAction():
         await navigator.push<void>(
           MaterialPageRoute(
