@@ -208,6 +208,103 @@ void main() {
       final m = BordereauPatterns.colisSameLineRegex.firstMatch('COLIS: 5');
       expect(m, isNotNull);
     });
+
+    test('Sprint OCR B-3 : match "PIECES AUTO. total colis: 1"', () {
+      // page_25 batch_eval : prefixe metier avant le label.
+      final m = BordereauPatterns.colisSameLineRegex
+          .firstMatch('PIECES AUTO. total colis: 1');
+      expect(m, isNotNull);
+      expect(m!.group(1), '1');
+    });
+
+    test('Sprint OCR B-3 : match "Nb colis 5" (sans :)', () {
+      final m = BordereauPatterns.colisSameLineRegex.firstMatch('Nb colis 5');
+      expect(m, isNotNull);
+      expect(m!.group(1), '5');
+    });
+
+    test('Sprint OCR B-3 : NE matche PAS le boilerplate "La remise des '
+        'colis entraine l\'acceptation de nos conditions"', () {
+      // Phrase legale presente sur 99% des bordereaux. Pas de chiffre
+      // court apres "colis", donc safe.
+      expect(
+        BordereauPatterns.colisSameLineRegex.hasMatch(
+          'La remise des colis entraine l\'acceptation de nos conditions',
+        ),
+        isFalse,
+      );
+    });
+
+    test('Sprint OCR B-3 : NE matche PAS un CP de 5 chiffres apres colis', () {
+      // Si un CP traine apres "colis" dans une ligne mal segmentee, on
+      // ne doit pas capturer ses 2-3 premiers chiffres comme nbColis.
+      expect(
+        BordereauPatterns.colisSameLineRegex.hasMatch('colis 28190 CHARTRES'),
+        isFalse,
+      );
+    });
+  });
+
+  group('BordereauPatterns.colisTotauxRegex (Sprint OCR B-3)', () {
+    test('match "COLIS TOTAUX: 1" (page_33 Eure-et-Loir)', () {
+      final m = BordereauPatterns.colisTotauxRegex
+          .firstMatch('COLIS TOTAUX: 1');
+      expect(m, isNotNull);
+      expect(m!.group(1), '1');
+    });
+
+    test('case insensitive "colis totaux : 7"', () {
+      final m = BordereauPatterns.colisTotauxRegex
+          .firstMatch('colis totaux : 7');
+      expect(m, isNotNull);
+      expect(m!.group(1), '7');
+    });
+
+    test('ne matche pas "total colis : 3" (cas inverse couvert ailleurs)', () {
+      // L'autre sens est couvert par colisSameLineRegex.
+      expect(
+        BordereauPatterns.colisTotauxRegex.hasMatch('total colis : 3'),
+        isFalse,
+      );
+    });
+  });
+
+  group('BordereauPatterns.umFractionRegex (Sprint OCR B-3)', () {
+    test('match "UM: 1/3" -> 3 (denominateur = total)', () {
+      final m = BordereauPatterns.umFractionRegex.firstMatch('UM: 1/3');
+      expect(m, isNotNull);
+      expect(m!.group(1), '3');
+    });
+
+    test('match "U.M. 2/5"', () {
+      final m = BordereauPatterns.umFractionRegex.firstMatch('U.M. 2/5');
+      expect(m, isNotNull);
+      expect(m!.group(1), '5');
+    });
+
+    test('match "u.m.: 1/1" (sans espace)', () {
+      final m = BordereauPatterns.umFractionRegex.firstMatch('u.m.: 1/1');
+      expect(m, isNotNull);
+      expect(m!.group(1), '1');
+    });
+
+    test('match au milieu de "PaDs:8 KG UM: 1/3" (ligne agglomeree OCR)', () {
+      // Bordereaux Eure-et-Loir ont souvent "PaDs:8 KG" + "UM: 1/1"
+      // sur la meme ligne OCR.
+      final m = BordereauPatterns.umFractionRegex
+          .firstMatch('PaDs:8 KG UM: 1/3');
+      expect(m, isNotNull);
+      expect(m!.group(1), '3');
+    });
+
+    test('ne matche pas "1/3" sans prefixe UM', () {
+      // On exige le label UM pour ne pas confondre avec des dates,
+      // refs, ou autres fractions.
+      expect(
+        BordereauPatterns.umFractionRegex.hasMatch('1/3'),
+        isFalse,
+      );
+    });
   });
 
   group('BordereauPatterns.unitColisLineRegex', () {

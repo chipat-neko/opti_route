@@ -32,6 +32,9 @@ class BordereauParser {
   static const _markersTotalColis = [
     'total colis',
     'colis :',
+    // Sprint OCR B-3 (2026-05-24) : inverse "colis totaux" observe sur
+    // les bordereaux Eure-et-Loir (page_33 / page_34 batch_eval).
+    'colis totaux',
     // ENLEVEMENT : la colonne du tableau s'appelle "U.M."
     // (Unites de Manutention). La valeur 1/2/3... est sur la ligne
     // d'apres ou meme cellule.
@@ -877,7 +880,18 @@ class BordereauParser {
       final inSame = BordereauPatterns.colisSameLineRegex.firstMatch(lineColis);
       if (inSame != null) {
         nbColis = int.tryParse(inSame.group(1) ?? '');
-      } else {
+      }
+      // Sprint OCR B-3 (2026-05-24) : cas inverse "COLIS TOTAUX: 1"
+      // (Eure-et-Loir, page_33/34). On retente avec un regex separe.
+      if (nbColis == null) {
+        final inverse = BordereauPatterns.colisTotauxRegex.firstMatch(
+          lineColis,
+        );
+        if (inverse != null) {
+          nbColis = int.tryParse(inverse.group(1) ?? '');
+        }
+      }
+      if (nbColis == null) {
         // Format ENLEVEMENT (U.M.) : la valeur est sur une ligne plus
         // bas dans le tableau. L'OCR peut intercaler "Client", "Date",
         // "1.0" ou la valeur reelle. On scanne les 12 lignes suivantes
@@ -895,6 +909,22 @@ class BordereauParser {
             nbColis = int.tryParse(m.group(1) ?? '');
             if (nbColis != null && nbColis > 0 && nbColis < 100) break;
             nbColis = null;
+          }
+        }
+      }
+    }
+    // Sprint OCR B-3 : fallback ultime "UM: 1/3" -> 3.
+    // Marche meme si colisIdx n'a pas ete trouve (page_41 a "COLIS"
+    // seul sans label exploitable mais "1/1" sur ligne precedente).
+    // Scan TOUTES les lignes (peu nombreuses, ~50-80 par bordereau).
+    if (nbColis == null) {
+      for (final line in lines) {
+        final m = BordereauPatterns.umFractionRegex.firstMatch(line);
+        if (m != null) {
+          final n = int.tryParse(m.group(1) ?? '');
+          if (n != null && n > 0 && n < 100) {
+            nbColis = n;
+            break;
           }
         }
       }
