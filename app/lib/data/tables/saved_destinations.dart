@@ -70,6 +70,12 @@ class SavedDestinations extends Table {
   /// l'afficher en gros lui aussi. Ex: "Bat C, 3e etage, app. 12".
   TextColumn get etageBatiment => text().nullable()();
 
+  /// Numero de telephone du client. Format libre (06xxx, +33xxx, fixe
+  /// 02xxx, etc.). Affiche dans la fiche client avec un bouton "Appeler"
+  /// qui lance `tel:<numero>` via url_launcher. Ajoute schema v35
+  /// (carte Trello #106).
+  TextColumn get telephone => text().nullable()();
+
   /// UUID v4 attribue par l'app au 1er push Supabase (sous-jalon 2.B).
   /// Null = entree carnet jamais sync. Voir `Tournees.cloudId` pour le
   /// pattern.

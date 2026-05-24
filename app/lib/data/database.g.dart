@@ -4289,6 +4289,17 @@ class $SavedDestinationsTable extends SavedDestinations
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _telephoneMeta = const VerificationMeta(
+    'telephone',
+  );
+  @override
+  late final GeneratedColumn<String> telephone = GeneratedColumn<String>(
+    'telephone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _cloudIdMeta = const VerificationMeta(
     'cloudId',
   );
@@ -4332,6 +4343,7 @@ class $SavedDestinationsTable extends SavedDestinations
     photoPath,
     codeAcces,
     etageBatiment,
+    telephone,
     cloudId,
     updatedAt,
   ];
@@ -4470,6 +4482,12 @@ class $SavedDestinationsTable extends SavedDestinations
         ),
       );
     }
+    if (data.containsKey('telephone')) {
+      context.handle(
+        _telephoneMeta,
+        telephone.isAcceptableOrUnknown(data['telephone']!, _telephoneMeta),
+      );
+    }
     if (data.containsKey('cloud_id')) {
       context.handle(
         _cloudIdMeta,
@@ -4563,6 +4581,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.string,
         data['${effectivePrefix}etage_batiment'],
       ),
+      telephone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}telephone'],
+      ),
       cloudId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cloud_id'],
@@ -4637,6 +4659,12 @@ class SavedDestination extends DataClass
   /// l'afficher en gros lui aussi. Ex: "Bat C, 3e etage, app. 12".
   final String? etageBatiment;
 
+  /// Numero de telephone du client. Format libre (06xxx, +33xxx, fixe
+  /// 02xxx, etc.). Affiche dans la fiche client avec un bouton "Appeler"
+  /// qui lance `tel:<numero>` via url_launcher. Ajoute schema v35
+  /// (carte Trello #106).
+  final String? telephone;
+
   /// UUID v4 attribue par l'app au 1er push Supabase (sous-jalon 2.B).
   /// Null = entree carnet jamais sync. Voir `Tournees.cloudId` pour le
   /// pattern.
@@ -4670,6 +4698,7 @@ class SavedDestination extends DataClass
     this.photoPath,
     this.codeAcces,
     this.etageBatiment,
+    this.telephone,
     this.cloudId,
     required this.updatedAt,
   });
@@ -4713,6 +4742,9 @@ class SavedDestination extends DataClass
     }
     if (!nullToAbsent || etageBatiment != null) {
       map['etage_batiment'] = Variable<String>(etageBatiment);
+    }
+    if (!nullToAbsent || telephone != null) {
+      map['telephone'] = Variable<String>(telephone);
     }
     if (!nullToAbsent || cloudId != null) {
       map['cloud_id'] = Variable<String>(cloudId);
@@ -4759,6 +4791,9 @@ class SavedDestination extends DataClass
       etageBatiment: etageBatiment == null && nullToAbsent
           ? const Value.absent()
           : Value(etageBatiment),
+      telephone: telephone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(telephone),
       cloudId: cloudId == null && nullToAbsent
           ? const Value.absent()
           : Value(cloudId),
@@ -4790,6 +4825,7 @@ class SavedDestination extends DataClass
       photoPath: serializer.fromJson<String?>(json['photoPath']),
       codeAcces: serializer.fromJson<String?>(json['codeAcces']),
       etageBatiment: serializer.fromJson<String?>(json['etageBatiment']),
+      telephone: serializer.fromJson<String?>(json['telephone']),
       cloudId: serializer.fromJson<String?>(json['cloudId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -4816,6 +4852,7 @@ class SavedDestination extends DataClass
       'photoPath': serializer.toJson<String?>(photoPath),
       'codeAcces': serializer.toJson<String?>(codeAcces),
       'etageBatiment': serializer.toJson<String?>(etageBatiment),
+      'telephone': serializer.toJson<String?>(telephone),
       'cloudId': serializer.toJson<String?>(cloudId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -4840,6 +4877,7 @@ class SavedDestination extends DataClass
     Value<String?> photoPath = const Value.absent(),
     Value<String?> codeAcces = const Value.absent(),
     Value<String?> etageBatiment = const Value.absent(),
+    Value<String?> telephone = const Value.absent(),
     Value<String?> cloudId = const Value.absent(),
     DateTime? updatedAt,
   }) => SavedDestination(
@@ -4863,6 +4901,7 @@ class SavedDestination extends DataClass
     etageBatiment: etageBatiment.present
         ? etageBatiment.value
         : this.etageBatiment,
+    telephone: telephone.present ? telephone.value : this.telephone,
     cloudId: cloudId.present ? cloudId.value : this.cloudId,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -4896,6 +4935,7 @@ class SavedDestination extends DataClass
       etageBatiment: data.etageBatiment.present
           ? data.etageBatiment.value
           : this.etageBatiment,
+      telephone: data.telephone.present ? data.telephone.value : this.telephone,
       cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -4922,6 +4962,7 @@ class SavedDestination extends DataClass
           ..write('photoPath: $photoPath, ')
           ..write('codeAcces: $codeAcces, ')
           ..write('etageBatiment: $etageBatiment, ')
+          ..write('telephone: $telephone, ')
           ..write('cloudId: $cloudId, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -4929,7 +4970,7 @@ class SavedDestination extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     nomClient,
     adresseDisplay,
@@ -4948,9 +4989,10 @@ class SavedDestination extends DataClass
     photoPath,
     codeAcces,
     etageBatiment,
+    telephone,
     cloudId,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4973,6 +5015,7 @@ class SavedDestination extends DataClass
           other.photoPath == this.photoPath &&
           other.codeAcces == this.codeAcces &&
           other.etageBatiment == this.etageBatiment &&
+          other.telephone == this.telephone &&
           other.cloudId == this.cloudId &&
           other.updatedAt == this.updatedAt);
 }
@@ -4996,6 +5039,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<String?> photoPath;
   final Value<String?> codeAcces;
   final Value<String?> etageBatiment;
+  final Value<String?> telephone;
   final Value<String?> cloudId;
   final Value<DateTime> updatedAt;
   const SavedDestinationsCompanion({
@@ -5017,6 +5061,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.photoPath = const Value.absent(),
     this.codeAcces = const Value.absent(),
     this.etageBatiment = const Value.absent(),
+    this.telephone = const Value.absent(),
     this.cloudId = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -5039,6 +5084,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.photoPath = const Value.absent(),
     this.codeAcces = const Value.absent(),
     this.etageBatiment = const Value.absent(),
+    this.telephone = const Value.absent(),
     this.cloudId = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
@@ -5063,6 +5109,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<String>? photoPath,
     Expression<String>? codeAcces,
     Expression<String>? etageBatiment,
+    Expression<String>? telephone,
     Expression<String>? cloudId,
     Expression<DateTime>? updatedAt,
   }) {
@@ -5085,6 +5132,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (photoPath != null) 'photo_path': photoPath,
       if (codeAcces != null) 'code_acces': codeAcces,
       if (etageBatiment != null) 'etage_batiment': etageBatiment,
+      if (telephone != null) 'telephone': telephone,
       if (cloudId != null) 'cloud_id': cloudId,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -5109,6 +5157,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<String?>? photoPath,
     Value<String?>? codeAcces,
     Value<String?>? etageBatiment,
+    Value<String?>? telephone,
     Value<String?>? cloudId,
     Value<DateTime>? updatedAt,
   }) {
@@ -5131,6 +5180,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       photoPath: photoPath ?? this.photoPath,
       codeAcces: codeAcces ?? this.codeAcces,
       etageBatiment: etageBatiment ?? this.etageBatiment,
+      telephone: telephone ?? this.telephone,
       cloudId: cloudId ?? this.cloudId,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -5193,6 +5243,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (etageBatiment.present) {
       map['etage_batiment'] = Variable<String>(etageBatiment.value);
     }
+    if (telephone.present) {
+      map['telephone'] = Variable<String>(telephone.value);
+    }
     if (cloudId.present) {
       map['cloud_id'] = Variable<String>(cloudId.value);
     }
@@ -5223,6 +5276,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('photoPath: $photoPath, ')
           ..write('codeAcces: $codeAcces, ')
           ..write('etageBatiment: $etageBatiment, ')
+          ..write('telephone: $telephone, ')
           ..write('cloudId: $cloudId, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -9616,6 +9670,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<String?> photoPath,
       Value<String?> codeAcces,
       Value<String?> etageBatiment,
+      Value<String?> telephone,
       Value<String?> cloudId,
       Value<DateTime> updatedAt,
     });
@@ -9639,6 +9694,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<String?> photoPath,
       Value<String?> codeAcces,
       Value<String?> etageBatiment,
+      Value<String?> telephone,
       Value<String?> cloudId,
       Value<DateTime> updatedAt,
     });
@@ -9739,6 +9795,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<String> get etageBatiment => $composableBuilder(
     column: $table.etageBatiment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get telephone => $composableBuilder(
+    column: $table.telephone,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9852,6 +9913,11 @@ class $$SavedDestinationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get cloudId => $composableBuilder(
     column: $table.cloudId,
     builder: (column) => ColumnOrderings(column),
@@ -9936,6 +10002,9 @@ class $$SavedDestinationsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get telephone =>
+      $composableBuilder(column: $table.telephone, builder: (column) => column);
+
   GeneratedColumn<String> get cloudId =>
       $composableBuilder(column: $table.cloudId, builder: (column) => column);
 
@@ -10001,6 +10070,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> photoPath = const Value.absent(),
                 Value<String?> codeAcces = const Value.absent(),
                 Value<String?> etageBatiment = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => SavedDestinationsCompanion(
@@ -10022,6 +10092,7 @@ class $$SavedDestinationsTableTableManager
                 photoPath: photoPath,
                 codeAcces: codeAcces,
                 etageBatiment: etageBatiment,
+                telephone: telephone,
                 cloudId: cloudId,
                 updatedAt: updatedAt,
               ),
@@ -10045,6 +10116,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> photoPath = const Value.absent(),
                 Value<String?> codeAcces = const Value.absent(),
                 Value<String?> etageBatiment = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
@@ -10066,6 +10138,7 @@ class $$SavedDestinationsTableTableManager
                 photoPath: photoPath,
                 codeAcces: codeAcces,
                 etageBatiment: etageBatiment,
+                telephone: telephone,
                 cloudId: cloudId,
                 updatedAt: updatedAt,
               ),

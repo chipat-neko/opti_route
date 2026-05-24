@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
@@ -173,6 +174,25 @@ class CarnetTile extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  // Bouton "Appeler" si telephone defini (carte Trello
+                  // #106). En 1 tap, ouvre le composeur Android avec
+                  // le numero pre-rempli. Discret (icone seule, pas de
+                  // label) pour pas surcharger la tile.
+                  if (entry.telephone != null &&
+                      entry.telephone!.trim().isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.phone_outlined,
+                          color: AppColors.emerald),
+                      tooltip: 'Appeler ${entry.telephone}',
+                      onPressed: () async {
+                        final uri = Uri(
+                          scheme: 'tel',
+                          path: entry.telephone!.trim(),
+                        );
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
+                      },
+                    ),
                   Icon(Icons.chevron_right,
                       color: p.textFaint),
                 ],

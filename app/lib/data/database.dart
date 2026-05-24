@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 34;
+  int get schemaVersion => 35;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -301,6 +301,12 @@ class AppDatabase extends _$AppDatabase {
             // Sert au workflow ScanColisScreen pour matcher un scan a
             // un arret existant (-> +1 colis) ou creer un nouvel arret.
             await m.addColumn(stops, stops.trackingNumbers);
+          }
+          if (from < 35) {
+            // Colonne `telephone` (TEXT nullable) sur saved_destinations :
+            // numero de tel du client pour bouton "Appeler" dans la fiche
+            // carnet. Carte Trello #106.
+            await m.addColumn(savedDestinations, savedDestinations.telephone);
           }
           if (from < 32) {
             // ════════════════════════════════════════════════════════

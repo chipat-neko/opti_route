@@ -27,6 +27,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
   late final TextEditingController _notesCarnetCtrl;
   late final TextEditingController _codeAccesCtrl;
   late final TextEditingController _etageCtrl;
+  late final TextEditingController _telephoneCtrl;
   late final TextEditingController _tagsCtrl;
   AddressSuggestion? _address;
   bool _saving = false;
@@ -39,6 +40,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
     _notesCarnetCtrl = TextEditingController(text: e.notesCarnet ?? '');
     _codeAccesCtrl = TextEditingController(text: e.codeAcces ?? '');
     _etageCtrl = TextEditingController(text: e.etageBatiment ?? '');
+    _telephoneCtrl = TextEditingController(text: e.telephone ?? '');
     final initialTags = SavedDestinationsRepository.parseTags(e.tagsJson);
     _tagsCtrl = TextEditingController(text: initialTags.join(', '));
     _address = AddressSuggestion(
@@ -57,6 +59,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
     _notesCarnetCtrl.dispose();
     _codeAccesCtrl.dispose();
     _etageCtrl.dispose();
+    _telephoneCtrl.dispose();
     _tagsCtrl.dispose();
     super.dispose();
   }
@@ -111,6 +114,23 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
               hintText: 'Ex: Bat C, 3e etage, app. 12',
               prefixIcon: Icon(Icons.apartment_outlined),
             ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          // Telephone du client. Affiche un bouton "Appeler" dans la
+          // fiche carnet qui lance tel:<numero>. Carte Trello #106.
+          TextField(
+            controller: _telephoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Telephone (optionnel)',
+              hintText: 'Ex: 06 12 34 56 78',
+              helperText: 'Permet d\'appeler le client en 1 tap depuis '
+                  'la fiche ou la liste du carnet.',
+              helperMaxLines: 2,
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+            autocorrect: false,
+            enableSuggestions: false,
           ),
           const SizedBox(height: AppSpacing.x14),
           // Tags libres, separes par virgules dans l'UI, stockes en JSON.
@@ -211,6 +231,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
         notesCarnet: _notesCarnetCtrl.text.trim(),
         codeAcces: _codeAccesCtrl.text.trim(),
         etageBatiment: _etageCtrl.text.trim(),
+        telephone: _telephoneCtrl.text.trim(),
       );
       // Tags : on parse la saisie "tag1, tag2, tag3" en liste, on filtre
       // les vides + duplicats (case-insensitive), puis on persiste.
