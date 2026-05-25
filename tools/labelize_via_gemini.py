@@ -1,18 +1,22 @@
-"""Labellise les lignes OCR d'un bordereau via l'Edge Function Gemini
-deja deployee (Supabase ocr-enhance).
+"""Labellise les lignes OCR d'un bordereau via Gemini 2.5 Flash.
 
 Usage:
-    python tools/labelize_via_gemini.py training_data.csv training_data_labeled.csv
+    python tools/labelize_via_gemini.py training_data.csv training_data_labeled_gemini.csv [--max N]
 
-Pre-requis : variable d'env SUPABASE_URL et SUPABASE_ANON_KEY (ou
-lecture depuis app/cloud.env.json).
+Pre-requis : GEMINI_API_KEY dans app/cloud.env.json.
 
 Format input  : image,block_id,line_idx,line_text,left,top,right,bottom,...
 Format output : input + class (NOM_CLIENT / RUE / CP_VILLE / TEL / REF / PARASITE)
 
-Note : 1 requete Gemini par IMAGE (pas par ligne). Gemini reçoit
+Note : 1 requete Gemini par IMAGE (pas par ligne). Gemini recoit
 toutes les lignes d'une image en bulk et renvoie un mapping
 {line_idx: class}.
+
+Reprise automatique : si le CSV output existe deja avec des images
+labellisees, on les skip et on continue depuis la suivante.
+
+--max N : limite le nombre d'images traitees ce run (utile si quota
+Gemini limite a 20/jour, on fait 18 par jour x 4 jours).
 """
 import csv
 import json
@@ -140,18 +144,38 @@ def call_gemini_direct(api_key, prompt, max_retries=4):
     raise Exception(f'Gemini : {max_retries} retries epuises ({last_err})')
 
 
+def load_already_done(output_csv):
+    """Si output_csv existe deja, retourne (set des images deja labellisees,
+    liste des rows deja ecrites). Sert a reprendre apres interruption."""
+    p = Path(output_csv)
+    if not p.exists():
+        return set(), []
+    done_images = set()
+    done_rows = []
+    with open(output_csv, encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            done_images.add(row['image'])
+            done_rows.append(row)
+    return done_images, done_rows
+
+
 def main():
-    if len(sys.argv) != 3:
+    args = sys.argv[1:]
+    max_images = None
+    if '--max' in args:
+        i = args.index('--max')
+        max_images = int(args[i + 1])
+        del args[i:i + 2]
+    if len(args) != 2:
         print(__doc__)
         sys.exit(1)
-    input_csv = sys.argv[1]
-    output_csv = sys.argv[2]
+    input_csv, output_csv = args
 
     env = load_env()
     api_key = env.get('GEMINI_API_KEY')
     if not api_key:
         print("Missing GEMINI_API_KEY in cloud.env.json")
-        print("Ajoute la cle dans cloud.env.json (gitignored par defaut).")
         sys.exit(1)
 
     # Lire input et grouper par image
@@ -161,46 +185,86 @@ def main():
         for row in reader:
             by_image[row['image']].append(row)
 
+    # Reprise : on ne re-labellise pas les images deja faites
+    done_images, done_rows = load_already_done(output_csv)
+    remaining = [(img, rows) for img, rows in by_image.items()
+                 if img not in done_images]
+
     print(f"Total : {sum(len(v) for v in by_image.values())} lignes / "
           f"{len(by_image)} images")
+    print(f"Deja labellisees : {len(done_images)} images "
+          f"({len(done_rows)} lignes)")
+    print(f"A traiter : {len(remaining)} images")
+    if max_images is not None:
+        remaining = remaining[:max_images]
+        print(f"Limite a {max_images} images ce run")
 
-    # Pour chaque image, batch-call Gemini
-    all_labeled = []
-    for img_idx, (image, rows) in enumerate(by_image.items(), 1):
-        # Liste (line_global_idx, line_text) pour ce bordereau
-        # On utilise un idx local 0..N pour le prompt, on garde mapping
-        # vers l'idx global dans le CSV.
+    # Pour chaque image, batch-call Gemini.
+    # On detecte 3 echecs 429 consecutifs = quota daily epuise -> stop.
+    all_labeled = list(done_rows)
+    consecutive_429 = 0
+    for img_idx, (image, rows) in enumerate(remaining, 1):
         lines_with_idx = [(i, r['line_text']) for i, r in enumerate(rows)]
         prompt = build_prompt(lines_with_idx)
-        print(f"  [{img_idx}/{len(by_image)}] {image} : "
-              f"{len(rows)} lignes -> appel Gemini...", end=' ')
+        print(f"  [{img_idx}/{len(remaining)}] {image} : "
+              f"{len(rows)} lignes -> appel Gemini...",
+              end=' ', flush=True)
         try:
             labels = call_gemini_direct(api_key, prompt)
+            consecutive_429 = 0
         except Exception as e:
-            print(f"FAIL: {e}")
-            # Marquer comme UNKNOWN pour ne pas perdre les lignes
+            err_msg = str(e)
+            is_429 = ('429' in err_msg
+                      or 'RESOURCE_EXHAUSTED' in err_msg
+                      or 'retries epuises' in err_msg)
+            if is_429:
+                consecutive_429 += 1
+                print(f"QUOTA 429 ({consecutive_429}/3)")
+                if consecutive_429 >= 3:
+                    print(f"\n=== Quota daily Gemini epuise. "
+                          f"Stop apres {img_idx - 1} images ce run. "
+                          f"Relance demain pour continuer (quota reset PT 00:00). "
+                          f"===")
+                    break
+                # Skip cette image (pas d'UNKNOWN, on la fera demain)
+                continue
+            print(f"FAIL non-429: {e}")
             labels = {str(i): 'UNKNOWN' for i in range(len(rows))}
-        print(f"OK ({len(labels)} labels)")
 
         for i, row in enumerate(rows):
             classe = labels.get(str(i), 'UNKNOWN')
             if classe not in CLASSES and classe != 'UNKNOWN':
-                classe = 'PARASITE'  # fallback
+                classe = 'PARASITE'
             row['class'] = classe
             all_labeled.append(row)
+
+        # Save apres chaque image pour pas perdre le travail en cas d'interrupt
+        save_output(output_csv, all_labeled)
+        print(f"OK ({len(labels)} labels, {len(all_labeled)} total)")
 
         # Rate limit Gemini free tier : 15 RPM => 4.5s/req min
         time.sleep(4.5)
 
-    # Ecrit output
+    save_output(output_csv, all_labeled)
+    print_stats(all_labeled, output_csv, len(by_image))
+
+
+def save_output(output_csv, all_labeled):
+    if not all_labeled:
+        return
     fieldnames = list(all_labeled[0].keys())
     with open(output_csv, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(all_labeled)
-    print(f"\n=== Output : {output_csv} ({len(all_labeled)} lignes) ===")
 
-    # Stats par classe
+
+def print_stats(all_labeled, output_csv, total_images):
+    if not all_labeled:
+        return
+    images_done = len({r['image'] for r in all_labeled})
+    print(f"\n=== Output : {output_csv} ({len(all_labeled)} lignes / "
+          f"{images_done}/{total_images} images) ===")
     from collections import Counter
     counts = Counter(r['class'] for r in all_labeled)
     print("Repartition :")
