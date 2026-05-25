@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
@@ -328,6 +329,11 @@ class StopRow extends ConsumerWidget {
             backgroundColor: AppColors.emerald,
             duration: Duration(seconds: 2),
           ),
+        );
+      case ShareAdresseAction():
+        final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
+        await SharePlus.instance.share(
+          ShareParams(text: adresse, subject: 'Adresse de livraison'),
         );
       case OpenInMapsAction():
         final adresse = stop.adresseNormalisee ?? stop.adresseBrute;

@@ -96,6 +96,14 @@ class OpenStreetviewAction extends StopAction {
   const OpenStreetviewAction();
 }
 
+/// Ouvre le menu de partage natif Android (SMS, WhatsApp, Email, Maps,
+/// Drive, etc.) pre-rempli avec l'adresse du stop. Complement de
+/// [CopyAdresseAction] : un seul tap au lieu de copier+coller.
+/// Le caller appelle `SharePlus.instance.share(ShareParams(text: adresse))`.
+class ShareAdresseAction extends StopAction {
+  const ShareAdresseAction();
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -607,6 +615,13 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                     .pop(const CopyAdresseAction()),
                 icon: const Icon(Icons.content_copy_outlined, size: 18),
                 label: const Text('Copier l\'adresse'),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: p.ink),
+                onPressed: () => Navigator.of(context)
+                    .pop(const ShareAdresseAction()),
+                icon: const Icon(Icons.share_outlined, size: 18),
+                label: const Text('Partager l\'adresse'),
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
