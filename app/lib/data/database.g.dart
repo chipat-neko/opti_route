@@ -7252,6 +7252,377 @@ class FraisCompanion extends UpdateCompanion<Frai> {
   }
 }
 
+class $TrackingCodesTable extends TrackingCodes
+    with TableInfo<$TrackingCodesTable, TrackingCode> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrackingCodesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _stopIdMeta = const VerificationMeta('stopId');
+  @override
+  late final GeneratedColumn<int> stopId = GeneratedColumn<int>(
+    'stop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES stops(id) ON DELETE CASCADE',
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 3,
+      maxTextLength: 5,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _cloudPushedMeta = const VerificationMeta(
+    'cloudPushed',
+  );
+  @override
+  late final GeneratedColumn<bool> cloudPushed = GeneratedColumn<bool>(
+    'cloud_pushed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("cloud_pushed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    stopId,
+    code,
+    createdAt,
+    cloudPushed,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tracking_codes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrackingCode> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('stop_id')) {
+      context.handle(
+        _stopIdMeta,
+        stopId.isAcceptableOrUnknown(data['stop_id']!, _stopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stopIdMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('cloud_pushed')) {
+      context.handle(
+        _cloudPushedMeta,
+        cloudPushed.isAcceptableOrUnknown(
+          data['cloud_pushed']!,
+          _cloudPushedMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {stopId},
+  ];
+  @override
+  TrackingCode map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrackingCode(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      stopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stop_id'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      cloudPushed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}cloud_pushed'],
+      )!,
+    );
+  }
+
+  @override
+  $TrackingCodesTable createAlias(String alias) {
+    return $TrackingCodesTable(attachedDatabase, alias);
+  }
+}
+
+class TrackingCode extends DataClass implements Insertable<TrackingCode> {
+  final int id;
+
+  /// FK vers le stop concerne. Un stop = max 1 code (unique index).
+  final int stopId;
+
+  /// Code court 4 caracteres [a-z0-9] (1.6M combinations). Unique
+  /// au niveau de la base : pas 2 stops avec le meme code.
+  final String code;
+  final DateTime createdAt;
+
+  /// True une fois que la row a ete push au cloud Supabase (table
+  /// `tracking_links`). Null/false en attendant le deploiement de
+  /// l'Edge Function backend (MVP scaffold pour l'instant).
+  final bool cloudPushed;
+  const TrackingCode({
+    required this.id,
+    required this.stopId,
+    required this.code,
+    required this.createdAt,
+    required this.cloudPushed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['stop_id'] = Variable<int>(stopId);
+    map['code'] = Variable<String>(code);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['cloud_pushed'] = Variable<bool>(cloudPushed);
+    return map;
+  }
+
+  TrackingCodesCompanion toCompanion(bool nullToAbsent) {
+    return TrackingCodesCompanion(
+      id: Value(id),
+      stopId: Value(stopId),
+      code: Value(code),
+      createdAt: Value(createdAt),
+      cloudPushed: Value(cloudPushed),
+    );
+  }
+
+  factory TrackingCode.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrackingCode(
+      id: serializer.fromJson<int>(json['id']),
+      stopId: serializer.fromJson<int>(json['stopId']),
+      code: serializer.fromJson<String>(json['code']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      cloudPushed: serializer.fromJson<bool>(json['cloudPushed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'stopId': serializer.toJson<int>(stopId),
+      'code': serializer.toJson<String>(code),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'cloudPushed': serializer.toJson<bool>(cloudPushed),
+    };
+  }
+
+  TrackingCode copyWith({
+    int? id,
+    int? stopId,
+    String? code,
+    DateTime? createdAt,
+    bool? cloudPushed,
+  }) => TrackingCode(
+    id: id ?? this.id,
+    stopId: stopId ?? this.stopId,
+    code: code ?? this.code,
+    createdAt: createdAt ?? this.createdAt,
+    cloudPushed: cloudPushed ?? this.cloudPushed,
+  );
+  TrackingCode copyWithCompanion(TrackingCodesCompanion data) {
+    return TrackingCode(
+      id: data.id.present ? data.id.value : this.id,
+      stopId: data.stopId.present ? data.stopId.value : this.stopId,
+      code: data.code.present ? data.code.value : this.code,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      cloudPushed: data.cloudPushed.present
+          ? data.cloudPushed.value
+          : this.cloudPushed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackingCode(')
+          ..write('id: $id, ')
+          ..write('stopId: $stopId, ')
+          ..write('code: $code, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('cloudPushed: $cloudPushed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, stopId, code, createdAt, cloudPushed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrackingCode &&
+          other.id == this.id &&
+          other.stopId == this.stopId &&
+          other.code == this.code &&
+          other.createdAt == this.createdAt &&
+          other.cloudPushed == this.cloudPushed);
+}
+
+class TrackingCodesCompanion extends UpdateCompanion<TrackingCode> {
+  final Value<int> id;
+  final Value<int> stopId;
+  final Value<String> code;
+  final Value<DateTime> createdAt;
+  final Value<bool> cloudPushed;
+  const TrackingCodesCompanion({
+    this.id = const Value.absent(),
+    this.stopId = const Value.absent(),
+    this.code = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.cloudPushed = const Value.absent(),
+  });
+  TrackingCodesCompanion.insert({
+    this.id = const Value.absent(),
+    required int stopId,
+    required String code,
+    this.createdAt = const Value.absent(),
+    this.cloudPushed = const Value.absent(),
+  }) : stopId = Value(stopId),
+       code = Value(code);
+  static Insertable<TrackingCode> custom({
+    Expression<int>? id,
+    Expression<int>? stopId,
+    Expression<String>? code,
+    Expression<DateTime>? createdAt,
+    Expression<bool>? cloudPushed,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (stopId != null) 'stop_id': stopId,
+      if (code != null) 'code': code,
+      if (createdAt != null) 'created_at': createdAt,
+      if (cloudPushed != null) 'cloud_pushed': cloudPushed,
+    });
+  }
+
+  TrackingCodesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? stopId,
+    Value<String>? code,
+    Value<DateTime>? createdAt,
+    Value<bool>? cloudPushed,
+  }) {
+    return TrackingCodesCompanion(
+      id: id ?? this.id,
+      stopId: stopId ?? this.stopId,
+      code: code ?? this.code,
+      createdAt: createdAt ?? this.createdAt,
+      cloudPushed: cloudPushed ?? this.cloudPushed,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (stopId.present) {
+      map['stop_id'] = Variable<int>(stopId.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (cloudPushed.present) {
+      map['cloud_pushed'] = Variable<bool>(cloudPushed.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackingCodesCompanion(')
+          ..write('id: $id, ')
+          ..write('stopId: $stopId, ')
+          ..write('code: $code, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('cloudPushed: $cloudPushed')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7266,6 +7637,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CoequipiersTable coequipiers = $CoequipiersTable(this);
   late final $TourneeMembresTable tourneeMembres = $TourneeMembresTable(this);
   late final $FraisTable frais = $FraisTable(this);
+  late final $TrackingCodesTable trackingCodes = $TrackingCodesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7281,6 +7653,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     coequipiers,
     tourneeMembres,
     frais,
+    trackingCodes,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -7304,6 +7677,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('stop_history', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'stops',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('tracking_codes', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -8082,6 +8462,24 @@ final class $$StopsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$TrackingCodesTable, List<TrackingCode>>
+  _trackingCodesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.trackingCodes,
+    aliasName: $_aliasNameGenerator(db.stops.id, db.trackingCodes.stopId),
+  );
+
+  $$TrackingCodesTableProcessedTableManager get trackingCodesRefs {
+    final manager = $$TrackingCodesTableTableManager(
+      $_db,
+      $_db.trackingCodes,
+    ).filter((f) => f.stopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_trackingCodesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
@@ -8291,6 +8689,31 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
           }) => $$StopHistoryTableFilterComposer(
             $db: $db,
             $table: $db.stopHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> trackingCodesRefs(
+    Expression<bool> Function($$TrackingCodesTableFilterComposer f) f,
+  ) {
+    final $$TrackingCodesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trackingCodes,
+      getReferencedColumn: (t) => t.stopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrackingCodesTableFilterComposer(
+            $db: $db,
+            $table: $db.trackingCodes,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -8657,6 +9080,31 @@ class $$StopsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> trackingCodesRefs<T extends Object>(
+    Expression<T> Function($$TrackingCodesTableAnnotationComposer a) f,
+  ) {
+    final $$TrackingCodesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trackingCodes,
+      getReferencedColumn: (t) => t.stopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrackingCodesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.trackingCodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$StopsTableTableManager
@@ -8676,6 +9124,7 @@ class $$StopsTableTableManager
             bool tourneeId,
             bool sheetsRefs,
             bool stopHistoryRefs,
+            bool trackingCodesRefs,
           })
         > {
   $$StopsTableTableManager(_$AppDatabase db, $StopsTable table)
@@ -8820,12 +9269,14 @@ class $$StopsTableTableManager
                 tourneeId = false,
                 sheetsRefs = false,
                 stopHistoryRefs = false,
+                trackingCodesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (sheetsRefs) db.sheets,
                     if (stopHistoryRefs) db.stopHistory,
+                    if (trackingCodesRefs) db.trackingCodes,
                   ],
                   addJoins:
                       <
@@ -8895,6 +9346,27 @@ class $$StopsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (trackingCodesRefs)
+                        await $_getPrefetchedData<
+                          Stop,
+                          $StopsTable,
+                          TrackingCode
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StopsTableReferences
+                              ._trackingCodesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).trackingCodesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.stopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -8919,6 +9391,7 @@ typedef $$StopsTableProcessedTableManager =
         bool tourneeId,
         bool sheetsRefs,
         bool stopHistoryRefs,
+        bool trackingCodesRefs,
       })
     >;
 typedef $$ParametresTableCreateCompanionBuilder =
@@ -11258,6 +11731,324 @@ typedef $$FraisTableProcessedTableManager =
       Frai,
       PrefetchHooks Function()
     >;
+typedef $$TrackingCodesTableCreateCompanionBuilder =
+    TrackingCodesCompanion Function({
+      Value<int> id,
+      required int stopId,
+      required String code,
+      Value<DateTime> createdAt,
+      Value<bool> cloudPushed,
+    });
+typedef $$TrackingCodesTableUpdateCompanionBuilder =
+    TrackingCodesCompanion Function({
+      Value<int> id,
+      Value<int> stopId,
+      Value<String> code,
+      Value<DateTime> createdAt,
+      Value<bool> cloudPushed,
+    });
+
+final class $$TrackingCodesTableReferences
+    extends BaseReferences<_$AppDatabase, $TrackingCodesTable, TrackingCode> {
+  $$TrackingCodesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StopsTable _stopIdTable(_$AppDatabase db) => db.stops.createAlias(
+    $_aliasNameGenerator(db.trackingCodes.stopId, db.stops.id),
+  );
+
+  $$StopsTableProcessedTableManager get stopId {
+    final $_column = $_itemColumn<int>('stop_id')!;
+
+    final manager = $$StopsTableTableManager(
+      $_db,
+      $_db.stops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_stopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TrackingCodesTableFilterComposer
+    extends Composer<_$AppDatabase, $TrackingCodesTable> {
+  $$TrackingCodesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get cloudPushed => $composableBuilder(
+    column: $table.cloudPushed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StopsTableFilterComposer get stopId {
+    final $$StopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableFilterComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackingCodesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrackingCodesTable> {
+  $$TrackingCodesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get cloudPushed => $composableBuilder(
+    column: $table.cloudPushed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StopsTableOrderingComposer get stopId {
+    final $$StopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackingCodesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrackingCodesTable> {
+  $$TrackingCodesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get cloudPushed => $composableBuilder(
+    column: $table.cloudPushed,
+    builder: (column) => column,
+  );
+
+  $$StopsTableAnnotationComposer get stopId {
+    final $$StopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.stopId,
+      referencedTable: $db.stops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackingCodesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrackingCodesTable,
+          TrackingCode,
+          $$TrackingCodesTableFilterComposer,
+          $$TrackingCodesTableOrderingComposer,
+          $$TrackingCodesTableAnnotationComposer,
+          $$TrackingCodesTableCreateCompanionBuilder,
+          $$TrackingCodesTableUpdateCompanionBuilder,
+          (TrackingCode, $$TrackingCodesTableReferences),
+          TrackingCode,
+          PrefetchHooks Function({bool stopId})
+        > {
+  $$TrackingCodesTableTableManager(_$AppDatabase db, $TrackingCodesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrackingCodesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrackingCodesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrackingCodesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> stopId = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> cloudPushed = const Value.absent(),
+              }) => TrackingCodesCompanion(
+                id: id,
+                stopId: stopId,
+                code: code,
+                createdAt: createdAt,
+                cloudPushed: cloudPushed,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int stopId,
+                required String code,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> cloudPushed = const Value.absent(),
+              }) => TrackingCodesCompanion.insert(
+                id: id,
+                stopId: stopId,
+                code: code,
+                createdAt: createdAt,
+                cloudPushed: cloudPushed,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TrackingCodesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({stopId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (stopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.stopId,
+                                referencedTable: $$TrackingCodesTableReferences
+                                    ._stopIdTable(db),
+                                referencedColumn: $$TrackingCodesTableReferences
+                                    ._stopIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TrackingCodesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrackingCodesTable,
+      TrackingCode,
+      $$TrackingCodesTableFilterComposer,
+      $$TrackingCodesTableOrderingComposer,
+      $$TrackingCodesTableAnnotationComposer,
+      $$TrackingCodesTableCreateCompanionBuilder,
+      $$TrackingCodesTableUpdateCompanionBuilder,
+      (TrackingCode, $$TrackingCodesTableReferences),
+      TrackingCode,
+      PrefetchHooks Function({bool stopId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11282,4 +12073,6 @@ class $AppDatabaseManager {
       $$TourneeMembresTableTableManager(_db, _db.tourneeMembres);
   $$FraisTableTableManager get frais =>
       $$FraisTableTableManager(_db, _db.frais);
+  $$TrackingCodesTableTableManager get trackingCodes =>
+      $$TrackingCodesTableTableManager(_db, _db.trackingCodes);
 }

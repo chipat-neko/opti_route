@@ -17,6 +17,7 @@ import '../data/stats_service.dart';
 import '../data/stops_repository.dart';
 import '../data/template_share_service.dart';
 import '../data/tournees_repository.dart';
+import '../data/tracking_codes_repository.dart';
 import '../data/unified_search_service.dart';
 import '../theme/app_tokens.dart';
 
@@ -86,6 +87,11 @@ final localReorderServiceProvider = Provider<LocalReorderService>((ref) {
 final savedDestinationsRepositoryProvider =
     Provider<SavedDestinationsRepository>((ref) {
   return SavedDestinationsRepository(ref.watch(appDatabaseProvider));
+});
+
+final trackingCodesRepositoryProvider =
+    Provider<TrackingCodesRepository>((ref) {
+  return TrackingCodesRepository(ref.watch(appDatabaseProvider));
 });
 
 final coequipiersRepositoryProvider = Provider<CoequipiersRepository>((ref) {

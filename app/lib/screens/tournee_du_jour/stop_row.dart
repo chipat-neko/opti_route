@@ -13,8 +13,10 @@ import '../../data/location_service.dart';
 import '../../data/notifications_service.dart';
 import '../../data/preuve_photo_service.dart';
 import '../../data/stop_types.dart';
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/stops_repository.dart';
 import '../../data/tournees_repository.dart';
+import '../../data/tracking_codes_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_theme.dart';
@@ -335,6 +337,28 @@ class StopRow extends ConsumerWidget {
         await SharePlus.instance.share(
           ShareParams(text: adresse, subject: 'Adresse de livraison'),
         );
+      case GenerateTrackingLinkAction():
+        final repo = ref.read(trackingCodesRepositoryProvider);
+        try {
+          final tc = await repo.generateForStop(stop.id);
+          final url = TrackingCodesRepository.buildUrl(tc.code);
+          await Clipboard.setData(ClipboardData(text: url));
+          unawaited(HapticFeedback.lightImpact());
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Lien tracking copie : $url'),
+              backgroundColor: AppColors.emerald,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        } catch (e) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Generation lien echouee : ${humanizeAnyError(e)}'),
+              backgroundColor: AppColors.red,
+            ),
+          );
+        }
       case OpenInMapsAction():
         final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
         final uri = Uri.parse(

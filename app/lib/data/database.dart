@@ -11,6 +11,7 @@ import 'tables/stop_history.dart';
 import 'tables/stops.dart';
 import 'tables/tournee_membres.dart';
 import 'tables/tournees.dart';
+import 'tables/tracking_codes.dart';
 
 // Re-export des tables pour que les modules historiques qui faisaient
 // `import 'database.dart'` puissent continuer a utiliser
@@ -25,6 +26,7 @@ export 'tables/stop_history.dart';
 export 'tables/stops.dart';
 export 'tables/tournee_membres.dart';
 export 'tables/tournees.dart';
+export 'tables/tracking_codes.dart';
 
 part 'database.g.dart';
 
@@ -40,6 +42,7 @@ part 'database.g.dart';
     Coequipiers,
     TourneeMembres,
     Frais,
+    TrackingCodes,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -69,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 35;
+  int get schemaVersion => 36;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -307,6 +310,14 @@ class AppDatabase extends _$AppDatabase {
             // numero de tel du client pour bouton "Appeler" dans la fiche
             // carnet. Carte Trello #106.
             await m.addColumn(savedDestinations, savedDestinations.telephone);
+          }
+          if (from < 36) {
+            // Table `tracking_codes` : codes courts (4 chars) attribues
+            // a un stop pour generer un lien tracking 20 chars lisible
+            // par le client final (Amazon Auneau). MVP scaffold local
+            // pour l'instant : `cloud_pushed` reste false tant que
+            // l'Edge Function backend n'est pas deployee. Carte #141.
+            await m.createTable(trackingCodes);
           }
           if (from < 32) {
             // ════════════════════════════════════════════════════════

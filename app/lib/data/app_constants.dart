@@ -156,3 +156,31 @@ const String kCodePostalPrefere = '28';
 /// 28 = Eure-et-Loir (principal), 27 = Eure, 41 = Loir-et-Cher,
 /// 72 = Sarthe, 78 = Yvelines, 91 = Essonne.
 const List<String> kCodePostalPreferes = ['28', '27', '41', '72', '78', '91'];
+
+// ════════════════════════════════════════════════════════════════
+// Tracking link 20 chars (carte Trello #141)
+// ════════════════════════════════════════════════════════════════
+
+/// Domaine court utilise pour generer les liens tracking destines au
+/// client final (ex Amazon Auneau, contrainte 20 chars stricte de leur
+/// logiciel). URL finale : `https://<kTrackingDomain>/<code>`.
+///
+/// Valeur **placeholder** : tant que Noah n'a pas achete le domaine
+/// final (en attente accord Romain pour `fa28.ro` ou choix `optr.ro`),
+/// on utilise `optr.ro` qui ne porte pas atteinte a la marque France
+/// Alliance. A modifier ici en une ligne quand le domaine final est
+/// achete + DNS pointe.
+///
+/// Verifier que `https://<domaine>/<code 4 chars>` <= 20 chars :
+/// - `https://` = 8 chars
+/// - `optr.ro` = 7 chars
+/// - `/` = 1 char
+/// - code = 4 chars
+/// - Total = 20 chars ✓
+const String kTrackingDomain = 'optr.ro';
+
+/// Longueur du code aleatoire dans l'URL tracking. 4 chars [a-z0-9]
+/// = 1.6M combinations, largement suffisant pour ne jamais epuiser
+/// l'espace de codes meme avec 1000 livraisons/jour pendant 4 ans.
+/// Si on prend un domaine plus court (3-4 chars), on peut passer a 5.
+const int kTrackingCodeLength = 4;
