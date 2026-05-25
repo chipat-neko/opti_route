@@ -23,6 +23,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/stop_action_sheet.dart';
 import '../ajout_arret_screen.dart';
+import 'known_client_badge.dart';
 import '../preuve_photo_viewer_screen.dart';
 
 /// Ligne d'arret dans la liste de la tournee du jour. Affiche numero,
@@ -134,19 +135,31 @@ class StopRow extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _primaryLine(stop),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isLivre ? p.textMute : p.ink,
-                        decoration:
-                            isLivre ? TextDecoration.lineThrough : null,
-                        decorationColor: p.textMute,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _primaryLine(stop),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isLivre ? p.textMute : p.ink,
+                              decoration: isLivre
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              decorationColor: p.textMute,
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // Carte Trello #94 : badge discret si le client
+                        // est deja dans le carnet (>= 2 livraisons, ou
+                        // favori). Aide Noah a reconnaitre les habitues.
+                        KnownClientBadge(stopId: stop.id),
+                      ],
                     ),
                     if (_secondaryLine(stop) != null) ...[
                       const SizedBox(height: 2),
