@@ -104,6 +104,15 @@ class ShareAdresseAction extends StopAction {
   const ShareAdresseAction();
 }
 
+/// Genere (ou recupere si existe deja) un lien tracking court 20 chars
+/// pour le client final (carte Trello #141, MVP Amazon Auneau). Format
+/// `https://<domaine>/<code>`. Le caller appelle
+/// `TrackingCodesRepository.generateForStop(stopId)` puis copie l'URL
+/// finale dans le presse-papier + SnackBar de confirmation.
+class GenerateTrackingLinkAction extends StopAction {
+  const GenerateTrackingLinkAction();
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -622,6 +631,13 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                     .pop(const ShareAdresseAction()),
                 icon: const Icon(Icons.share_outlined, size: 18),
                 label: const Text('Partager l\'adresse'),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: p.ink),
+                onPressed: () => Navigator.of(context)
+                    .pop(const GenerateTrackingLinkAction()),
+                icon: const Icon(Icons.link_outlined, size: 18),
+                label: const Text('Generer lien tracking (20 chars)'),
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
