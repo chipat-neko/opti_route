@@ -9,6 +9,7 @@ import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
+import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
 import '../data/saved_destinations_repository.dart';
@@ -92,6 +93,30 @@ final savedDestinationsRepositoryProvider =
 final trackingCodesRepositoryProvider =
     Provider<TrackingCodesRepository>((ref) {
   return TrackingCodesRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Recherche un client connu (entry [SavedDestinations]) qui matche un
+/// stop donne via fuzzy nom (Levenshtein) + bonus ville. Retourne null
+/// si pas de match. Utilise par le badge "client connu" dans la liste
+/// de stops (carte Trello #94).
+///
+/// Le cache Riverpod (family by stopId) evite de re-faire le fuzzy
+/// matching a chaque rebuild du StopRow (le carnet est tout charge en
+/// memoire dans ClientMemoryService).
+final clientHistoryProvider =
+    FutureProvider.family<SavedDestination?, int>((ref, stopId) async {
+  final stop = await ref.read(stopsRepositoryProvider).getById(stopId);
+  if (stop == null) return null;
+  final nom = stop.nomClient;
+  if (nom == null || nom.isEmpty) return null;
+  final svc = ClientMemoryService(
+    ref.read(savedDestinationsRepositoryProvider),
+  );
+  // Stop n'a pas de champ ville dedie -- la ville est dans
+  // adresseNormalisee. Pour le badge "client connu" on se contente du
+  // match nom uniquement (suffit pour distinguer un client deja
+  // livre, le bonus ville sert surtout au scan bordereau).
+  return svc.findSimilarClient(nom);
 });
 
 final coequipiersRepositoryProvider = Provider<CoequipiersRepository>((ref) {
