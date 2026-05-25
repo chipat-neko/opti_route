@@ -8,12 +8,14 @@ import '../../theme/app_tokens.dart';
 /// du jour. Le bouton du bas est "Ajouter un arret" (toujours present).
 /// Au-dessus, selon le statut de la tournee :
 ///
-///   - **'optimisee'** : "Demarrer" en lime (passe en 'en_cours' et
-///     enregistre `demareeLe`).
+///   - **'brouillon' / 'optimisee'** : "Demarrer" en lime (passe en
+///     'en_cours' et enregistre `demareeLe`). Permet de demarrer
+///     meme sans avoir fait l'optim ORS (cas pas de cle ORS, tournee
+///     mini, ordre saisi deja correct).
 ///   - **'en_cours'**  : "Pause" en amber (`pauseeLe` + cumul des
 ///     secondes de pause).
-///   - **brouillon / terminee** : aucun FAB supplementaire au-dessus
-///     du "Ajouter un arret".
+///   - **'terminee'**  : aucun FAB supplementaire au-dessus du
+///     "Ajouter un arret".
 /// ════════════════════════════════════════════════════════════════
 class Fabs extends StatelessWidget {
   const Fabs({
@@ -39,13 +41,18 @@ class Fabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final isBrouillon = tournee.statut == 'brouillon';
     final isOptimisee = tournee.statut == 'optimisee';
     final isEnCours = tournee.statut == 'en_cours';
+    // Le bouton Demarrer s'affiche aussi en brouillon : pas besoin
+    // d'optim ORS pour pouvoir demarrer (cas pas de cle ORS, tournee
+    // mini, ordre saisi deja correct). Carte Trello #136.
+    final showDemarrer = isBrouillon || isOptimisee;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (isOptimisee)
+        if (showDemarrer)
           FloatingActionButton.extended(
             heroTag: 'fab-demarrer',
             backgroundColor: AppColors.lime,
@@ -69,7 +76,7 @@ class Fabs extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
-        if (isOptimisee || isEnCours) const SizedBox(height: AppSpacing.x10),
+        if (showDemarrer || isEnCours) const SizedBox(height: AppSpacing.x10),
         // Mini FAB scanner code-barre colis. Place au-dessus du FAB
         // principal "Ajouter un arret" pour acces rapide en plein
         // workflow (Noah scanne plusieurs colis a la suite).
