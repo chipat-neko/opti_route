@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
 import '../data/frais_repository.dart';
+import '../data/fuel_price_service.dart';
 import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
@@ -174,6 +175,27 @@ final coequipiersByIdProvider = Provider<Map<int, Coequipier>>((ref) {
 
 final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
   return ParametresRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Service de recuperation du prix moyen du carburant en temps reel
+/// (API publique data.gouv.fr, sans cle). Carte Trello #39.
+final fuelPriceServiceProvider = Provider<FuelPriceService>((ref) {
+  final svc = FuelPriceService();
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// Prix moyen du Diesel pour un departement donne (default "28"
+/// = Eure-et-Loir, zone principale de l'utilisateur). Cache Riverpod
+/// jusqu'au prochain redemarrage de l'app -- pas besoin de refetch
+/// le prix toutes les 30 secondes, il bouge typiquement 1 fois par
+/// jour. Retourne null si reseau down ou API en erreur (l'UI doit
+/// gerer ce cas en gardant la valeur saisie manuellement).
+final fuelPriceAverageProvider =
+    FutureProvider.family<FuelPriceResult?, String>((ref, departement) async {
+  return ref.read(fuelPriceServiceProvider).getAverageDieselPrice(
+        departement: departement,
+      );
 });
 
 /// Service de sauvegarde locale periodique (cf AutoBackupService).

@@ -353,6 +353,12 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               ),
             ],
           ),
+          // Suggestion live du prix Diesel moyen dans le departement
+          // (API gratuite data.gouv.fr, source officielle). Carte #39.
+          // Si le reseau est down ou l'API ne repond pas, le widget ne
+          // s'affiche simplement pas (gracieux degrade).
+          const SizedBox(height: AppSpacing.x10),
+          const _FuelPriceSuggestion(departement: '28'),
           const SizedBox(height: AppSpacing.x14),
           FilledButton.icon(
             onPressed: _saving || !_defaultsInitialized ? null : _saveCarburant,
@@ -833,6 +839,17 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     }
   }
 
+  /// Pre-remplit le champ `Prix EUR / litre` avec la valeur suggeree
+  /// par l'API data.gouv.fr et sauvegarde immediatement. Appele par
+  /// `_FuelPriceSuggestion` quand l'utilisateur tape "Utiliser".
+  /// Carte Trello #39.
+  Future<void> _applyFuelPriceSuggestion(double averageEurPerLiter) async {
+    final rounded = averageEurPerLiter.toStringAsFixed(3);
+    _coutLitreCtrl.text = rounded;
+    // Sauvegarde automatique pour eviter une etape "Enregistrer" en plus.
+    await _saveCarburant();
+  }
+
   Future<void> _saveCarburant() async {
     setState(() => _saving = true);
     try {
@@ -943,5 +960,100 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+/// Widget compact qui affiche le prix moyen du Diesel dans un
+/// departement donne (data.gouv.fr) + bouton "Utiliser cette valeur"
+/// qui pre-remplit le champ `_coutLitreCtrl` du parent via un appel
+/// indirect a `_ParametresScreenState._applyFuelPriceSuggestion`.
+///
+/// Volontairement silencieux si l'API est down ou n'a aucune station :
+/// le widget se rend en `SizedBox.shrink()` pour ne pas polluer l'UI.
+/// Carte Trello #39.
+class _FuelPriceSuggestion extends ConsumerWidget {
+  const _FuelPriceSuggestion({required this.departement});
+
+  final String departement;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final asyncResult = ref.watch(fuelPriceAverageProvider(departement));
+    final result = asyncResult.asData?.value;
+    if (result == null) {
+      // Soit en chargement (premier fetch ~1s), soit erreur reseau.
+      // Dans les deux cas on n'affiche rien : la saisie manuelle
+      // reste fonctionnelle et c'est l'experience par defaut.
+      return const SizedBox.shrink();
+    }
+    final priceFr = result.averageEurPerLiter.toStringAsFixed(3);
+    final freshness = _formatFreshness(result.lastUpdate);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x12,
+        vertical: AppSpacing.x10,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.lime.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+        border: Border.all(color: AppColors.lime),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_gas_station_outlined,
+              size: 16, color: AppColors.emerald),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Prix moyen Diesel dep. $departement : $priceFr EUR/L',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: p.ink,
+                  ),
+                ),
+                Text(
+                  'Source data.gouv.fr · ${result.sampleSize} stations · $freshness',
+                  style: TextStyle(fontSize: 10.5, color: p.textMute),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              // On remonte au state du parent via un type-cast sur le
+              // context : c'est moche mais c'est isolated a ce widget
+              // et evite de faire du callback prop drilling.
+              final state = context.findAncestorStateOfType<
+                  _ParametresScreenState>();
+              if (state == null) return;
+              state._applyFuelPriceSuggestion(result.averageEurPerLiter);
+            },
+            child: const Text('Utiliser'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Format compact d'une duree depuis [updated] : "il y a 12 min",
+  /// "il y a 3 h", "il y a 2 j". On clamp a "il y a > 1 sem" au-dela.
+  static String _formatFreshness(DateTime updated) {
+    final diff = DateTime.now().difference(updated);
+    if (diff.inMinutes < 60) {
+      final m = diff.inMinutes.clamp(1, 59);
+      return 'maj il y a $m min';
+    }
+    if (diff.inHours < 24) {
+      return 'maj il y a ${diff.inHours} h';
+    }
+    if (diff.inDays < 7) {
+      return 'maj il y a ${diff.inDays} j';
+    }
+    return 'maj il y a > 1 sem';
   }
 }
