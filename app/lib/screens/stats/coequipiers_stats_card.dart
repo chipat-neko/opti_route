@@ -25,6 +25,13 @@ class CoequipiersStatsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
+    // Carte Trello #97 V3 : reserve au chef d'equipe. Si Noah est en
+    // mode solo OU si Lucas/Marc/Papa (coequipiers) ouvrent Stats, on
+    // ne montre PAS le tableau comparatif pour eviter tout conflit
+    // intra-equipe ("pourquoi Lucas voit mes chiffres ?").
+    final modeChef = ref.watch(modeChefProvider).asData?.value ?? false;
+    if (!modeChef) return const SizedBox.shrink();
+
     final statsAsync = ref.watch(statsParCoequipierProvider(_days));
     final coequipiers = ref.watch(coequipiersAllProvider).asData?.value ??
         const <Coequipier>[];
