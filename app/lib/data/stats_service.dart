@@ -42,14 +42,22 @@ class StatsService {
   }
 
   /// Variante in-memory : prend un [bundle] deja charge et filtre sur
-  /// une sous-fenetre [since]. Permet de partager 1 seule fetch pour
-  /// les cards 7/30/365 jours.
+  /// une sous-fenetre [since, until]. Permet de partager 1 seule fetch
+  /// pour les cards 7/30/365 jours.
+  ///
+  /// Si [until] est fourni, on filtre `since <= date < until` (utile
+  /// pour comparer une fenetre passee, ex S-1 vs S, carte Trello #99).
+  /// Si [until] est null, on prend `[since, +infini]` comme avant.
   static TourneeStats computeFromBundle(
     StatsBundle bundle, {
     required DateTime since,
+    DateTime? until,
   }) {
-    final tournees =
-        bundle.tournees.where((t) => !t.date.isBefore(since)).toList();
+    final tournees = bundle.tournees.where((t) {
+      if (t.date.isBefore(since)) return false;
+      if (until != null && !t.date.isBefore(until)) return false;
+      return true;
+    }).toList();
     if (tournees.isEmpty) return TourneeStats.empty;
     final ids = tournees.map((t) => t.id).toSet();
     final stops =
