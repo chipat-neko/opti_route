@@ -9,6 +9,7 @@ import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
+import '../data/resume_hebdo_service.dart';
 import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
@@ -205,6 +206,21 @@ final lockEnabledStreamProvider = StreamProvider<bool>((ref) {
         .getPinHash();
     return hash != null && hash.isNotEmpty;
   });
+});
+
+/// Service de resume hebdomadaire chef (carte Trello #101).
+final resumeHebdoServiceProvider = Provider<ResumeHebdoService>((ref) {
+  return ResumeHebdoService(ref.watch(appDatabaseProvider));
+});
+
+/// Resume hebdomadaire pour la semaine contenant [reference] (default
+/// = maintenant). Recharge a chaque modif de tournee / stop.
+final resumeHebdoProvider =
+    FutureProvider.family<ResumeHebdo, DateTime?>((ref, reference) async {
+  ref.watch(tourneesStreamProvider);
+  return ref.read(resumeHebdoServiceProvider).computeWeek(
+        reference: reference,
+      );
 });
 
 final statsServiceProvider = Provider<StatsService>((ref) {
