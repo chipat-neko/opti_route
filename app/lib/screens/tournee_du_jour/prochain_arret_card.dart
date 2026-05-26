@@ -11,6 +11,25 @@ import '../../providers/location_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 
+/// Selectionne le **premier** stop encore `a_livrer` qui a des coords
+/// GPS dans [list]. Centralise la regle pour que build() ET les
+/// boutons Maps/Waze utilisent strictement la meme logique de
+/// selection (carte Trello #149 -- evite la divergence entre "ce que
+/// l'UI affiche comme prochain" et "ce que le tap Maps/Waze lance").
+///
+/// Expose en top-level pour etre testable directement sans avoir a
+/// pump le widget complet.
+Stop? firstAlivrerWithCoords(List<Stop> list) {
+  for (final s in list) {
+    if (s.statutLivraison == 'a_livrer' &&
+        s.lat != null &&
+        s.lng != null) {
+      return s;
+    }
+  }
+  return null;
+}
+
 /// ════════════════════════════════════════════════════════════════
 /// Card "Prochain arret" — encart noir mis en avant en haut de
 /// l'ecran pendant qu'une tournee est en cours.
@@ -43,15 +62,7 @@ class ProchainArretCard extends ConsumerWidget {
     // On prend le premier stop encore "a_livrer" qui a des coords.
     // Les stops sans coords sont ignores (on ne peut pas calculer la
     // distance ni proposer la navigation Maps/Waze).
-    Stop? candidat;
-    for (final s in stops) {
-      if (s.statutLivraison == 'a_livrer' &&
-          s.lat != null &&
-          s.lng != null) {
-        candidat = s;
-        break;
-      }
-    }
+    final candidat = firstAlivrerWithCoords(stops);
     if (candidat == null) {
       // Aucun stop a livrer (tournee finie) ou aucun avec coords :
       // on n'affiche rien. Le ProgressBanner + la StopsList suffisent.
@@ -183,9 +194,12 @@ class ProchainArretCard extends ConsumerWidget {
                     foregroundColor: p.ink,
                     minimumSize: const Size(0, 44),
                   ),
-                  onPressed: () => NavigationService.launchGoogleMaps(
-                    lat: lat,
-                    lng: lng,
+                  onPressed: () => _launchNavToFreshNext(
+                    ref,
+                    tourneeId: prochain.tourneeId,
+                    fallbackLat: lat,
+                    fallbackLng: lng,
+                    isWaze: false,
                   ),
                   icon: const Icon(Icons.map_outlined, size: 16),
                   label: const Text(
@@ -202,9 +216,12 @@ class ProchainArretCard extends ConsumerWidget {
                     foregroundColor: p.ink,
                     minimumSize: const Size(0, 44),
                   ),
-                  onPressed: () => NavigationService.launchWaze(
-                    lat: lat,
-                    lng: lng,
+                  onPressed: () => _launchNavToFreshNext(
+                    ref,
+                    tourneeId: prochain.tourneeId,
+                    fallbackLat: lat,
+                    fallbackLng: lng,
+                    isWaze: true,
                   ),
                   icon: const Icon(Icons.navigation_outlined, size: 16),
                   label: const Text(
@@ -305,5 +322,37 @@ class ProchainArretCard extends ConsumerWidget {
   static String _formatDistanceMeters(double m) {
     if (m < 1000) return '${m.round()} m';
     return '${(m / 1000).toStringAsFixed(1)} km';
+  }
+
+  /// Lance Maps ou Waze sur le prochain stop **fraichement** relu
+  /// depuis le provider Riverpod, pas sur les coords capturees au
+  /// dernier build du widget. Fix carte Trello #149 :
+  ///
+  /// Symptome : Noah valide la livraison du stop 1, l'UI bascule sur
+  /// le stop 2 ("ProchainArretCard" affiche stop 2). Mais s'il tape
+  /// Maps/Waze juste apres, l'app pouvait relancer la nav vers le
+  /// stop 1 a cause de la closure capturee a l'ancien build.
+  ///
+  /// La defense : a chaque tap, on relit la liste de stops courante
+  /// via `ref.read(stopsByTourneeProvider(tourneeId))` puis on re-selectionne
+  /// le candidat. Si pas de fresh data (cas degenere : provider pas
+  /// encore emis), on retombe sur les fallback fournis (qui sont au
+  /// pire les coords du candidat affiche).
+  static Future<void> _launchNavToFreshNext(
+    WidgetRef ref, {
+    required int tourneeId,
+    required double fallbackLat,
+    required double fallbackLng,
+    required bool isWaze,
+  }) async {
+    final fresh = ref.read(stopsByTourneeProvider(tourneeId)).asData?.value;
+    final candidat = fresh == null ? null : firstAlivrerWithCoords(fresh);
+    final lat = candidat?.lat ?? fallbackLat;
+    final lng = candidat?.lng ?? fallbackLng;
+    if (isWaze) {
+      await NavigationService.launchWaze(lat: lat, lng: lng);
+    } else {
+      await NavigationService.launchGoogleMaps(lat: lat, lng: lng);
+    }
   }
 }
