@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 
@@ -96,7 +97,145 @@ class FuelPriceService {
     }
   }
 
+  /// Recupere les N stations Diesel les plus proches de [lat]/[lng]
+  /// dans un rayon de [maxKm] km. Tri par distance haversine croissante.
+  /// Carte Trello #39 V4 : permet de localiser les stations pas cheres
+  /// pendant les tournees.
+  ///
+  /// L'API data.gouv.fr ne supporte pas le filtre geo natif sans un
+  /// where SQL personnalise. On rapatrie un batch (limit 500) au-dessus
+  /// d'un radius approximatif (~0.1 deg = ~11 km), puis on filtre + trie
+  /// cote app pour avoir une distance precise.
+  ///
+  /// Retourne une liste vide si reseau down, API erreur, ou aucune
+  /// station dans le rayon. **Pas de levee d'exception** : best-effort.
+  Future<List<FuelStation>> findNearbyDieselStations({
+    required double lat,
+    required double lng,
+    int limit = 5,
+    double maxKm = 10,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    try {
+      // Approx 1 deg de latitude = ~111 km. On prend une marge x1.5 pour
+      // ne pas manquer les stations en bordure.
+      final degRadius = (maxKm / 111) * 1.5;
+      final latMin = lat - degRadius;
+      final latMax = lat + degRadius;
+      // La longitude varie avec la latitude. On compense par cos(lat).
+      final lngRadius = degRadius / math.cos(lat * math.pi / 180);
+      final lngMin = lng - lngRadius;
+      final lngMax = lng + lngRadius;
+
+      final uri = Uri.parse(_baseUrl).replace(queryParameters: {
+        'where':
+            'geom is not null and gazole_prix is not null '
+            'and latitude > $latMin and latitude < $latMax '
+            'and longitude > $lngMin and longitude < $lngMax',
+        'select':
+            'id,gazole_prix,gazole_maj,latitude,longitude,'
+            'cp,ville,adresse,nom',
+        'limit': '500',
+      });
+      final resp = await _http.get(uri).timeout(timeout);
+      if (resp.statusCode != 200) return const [];
+      final body = json.decode(resp.body) as Map<String, dynamic>;
+      final results = (body['results'] as List?) ?? const [];
+
+      final stations = <FuelStation>[];
+      for (final r in results) {
+        final m = r as Map<String, dynamic>;
+        final p = m['gazole_prix'];
+        final lt = m['latitude'];
+        final lg = m['longitude'];
+        if (p == null || lt == null || lg == null) continue;
+        final price = (p as num).toDouble();
+        if (price < 0.5 || price > 5.0) continue;
+        final stLat = (lt as num).toDouble();
+        final stLng = (lg as num).toDouble();
+        final dKm = _haversineKm(lat, lng, stLat, stLng);
+        if (dKm > maxKm) continue;
+        stations.add(FuelStation(
+          id: (m['id'] as Object?)?.toString() ?? '',
+          name: (m['nom'] as String?)?.trim() ?? '',
+          address: (m['adresse'] as String?)?.trim() ?? '',
+          codePostal: (m['cp'] as String?)?.trim() ?? '',
+          ville: (m['ville'] as String?)?.trim() ?? '',
+          lat: stLat,
+          lng: stLng,
+          dieselPriceEur: price,
+          distanceKm: dKm,
+          lastUpdate: _parseDate(m['gazole_maj']),
+        ));
+      }
+      stations.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+      return stations.take(limit).toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   void dispose() => _http.close();
+
+  /// Distance haversine en km entre 2 points GPS.
+  static double _haversineKm(
+    double lat1, double lng1, double lat2, double lng2,
+  ) {
+    const r = 6371.0; // rayon terre en km
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLng = (lng2 - lng1) * math.pi / 180;
+    final lat1r = lat1 * math.pi / 180;
+    final lat2r = lat2 * math.pi / 180;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1r) * math.cos(lat2r) *
+            math.sin(dLng / 2) * math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return r * c;
+  }
+
+  static DateTime _parseDate(Object? raw) {
+    if (raw is String) {
+      final d = DateTime.tryParse(raw);
+      if (d != null) return d;
+    }
+    return DateTime.now();
+  }
+}
+
+/// Une station Diesel localisee, retournee par
+/// [FuelPriceService.findNearbyDieselStations].
+class FuelStation {
+  const FuelStation({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.codePostal,
+    required this.ville,
+    required this.lat,
+    required this.lng,
+    required this.dieselPriceEur,
+    required this.distanceKm,
+    required this.lastUpdate,
+  });
+
+  final String id;
+  /// Nom commercial (TOTAL, CARREFOUR...). Souvent vide dans l'API.
+  final String name;
+  final String address;
+  final String codePostal;
+  final String ville;
+  final double lat;
+  final double lng;
+  final double dieselPriceEur;
+  /// Distance haversine en km depuis la position user.
+  final double distanceKm;
+  final DateTime lastUpdate;
+
+  /// Label compose : "TOTAL · 12 rue X" ou juste l'adresse si pas de nom.
+  String get displayLabel {
+    if (name.isEmpty) return address.isEmpty ? ville : address;
+    return address.isEmpty ? name : '$name · $address';
+  }
 }
 
 /// Resultat d'un appel reussi a l'API prix carburants.

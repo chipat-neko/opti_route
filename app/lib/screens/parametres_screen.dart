@@ -1023,6 +1023,23 @@ class _FuelPriceSuggestion extends ConsumerWidget {
               ],
             ),
           ),
+          // Bouton refresh : invalide le provider pour re-fetch l'API.
+          // Utile quand Noah veut forcer une mise a jour (ex: changement
+          // brutal du prix de l'essence en France, ou debug si la valeur
+          // affichee semble peri mee). Carte Trello #39 V4.
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 18),
+            tooltip: 'Rafraichir le prix',
+            onPressed: () {
+              ref.invalidate(fuelPriceAverageProvider(departement));
+            },
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
+            ),
+          ),
           TextButton(
             onPressed: () {
               // On remonte au state du parent via un type-cast sur le

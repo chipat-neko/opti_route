@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../data/fuel_price_service.dart';
+import '../data/location_service.dart';
+import '../data/navigation_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 
@@ -74,6 +77,83 @@ class _FraisFormScreenState extends ConsumerState<FraisFormScreen> {
     _montantCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  /// Ouvre la bottomsheet "Stations Diesel proches" (carte Trello
+  /// #39 V4). Recupere la position GPS courante (best-effort 4s),
+  /// fetch les 5 stations Diesel les plus proches (rayon 10 km) via
+  /// l'API data.gouv.fr, propose un clic pour pre-remplir le libelle
+  /// et le montant suggere base sur ~50L de plein.
+  Future<void> _openNearbyStations() async {
+    final messenger = ScaffoldMessenger.of(context);
+    HapticFeedback.selectionClick();
+    // Etape 1 : GPS one-shot (timeout 4s). Si refuse / indispo, on
+    // affiche un message clair et on stoppe.
+    try {
+      final ok = await LocationService.ensurePermission();
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Permission GPS refusee. Active-la pour localiser les stations.',
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Permission GPS refusee. Active-la pour localiser les stations.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ({double lat, double lng})? pos;
+    try {
+      final p = await LocationService.currentPosition()
+          .timeout(const Duration(seconds: 4));
+      pos = (lat: p.latitude, lng: p.longitude);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'GPS indisponible. Ouvre les Reglages pour activer la geoloc.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    // Etape 2 : ouvre la bottomsheet qui fait le fetch via le provider.
+    final picked = await showModalBottomSheet<FuelStation>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.palette.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.r22),
+        ),
+      ),
+      builder: (_) => _NearbyStationsSheet(lat: pos!.lat, lng: pos.lng),
+    );
+    if (picked == null || !mounted) return;
+    // Etape 3 : pre-remplit le libelle (nom ou adresse + ville) et le
+    // montant suggere = 50L au prix Diesel station (estim plein
+    // typique fourgon Noah). L'utilisateur ajuste s'il a fait <50L.
+    final label = picked.name.isNotEmpty
+        ? '${picked.name} · ${picked.ville}'
+        : (picked.address.isNotEmpty
+            ? '${picked.address} · ${picked.ville}'
+            : picked.ville);
+    final suggested = (picked.dieselPriceEur * 50).toStringAsFixed(2);
+    setState(() {
+      _libelleCtrl.text = label;
+      _montantCtrl.text = suggested.replaceAll('.', ',');
+    });
   }
 
   Future<void> _pickDate() async {
@@ -231,6 +311,25 @@ class _FraisFormScreenState extends ConsumerState<FraisFormScreen> {
                 return null;
               },
             ),
+            // Bouton "Stations Diesel proches" : visible uniquement
+            // pour le type carburant. Carte Trello #39 V4.
+            if (_type == 'carburant') ...[
+              const SizedBox(height: AppSpacing.x8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _openNearbyStations,
+                  icon: const Icon(Icons.local_gas_station_outlined,
+                      size: 16),
+                  label: const Text('Stations Diesel proches'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.x8,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.x18),
 
             // ─── Libelle ─────────────────────────────────────────
@@ -359,4 +458,195 @@ IconData _iconForType(String type) {
     'autre' => Icons.receipt_outlined,
     _ => Icons.receipt_outlined,
   };
+}
+
+/// BottomSheet "Stations Diesel proches" (carte Trello #39 V4).
+/// Fetch les 5 stations les plus proches via `nearbyDieselStationsProvider`
+/// et propose pour chacune : nom + adresse + prix + distance + bouton
+/// "Itineraire" (lance Maps avec lat/lng). Tap sur la card = pop avec
+/// la station selectionnee.
+class _NearbyStationsSheet extends ConsumerWidget {
+  const _NearbyStationsSheet({required this.lat, required this.lng});
+
+  final double lat;
+  final double lng;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    // Arrondit a 0.01 deg (~1 km) pour cache stable.
+    final coords = (
+      (lat * 100).round() / 100,
+      (lng * 100).round() / 100,
+    );
+    final async = ref.watch(nearbyDieselStationsProvider(coords));
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.x18,
+          AppSpacing.x18,
+          AppSpacing.x18,
+          AppSpacing.x10,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.local_gas_station_outlined,
+                    color: AppColors.emerald),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(
+                  child: Text(
+                    'Stations Diesel proches',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: p.ink,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  tooltip: 'Rafraichir',
+                  onPressed: () =>
+                      ref.invalidate(nearbyDieselStationsProvider(coords)),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Text(
+              'Tap sur une station pour pre-remplir le libelle + montant '
+              '(estim 50L de plein). Source data.gouv.fr.',
+              style: TextStyle(fontSize: 11.5, color: p.textMute, height: 1.4),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            async.when(
+              data: (stations) {
+                if (stations.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.x22,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Aucune station trouvee dans un rayon de 10 km '
+                        '(reseau down ou zone isolee).',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: p.textMute,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final st in stations)
+                      _StationTile(station: st),
+                  ],
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.x22),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.x18,
+                ),
+                child: Text(
+                  'Erreur de chargement : $e',
+                  style: const TextStyle(color: AppColors.red),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StationTile extends StatelessWidget {
+  const _StationTile({required this.station});
+
+  final FuelStation station;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final priceFr = station.dieselPriceEur.toStringAsFixed(3);
+    final distFr = station.distanceKm < 1
+        ? '${(station.distanceKm * 1000).round()} m'
+        : '${station.distanceKm.toStringAsFixed(1)} km';
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.x8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        onTap: () => Navigator.of(context).pop(station),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      station.displayLabel,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: p.ink,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${station.codePostal} ${station.ville} · $distFr',
+                      style: TextStyle(fontSize: 11, color: p.textMute),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$priceFr EUR',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.emerald,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.directions, size: 18),
+                    tooltip: 'Itineraire',
+                    onPressed: () => NavigationService.launchGoogleMaps(
+                      lat: station.lat,
+                      lng: station.lng,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
