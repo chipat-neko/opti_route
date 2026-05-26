@@ -572,3 +572,136 @@ final currentTourneeProvider = Provider<AsyncValue<Tournee?>>((ref) {
     return todayList.first;
   });
 });
+
+/// Resume agrege de toutes les tournees datees d'aujourd'hui (peu
+/// importe leur statut). Sert au compteur "X colis livres aujourd'hui"
+/// dans HomeScreen : Noah voit son avancement sans devoir ouvrir
+/// chaque tournee individuellement.
+///
+/// Carte Trello #100 : sert au cas typique multi-tournees (matin +
+/// aprem) ou quand toutes les tournees du jour sont terminees et que
+/// l'app retombe sur `_NoTourTodayScreen` -- le resume reste visible.
+///
+/// Recharge automatiquement quand une tournee du jour est ajoutee /
+/// modifiee (depend de `tourneesDuJourProvider`). 1 seule query Drift
+/// supplementaire (les stops du jour) -- les tournees sont deja en
+/// cache via `tourneesStreamProvider`.
+final aujourdhuiResumeProvider =
+    FutureProvider<AujourdhuiResume>((ref) async {
+  final tournees = ref.watch(tourneesDuJourProvider);
+  if (tournees.isEmpty) return AujourdhuiResume.empty;
+
+  final db = ref.watch(appDatabaseProvider);
+  final ids = tournees.map((t) => t.id).toList();
+  final stops = await (db.select(db.stops)
+        ..where((s) => s.tourneeId.isIn(ids)))
+      .get();
+
+  final livres = stops.where((s) => s.statutLivraison == 'livre').toList();
+  final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
+  final colisLivres = livres.fold<int>(0, (a, s) => a + s.nbColis);
+  final distance =
+      tournees.fold<int>(0, (a, t) => a + (t.distanceTotaleM ?? 0));
+  final duree =
+      tournees.fold<int>(0, (a, t) => a + (t.dureeTotaleS ?? 0));
+
+  // Premier et dernier horodatage de livraison du jour (utile pour
+  // afficher "12h05 - 17h32"). On filtre sur livreLe non-null et on
+  // trie ascendant.
+  final livresWithTime = livres.where((s) => s.livreLe != null).toList()
+    ..sort((a, b) => a.livreLe!.compareTo(b.livreLe!));
+  DateTime? premier;
+  DateTime? dernier;
+  if (livresWithTime.isNotEmpty) {
+    premier = livresWithTime.first.livreLe;
+    dernier = livresWithTime.last.livreLe;
+  }
+
+  return AujourdhuiResume(
+    nbTournees: tournees.length,
+    nbTourneesTerminees:
+        tournees.where((t) => t.statut == 'terminee').length,
+    nbTourneesEnCours:
+        tournees.where((t) => t.statut == 'en_cours').length,
+    nbArretsTotaux: stops.length,
+    nbLivres: livres.length,
+    nbEchecs: echecs,
+    nbColisLivres: colisLivres,
+    distanceMeters: distance,
+    durationSeconds: duree,
+    premierLivreLe: premier,
+    dernierLivreLe: dernier,
+  );
+});
+
+/// Snapshot immuable du resume du jour, consomme par [AujourdhuiResume]
+/// dans HomeScreen. Tous les champs sont en valeur (pas de stream
+/// derive) pour pouvoir tester l'UI sans Drift.
+class AujourdhuiResume {
+  const AujourdhuiResume({
+    required this.nbTournees,
+    required this.nbTourneesTerminees,
+    required this.nbTourneesEnCours,
+    required this.nbArretsTotaux,
+    required this.nbLivres,
+    required this.nbEchecs,
+    required this.nbColisLivres,
+    required this.distanceMeters,
+    required this.durationSeconds,
+    this.premierLivreLe,
+    this.dernierLivreLe,
+  });
+
+  static const empty = AujourdhuiResume(
+    nbTournees: 0,
+    nbTourneesTerminees: 0,
+    nbTourneesEnCours: 0,
+    nbArretsTotaux: 0,
+    nbLivres: 0,
+    nbEchecs: 0,
+    nbColisLivres: 0,
+    distanceMeters: 0,
+    durationSeconds: 0,
+  );
+
+  final int nbTournees;
+  final int nbTourneesTerminees;
+  final int nbTourneesEnCours;
+  final int nbArretsTotaux;
+  final int nbLivres;
+  final int nbEchecs;
+  final int nbColisLivres;
+  final int distanceMeters;
+  final int durationSeconds;
+  final DateTime? premierLivreLe;
+  final DateTime? dernierLivreLe;
+
+  /// Aucune tournee planifiee aujourd'hui -> l'UI doit cacher la card.
+  bool get isEmpty => nbTournees == 0;
+
+  /// Vrai si au moins 1 stop a ete traite (livre ou echec). Sert au UI
+  /// pour decider d'afficher la progress bar ou juste les compteurs.
+  bool get hasActivite => nbLivres + nbEchecs > 0;
+
+  /// Pourcentage d'avancement = (livres + echecs) / total. 0 si pas
+  /// d'arret. Borne entre 0 et 1.
+  double get avancement {
+    if (nbArretsTotaux == 0) return 0;
+    return ((nbLivres + nbEchecs) / nbArretsTotaux).clamp(0.0, 1.0);
+  }
+
+  /// Nombre de stops restants a traiter (ni livre ni echec). 0 si la
+  /// journee est terminee.
+  int get nbArretsRestants {
+    final r = nbArretsTotaux - nbLivres - nbEchecs;
+    return r < 0 ? 0 : r;
+  }
+
+  /// Taux de reussite sur les stops cloturés (livres / (livres +
+  /// echecs)). 0 si aucun stop cloture.
+  double get tauxReussite {
+    final total = nbLivres + nbEchecs;
+    if (total == 0) return 0;
+    return nbLivres / total;
+  }
+}
