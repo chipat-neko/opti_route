@@ -217,10 +217,16 @@
   const code = readCode();
   document.getElementById('codeLabel').textContent = '#' + code;
 
-  // ─── Donnees MOCKEES (demo) ──────────────────────────────────────
-  // En prod, un fetch vers l'Edge Function Supabase `track` resoudra
-  // le code en : position GPS live du livreur, ETA, statut, arrets
-  // restants, telephone du livreur. Ici on simule autour de Chartres.
+  // ─── Endpoint Edge Function `track` (carte #81) ──────────────────
+  // Si la function repond, on utilise ses donnees reelles. Sinon
+  // (404 code inconnu, endpoint pas deploye, reseau) on retombe sur
+  // le mock pour que la demo reste presentable.
+  const TRACK_ENDPOINT =
+    'https://wipxgcnpiaecpcipqnpl.supabase.co/functions/v1/track';
+
+  // ─── Donnees MOCKEES (fallback demo) ─────────────────────────────
+  // Position simulee autour de Chartres. Utilisees si l'Edge Function
+  // n'a pas de donnee pour ce code (ex: code=demo).
   const demo = {
     recipient: 'Votre colis arrive',
     livreurLat: 48.4471,
@@ -268,14 +274,66 @@
   // ─── Simulation deplacement livreur (demo visuelle) ──────────────
   // Toutes les 3s, rapproche legerement le livreur de la destination
   // pour montrer le "live". En prod ce sera un abonnement Realtime
-  // Supabase au channel de la tournee.
+  // Supabase au channel de la tournee. Stoppee si on bascule sur des
+  // donnees reelles.
   let t = 0;
-  setInterval(() => {
+  let simTimer = setInterval(() => {
     t = Math.min(t + 0.08, 1);
     const lat = demo.livreurLat + (demo.destLat - demo.livreurLat) * t;
     const lng = demo.livreurLng + (demo.destLng - demo.livreurLng) * t;
     livreur.setLatLng([lat, lng]);
   }, 3000);
+
+  // ─── Tentative donnees reelles via Edge Function `track` ─────────
+  // Best-effort : si l'endpoint repond avec une destination, on
+  // bascule sur le reel (masque le badge demo, stoppe la simulation).
+  // Sinon on garde le mock silencieusement.
+  (async () => {
+    if (code === 'demo') return; // garde la demo pour ?code=demo
+    try {
+      const resp = await fetch(
+        TRACK_ENDPOINT + '?code=' + encodeURIComponent(code),
+      );
+      if (!resp.ok) return;
+      const d = await resp.json();
+      if (d.dest_lat == null || d.dest_lng == null) return;
+
+      // Donnees reelles : on quitte le mode demo.
+      clearInterval(simTimer);
+      document.querySelector('.demo-badge')?.remove();
+
+      if (d.recipient) {
+        document.getElementById('recipient').textContent =
+          'Colis pour ' + d.recipient;
+      }
+      document.getElementById('statusValue').textContent =
+        d.status_label || 'En cours de livraison';
+      if (d.stops_before != null) {
+        document.getElementById('etaStops').textContent = d.stops_before;
+        document.getElementById('approachSub').textContent =
+          d.stops_before + ' arret' + (d.stops_before > 1 ? 's' : '') +
+          ' avant le votre';
+      }
+      // ETA : masque le bloc si null (pas encore calcule cote serveur).
+      document.getElementById('etaTime').textContent = d.eta_time || '—';
+
+      // Repositionne la carte : destination + livreur si dispo.
+      const dest = [d.dest_lat, d.dest_lng];
+      L.marker(dest).addTo(map).bindPopup('Votre adresse');
+      if (d.livreur_lat != null && d.livreur_lng != null) {
+        livreur.setLatLng([d.livreur_lat, d.livreur_lng]);
+        map.fitBounds([[d.livreur_lat, d.livreur_lng], dest],
+          { padding: [50, 50] });
+      } else {
+        // Pas de position live livreur (jalon 3.C a venir) : centre
+        // sur la destination.
+        livreur.setLatLng(dest);
+        map.setView(dest, 14);
+      }
+    } catch (_) {
+      // Reseau / endpoint indispo : on garde le mock.
+    }
+  })();
 </script>
 </body>
 </html>
