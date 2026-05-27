@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
 import 'chef_stats_panel.dart';
+import 'chef_tournees_panel.dart';
 
 /// Largeur minimale (en px logiques) au-dela de laquelle on bascule en
 /// disposition "grand ecran" multi-panneaux. En dessous, les panneaux
@@ -136,18 +137,13 @@ class _NarrowLayout extends StatelessWidget {
   }
 }
 
-/// Panneau "tournees en cours" — placeholder, contenu en [#88·2].
+/// Panneau "tournees en cours" — branche sur le vrai contenu ([#88·2]).
 class _TourneesPanel extends StatelessWidget {
   const _TourneesPanel();
 
   @override
   Widget build(BuildContext context) {
-    return const _ChefPanel(
-      icon: Icons.route_outlined,
-      title: 'Tournees en cours',
-      sousCarte: '[#88·2]',
-      description: 'Liste temps reel de tous les chauffeurs + progression',
-    );
+    return const ChefTourneesPanel();
   }
 }
 

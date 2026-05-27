@@ -13,6 +13,7 @@ import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
 import '../data/resume_hebdo_service.dart';
 import '../data/chef_stats_service.dart';
+import '../data/chef_tournees_service.dart';
 import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
@@ -757,6 +758,28 @@ final equipeStatsJourProvider =
       .get();
 
   return ChefStatsJour.computeFromBundle(tournees: tournees, stops: stops);
+});
+
+/// Liste des tournees du jour avec leur progression, pour le panneau
+/// "tournees en cours" du logiciel chef (epopee #88 / [#88·2]). Meme
+/// source que `equipeStatsJourProvider` (tournees du jour + 1 query
+/// stops). Le tri + l'agregation vivent dans la fonction pure
+/// [ChefTourneeProgress.computeFromBundle].
+final equipeTourneesEnCoursProvider =
+    FutureProvider<List<ChefTourneeProgress>>((ref) async {
+  final tournees = ref.watch(tourneesDuJourProvider);
+  if (tournees.isEmpty) return const [];
+
+  final db = ref.watch(appDatabaseProvider);
+  final ids = tournees.map((t) => t.id).toList();
+  final stops = await (db.select(db.stops)
+        ..where((s) => s.tourneeId.isIn(ids)))
+      .get();
+
+  return ChefTourneeProgress.computeFromBundle(
+    tournees: tournees,
+    stops: stops,
+  );
 });
 
 /// Snapshot immuable du resume du jour, consomme par [AujourdhuiResume]

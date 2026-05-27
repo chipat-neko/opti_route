@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:opti_route/data/chef_stats_service.dart';
+import 'package:opti_route/data/chef_tournees_service.dart';
 import 'package:opti_route/providers/database_providers.dart';
 import 'package:opti_route/screens/chef/chef_dashboard_shell.dart';
 import 'package:opti_route/theme/app_theme.dart';
@@ -23,6 +24,8 @@ void main() {
         overrides: [
           equipeStatsJourProvider
               .overrideWith((ref) async => ChefStatsJour.empty),
+          equipeTourneesEnCoursProvider
+              .overrideWith((ref) async => const <ChefTourneeProgress>[]),
         ],
         child: MaterialApp(
           theme: buildAppTheme(preset: AppThemePreset.lime),
