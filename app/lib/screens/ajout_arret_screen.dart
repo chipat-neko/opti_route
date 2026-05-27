@@ -6,20 +6,19 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/address_suggestion.dart';
-import '../data/bordereau_extraction.dart';
 import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
-import '../data/geo_utils.dart';
 import '../data/stop_types.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
-import '../providers/supabase_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
 import '../widgets/voice_input_button.dart';
+import 'ajout_arret/bordereau_scan_handler.dart';
+import 'ajout_arret/delete_helper.dart';
 import 'ajout_arret/dialogs.dart';
+import 'ajout_arret/doublon_helpers.dart';
 import 'ajout_arret/form_widgets.dart';
-import 'scan_bordereau_screen.dart';
 
 /// Ajout (potentiellement multiple) d'arrets a une tournee, avec
 /// imperatifs sur la meme page :
@@ -384,58 +383,20 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
 
   Future<void> _confirmDelete() async {
     if (widget.initial == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Supprimer cet arret ?'),
-        content: Text(
-          widget.initial!.nomClient != null &&
-                  widget.initial!.nomClient!.isNotEmpty
-              ? '${widget.initial!.nomClient} - ${widget.initial!.adresseBrute}'
-              : widget.initial!.adresseBrute,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton.tonal(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.red.withValues(alpha: 0.15),
-              foregroundColor: AppColors.red,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
     setState(() => _saving = true);
-    try {
-      // Jalon 2.F : propagation cloud (best-effort) + local
-      await ref
-          .read(cloudSyncServiceProvider)
-          .deleteStopWithCloudCleanup(widget.initial!.id);
-      await ref
-          .read(tourneesRepositoryProvider)
-          .invalidateOptimization(widget.tourneeId);
-      // Auto-reorder local (nearest-neighbor, sans appel ORS) :
-      // maintient l'ordre des arrets pre-trie a chaque modif.
-      await ref
-          .read(localReorderServiceProvider)
-          .reorder(widget.tourneeId);
-      if (!mounted) return;
+    final ok = await confirmAndDeleteStop(
+      context,
+      ref,
+      stop: widget.initial!,
+      tourneeId: widget.tourneeId,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (ok) {
       Navigator.of(context).pop();
-    } catch (e) {
-      if (!mounted) return;
+    } else {
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content:
-                Text('Erreur lors de la suppression : ${humanizeAnyError(e)}')),
-      );
     }
   }
 
@@ -496,120 +457,22 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   }
 
   Future<void> _scanBordereau() async {
-    final extraction = await Navigator.of(context).push<BordereauExtraction?>(
-      MaterialPageRoute(
-        builder: (_) => const ScanBordereauScreen(),
-      ),
-    );
-    if (extraction == null || !mounted) return;
+    final scan = await handleBordereauScan(context, ref);
+    if (scan == null || !mounted) return;
 
-    // Pre-remplit nom client et nb colis si presents.
-    if (extraction.nomDestinataire != null &&
-        extraction.nomDestinataire!.isNotEmpty) {
-      _nomClientCtrl.text = extraction.nomDestinataire!;
+    if (scan.nomClient != null && scan.nomClient!.isNotEmpty) {
+      _nomClientCtrl.text = scan.nomClient!;
     }
-    if (extraction.nbColis != null && extraction.nbColis! > 0) {
-      _nbColisCtrl.text = extraction.nbColis!.toString();
+    if (scan.nbColis != null && scan.nbColis! > 0) {
+      _nbColisCtrl.text = scan.nbColis!.toString();
     }
-    // Sprint 2026-05-23 (Noah feedback) : propager le format ENLEVEMENT
-    // au type d'arret. Debug print pour valider que le format remonte
-    // bien jusqu'ici.
-    debugPrint('OCRDUMP === ajout_arret recu extraction.format = '
-        '${extraction.format.name}, nomDest = ${extraction.nomDestinataire}');
-
-    // Recherche d'adresse : on tente les 2 strategies en parallele
-    // et on garde la PLUS PRECISE (qui a une `road` = vraie rue).
-    // Avant : on prenait la 1ere reussie meme si c'etait juste une
-    // commune -> cas "Arcisses" seule sans la rue RN 23 AVENUE DE
-    // PARIS, alors que BAN aurait trouve l'adresse complete.
-    AddressSuggestion? found;
-    final service = ref.read(geocodingServiceProvider);
-
-    final results = <AddressSuggestion>[];
-    final nomQuery = extraction.rechercheParNom;
-    if (nomQuery != null && nomQuery.length >= 3) {
-      try {
-        final r = await service.search(nomQuery);
-        results.addAll(r);
-      } catch (_) {/* on tente l'adresse */}
-    }
-    final addrQuery = extraction.adressePostale;
-    if (addrQuery != null && addrQuery.length >= 3) {
-      try {
-        final r = await service.search(addrQuery);
-        results.addAll(r);
-      } catch (_) {/* tant pis */}
-    }
-    if (results.isNotEmpty) {
-      // Sprint 2026-05-23 v2 (Noah) : ne PAS proposer une "supposition"
-      // si elle est dans une AUTRE ville/CP que ce qu'on a sur le
-      // bordereau. Cas reel : BAN trouvait "23 Avenue des Parigaudes,
-      // 28300" pour NOGENT AUTO alors que la vraie adresse est 28400
-      // ARCISSES. Le 28300 c'est Mainvilliers, pas Arcisses.
-      //
-      // On filtre les resultats : garder uniquement ceux dont le CP
-      // ou la ville matche l'extraction (si extraction a un CP/ville).
-      final extractedCp = extraction.codePostal;
-      final extractedVille = extraction.ville?.toLowerCase();
-      final filtered = results.where((r) {
-        // Si pas de CP/ville extrait, on garde tout
-        if (extractedCp == null && extractedVille == null) return true;
-        // Matche CP exact ?
-        if (extractedCp != null && r.postcode != null) {
-          if (r.postcode == extractedCp) return true;
-          // Tolerance : meme departement (2 premiers chars) si meme ville
-          if (extractedVille != null &&
-              r.city != null &&
-              r.postcode!.startsWith(extractedCp.substring(0, 2)) &&
-              r.city!.toLowerCase().contains(extractedVille)) {
-            return true;
-          }
-          // Sinon rejete : CP different = autre ville
-          return false;
-        }
-        // Pas de CP dans le resultat : tolerer si ville matche
-        if (extractedVille != null && r.city != null) {
-          return r.city!.toLowerCase().contains(extractedVille);
-        }
-        return true;
-      }).toList();
-      // Si tout a ete filtre (aucune adresse matche le CP/ville
-      // extrait), on N'AFFICHE PAS de suggestion validee. Noah verra
-      // le texte brut et corrigera manuellement.
-      if (filtered.isEmpty) {
-        debugPrint('OCRDUMP === geocodage : ${results.length} resultats '
-            'rejetes (CP/ville different de "$extractedCp $extractedVille"). '
-            'Pas de validation auto.');
-      } else {
-        // Score : POI (entreprise nommee) = 3, rue complete + numero = 3,
-        // rue sans numero = 2, juste commune = 1.
-        int score(AddressSuggestion a) {
-          if (a.isPoi) return 3;
-          if (a.road != null && a.houseNumber != null) return 3;
-          if (a.road != null) return 2;
-          return 1;
-        }
-        filtered.sort((a, b) => score(b).compareTo(score(a)));
-        found = filtered.first;
-      }
-    }
-
-    if (!mounted) return;
     setState(() {
-      // Propager le format ENLEVEMENT au type d'arret. Inclus DANS le
-      // setState pour garantir le rebuild du SegmentedButton.
-      if (extraction.format == BordereauFormat.enlevement) {
-        _type = kStopTypeRamasse;
-      }
-      if (found != null) {
-        // Adresse validee directement : on a les coordonnees + le label.
-        _address = found;
+      if (scan.isEnlevement) _type = kStopTypeRamasse;
+      if (scan.address != null) {
+        _address = scan.address;
         _scannedAddress = null;
       } else {
-        // Aucun match : on met le scan en string libre dans le champ
-        // adresse, l'utilisateur affinera (suggestions s'afficheront
-        // automatiquement grace au declenchement de la recherche).
-        _scannedAddress = addrQuery ?? nomQuery;
+        _scannedAddress = scan.scannedAddressText;
         _address = null;
       }
       _addressFieldVersion++;
@@ -630,13 +493,16 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     // tournee tres proche (< 30 m haversine) ou avec la meme adresse
     // brute (case-insensitive). Avertit avant de creer.
     if (!_isEdit && _address != null) {
-      final doublon = await _findPossibleDoublon(
+      final doublon = await findPossibleDoublon(
+        ref,
+        tourneeId: widget.tourneeId,
         lat: _address!.lat,
         lng: _address!.lon,
         adresse: _address!.adressePostale,
       );
       if (doublon != null && mounted) {
-        final keepGoing = await _askConfirmDoublon(doublon);
+        final keepGoing =
+            await askConfirmDoublon(context, doublon: doublon);
         if (!keepGoing) return;
       }
     }
@@ -792,97 +658,8 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
 
   String? _orNull(String s) => s.trim().isEmpty ? null : s.trim();
 
-  /// Retourne le Stop deja present dans la tournee qui ressemble a
-  /// l'adresse passee, soit par coords (< 30 m haversine), soit par
-  /// adresse brute identique (case-insensitive). Null si pas de
-  /// doublon detecte.
-  Future<Stop?> _findPossibleDoublon({
-    required double lat,
-    required double lng,
-    required String adresse,
-  }) async {
-    final repo = ref.read(stopsRepositoryProvider);
-    final stops = await repo.getByTournee(widget.tourneeId);
-    final adresseLower = adresse.toLowerCase().trim();
-    for (final s in stops) {
-      if (s.adresseBrute.toLowerCase().trim() == adresseLower) return s;
-      if (s.lat != null && s.lng != null) {
-        if (GeoUtils.areClose(
-          lat1: lat,
-          lon1: lng,
-          lat2: s.lat!,
-          lon2: s.lng!,
-          thresholdMeters: 30,
-        )) {
-          return s;
-        }
-      }
-    }
-    return null;
-  }
-
-  /// Dialog "Doublon possible" : affiche les details du Stop ressemblant
-  /// et demande confirmation. Retourne true si l'utilisateur veut
-  /// quand meme creer le nouvel arret.
-  Future<bool> _askConfirmDoublon(Stop doublon) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Doublon possible ?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Un arret tres proche existe deja dans cette tournee :',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: AppSpacing.x10),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.x10),
-              decoration: BoxDecoration(
-                color: AppColors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(AppRadius.r10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (doublon.nomClient != null &&
-                      doublon.nomClient!.isNotEmpty)
-                    Text(
-                      doublon.nomClient!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  Text(
-                    doublon.adresseBrute,
-                    style: const TextStyle(color: AppColors.ink),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Ajouter quand meme'),
-          ),
-        ],
-      ),
-    );
-    return result == true;
-  }
-
-  // Note : haversine deplace dans `GeoUtils` (lib/data/geo_utils.dart)
-  // pour pouvoir le tester sans dependance Flutter et l'utiliser depuis
-  // d'autres ecrans.
+  // findPossibleDoublon + askConfirmDoublon extraits dans
+  // `lib/screens/ajout_arret/doublon_helpers.dart` (carte #165).
 
   /// Dialog "Saisie hors-ligne" : un seul champ texte que l'utilisateur
   /// remplit a la main quand l'autocomplete echoue (zone rurale sans
