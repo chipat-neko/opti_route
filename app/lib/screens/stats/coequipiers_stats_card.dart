@@ -147,6 +147,24 @@ class _CoequipierRow extends StatelessWidget {
                   '${stats.colisLivres} colis',
                   style: TextStyle(fontSize: 11, color: p.textMute),
                 ),
+                if (stats.nbLivres > 0) ...[
+                  const SizedBox(height: 1),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.photo_camera_outlined,
+                        size: 11,
+                        color: p.textMute,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${stats.nbPhotosPreuves}/${stats.nbLivres} preuves '
+                        '(${(stats.tauxPhotos * 100).round()}%)',
+                        style: TextStyle(fontSize: 10, color: p.textMute),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
