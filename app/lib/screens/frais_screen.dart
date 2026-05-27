@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/drawer_badge_icon.dart';
+import 'frais_form/type_helpers.dart';
 import 'frais_form_screen.dart';
 
 /// Ecran "Notes de frais" : liste les depenses du mois selectionne,
@@ -233,17 +234,17 @@ class _FraisScreenState extends ConsumerState<FraisScreen> {
                   runSpacing: 6,
                   children: parType.entries
                       .map((e) => Chip(
-                            backgroundColor: _colorForType(e.key)
+                            backgroundColor: colorForType(e.key)
                                 .withValues(alpha: 0.18),
                             side: BorderSide.none,
                             visualDensity: VisualDensity.compact,
                             label: Text(
-                              '${_labelForType(e.key)} '
+                              '${labelForType(e.key)} '
                               '${_formatEur(e.value)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: _colorForType(e.key),
+                                color: colorForType(e.key),
                               ),
                             ),
                           ))
@@ -277,7 +278,7 @@ class _FraisScreenState extends ConsumerState<FraisScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Supprimer ce frais ?'),
-        content: Text('${_labelForType(f.type)} - ${f.libelle}\n'
+        content: Text('${labelForType(f.type)} - ${f.libelle}\n'
             '${_formatEur(f.montantCentimes)}'),
         actions: [
           TextButton(
@@ -312,7 +313,7 @@ class _FraisRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final dateLabel = DateFormat('EEE d MMM', 'fr').format(frais.date);
-    final color = _colorForType(frais.type);
+    final color = colorForType(frais.type);
     return Material(
       color: p.paper,
       borderRadius: BorderRadius.circular(AppRadius.r14),
@@ -335,7 +336,7 @@ class _FraisRow extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Icon(_iconForType(frais.type), color: color, size: 20),
+                child: Icon(iconForType(frais.type), color: color, size: 20),
               ),
               const SizedBox(width: AppSpacing.x12),
               Expanded(
@@ -354,7 +355,7 @@ class _FraisRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${_labelForType(frais.type)} · $dateLabel',
+                      '${labelForType(frais.type)} · $dateLabel',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: p.textMute,
@@ -379,42 +380,10 @@ class _FraisRow extends StatelessWidget {
   }
 }
 
-// ─── Helpers communs (color + label + icon + format) ───────────────
+// labelForType / colorForType / iconForType : extraits dans
+// `lib/screens/frais_form/type_helpers.dart` (carte Trello #166).
 
 String _formatEur(int centimes) {
   final eur = centimes / 100;
   return NumberFormat.currency(locale: 'fr_FR', symbol: 'EUR').format(eur);
-}
-
-String _labelForType(String type) {
-  return switch (type) {
-    'carburant' => 'Carburant',
-    'peage' => 'Peage',
-    'parking' => 'Parking',
-    'repas' => 'Repas',
-    'autre' => 'Autre',
-    _ => type[0].toUpperCase() + type.substring(1),
-  };
-}
-
-Color _colorForType(String type) {
-  return switch (type) {
-    'carburant' => AppColors.amber,
-    'peage' => AppColors.emerald,
-    'parking' => const Color(0xFF7C4DFF),
-    'repas' => AppColors.red,
-    'autre' => AppColors.textMute,
-    _ => AppColors.textMute,
-  };
-}
-
-IconData _iconForType(String type) {
-  return switch (type) {
-    'carburant' => Icons.local_gas_station_outlined,
-    'peage' => Icons.toll_outlined,
-    'parking' => Icons.local_parking_outlined,
-    'repas' => Icons.restaurant_outlined,
-    'autre' => Icons.receipt_outlined,
-    _ => Icons.receipt_outlined,
-  };
 }
