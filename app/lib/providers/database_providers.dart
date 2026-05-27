@@ -200,6 +200,20 @@ final fuelPriceAverageProvider =
       );
 });
 
+/// Stations Diesel les plus proches d'une position GPS donnee (carte
+/// Trello #39 V4). Family avec une cle composite (lat, lng) arrondie
+/// au 0.01 deg (~1 km) pour eviter de re-fetch a chaque micro-deplacement
+/// du livreur. Resultats triees par distance croissante, limite 5 par
+/// defaut.
+final nearbyDieselStationsProvider = FutureProvider.autoDispose
+    .family<List<FuelStation>, (double, double)>((ref, coords) async {
+  final (lat, lng) = coords;
+  return ref.read(fuelPriceServiceProvider).findNearbyDieselStations(
+        lat: lat,
+        lng: lng,
+      );
+});
+
 /// Service de sauvegarde locale periodique (cf AutoBackupService).
 /// Le declenchement reel se fait depuis main.dart via
 /// `maybeRunAutoBackup()` au boot (best-effort, en arriere-plan).
