@@ -53,6 +53,179 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   /// Carte Trello #105.
   String? _regulariteFilter;
 
+  /// Mode selection multiple (carte #104). Active par appui long sur une
+  /// tile. `_selectedIds` = ids des fiches cochees.
+  bool _selectionMode = false;
+  final Set<int> _selectedIds = {};
+
+  void _exitSelection() {
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  void _enterSelection(int id) {
+    setState(() {
+      _selectionMode = true;
+      _selectedIds.add(id);
+    });
+  }
+
+  void _toggleSelect(int id) {
+    setState(() {
+      if (!_selectedIds.remove(id)) _selectedIds.add(id);
+      if (_selectedIds.isEmpty) _selectionMode = false;
+    });
+  }
+
+  /// AppBar contextuel du mode selection (carte #104) : compteur +
+  /// actions en masse (favori / couleur / suppression).
+  PreferredSizeWidget _buildSelectionAppBar() {
+    final n = _selectedIds.length;
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        tooltip: 'Quitter la selection',
+        onPressed: _exitSelection,
+      ),
+      title: Text('$n selectionne${n > 1 ? "s" : ""}'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.star_outline),
+          tooltip: 'Marquer favori',
+          onPressed: n == 0 ? null : _bulkFavori,
+        ),
+        IconButton(
+          icon: const Icon(Icons.palette_outlined),
+          tooltip: 'Etiquette couleur',
+          onPressed: n == 0 ? null : _bulkColorTag,
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          tooltip: 'Supprimer',
+          onPressed: n == 0 ? null : _bulkDelete,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _bulkFavori() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ids = _selectedIds.toList();
+    await ref
+        .read(savedDestinationsRepositoryProvider)
+        .setFavoriBulk(ids, true);
+    _exitSelection();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('${ids.length} fiche(s) marquees favori'),
+        backgroundColor: AppColors.emerald,
+      ),
+    );
+  }
+
+  Future<void> _bulkColorTag() async {
+    final p = context.palette;
+    final picked = await showModalBottomSheet<String?>(
+      context: context,
+      backgroundColor: p.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppRadius.r22)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Etiquette couleur',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              Wrap(
+                spacing: AppSpacing.x10,
+                runSpacing: AppSpacing.x10,
+                children: [
+                  for (final (tag, color) in colorTagOptions)
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(tag),
+                      child: CircleAvatar(
+                        backgroundColor: color,
+                        radius: 20,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x14),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop('__none__'),
+                child: const Text('Retirer l\'etiquette'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return; // sheet ferme sans choix
+    final messenger = ScaffoldMessenger.of(context);
+    final ids = _selectedIds.toList();
+    await ref
+        .read(savedDestinationsRepositoryProvider)
+        .setColorTagBulk(ids, picked == '__none__' ? null : picked);
+    _exitSelection();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('${ids.length} fiche(s) mises a jour'),
+        backgroundColor: AppColors.emerald,
+      ),
+    );
+  }
+
+  Future<void> _bulkDelete() async {
+    final ids = _selectedIds.toList();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Supprimer ${ids.length} fiche(s) ?'),
+        content: const Text(
+          'Les fiches selectionnees seront supprimees du carnet local. '
+          'Action irreversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red.withValues(alpha: 0.15),
+              foregroundColor: AppColors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await ref
+        .read(savedDestinationsRepositoryProvider)
+        .deleteBulk(ids);
+    _exitSelection();
+    messenger.showSnackBar(
+      SnackBar(content: Text('${ids.length} fiche(s) supprimees')),
+    );
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -76,7 +249,9 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
     final stream = ref.watch(carnetStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: _selectionMode
+          ? _buildSelectionAppBar()
+          : AppBar(
         title: const Text('Carnet d\'adresses'),
         actions: [
           IconButton(
@@ -387,8 +562,16 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
                     AppSpacing.x18,
                   ),
                   itemCount: filtered.length,
-                  itemBuilder: (context, i) =>
-                      CarnetTile(entry: filtered[i]),
+                  itemBuilder: (context, i) {
+                    final e = filtered[i];
+                    return CarnetTile(
+                      entry: e,
+                      selectionMode: _selectionMode,
+                      selected: _selectedIds.contains(e.id),
+                      onSelectToggle: () => _toggleSelect(e.id),
+                      onEnterSelection: () => _enterSelection(e.id),
+                    );
+                  },
                 );
               },
               loading: () =>
