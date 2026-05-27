@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
+import '../screens/chef/chef_dashboard_shell.dart';
 import '../screens/frais_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/resume_hebdo_screen.dart';
@@ -182,21 +183,46 @@ class AppDrawer extends ConsumerWidget {
                 final modeChef =
                     ref.watch(modeChefProvider).asData?.value ?? false;
                 if (!modeChef) return const SizedBox.shrink();
-                return ListTile(
-                  leading: const Icon(Icons.dashboard_outlined),
-                  title: const Text('Tableau de bord equipe'),
-                  subtitle: const Text(
-                    'Vue agregee toutes tournees du jour',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const TableauBordEquipeScreen(),
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.dashboard_outlined),
+                      title: const Text('Tableau de bord equipe'),
+                      subtitle: const Text(
+                        'Vue agregee toutes tournees du jour',
+                        style: TextStyle(fontSize: 11),
                       ),
-                    );
-                  },
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const TableauBordEquipeScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    // Logiciel "vue d'ensemble chef" grand ecran / PC
+                    // (epopee #88, fondation [#88·1]). Pense pour le web
+                    // et le desktop, mais reste accessible depuis le
+                    // drawer mobile pour tester la mise en page.
+                    ListTile(
+                      leading: const Icon(Icons.desktop_windows_outlined),
+                      title: const Text('Mode chef (PC)'),
+                      subtitle: const Text(
+                        'Vue d\'ensemble grand ecran — beta',
+                        style: TextStyle(fontSize: 11),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ChefDashboardShell(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 );
               },
             ),
