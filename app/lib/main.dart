@@ -177,7 +177,13 @@ class OptiRouteApp extends ConsumerWidget {
 
     ref.listen(cloudUserProvider, (prev, next) {
       final user = next.value;
-      if (user == null) return;
+      if (user == null) {
+        // Sign-out : stop l'auto-push carnet (sera redemarre au prochain
+        // sign-in). Le snapshot des updatedAt connus est conserve dans
+        // le service pour eviter de re-push tout le carnet au reconnect.
+        ref.read(carnetAutoPushServiceProvider).stop();
+        return;
+      }
       final notifier = ref.read(cloudPullStateProvider.notifier);
       notifier.set(const AsyncLoading());
       ref
@@ -185,6 +191,11 @@ class OptiRouteApp extends ConsumerWidget {
           .runAutoPullOnSignIn()
           .then((result) {
         notifier.set(AsyncData(result));
+        // Demarre l'auto-push carnet apres le pull initial : la baseline
+        // (1er emit du watch Drift) sera donc post-pull, et l'auto-push
+        // ne se declenchera que sur les modifs locales reelles -- pas
+        // sur le retro-push pour les rows pull du serveur. Cf carte #57 V2.
+        ref.read(carnetAutoPushServiceProvider).start();
       }, onError: (Object e, StackTrace st) {
         notifier.set(AsyncError(e, st));
       });
