@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import 'chef_stats_panel.dart';
 
 /// Largeur minimale (en px logiques) au-dela de laquelle on bascule en
 /// disposition "grand ecran" multi-panneaux. En dessous, les panneaux
@@ -165,18 +166,13 @@ class _CartePanel extends StatelessWidget {
   }
 }
 
-/// Panneau "stats du jour" — placeholder, contenu en [#88·4].
+/// Panneau "stats du jour" — branche sur le vrai contenu ([#88·4]).
 class _StatsPanel extends StatelessWidget {
   const _StatsPanel();
 
   @override
   Widget build(BuildContext context) {
-    return const _ChefPanel(
-      icon: Icons.insights_outlined,
-      title: 'Stats du jour',
-      sousCarte: '[#88·4]',
-      description: '% livres, retards, alertes de la journee',
-    );
+    return const ChefStatsPanel();
   }
 }
 
