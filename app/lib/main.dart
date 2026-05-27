@@ -84,10 +84,11 @@ class OptiRouteApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Mode de theme depuis Parametres ; default ThemeMode.system tant
-    // que le stream n'a pas encore emis (1er frame).
-    final themeMode =
-        ref.watch(themeModeProvider).asData?.value ?? ThemeMode.system;
+    // Mode de theme effectif : si le mode auto luminosite est ON et
+    // que le capteur a emis au moins une valeur, on override le choix
+    // user. Sinon retombe sur le choix user (system / light / dark).
+    // Voir carte Trello #95.
+    final themeMode = ref.watch(effectiveThemeModeProvider);
     // Preset de palette choisi par l'utilisateur. Default lime tant
     // que le stream n'a pas emis.
     final preset = ref.watch(themePresetProvider).asData?.value ??

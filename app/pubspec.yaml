@@ -113,6 +113,11 @@ dependencies:
   # ParametresRepository pour ne plus re-afficher apres validation.
   # Reset via Parametres > Aide > Reactiver les astuces.
   tutorial_coach_mark: ^1.2.11
+  # light : lecture du capteur de luminosite ambiante (Android only) pour
+  # le mode jour/nuit auto (carte Trello #95). Stream<int> en lux. Si le
+  # capteur n'est pas dispo (rare sur Android, jamais sur iOS), le toggle
+  # reste OFF et l'utilisateur garde la bascule manuelle. MIT, ~80 KB.
+  light: ^4.0.1
 
 dev_dependencies:
   flutter_test:

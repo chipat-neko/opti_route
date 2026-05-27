@@ -6,6 +6,7 @@ import '../providers/database_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
 import '../screens/frais_screen.dart';
 import '../screens/parametres_screen.dart';
+import '../screens/resume_hebdo_screen.dart';
 import '../screens/stats_screen.dart';
 import '../screens/tableau_bord_equipe_screen.dart';
 import '../screens/tournees_list_screen.dart';
@@ -137,6 +138,22 @@ class AppDrawer extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const StatsScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_view_week_outlined),
+              title: const Text('Resume de la semaine'),
+              subtitle: const Text(
+                'Bilan hebdo + comparatif S-1',
+                style: TextStyle(fontSize: 11),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ResumeHebdoScreen(),
                   ),
                 );
               },

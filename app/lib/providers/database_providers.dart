@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
 import '../data/frais_repository.dart';
+import '../data/ambient_light_service.dart';
 import '../data/fuel_price_service.dart';
 import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
+import '../data/resume_hebdo_service.dart';
 import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
@@ -229,6 +231,21 @@ final lockEnabledStreamProvider = StreamProvider<bool>((ref) {
   });
 });
 
+/// Service de resume hebdomadaire chef (carte Trello #101).
+final resumeHebdoServiceProvider = Provider<ResumeHebdoService>((ref) {
+  return ResumeHebdoService(ref.watch(appDatabaseProvider));
+});
+
+/// Resume hebdomadaire pour la semaine contenant [reference] (default
+/// = maintenant). Recharge a chaque modif de tournee / stop.
+final resumeHebdoProvider =
+    FutureProvider.family<ResumeHebdo, DateTime?>((ref, reference) async {
+  ref.watch(tourneesStreamProvider);
+  return ref.read(resumeHebdoServiceProvider).computeWeek(
+        reference: reference,
+      );
+});
+
 final statsServiceProvider = Provider<StatsService>((ref) {
   return StatsService(ref.watch(appDatabaseProvider));
 });
@@ -267,6 +284,41 @@ final themeModeProvider = StreamProvider<ThemeMode>((ref) {
             'dark' => ThemeMode.dark,
             _ => ThemeMode.system,
           });
+});
+
+/// Toggle "mode auto luminosite" (carte Trello #95). Default false.
+final ambientLightAutoEnabledProvider = StreamProvider<bool>((ref) {
+  return ref
+      .watch(parametresRepositoryProvider)
+      .watchAmbientLightAuto();
+});
+
+/// Stream du ThemeMode derive du capteur de luminosite ambiante. Vide
+/// si le toggle est OFF ou si la plateforme ne supporte pas le capteur
+/// (iOS, desktop, web). MyApp consomme ce stream pour ecraser
+/// silencieusement [themeModeProvider] quand l'auto est ON.
+final ambientLightThemeModeProvider = StreamProvider<ThemeMode>((ref) {
+  final enabled = ref.watch(ambientLightAutoEnabledProvider).asData?.value;
+  if (enabled != true) return const Stream<ThemeMode>.empty();
+  if (!AmbientLightService.isSupported) {
+    return const Stream<ThemeMode>.empty();
+  }
+  final svc = AmbientLightService();
+  return svc.themeModeStream();
+});
+
+/// ThemeMode effectivement applique. Si l'auto luminosite est ON et
+/// qu'on a au moins une lecture du capteur, on overrride le choix
+/// user. Sinon on tombe sur le choix user (system / light / dark).
+final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
+  final autoOn =
+      ref.watch(ambientLightAutoEnabledProvider).asData?.value ?? false;
+  if (autoOn) {
+    final autoMode =
+        ref.watch(ambientLightThemeModeProvider).asData?.value;
+    if (autoMode != null) return autoMode;
+  }
+  return ref.watch(themeModeProvider).asData?.value ?? ThemeMode.system;
 });
 
 /// Preset de palette de couleurs choisi (lime / ocean / terracotta /
@@ -473,6 +525,23 @@ final statsFromBundleProvider =
       ));
 });
 
+/// TourneeStats pour la fenetre **precedente** de meme duree [days].
+/// Ex : days=7 -> retourne stats des jours [J-14, J-7[.
+/// Utilise pour comparer S vs S-1 dans StatsCard (carte Trello #99).
+/// 0 query Drift, derive du bundle 365j deja en cache.
+final statsPreviousWindowProvider =
+    Provider.family<AsyncValue<TourneeStats>, int>((ref, days) {
+  final bundle = ref.watch(statsBundleProvider);
+  return bundle.whenData((b) {
+    final now = DateTime.now();
+    return StatsService.computeFromBundle(
+      b,
+      since: now.subtract(Duration(days: days * 2)),
+      until: now.subtract(Duration(days: days)),
+    );
+  });
+});
+
 /// Colis livres par jour de la semaine (ISO 8601 : 1=lundi -> 7=dimanche)
 /// sur la fenetre [days]. Vide si aucune tournee.
 final colisParJourProvider =
@@ -594,3 +663,136 @@ final currentTourneeProvider = Provider<AsyncValue<Tournee?>>((ref) {
     return todayList.first;
   });
 });
+
+/// Resume agrege de toutes les tournees datees d'aujourd'hui (peu
+/// importe leur statut). Sert au compteur "X colis livres aujourd'hui"
+/// dans HomeScreen : Noah voit son avancement sans devoir ouvrir
+/// chaque tournee individuellement.
+///
+/// Carte Trello #100 : sert au cas typique multi-tournees (matin +
+/// aprem) ou quand toutes les tournees du jour sont terminees et que
+/// l'app retombe sur `_NoTourTodayScreen` -- le resume reste visible.
+///
+/// Recharge automatiquement quand une tournee du jour est ajoutee /
+/// modifiee (depend de `tourneesDuJourProvider`). 1 seule query Drift
+/// supplementaire (les stops du jour) -- les tournees sont deja en
+/// cache via `tourneesStreamProvider`.
+final aujourdhuiResumeProvider =
+    FutureProvider<AujourdhuiResume>((ref) async {
+  final tournees = ref.watch(tourneesDuJourProvider);
+  if (tournees.isEmpty) return AujourdhuiResume.empty;
+
+  final db = ref.watch(appDatabaseProvider);
+  final ids = tournees.map((t) => t.id).toList();
+  final stops = await (db.select(db.stops)
+        ..where((s) => s.tourneeId.isIn(ids)))
+      .get();
+
+  final livres = stops.where((s) => s.statutLivraison == 'livre').toList();
+  final echecs = stops.where((s) => s.statutLivraison == 'echec').length;
+  final colisLivres = livres.fold<int>(0, (a, s) => a + s.nbColis);
+  final distance =
+      tournees.fold<int>(0, (a, t) => a + (t.distanceTotaleM ?? 0));
+  final duree =
+      tournees.fold<int>(0, (a, t) => a + (t.dureeTotaleS ?? 0));
+
+  // Premier et dernier horodatage de livraison du jour (utile pour
+  // afficher "12h05 - 17h32"). On filtre sur livreLe non-null et on
+  // trie ascendant.
+  final livresWithTime = livres.where((s) => s.livreLe != null).toList()
+    ..sort((a, b) => a.livreLe!.compareTo(b.livreLe!));
+  DateTime? premier;
+  DateTime? dernier;
+  if (livresWithTime.isNotEmpty) {
+    premier = livresWithTime.first.livreLe;
+    dernier = livresWithTime.last.livreLe;
+  }
+
+  return AujourdhuiResume(
+    nbTournees: tournees.length,
+    nbTourneesTerminees:
+        tournees.where((t) => t.statut == 'terminee').length,
+    nbTourneesEnCours:
+        tournees.where((t) => t.statut == 'en_cours').length,
+    nbArretsTotaux: stops.length,
+    nbLivres: livres.length,
+    nbEchecs: echecs,
+    nbColisLivres: colisLivres,
+    distanceMeters: distance,
+    durationSeconds: duree,
+    premierLivreLe: premier,
+    dernierLivreLe: dernier,
+  );
+});
+
+/// Snapshot immuable du resume du jour, consomme par [AujourdhuiResume]
+/// dans HomeScreen. Tous les champs sont en valeur (pas de stream
+/// derive) pour pouvoir tester l'UI sans Drift.
+class AujourdhuiResume {
+  const AujourdhuiResume({
+    required this.nbTournees,
+    required this.nbTourneesTerminees,
+    required this.nbTourneesEnCours,
+    required this.nbArretsTotaux,
+    required this.nbLivres,
+    required this.nbEchecs,
+    required this.nbColisLivres,
+    required this.distanceMeters,
+    required this.durationSeconds,
+    this.premierLivreLe,
+    this.dernierLivreLe,
+  });
+
+  static const empty = AujourdhuiResume(
+    nbTournees: 0,
+    nbTourneesTerminees: 0,
+    nbTourneesEnCours: 0,
+    nbArretsTotaux: 0,
+    nbLivres: 0,
+    nbEchecs: 0,
+    nbColisLivres: 0,
+    distanceMeters: 0,
+    durationSeconds: 0,
+  );
+
+  final int nbTournees;
+  final int nbTourneesTerminees;
+  final int nbTourneesEnCours;
+  final int nbArretsTotaux;
+  final int nbLivres;
+  final int nbEchecs;
+  final int nbColisLivres;
+  final int distanceMeters;
+  final int durationSeconds;
+  final DateTime? premierLivreLe;
+  final DateTime? dernierLivreLe;
+
+  /// Aucune tournee planifiee aujourd'hui -> l'UI doit cacher la card.
+  bool get isEmpty => nbTournees == 0;
+
+  /// Vrai si au moins 1 stop a ete traite (livre ou echec). Sert au UI
+  /// pour decider d'afficher la progress bar ou juste les compteurs.
+  bool get hasActivite => nbLivres + nbEchecs > 0;
+
+  /// Pourcentage d'avancement = (livres + echecs) / total. 0 si pas
+  /// d'arret. Borne entre 0 et 1.
+  double get avancement {
+    if (nbArretsTotaux == 0) return 0;
+    return ((nbLivres + nbEchecs) / nbArretsTotaux).clamp(0.0, 1.0);
+  }
+
+  /// Nombre de stops restants a traiter (ni livre ni echec). 0 si la
+  /// journee est terminee.
+  int get nbArretsRestants {
+    final r = nbArretsTotaux - nbLivres - nbEchecs;
+    return r < 0 ? 0 : r;
+  }
+
+  /// Taux de reussite sur les stops cloturés (livres / (livres +
+  /// echecs)). 0 si aucun stop cloture.
+  double get tauxReussite {
+    final total = nbLivres + nbEchecs;
+    if (total == 0) return 0;
+    return nbLivres / total;
+  }
+}
