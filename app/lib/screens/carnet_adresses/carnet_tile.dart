@@ -25,8 +25,26 @@ import '../carnet_edit_screen.dart';
 /// AlertDialog). Tap sur la pastille = toggle favori. Tap ailleurs =
 /// ouvre l'ecran d'edition.
 class CarnetTile extends ConsumerWidget {
-  const CarnetTile({super.key, required this.entry});
+  const CarnetTile({
+    super.key,
+    required this.entry,
+    this.selectionMode = false,
+    this.selected = false,
+    this.onSelectToggle,
+    this.onEnterSelection,
+  });
   final SavedDestination entry;
+
+  /// Mode selection multiple actif (carte #104) : la tile affiche une
+  /// case a cocher, le tap selectionne au lieu d'ouvrir l'edition, et
+  /// le swipe-supprimer est desactive.
+  final bool selectionMode;
+  final bool selected;
+  final VoidCallback? onSelectToggle;
+
+  /// Appele sur appui long (hors mode selection) pour entrer en mode
+  /// selection avec cette fiche pre-cochee.
+  final VoidCallback? onEnterSelection;
 
   /// "Livre N fois - dernier le J/M/A" (ou juste "Livre N fois" si la
   /// derniere date est null). Donne du contexte temporel en une ligne
@@ -45,105 +63,82 @@ class CarnetTile extends ConsumerWidget {
     final nom = entry.nomClient?.trim() ?? '';
     final hasNom = nom.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-      child: Dismissible(
-        key: ValueKey('carnet-${entry.id}'),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          decoration: BoxDecoration(
-            color: AppColors.red.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(AppRadius.r14),
-          ),
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x22),
-          child: const Icon(Icons.delete_outline, color: AppColors.red),
-        ),
-        confirmDismiss: (_) async {
-          return await showDialog<bool>(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: const Text('Supprimer du carnet ?'),
-                  content: Text(
-                    hasNom
-                        ? '"$nom" sera supprime du carnet d\'adresses local.'
-                        : '"${entry.adresseDisplay}" sera supprime du '
-                            'carnet d\'adresses local.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Annuler'),
-                    ),
-                    FilledButton.tonal(
-                      style: FilledButton.styleFrom(
-                        backgroundColor:
-                            AppColors.red.withValues(alpha: 0.15),
-                        foregroundColor: AppColors.red,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Supprimer'),
-                    ),
-                  ],
-                ),
-              ) ??
-              false;
-        },
-        onDismissed: (_) async {
-          await ref
-              .read(savedDestinationsRepositoryProvider)
-              .delete(entry.id);
-        },
-        child: Material(
-          color: p.paper,
-          borderRadius: BorderRadius.circular(AppRadius.r14),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.r14),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => CarnetEditScreen(entry: entry),
+    // En mode selection : pastille remplacee par une case a cocher,
+    // tap = (de)selectionner, swipe supprimer desactive.
+    final leading = selectionMode
+        ? Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.emerald : Colors.transparent,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected ? AppColors.emerald : p.textFaint,
+                width: 2,
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.x14),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () async {
-                      await ref
-                          .read(savedDestinationsRepositoryProvider)
-                          .toggleFavori(entry.id);
-                      // Carte #57 : push silencieux pour propager le
-                      // toggle favori aux coequipiers de l'equipe.
-                      try {
-                        await ref
-                            .read(cloudSyncServiceProvider)
-                            .pushSavedDestination(entry.id);
-                      } on Object {/* offline / non auth : no-op */}
-                    },
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        // Priorite : colorTag custom > favori amber >
-                        // lime par defaut.
-                        color: colorFromTag(
-                          entry.colorTag,
-                          defaultColor: entry.isFavori
-                              ? AppColors.amber
-                              : AppColors.lime,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        entry.isFavori ? Icons.star : Icons.bookmark,
-                        color: p.ink,
-                        size: 18,
-                      ),
-                    ),
+            alignment: Alignment.center,
+            child: selected
+                ? const Icon(Icons.check, color: AppColors.paper, size: 20)
+                : null,
+          )
+        : GestureDetector(
+            onTap: () async {
+              await ref
+                  .read(savedDestinationsRepositoryProvider)
+                  .toggleFavori(entry.id);
+              // Carte #57 : push silencieux pour propager le
+              // toggle favori aux coequipiers de l'equipe.
+              try {
+                await ref
+                    .read(cloudSyncServiceProvider)
+                    .pushSavedDestination(entry.id);
+              } on Object {/* offline / non auth : no-op */}
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                // Priorite : colorTag custom > favori amber >
+                // lime par defaut.
+                color: colorFromTag(
+                  entry.colorTag,
+                  defaultColor: entry.isFavori
+                      ? AppColors.amber
+                      : AppColors.lime,
+                ),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                entry.isFavori ? Icons.star : Icons.bookmark,
+                color: p.ink,
+                size: 18,
+              ),
+            ),
+          );
+
+    final card = Material(
+      color: selectionMode && selected
+          ? AppColors.emerald.withValues(alpha: 0.10)
+          : p.paper,
+      borderRadius: BorderRadius.circular(AppRadius.r14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r14),
+        onTap: selectionMode
+            ? onSelectToggle
+            : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CarnetEditScreen(entry: entry),
                   ),
-                  const SizedBox(width: AppSpacing.x12),
+                ),
+        onLongPress: selectionMode ? null : onEnterSelection,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x14),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: AppSpacing.x12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,14 +198,71 @@ class CarnetTile extends ConsumerWidget {
                             mode: LaunchMode.externalApplication);
                       },
                     ),
-                  Icon(Icons.chevron_right,
-                      color: p.textFaint),
+                  Icon(Icons.chevron_right, color: p.textFaint),
                 ],
               ),
             ),
           ),
-        ),
-      ),
+        );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+      child: selectionMode
+          ? card
+          : Dismissible(
+              key: ValueKey('carnet-${entry.id}'),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.r14),
+                ),
+                alignment: Alignment.centerRight,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.x22),
+                child:
+                    const Icon(Icons.delete_outline, color: AppColors.red),
+              ),
+              confirmDismiss: (_) async {
+                return await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Supprimer du carnet ?'),
+                        content: Text(
+                          hasNom
+                              ? '"$nom" sera supprime du carnet '
+                                  'd\'adresses local.'
+                              : '"${entry.adresseDisplay}" sera supprime '
+                                  'du carnet d\'adresses local.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(context).pop(false),
+                            child: const Text('Annuler'),
+                          ),
+                          FilledButton.tonal(
+                            style: FilledButton.styleFrom(
+                              backgroundColor:
+                                  AppColors.red.withValues(alpha: 0.15),
+                              foregroundColor: AppColors.red,
+                            ),
+                            onPressed: () =>
+                                Navigator.of(context).pop(true),
+                            child: const Text('Supprimer'),
+                          ),
+                        ],
+                      ),
+                    ) ??
+                    false;
+              },
+              onDismissed: (_) async {
+                await ref
+                    .read(savedDestinationsRepositoryProvider)
+                    .delete(entry.id);
+              },
+              child: card,
+            ),
     );
   }
 }

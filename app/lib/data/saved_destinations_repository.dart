@@ -201,6 +201,32 @@ class SavedDestinationsRepository {
         .go();
   }
 
+  // ─── Operations en masse (carte #104) ───────────────────────────────
+  // Une seule requete SQL par operation (WHERE id IN (...)), pas N
+  // requetes. Retournent le nombre de lignes affectees.
+
+  /// Applique (ou retire si [tag] == null) une etiquette couleur a
+  /// plusieurs fiches d'un coup.
+  Future<int> setColorTagBulk(List<int> ids, String? tag) {
+    if (ids.isEmpty) return Future.value(0);
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.isIn(ids)))
+        .write(SavedDestinationsCompanion(colorTag: Value(tag)));
+  }
+
+  /// Met le flag favori a [favori] sur plusieurs fiches d'un coup.
+  Future<int> setFavoriBulk(List<int> ids, bool favori) {
+    if (ids.isEmpty) return Future.value(0);
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.isIn(ids)))
+        .write(SavedDestinationsCompanion(isFavori: Value(favori)));
+  }
+
+  /// Supprime plusieurs fiches du carnet d'un coup.
+  Future<int> deleteBulk(List<int> ids) {
+    if (ids.isEmpty) return Future.value(0);
+    return (_db.delete(_db.savedDestinations)..where((d) => d.id.isIn(ids)))
+        .go();
+  }
+
   Future<SavedDestination?> getById(int id) {
     return (_db.select(_db.savedDestinations)..where((d) => d.id.equals(id)))
         .getSingleOrNull();
