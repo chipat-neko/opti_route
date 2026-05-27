@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
+import '../../providers/supabase_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 import '../carnet_edit_screen.dart';
@@ -108,9 +109,18 @@ class CarnetTile extends ConsumerWidget {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => ref
-                        .read(savedDestinationsRepositoryProvider)
-                        .toggleFavori(entry.id),
+                    onTap: () async {
+                      await ref
+                          .read(savedDestinationsRepositoryProvider)
+                          .toggleFavori(entry.id);
+                      // Carte #57 : push silencieux pour propager le
+                      // toggle favori aux coequipiers de l'equipe.
+                      try {
+                        await ref
+                            .read(cloudSyncServiceProvider)
+                            .pushSavedDestination(entry.id);
+                      } on Object {/* offline / non auth : no-op */}
+                    },
                     child: Container(
                       width: 36,
                       height: 36,
