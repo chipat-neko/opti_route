@@ -141,19 +141,105 @@ class _FraisFormScreenState extends ConsumerState<FraisFormScreen> {
       builder: (_) => _NearbyStationsSheet(lat: pos!.lat, lng: pos.lng),
     );
     if (picked == null || !mounted) return;
-    // Etape 3 : pre-remplit le libelle (nom ou adresse + ville) et le
-    // montant suggere = 50L au prix Diesel station (estim plein
-    // typique fourgon Noah). L'utilisateur ajuste s'il a fait <50L.
+    // Etape 3 : pre-remplit le libelle (adresse · ville) et demande
+    // a Noah combien de litres il a mis. Le montant se calcule en
+    // direct dans le dialog (litres × prix station). Annuler =
+    // remplit juste le libelle, Noah saisit le montant a la main.
     final label = picked.name.isNotEmpty
         ? '${picked.name} · ${picked.ville}'
         : (picked.address.isNotEmpty
             ? '${picked.address} · ${picked.ville}'
             : picked.ville);
-    final suggested = (picked.dieselPriceEur * 50).toStringAsFixed(2);
+    final litres = await _promptForLitres(picked.dieselPriceEur);
+    if (!mounted) return;
     setState(() {
       _libelleCtrl.text = label;
-      _montantCtrl.text = suggested.replaceAll('.', ',');
+      if (litres != null) {
+        final montant =
+            (picked.dieselPriceEur * litres).toStringAsFixed(2);
+        _montantCtrl.text = montant.replaceAll('.', ',');
+      }
     });
+  }
+
+  /// Mini-dialog "Combien de litres ?" qui calcule le montant en
+  /// direct (litres × prix Diesel station). Retourne le nb de litres
+  /// valide, ou null si annule (le caller laisse le montant vide).
+  Future<double?> _promptForLitres(double pricePerLitre) async {
+    final ctrl = TextEditingController(text: '50');
+    var currentMontant = pricePerLitre * 50;
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          return AlertDialog(
+            title: const Text('Combien de litres ?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: ctrl,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Litres',
+                    suffixText: 'L',
+                    hintText: '50',
+                  ),
+                  onChanged: (v) {
+                    final l = double.tryParse(v.replaceAll(',', '.'));
+                    setSt(() {
+                      currentMontant = (l ?? 0) * pricePerLitre;
+                    });
+                  },
+                ),
+                const SizedBox(height: AppSpacing.x12),
+                Text(
+                  'Prix Diesel : '
+                  '${pricePerLitre.toStringAsFixed(3)} EUR/L',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.palette.textMute,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x4),
+                Text(
+                  'Montant : ${currentMontant.toStringAsFixed(2)} EUR',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.emerald,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Annuler'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final l = double.tryParse(
+                    ctrl.text.replaceAll(',', '.'),
+                  );
+                  Navigator.of(ctx).pop(l);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    ctrl.dispose();
+    return result;
   }
 
   Future<void> _pickDate() async {
