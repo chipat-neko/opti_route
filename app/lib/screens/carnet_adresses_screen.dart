@@ -18,6 +18,7 @@ import '../widgets/voice_input_button.dart';
 import 'carnet_adresses/carnet_tile.dart';
 import 'carnet_adresses/filter_chips.dart';
 import 'carnet_adresses/providers.dart';
+import 'carnet_doublons_screen.dart';
 import 'unified_search_screen.dart';
 
 /// Liste des entrees du carnet d'adresses local. Recherche en haut,
@@ -172,6 +173,9 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       ),
       body: Column(
         children: [
+          // Banniere doublons (carte #103) : visible seulement si des
+          // paires sont detectees. Tap -> ecran de revue / fusion.
+          const _DoublonsBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.x18,
@@ -744,5 +748,71 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       buf.write(map[ch] ?? ch);
     }
     return buf.toString();
+  }
+}
+
+/// Banniere "X doublons potentiels detectes" affichee en tete du carnet
+/// (carte #103). Masquee si aucun doublon. Tap -> CarnetDoublonsScreen.
+class _DoublonsBanner extends ConsumerWidget {
+  const _DoublonsBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = ref.watch(carnetDoublonsProvider).length;
+    if (n == 0) return const SizedBox.shrink();
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x18,
+        AppSpacing.x12,
+        AppSpacing.x18,
+        0,
+      ),
+      child: Material(
+        color: AppColors.amber.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const CarnetDoublonsScreen(),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x14,
+              vertical: AppSpacing.x12,
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.merge_type, size: 18, color: AppColors.amber),
+                const SizedBox(width: AppSpacing.x10),
+                Expanded(
+                  child: Text(
+                    '$n doublon${n > 1 ? "s" : ""} potentiel'
+                    '${n > 1 ? "s" : ""} detecte${n > 1 ? "s" : ""}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: p.ink,
+                    ),
+                  ),
+                ),
+                Text(
+                  'Voir',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.emerald,
+                  ),
+                ),
+                const Icon(Icons.chevron_right, size: 18,
+                    color: AppColors.emerald),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

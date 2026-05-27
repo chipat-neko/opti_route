@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../data/doublon_detection_service.dart';
 import '../../providers/database_providers.dart';
 
 /// Stream du contenu complet du carnet d'adresses. Watch directement la
@@ -18,4 +19,15 @@ import '../../providers/database_providers.dart';
 final carnetStreamProvider =
     StreamProvider.autoDispose<List<SavedDestination>>((ref) {
   return ref.watch(savedDestinationsRepositoryProvider).watchAll();
+});
+
+/// Paires de fiches suspectees d'etre des doublons dans le carnet
+/// (carte #103). Derive de [carnetStreamProvider] -> recalcul auto a
+/// chaque modif du carnet (ajout / fusion / suppression). Liste vide
+/// tant que le carnet n'a pas charge.
+final carnetDoublonsProvider =
+    Provider.autoDispose<List<DoublonPaire>>((ref) {
+  final entries =
+      ref.watch(carnetStreamProvider).asData?.value ?? const [];
+  return DoublonDetectionService.detect(entries);
 });

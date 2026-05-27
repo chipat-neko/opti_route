@@ -206,6 +206,55 @@ class SavedDestinationsRepository {
         .getSingleOrNull();
   }
 
+  /// Fusionne 2 fiches doublons (carte #103) : conserve [keepId], y
+  /// recopie les champs que [dropId] renseigne mais que [keepId] laisse
+  /// vide, cumule `useCount`, OR sur `isFavori`, garde le `lastUsedAt`
+  /// le plus recent, puis supprime [dropId]. No-op si l'une des 2 fiches
+  /// est introuvable. Transaction atomique.
+  Future<void> mergeInto(int keepId, int dropId) async {
+    if (keepId == dropId) return;
+    await _db.transaction(() async {
+      final keep = await getById(keepId);
+      final drop = await getById(dropId);
+      if (keep == null || drop == null) return;
+
+      // Garde la valeur de keep si non-vide, sinon prend celle de drop.
+      String? pick(String? k, String? d) {
+        final kv = (k ?? '').trim();
+        if (kv.isNotEmpty) return k;
+        final dv = (d ?? '').trim();
+        return dv.isEmpty ? null : d;
+      }
+
+      final lastUsed = keep.lastUsedAt.isAfter(drop.lastUsedAt)
+          ? keep.lastUsedAt
+          : drop.lastUsedAt;
+
+      await (_db.update(_db.savedDestinations)
+            ..where((t) => t.id.equals(keepId)))
+          .write(SavedDestinationsCompanion(
+        nomClient: Value(pick(keep.nomClient, drop.nomClient)),
+        rue: Value(pick(keep.rue, drop.rue)),
+        codePostal: Value(pick(keep.codePostal, drop.codePostal)),
+        ville: Value(pick(keep.ville, drop.ville)),
+        notesCarnet: Value(pick(keep.notesCarnet, drop.notesCarnet)),
+        codeAcces: Value(pick(keep.codeAcces, drop.codeAcces)),
+        etageBatiment: Value(pick(keep.etageBatiment, drop.etageBatiment)),
+        telephone: Value(pick(keep.telephone, drop.telephone)),
+        colorTag: Value(pick(keep.colorTag, drop.colorTag)),
+        photoPath: Value(pick(keep.photoPath, drop.photoPath)),
+        tagsJson: Value(pick(keep.tagsJson, drop.tagsJson)),
+        useCount: Value(keep.useCount + drop.useCount),
+        isFavori: Value(keep.isFavori || drop.isFavori),
+        lastUsedAt: Value(lastUsed),
+      ));
+
+      await (_db.delete(_db.savedDestinations)
+            ..where((t) => t.id.equals(dropId)))
+          .go();
+    });
+  }
+
   /// Edition manuelle d'une entree du carnet. On ne met a jour que les
   /// champs fournis, sans toucher a `useCount` ni `creeLe`.
   Future<int> update(
