@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
 import '../data/frais_repository.dart';
+import '../data/ambient_light_service.dart';
 import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
@@ -245,6 +246,41 @@ final themeModeProvider = StreamProvider<ThemeMode>((ref) {
             'dark' => ThemeMode.dark,
             _ => ThemeMode.system,
           });
+});
+
+/// Toggle "mode auto luminosite" (carte Trello #95). Default false.
+final ambientLightAutoEnabledProvider = StreamProvider<bool>((ref) {
+  return ref
+      .watch(parametresRepositoryProvider)
+      .watchAmbientLightAuto();
+});
+
+/// Stream du ThemeMode derive du capteur de luminosite ambiante. Vide
+/// si le toggle est OFF ou si la plateforme ne supporte pas le capteur
+/// (iOS, desktop, web). MyApp consomme ce stream pour ecraser
+/// silencieusement [themeModeProvider] quand l'auto est ON.
+final ambientLightThemeModeProvider = StreamProvider<ThemeMode>((ref) {
+  final enabled = ref.watch(ambientLightAutoEnabledProvider).asData?.value;
+  if (enabled != true) return const Stream<ThemeMode>.empty();
+  if (!AmbientLightService.isSupported) {
+    return const Stream<ThemeMode>.empty();
+  }
+  final svc = AmbientLightService();
+  return svc.themeModeStream();
+});
+
+/// ThemeMode effectivement applique. Si l'auto luminosite est ON et
+/// qu'on a au moins une lecture du capteur, on overrride le choix
+/// user. Sinon on tombe sur le choix user (system / light / dark).
+final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
+  final autoOn =
+      ref.watch(ambientLightAutoEnabledProvider).asData?.value ?? false;
+  if (autoOn) {
+    final autoMode =
+        ref.watch(ambientLightThemeModeProvider).asData?.value;
+    if (autoMode != null) return autoMode;
+  }
+  return ref.watch(themeModeProvider).asData?.value ?? ThemeMode.system;
 });
 
 /// Preset de palette de couleurs choisi (lime / ocean / terracotta /

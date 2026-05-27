@@ -45,6 +45,11 @@ class ParametresRepository {
   static const _kCoachScanDone = 'coach_scan_done';
   static const _kCoachParametresDone = 'coach_parametres_done';
   static const _kCoachCarnetDone = 'coach_carnet_done';
+  // Mode auto luminosite (carte Trello #95). Bascule light/dark selon
+  // le capteur du telephone. Default OFF (les users sans capteur ou qui
+  // ne veulent pas du switch auto). Seuil par defaut 50 lux (penombre).
+  static const _kAmbientLightAuto = 'ambient_light_auto';
+  static const _kAmbientLightSeuilLux = 'ambient_light_seuil_lux';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -169,6 +174,38 @@ class ParametresRepository {
     assert(mode == 'system' || mode == 'light' || mode == 'dark');
     return _write(_kThemeMode, mode);
   }
+
+  /// Mode auto luminosite (carte Trello #95) : si ON, l'app bascule
+  /// automatiquement light/dark selon le capteur de luminosite du
+  /// telephone. Override silencieusement le choix manuel themeMode tant
+  /// que le toggle est ON.
+  ///
+  /// Default OFF : on ne demarre pas le stream capteur tant que
+  /// l'utilisateur n'a pas explicitement opt-in (eviter le drain
+  /// batterie / la confusion).
+  Future<bool> getAmbientLightAuto() async {
+    final v = await _readKey(_kAmbientLightAuto);
+    return v == 'true';
+  }
+
+  Stream<bool> watchAmbientLightAuto() =>
+      _watchKey(_kAmbientLightAuto).map((v) => v == 'true');
+
+  Future<void> setAmbientLightAuto(bool value) =>
+      _write(_kAmbientLightAuto, value.toString());
+
+  /// Seuil de luminosite (en lux) en dessous duquel on bascule en mode
+  /// sombre. Default 50 lux (penombre / interieur faible). Au-dessus,
+  /// mode clair. Modifiable plus tard si besoin de finesse.
+  static const int defaultAmbientLightSeuilLux = 50;
+
+  Future<int> getAmbientLightSeuilLux() async {
+    final v = await _readKey(_kAmbientLightSeuilLux);
+    return int.tryParse(v ?? '') ?? defaultAmbientLightSeuilLux;
+  }
+
+  Future<void> setAmbientLightSeuilLux(int lux) =>
+      _write(_kAmbientLightSeuilLux, lux.toString());
 
   /// Cout du carburant en EUR/litre. Defaut commun France (gasoil
   /// hors stations autoroute) : 1.85 EUR/L au 2026-05-11. Sert au
