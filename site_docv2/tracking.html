@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<!-- ════════════════════════════════════════════════════════════════
+     opti_route — Document d'évolution produit (site_docv2)
+     Page : tracking.html
+     Objet : analyse approfondie du lien tracking destinataire 20
+            caractères. Présente 4 options techniques (standalone,
+            redirect, couplage API, hybride) avec leurs avantages,
+            coûts et délais. Format aide à la décision.
+     ════════════════════════════════════════════════════════════════ -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lien tracking destinataire — opti_route</title>
+<meta name="description" content="Analyse technique du lien tracking destinataire 20 caractères : option standalone autonome, option redirect vers TMS existant, option couplage API, option hybride. Avantages, coûts et délais.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">opti_route</a>
+    <nav class="nav-links" aria-label="Navigation principale">
+      <a href="index.html">Vue d'ensemble</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="tracking.html">Tracking</a>
+      <a href="couts.html">Chiffrage</a>
+      <a href="architecture.html">Architecture</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" type="button">
+        <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════
+     HERO : positionnement de la problématique tracking
+     ════════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">Lien tracking destinataire</span>
+    <h1>Une URL de 20 caractères, plusieurs façons d'y arriver.</h1>
+    <p class="hero-sub">
+      Certains logiciels métier de gros clients industriels imposent
+      une URL de tracking limitée à 20 caractères maximum. Voici quatre
+      stratégies techniques pour répondre à cette contrainte, avec
+      leurs implications opérationnelles.
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : la contrainte expliquée
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Le calcul d'une URL de 20 caractères</h2>
+      <p>
+        Pour rentrer dans la contrainte stricte d'un logiciel client,
+        chaque caractère compte. Le format complet de l'URL est
+        contraint comme suit.
+      </p>
+    </div>
+
+    <div class="card" style="max-width: 720px;">
+      <h3>Décomposition d'une URL conforme</h3>
+      <p style="margin-bottom: var(--s-20);">
+        Exemple : <code>https://fa28.ro/abcd</code> = 20 caractères pile.
+      </p>
+      <ul class="feature-list">
+        <li><code>https://</code> = 8 caractères, obligatoire pour la sécurité</li>
+        <li><code>fa28.ro</code> = 7 caractères, domaine court (5 € par an)</li>
+        <li><code>/</code> = 1 caractère, séparateur</li>
+        <li><code>abcd</code> = 4 caractères, code unique généré aléatoirement (1,6 million de combinaisons possibles)</li>
+      </ul>
+      <p style="margin-top: var(--s-20); color: var(--text-mute); font-size: 0.9rem;">
+        Avec un domaine en <code>.fr</code> (3 caractères de TLD au lieu
+        de 2), il faudrait raccourcir le code à 3 caractères, ce qui
+        reste suffisant pour 46 656 combinaisons mais offre moins de
+        marge.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : constat sur les TMS du marché
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Pourquoi les TMS du marché ne suffisent pas seuls</h2>
+      <p>
+        La plupart des TMS (Transport Management Systems) modernes
+        proposent déjà un suivi destinataire natif : portail web,
+        notifications push, email, SMS. Mais leur URL native est
+        généralement bien trop longue pour respecter une contrainte
+        stricte côté client.
+      </p>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <h3>Format URL TMS typique</h3>
+        <p>
+          La plupart des TMS génèrent une URL du type
+          <code>portail.tms.com/track/[id-long-uuid-securise]</code>,
+          ce qui peut atteindre 60 à 100 caractères selon le format
+          d'identifiant utilisé.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Pourquoi un format aussi long ?</h3>
+        <p>
+          Les TMS visent des destinataires qui reçoivent l'URL par
+          email ou SMS personnel. La longueur n'est pas une contrainte
+          dans ces canaux. Le format identifie de manière unique et
+          sécurisée chaque envoi.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Le besoin spécifique 20 caractères</h3>
+        <p>
+          Quand le destinataire est un logiciel B2B (gestion de stock
+          chez un grand industriel par exemple), le champ peut être
+          contraint pour des raisons d'affichage tableau, d'export
+          CSV ou de compatibilité legacy.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : les 4 options techniques
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Quatre stratégies techniques possibles</h2>
+      <p>
+        Chaque option présente un compromis différent entre rapidité
+        de déploiement, autonomie et qualité d'intégration avec
+        l'existant. Le choix dépend du contexte opérationnel.
+      </p>
+    </div>
+
+    <div class="cards-grid">
+
+      <!-- Option A -->
+      <div class="card">
+        <span class="badge badge-livre">Disponible immédiatement</span>
+        <h3>Option A — Standalone autonome</h3>
+        <p>
+          Le lien et la page tracking sont entièrement gérés côté
+          opti_route. Le statut de livraison et la photo preuve sont
+          poussés depuis l'application mobile au moment où le chauffeur
+          valide la livraison.
+        </p>
+        <ul class="feature-list">
+          <li>Domaine court (5 €/an) + hébergement Cloudflare Workers gratuit</li>
+          <li>Source de vérité : application opti_route</li>
+          <li>UX 100 % contrôlée, design adapté à l'image souhaitée</li>
+          <li>Déployable en 1 à 2 jours</li>
+        </ul>
+        <p style="margin-top: var(--s-16); font-size: 0.88rem; color: var(--text-mute);">
+          <strong>Limite :</strong> si l'agence utilise aussi un TMS
+          interne, le chauffeur saisit la livraison deux fois (une fois
+          dans le TMS, une fois dans opti_route). À considérer selon
+          le workflow réel.
+        </p>
+      </div>
+
+      <!-- Option B -->
+      <div class="card">
+        <span class="badge badge-encours">Sous condition partenaire</span>
+        <h3>Option B — Redirection vers TMS</h3>
+        <p>
+          Le domaine court fait une simple redirection HTTP vers
+          l'URL tracking native du TMS partenaire. Le TMS reste la
+          source de vérité unique, opti_route ne fait que raccourcir
+          le lien.
+        </p>
+        <ul class="feature-list">
+          <li>Domaine court seul (5 €/an), aucun coût supplémentaire</li>
+          <li>Source de vérité : TMS partenaire (zéro double saisie)</li>
+          <li>UX subie : le destinataire voit la page du TMS</li>
+          <li>Déployable en quelques heures si l'URL TMS est connue</li>
+        </ul>
+        <p style="margin-top: var(--s-16); font-size: 0.88rem; color: var(--text-mute);">
+          <strong>Condition :</strong> nécessite que le TMS expose des
+          URLs publiques avec un format prédictible (slug d'identifiant
+          accessible côté backend). À valider avec le DSI partenaire.
+        </p>
+      </div>
+
+      <!-- Option C -->
+      <div class="card">
+        <span class="badge badge-futur">Partenariat formel</span>
+        <h3>Option C — Couplage API</h3>
+        <p>
+          La page tracking est hébergée côté opti_route, mais alimentée
+          par appel API vers le TMS partenaire à chaque consultation.
+          La donnée vient du TMS, l'affichage est custom. Combinaison
+          la plus aboutie.
+        </p>
+        <ul class="feature-list">
+          <li>Domaine court (5 €/an) + Worker serverless gratuit</li>
+          <li>Source de vérité : TMS partenaire (intégrité garantie)</li>
+          <li>UX 100 % contrôlée, adaptée à l'image client final</li>
+          <li>Délai 2 à 4 semaines (accord partenaire + développement + tests)</li>
+        </ul>
+        <p style="margin-top: var(--s-16); font-size: 0.88rem; color: var(--text-mute);">
+          <strong>Condition :</strong> nécessite un accès API
+          partenaire formalisé (clé d'API, conditions d'usage, SLA
+          minimum). Souvent lié à un accord commercial.
+        </p>
+      </div>
+
+      <!-- Option D -->
+      <div class="card">
+        <span class="badge badge-futur">Déploiement à l'échelle</span>
+        <h3>Option D — Hybride dual</h3>
+        <p>
+          Combine les options A et C : standalone pour les agences
+          sans TMS, couplage API pour celles qui l'ont. Une seule
+          interface destinataire quel que soit le contexte
+          opérationnel de l'agence.
+        </p>
+        <ul class="feature-list">
+          <li>Routage interne automatique selon l'agence</li>
+          <li>Couverture 100 % des cas terrain</li>
+          <li>Double effort de développement et de maintenance</li>
+          <li>Justifié seulement à partir d'un certain volume</li>
+        </ul>
+        <p style="margin-top: var(--s-16); font-size: 0.88rem; color: var(--text-mute);">
+          <strong>Recommandé :</strong> pertinent uniquement après
+          validation d'un déploiement multi-agences (plus de 5 agences
+          actives sur la solution).
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : tableau de synthèse
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Comparatif synthétique</h2>
+      <p>
+        Vue d'ensemble des quatre options sur les critères clés.
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="costs" aria-label="Comparatif des 4 options techniques de tracking">
+        <thead>
+          <tr>
+            <th scope="col">Critère</th>
+            <th scope="col">Option A<br>Standalone</th>
+            <th scope="col">Option B<br>Redirect TMS</th>
+            <th scope="col">Option C<br>Couplage API</th>
+            <th scope="col">Option D<br>Hybride</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Délai de mise en service</td>
+            <td>1 à 2 jours</td>
+            <td>Quelques heures</td>
+            <td>2 à 4 semaines</td>
+            <td>1 à 2 mois</td>
+          </tr>
+          <tr>
+            <td>Coût opérationnel mensuel</td>
+            <td class="num">≈ 0,40 €</td>
+            <td class="num">≈ 0,40 €</td>
+            <td class="num">≈ 0,40 €</td>
+            <td class="num">≈ 0,40 €</td>
+          </tr>
+          <tr>
+            <td>Source de vérité</td>
+            <td>opti_route</td>
+            <td>TMS partenaire</td>
+            <td>TMS partenaire</td>
+            <td>Mixte selon agence</td>
+          </tr>
+          <tr>
+            <td>UX page destinataire</td>
+            <td>Contrôlée</td>
+            <td>Subie</td>
+            <td>Contrôlée</td>
+            <td>Contrôlée</td>
+          </tr>
+          <tr>
+            <td>Double saisie chauffeur</td>
+            <td>Oui si TMS</td>
+            <td>Non</td>
+            <td>Non</td>
+            <td>Non</td>
+          </tr>
+          <tr>
+            <td>Nécessite accord partenaire</td>
+            <td>Non</td>
+            <td>Oui (léger)</td>
+            <td>Oui (formel)</td>
+            <td>Oui (formel)</td>
+          </tr>
+          <tr>
+            <td>Autonomie produit</td>
+            <td>Maximale</td>
+            <td>Faible</td>
+            <td>Moyenne</td>
+            <td>Variable</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : recommandation par phase
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Recommandation par étape</h2>
+      <p>
+        Une stratégie en trois temps qui maximise la valeur immédiate
+        tout en gardant la porte ouverte aux meilleures intégrations.
+      </p>
+    </div>
+
+    <div class="cards-grid">
+
+      <div class="card">
+        <h3>Court terme — Option A</h3>
+        <p>
+          Déployer immédiatement le standalone autonome. Permet une
+          démo concrète sous quelques jours, un retour terrain rapide
+          et une preuve de concept tangible auprès du client final
+          contraint.
+        </p>
+        <p style="margin-top: var(--s-12);">
+          <strong>Décision attendue :</strong> validation du domaine
+          court (choix entre marque générique et marque sectorielle).
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Moyen terme — Option B ou C</h3>
+        <p>
+          Lors de la première rencontre avec l'équipe technique du
+          TMS partenaire, demander : « expose-t-il une URL publique
+          stable pour le tracking ? ». Si oui, basculer en Option B.
+          Sinon, négocier un accès API pour Option C.
+        </p>
+        <p style="margin-top: var(--s-12);">
+          <strong>Bénéfice :</strong> élimination de la double saisie,
+          source de vérité unique côté TMS, conformité maximale.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Long terme — Option D si pertinent</h3>
+        <p>
+          Si le déploiement se généralise à plusieurs agences avec
+          des contextes mixtes (certaines sur TMS, d'autres non),
+          l'Option D permet une expérience unifiée côté destinataire
+          quel que soit le contexte opérationnel.
+        </p>
+        <p style="margin-top: var(--s-12);">
+          <strong>Seuil de rentabilité :</strong> environ cinq agences
+          actives avec contextes différents.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : angle commercial / discussion partenaire
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Position commerciale vis-à-vis du TMS partenaire</h2>
+      <p>
+        Cette intégration n'est pas en concurrence avec le TMS
+        existant. Elle est complémentaire et résout un cas d'usage
+        spécifique non couvert nativement.
+      </p>
+    </div>
+
+    <div class="card read-width">
+      <h3>Argumentaire d'ouverture</h3>
+      <p>
+        Le besoin client est précis : une URL de tracking strictement
+        limitée à 20 caractères pour rentrer dans un logiciel métier
+        gros donneur d'ordre. Le TMS partenaire gère parfaitement le
+        tracking destinataire en standard, mais son format URL natif
+        dépasse cette contrainte.
+      </p>
+      <p>
+        Deux options non-conflictuelles sont possibles :
+      </p>
+      <ul class="feature-list">
+        <li>Soit le TMS expose une URL publique stable, opti_route fait juste un raccourcissement et un branding adapté</li>
+        <li>Soit le TMS expose une API, opti_route construit une page custom alimentée par cette API</li>
+      </ul>
+      <p style="margin-top: var(--s-16);">
+        Dans les deux cas, le TMS garde la source de vérité.
+        opti_route ne fait qu'adapter le format de présentation à
+        une contrainte spécifique d'un client final. C'est un service
+        de packaging, pas de remplacement.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CTA bas de page
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="cta-block">
+      <h2>L'option standalone est prête à être déployée</h2>
+      <p>
+        Le scaffold technique côté application mobile et page web est
+        déjà codé. Il manque l'achat du domaine court et l'ouverture
+        du compte Cloudflare pour la mise en service.
+      </p>
+      <a href="roadmap.html" class="btn btn-primary">Voir la roadmap globale</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div>
+      <strong>opti_route</strong> — Document d'évolution produit · v2 · Mai 2026
+    </div>
+    <div>
+      <a href="index.html">Accueil</a> ·
+      <a href="roadmap.html">Roadmap</a> ·
+      <a href="couts.html">Chiffrage</a> ·
+      <a href="architecture.html">Architecture</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

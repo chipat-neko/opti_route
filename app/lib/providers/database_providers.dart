@@ -451,6 +451,23 @@ final statsFromBundleProvider =
       ));
 });
 
+/// TourneeStats pour la fenetre **precedente** de meme duree [days].
+/// Ex : days=7 -> retourne stats des jours [J-14, J-7[.
+/// Utilise pour comparer S vs S-1 dans StatsCard (carte Trello #99).
+/// 0 query Drift, derive du bundle 365j deja en cache.
+final statsPreviousWindowProvider =
+    Provider.family<AsyncValue<TourneeStats>, int>((ref, days) {
+  final bundle = ref.watch(statsBundleProvider);
+  return bundle.whenData((b) {
+    final now = DateTime.now();
+    return StatsService.computeFromBundle(
+      b,
+      since: now.subtract(Duration(days: days * 2)),
+      until: now.subtract(Duration(days: days)),
+    );
+  });
+});
+
 /// Colis livres par jour de la semaine (ISO 8601 : 1=lundi -> 7=dimanche)
 /// sur la fenetre [days]. Vide si aucune tournee.
 final colisParJourProvider =
