@@ -625,6 +625,64 @@ void main() {
       );
       expect(s.tauxReussite, 1.0);
     });
+
+    test('comptage photos preuves par coequipier', () async {
+      final tId = await seedTournee();
+      // Moi : 2 livres dont 1 avec photo
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'moi-avec-photo',
+              statutLivraison: const Value('livre'),
+              nbColis: const Value(1),
+              preuvePhotoPath: const Value('/preuves/m1.jpg'),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'moi-sans',
+              statutLivraison: const Value('livre'),
+              nbColis: const Value(1),
+            ),
+          );
+      // Lucas : 1 livre + 1 echec, aucune photo
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'lucas-1',
+              statutLivraison: const Value('livre'),
+              coequipierId: const Value(1),
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tId,
+              adresseBrute: 'lucas-echec',
+              statutLivraison: const Value('echec'),
+              coequipierId: const Value(1),
+            ),
+          );
+
+      final r = await stats.statsParCoequipier(
+        since: DateTime(2020, 1, 1),
+      );
+      expect(r[null]!.nbPhotosPreuves, 1, reason: 'Moi : 1 photo sur 2 livres');
+      expect(r[null]!.tauxPhotos, closeTo(0.5, 0.001));
+      expect(r[1]!.nbPhotosPreuves, 0, reason: 'Lucas : 0 photo');
+      expect(r[1]!.tauxPhotos, 0);
+    });
+
+    test('CoequipierStats.tauxPhotos : 0 si pas de livraison', () {
+      const s = CoequipierStats(
+        coequipierId: 1,
+        nbArrets: 0,
+        nbLivres: 0,
+        nbEchecs: 0,
+        colisLivres: 0,
+      );
+      expect(s.tauxPhotos, 0);
+    });
   });
 
   group('StatsService.compteursMotivants', () {

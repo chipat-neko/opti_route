@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<!-- ════════════════════════════════════════════════════════════════
+     opti_route — Document d'évolution produit (site_docv2)
+     Page : index.html
+     Objet : vitrine d'entrée. Présente le produit en l'état actuel
+            (Phase 1 livrée) et oriente vers la roadmap des évolutions.
+     Ton : pro / sobre / 1ère personne ("je propose").
+     ════════════════════════════════════════════════════════════════ -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>opti_route — Plateforme de tournées de livraison, évolutions possibles</title>
+<meta name="description" content="Présentation de l'application opti_route et des évolutions techniques possibles (Phase 1 actuelle gratuite, Phase 2 cloud équipe, Phase 3 entreprise multi-tenant) avec chiffrage clair.">
+
+<!-- Open Graph (preview au partage WhatsApp / LinkedIn / mail) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="opti_route — Évolutions du produit">
+<meta property="og:description" content="Roadmap et chiffrage des évolutions possibles pour opti_route, plateforme de tournées de livraison.">
+<meta property="og:locale" content="fr_FR">
+
+<!-- Polices : Inter (corps) + JetBrains Mono (chiffres / code) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Barre de navigation principale (sticky en haut de page)
+     ════════════════════════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">opti_route</a>
+    <nav class="nav-links" aria-label="Navigation principale">
+      <a href="index.html">Vue d'ensemble</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="tracking.html">Tracking</a>
+      <a href="couts.html">Chiffrage</a>
+      <a href="architecture.html">Architecture</a>
+      <!-- Bouton de bascule clair/sombre (icône lune par défaut) -->
+      <button class="theme-toggle" id="themeToggle" aria-label="Basculer le mode sombre" type="button">
+        <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════
+     HERO : pitch produit + métriques clés
+     ════════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">Document d'évolution produit · Mai 2026</span>
+    <h1>Une plateforme de tournées de livraison <span class="accent">déjà opérationnelle</span>, ouverte aux évolutions.</h1>
+    <p class="hero-sub">
+      opti_route est une application mobile Android et un tableau de bord web,
+      pensés pour les chauffeurs-livreurs en solo, les petites équipes coopératives
+      et les flottes structurées. Phase 1 entièrement livrée, gratuite et 100 % locale.
+      Les Phases 2 et 3 ouvrent la voie au cloud collaboratif, au tracking client final
+      et à l'intégration métier.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="roadmap.html" class="btn btn-primary">Voir la roadmap détaillée</a>
+      <a href="couts.html" class="btn btn-secondary">Consulter le chiffrage</a>
+    </div>
+
+    <!-- Métriques objectives du projet (chiffres réels au 25 mai 2026) -->
+    <div class="hero-metrics">
+      <div class="hero-metric">
+        <span class="hero-metric-value">834</span>
+        <span class="hero-metric-label">Tests automatisés</span>
+      </div>
+      <div class="hero-metric">
+        <span class="hero-metric-value">200+</span>
+        <span class="hero-metric-label">Pull requests mergées</span>
+      </div>
+      <div class="hero-metric">
+        <span class="hero-metric-value">v1.1</span>
+        <span class="hero-metric-label">Version stable terrain</span>
+      </div>
+      <div class="hero-metric">
+        <span class="hero-metric-value">100 %</span>
+        <span class="hero-metric-label">Données locales en Phase 1</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : les 3 piliers fonctionnels actuels (Phase 1)
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Phase 1 livrée</span>
+      <h2>Ce que la plateforme fait aujourd'hui</h2>
+      <p>
+        Trois piliers fonctionnels, déjà en production et testés sur le terrain.
+        Tout est embarqué dans l'application mobile, sans dépendance à un serveur.
+      </p>
+    </div>
+
+    <div class="cards-grid">
+
+      <!-- Pilier 1 : optimisation d'itinéraires -->
+      <div class="card">
+        <h3>Optimisation des tournées</h3>
+        <p>
+          Calcul d'ordre optimal des arrêts via l'algorithme open source
+          VROOM, profils véhicule léger ou poids lourd, contraintes de
+          fenêtres horaires et de capacité.
+        </p>
+        <ul class="feature-list">
+          <li>Profils driving-car et driving-hgv</li>
+          <li>Évitement péages, contraintes de capacité</li>
+          <li>Fallback haversine si l'API ne répond pas</li>
+          <li>500 optimisations par jour, gratuites</li>
+        </ul>
+      </div>
+
+      <!-- Pilier 2 : OCR scan bordereaux -->
+      <div class="card">
+        <h3>Reconnaissance de bordereaux</h3>
+        <p>
+          Scan caméra du bordereau papier, extraction du nom destinataire,
+          de l'adresse et du nombre de colis. Reconnaissance entièrement
+          sur l'appareil, aucune image transmise à un serveur.
+        </p>
+        <ul class="feature-list">
+          <li>Formats MESEXP, Colissimo, Chronopost</li>
+          <li>Détection automatique du transporteur</li>
+          <li>Indicateur de confiance (carte verte / orange / rouge)</li>
+          <li>Mémoire client : autocorrection sur les habitués</li>
+        </ul>
+      </div>
+
+      <!-- Pilier 3 : mode chef d'équipe local -->
+      <div class="card">
+        <h3>Mode chef d'équipe local</h3>
+        <p>
+          Affectation des arrêts aux coéquipiers, partage individualisé
+          des feuilles de route (WhatsApp ciblé, PDF par personne),
+          tableau de bord agrégé. Tout reste sur le téléphone du chef
+          en Phase 1.
+        </p>
+        <ul class="feature-list">
+          <li>CRUD coéquipiers avec couleur avatar</li>
+          <li>Affectation à l'unité ou en masse</li>
+          <li>Partage WhatsApp ciblé sur le numéro du coéquipier</li>
+          <li>Export PDF individuel avec en-tête entreprise</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Section : ce qui rend la plateforme robuste (qualité produit)
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Qualité et fiabilité</span>
+      <h2>Les fondations qui justifient la confiance</h2>
+      <p>
+        Le produit n'est pas un prototype. Il a été conçu pour tourner
+        en mains de chauffeur, en zone réseau faible, avec des données
+        sensibles à ne jamais perdre.
+      </p>
+    </div>
+
+    <div class="cards-grid">
+
+      <div class="card">
+        <h3>Données locales chiffrables</h3>
+        <p>
+          Toutes les données métier (carnet clients, codes interphones,
+          historique de tournées) restent sur l'appareil. Verrouillage
+          de l'application par PIN et biométrie en option.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Sauvegardes portables</h3>
+        <p>
+          Export complet de la base et des photos preuves dans un
+          fichier .zip, partageable par Drive, mail ou clé USB.
+          Sauvegarde automatique hebdomadaire programmable.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Mode hors-ligne natif</h3>
+        <p>
+          Création d'arrêt, marquage de livraison, capture de photo
+          preuve et navigation fonctionnent sans réseau. Géocodage
+          différé au retour de connexion.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Statistiques annuelles</h3>
+        <p>
+          Compteurs sur 7, 30 et 365 jours : colis livrés, tournées,
+          taux de réussite, distance, durée. Export CSV pour intégration
+          dans un tableau Excel ou un dashboard interne.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Personnalisation visuelle</h3>
+        <p>
+          Quatre palettes de couleurs (Lime, Ocean, Terracotta, Mono),
+          mode jour / nuit automatique, mode XL accessibilité pour la
+          conduite. Charte cohérente entre application et dashboard.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Facturation indicative</h3>
+        <p>
+          Récapitulatif mensuel HT (par arrêt, par colis ou au kilomètre),
+          coût carburant estimé, marge brute. Note : ce n'est pas une
+          facturation officielle, pas de TVA ni de mentions légales.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CTA central : redirige vers les pages de détail
+     ════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="cta-block">
+      <h2>Phase 2 et Phase 3 sont chiffrées et prêtes à être déclenchées</h2>
+      <p>
+        Sync cloud multi-appareils, lien tracking destinataire, intégration
+        API métier : chaque évolution est décrite avec son périmètre, son
+        coût récurrent et son délai d'implémentation.
+      </p>
+      <a href="roadmap.html" class="btn btn-primary">Découvrir la roadmap complète</a>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Footer : copyright + liens annexes
+     ════════════════════════════════════════════════════════════════ -->
+<footer class="site-footer">
+  <div class="container">
+    <div>
+      <strong>opti_route</strong> — Document d'évolution produit · v2 · Mai 2026
+    </div>
+    <div>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="tracking.html">Tracking</a> ·
+      <a href="couts.html">Chiffrage</a> ·
+      <a href="architecture.html">Architecture</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

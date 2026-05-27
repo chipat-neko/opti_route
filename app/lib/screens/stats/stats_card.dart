@@ -47,6 +47,11 @@ class StatsCard extends ConsumerWidget {
     // entre les 3 cards 7/30/365 jours) au lieu de statsProvider(days)
     // qui refait 2 queries par card.
     final async = ref.watch(statsFromBundleProvider(days));
+    // Carte Trello #99 : fenetre precedente de meme duree pour
+    // afficher les deltas (+12%, -5%, ...) sous chaque metric.
+    // Si bundle pas encore charge ou aucune tournee S-1 : null = pas
+    // d'affichage de delta (pas de regression visuelle).
+    final prevAsync = ref.watch(statsPreviousWindowProvider(days));
     final coutAsync = ref.watch(coutCarburantCumuleProvider(days));
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -72,7 +77,13 @@ class StatsCard extends ConsumerWidget {
             data: (stats) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _StatsBody(stats: stats),
+                _StatsBody(
+                  stats: stats,
+                  // null si bundle pas pret OU si aucune tournee dans
+                  // la fenetre precedente -> _StatsBody n'affiche pas
+                  // de delta (pas de regression visuelle).
+                  previousStats: prevAsync.asData?.value,
+                ),
                 // Ligne "Cout carburant estime" en bas de la card si la
                 // distance > 0 ET si le calcul async est dispo.
                 if (stats.distanceMeters > 0 &&
@@ -127,10 +138,15 @@ class StatsCard extends ConsumerWidget {
 
 /// Corps de la card : big number "colis livres" + 4 small stats
 /// (tournees, arrets, distance, duree, reussite). Vide si 0 tournee.
+///
+/// [previousStats] : stats de la fenetre precedente de meme duree.
+/// Si non-null et non-vides, on affiche le delta (+12%, -5%) sous
+/// chaque metric (carte Trello #99).
 class _StatsBody extends StatelessWidget {
-  const _StatsBody({required this.stats});
+  const _StatsBody({required this.stats, this.previousStats});
 
   final TourneeStats stats;
+  final TourneeStats? previousStats;
 
   @override
   Widget build(BuildContext context) {
@@ -147,6 +163,12 @@ class _StatsBody extends StatelessWidget {
     final km = (stats.distanceMeters / 1000).toStringAsFixed(1);
     final dur = _formatDuration(stats.durationSeconds);
     final tauxPct = (stats.tauxReussite * 100).toStringAsFixed(0);
+    // Si on a une fenetre precedente non vide, on calcule les deltas
+    // pour chaque metric. Sinon, on passe null partout -> les chips
+    // ne s'affichent pas (pas de regression visuelle).
+    final prev = (previousStats != null && previousStats!.nbTournees > 0)
+        ? previousStats
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -155,6 +177,14 @@ class _StatsBody extends StatelessWidget {
           value: '${stats.nbColisLivres}',
           label: 'colis livres',
           accent: AppColors.emerald,
+          // Delta colis livres : higher = better.
+          change: prev == null
+              ? null
+              : _ChangeChip.from(
+                  current: stats.nbColisLivres,
+                  previous: prev.nbColisLivres,
+                  higherIsBetter: true,
+                ),
         ),
         const SizedBox(height: AppSpacing.x12),
         Row(
@@ -166,6 +196,13 @@ class _StatsBody extends StatelessWidget {
                 hint: stats.nbTourneesTerminees == stats.nbTournees
                     ? 'toutes terminees'
                     : '${stats.nbTournees - stats.nbTourneesTerminees} en cours / brouillon',
+                change: prev == null
+                    ? null
+                    : _ChangeChip.from(
+                        current: stats.nbTournees,
+                        previous: prev.nbTournees,
+                        higherIsBetter: true,
+                      ),
               ),
             ),
             const _StatDivider(),
@@ -181,6 +218,13 @@ class _StatsBody extends StatelessWidget {
                     : '${stats.nbLivraisons} livres · '
                         '${stats.nbRamasses} ramasses · '
                         '${stats.nbEchecs} echecs',
+                change: prev == null
+                    ? null
+                    : _ChangeChip.from(
+                        current: stats.nbArrets,
+                        previous: prev.nbArrets,
+                        higherIsBetter: true,
+                      ),
               ),
             ),
           ],
@@ -193,6 +237,13 @@ class _StatsBody extends StatelessWidget {
                 label: 'Distance',
                 value: km,
                 unit: 'km',
+                change: prev == null
+                    ? null
+                    : _ChangeChip.from(
+                        current: stats.distanceMeters,
+                        previous: prev.distanceMeters,
+                        higherIsBetter: true,
+                      ),
               ),
             ),
             const _StatDivider(),
@@ -200,6 +251,13 @@ class _StatsBody extends StatelessWidget {
               child: _SmallStat(
                 label: 'Duree',
                 value: dur,
+                change: prev == null
+                    ? null
+                    : _ChangeChip.from(
+                        current: stats.durationSeconds,
+                        previous: prev.durationSeconds,
+                        higherIsBetter: true,
+                      ),
               ),
             ),
             const _StatDivider(),
@@ -209,6 +267,16 @@ class _StatsBody extends StatelessWidget {
                 value: '$tauxPct%',
                 hint:
                     '${stats.nbLivres} sur ${stats.nbLivres + stats.nbEchecs}',
+                change: prev == null
+                    ? null
+                    // Taux de reussite : higher = better. On compare
+                    // en points (pas en %) pour eviter le piege
+                    // "passer de 98% a 99% = +1% relatif mais +1 pt".
+                    : _ChangeChip.fromPoints(
+                        current: stats.tauxReussite * 100,
+                        previous: prev.tauxReussite * 100,
+                        higherIsBetter: true,
+                      ),
               ),
             ),
           ],
@@ -229,18 +297,21 @@ class _StatsBody extends StatelessWidget {
 }
 
 /// Big number sur fond lime : la mise en valeur du chiffre principal.
-/// Layout en row : valeur ENORME a gauche, label discret a droite.
+/// Layout en row : valeur ENORME a gauche, label discret a droite,
+/// chip de delta optionnel a l'extreme droite (carte #99).
 class _BigNumber extends StatelessWidget {
   const _BigNumber({
     required this.value,
     required this.label,
     required this.accent,
+    this.change,
   });
 
   final String value;
   final String label;
   // ignore: unused_field
   final Color accent;
+  final Widget? change;
 
   @override
   Widget build(BuildContext context) {
@@ -278,6 +349,13 @@ class _BigNumber extends StatelessWidget {
               ),
             ),
           ),
+          if (change != null) ...[
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: change,
+            ),
+          ],
         ],
       ),
     );
@@ -285,19 +363,22 @@ class _BigNumber extends StatelessWidget {
 }
 
 /// Petite stat : label en haut, valeur (avec unite optionnelle), hint
-/// optionnel en bas. Utilise pour les sous-stats dans la grille 2x3.
+/// optionnel en bas, chip de delta optionnel a droite du label
+/// (carte #99). Utilise pour les sous-stats dans la grille 2x3.
 class _SmallStat extends StatelessWidget {
   const _SmallStat({
     required this.label,
     required this.value,
     this.unit,
     this.hint,
+    this.change,
   });
 
   final String label;
   final String value;
   final String? unit;
   final String? hint;
+  final Widget? change;
 
   @override
   Widget build(BuildContext context) {
@@ -351,6 +432,10 @@ class _SmallStat extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+          if (change != null) ...[
+            const SizedBox(height: 4),
+            change!,
+          ],
         ],
       ),
     );
@@ -364,4 +449,100 @@ class _StatDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Container(width: 1, height: 32, color: context.palette.divider);
+}
+
+/// Petit chip de variation vs fenetre precedente (carte Trello #99).
+/// Format : `+12%` (emerald si higherIsBetter=true et delta > 0,
+/// red si delta < 0). Affiche `=` neutre si delta == 0 +/- 1 %.
+/// Retourne `SizedBox.shrink()` si previous == 0 (calcul impossible).
+class _ChangeChip extends StatelessWidget {
+  const _ChangeChip._({
+    required this.label,
+    required this.color,
+    required this.background,
+  });
+
+  final String label;
+  final Color color;
+  final Color background;
+
+  /// Construit un chip pour un ratio (`(curr - prev) / prev * 100`).
+  /// Retourne `null` si `previous == 0` (division impossible).
+  /// Le caller fait `change: prev == null ? null : _ChangeChip.from(...)`.
+  static _ChangeChip? from({
+    required num current,
+    required num previous,
+    required bool higherIsBetter,
+  }) {
+    if (previous == 0) {
+      // Pas de comparaison possible : on retourne null pour cacher
+      // l'affichage plutot que de mentir avec "+inf%".
+      return null;
+    }
+    final pct = ((current - previous) / previous) * 100;
+    return _build(pct.round(), higherIsBetter, isPoints: false);
+  }
+
+  /// Variante en points absolus (ex : taux de reussite 96 % -> 98 %
+  /// = +2 pt, pas +2 %). Pour les metrics deja exprimes en pourcent.
+  static _ChangeChip? fromPoints({
+    required num current,
+    required num previous,
+    required bool higherIsBetter,
+  }) {
+    final diff = (current - previous).round();
+    // Pas de seuil "neutre" sur les points : 0 pt = vraiment stable.
+    return _build(diff, higherIsBetter, isPoints: true);
+  }
+
+  static _ChangeChip _build(int value, bool higherIsBetter,
+      {required bool isPoints}) {
+    // Bande neutre +/- 1 sur les pourcentages (le bruit n'est pas
+    // significatif). Sur les points, 0 est strictement stable.
+    final neutralBand = isPoints ? 0 : 1;
+    final String sign;
+    final Color color;
+    final Color bg;
+    if (value.abs() <= neutralBand) {
+      sign = isPoints && value == 0 ? '=' : '~';
+      color = const Color(0xFF6B7280); // slate-500
+      bg = const Color(0x1F6B7280);
+    } else {
+      final positive = value > 0;
+      // Higher is better : positif = vert, negatif = rouge.
+      // Lower is better (inverse) : positif = rouge, negatif = vert.
+      final good = higherIsBetter ? positive : !positive;
+      color = good ? AppColors.emerald : AppColors.red;
+      bg = good
+          ? const Color(0x1F10B981) // emerald light
+          : const Color(0x1FDC2626); // red light
+      sign = positive ? '+$value' : '$value';
+    }
+    final suffix = isPoints ? ' pt' : ' %';
+    return _ChangeChip._(
+      label: sign == '=' || sign == '~' ? sign : '$sign$suffix',
+      color: color,
+      background: bg,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: appMonoStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: color,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
 }
