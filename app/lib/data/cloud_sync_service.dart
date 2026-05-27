@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import 'cloud/cloud_carnet_sync.dart';
 import 'cloud/cloud_sync_helpers.dart';
 import 'cloud_error_humanizer.dart';
 import 'cloud_sync_types.dart';
@@ -61,11 +62,17 @@ class CloudSyncService {
     this._db,
     this._supabase, {
     SupabaseClient? client,
-  }) : _explicitClient = client;
+  })  : _explicitClient = client,
+        _carnet = CloudCarnetSync(_db);
 
   final AppDatabase _db;
   final SupabaseService _supabase;
   final SupabaseClient? _explicitClient;
+
+  /// Sous-service de sync du carnet (saved_destinations). Carte #167
+  /// etape 2. CloudSyncService lui delegue push/pull et lui fournit le
+  /// client + userId via ses guards.
+  final CloudCarnetSync _carnet;
 
   static const _uuid = Uuid();
 
@@ -431,7 +438,7 @@ class CloudSyncService {
     final coequipiers = await _pullCoequipiers(client);
     final tournees = await _pullTournees(client);
     final stops = await _pullStops(client);
-    final savedDestinations = await _pullSavedDestinations(client);
+    final savedDestinations = await _carnet.pull(client);
     // Jalon 3.A : adhesions aux tournees partagees (qui voit quoi).
     // Apres les tournees pour que les rows membres aient bien une
     // tournee_cloud_id correspondant a un row tournees deja pulle.
@@ -443,7 +450,7 @@ class CloudSyncService {
     // un device avec un carnet existant -> push retroactif). Silent :
     // un echec ne casse pas le pull global, on re-tentera plus tard.
     try {
-      await _pushAllSavedDestinations(client, userId);
+      await _carnet.pushAll(client, userId);
     } on Object catch (e) {
       debugPrint('[CloudSyncService] Push carnet apres pull echec : $e');
     }
@@ -1072,32 +1079,6 @@ class CloudSyncService {
         .write(StopsCompanion(preuvePhotoPath: Value(resolved)));
   }
 
-  /// Push toutes les entrees locales du carnet vers Supabase (bug
-  /// Trello #68 : avant ce fix, seul le pull existait). Pattern
-  /// idempotent identique au push tournee : cloud_id null -> generer
-  /// UUID + INSERT + persister localement. cloud_id set -> UPDATE.
-  ///
-  /// Best-effort par row : si une row echoue (RLS, conflit, etc.),
-  /// on log et on continue avec les suivantes plutot que de tout
-  /// arreter.
-  Future<void> _pushAllSavedDestinations(
-    SupabaseClient client,
-    String userId,
-  ) async {
-    final locals = await _db.select(_db.savedDestinations).get();
-    for (final s in locals) {
-      try {
-        await _pushSavedDestinationRow(client, s, userId);
-      } on Object catch (e) {
-        debugPrint(
-          '[CloudSyncService] Push carnet "${s.nomClient ?? s.adresseDisplay}" '
-          'echec : $e',
-        );
-        // Continue avec les autres rows.
-      }
-    }
-  }
-
   /// Push public d'une seule entree du carnet identifiee par son id
   /// local. Sert au carnet partage entre coequipiers (carte Trello #57) :
   /// quand un livreur ajoute / edite un client, on push immediatement
@@ -1105,121 +1086,17 @@ class CloudSyncService {
   /// pull. Best-effort : silencieux si offline ou row introuvable, throw
   /// [CloudSyncException] uniquement sur erreur de configuration.
   ///
-  /// Pattern identique a [_pushAllSavedDestinations] mais sur 1 row :
-  /// idempotent (cloud_id null -> INSERT + persist, set -> UPDATE).
+  /// Delegue a [CloudCarnetSync] (carte #167 etape 2).
   Future<void> pushSavedDestination(int localId) async {
     final client = _client();
     final userId = _requireUserId();
-    final row = await (_db.select(_db.savedDestinations)
-          ..where((d) => d.id.equals(localId)))
-        .getSingleOrNull();
-    if (row == null) return;
-    await _pushSavedDestinationRow(client, row, userId);
+    await _carnet.pushOne(client, userId, localId);
   }
 
-  /// User_id envoye uniquement au 1er push (cf [_pushCoequipier]).
-  /// Pas de push de la colonne `photo_path` (chemin local du device
-  /// source, pas valide ailleurs).
-  Future<void> _pushSavedDestinationRow(
-    SupabaseClient client,
-    SavedDestination s,
-    String userId,
-  ) async {
-    final cloudId = s.cloudId ?? _uuid.v4();
-    final isFirstPush = s.cloudId == null;
-    final row = <String, dynamic>{
-      'id': cloudId,
-      if (isFirstPush) 'user_id': userId,
-      'nom_client': s.nomClient,
-      'adresse_display': s.adresseDisplay,
-      'lat': s.lat,
-      'lng': s.lng,
-      'rue': s.rue,
-      'code_postal': s.codePostal,
-      'ville': s.ville,
-      'use_count': s.useCount,
-      'last_used_at': s.lastUsedAt.toIso8601String(),
-      if (isFirstPush) 'cree_le': s.creeLe.toIso8601String(),
-      'is_favori': s.isFavori,
-      'color_tag': s.colorTag,
-      'notes_carnet': s.notesCarnet,
-      'tags_json': s.tagsJson,
-      // photo_path : volontairement non push (chemin local du device).
-      'code_acces': s.codeAcces,
-      'etage_batiment': s.etageBatiment,
-      'updated_at': s.updatedAt.toUtc().toIso8601String(),
-    };
-    if (isFirstPush) {
-      await client.from('saved_destinations').insert(row);
-      await (_db.update(_db.savedDestinations)
-            ..where((r) => r.id.equals(s.id)))
-          .write(SavedDestinationsCompanion(cloudId: Value(cloudId)));
-    } else {
-      await client.from('saved_destinations').update(row).eq('id', cloudId);
-    }
-  }
-
-  Future<CloudPullStats> _pullSavedDestinations(SupabaseClient client) async {
-    final List<dynamic> rows;
-    try {
-      rows = await client.from('saved_destinations').select();
-    } on Object catch (e) {
-      throw CloudSyncException('Echec fetch carnet : ${humanizeCloudError(e)}');
-    }
-    int inserted = 0, updated = 0, skipped = 0;
-    for (final r in rows) {
-      final row = r as Map<String, dynamic>;
-      final cloudId = row['id'] as String;
-      final cloudUpdatedAt = parseCloudUpdatedAt(row['updated_at']);
-      final localRow = await (_db.select(_db.savedDestinations)
-            ..where((s) => s.cloudId.equals(cloudId)))
-          .getSingleOrNull();
-      if (localRow != null &&
-          !cloudIsNewer(cloudUpdatedAt, localRow.updatedAt)) {
-        skipped++;
-        continue;
-      }
-      final companion = SavedDestinationsCompanion(
-        nomClient: Value(row['nom_client'] as String?),
-        adresseDisplay: Value(row['adresse_display'] as String),
-        lat: Value((row['lat'] as num).toDouble()),
-        lng: Value((row['lng'] as num).toDouble()),
-        rue: Value(row['rue'] as String?),
-        codePostal: Value(row['code_postal'] as String?),
-        ville: Value(row['ville'] as String?),
-        useCount: Value(row['use_count'] as int? ?? 1),
-        lastUsedAt: Value(DateTime.parse(row['last_used_at'] as String)),
-        creeLe: Value(DateTime.parse(row['cree_le'] as String)),
-        isFavori: Value(row['is_favori'] as bool? ?? false),
-        colorTag: Value(row['color_tag'] as String?),
-        notesCarnet: Value(row['notes_carnet'] as String?),
-        tagsJson: Value(row['tags_json'] as String?),
-        photoPath: Value(row['photo_path'] as String?),
-        codeAcces: Value(row['code_acces'] as String?),
-        etageBatiment: Value(row['etage_batiment'] as String?),
-        cloudId: Value(cloudId),
-        updatedAt: Value(cloudUpdatedAt),
-      );
-      if (localRow == null) {
-        await _db.into(_db.savedDestinations).insert(companion);
-        inserted++;
-      } else {
-        await (_db.update(_db.savedDestinations)
-              ..where((s) => s.id.equals(localRow.id)))
-            .write(companion);
-        updated++;
-      }
-    }
-    return CloudPullStats(
-      inserted: inserted,
-      updated: updated,
-      skipped: skipped,
-    );
-  }
-
-  // parseCloudUpdatedAt + cloudIsNewer (helpers last-write-wins
-  // sous-jalon 2.D-1c) extraits dans `cloud/cloud_sync_helpers.dart`
-  // (carte #167 etape 1).
+  // _pushAllSavedDestinations + _pushSavedDestinationRow +
+  // _pullSavedDestinations + helpers last-write-wins extraits dans
+  // `cloud/cloud_carnet_sync.dart` + `cloud/cloud_sync_helpers.dart`
+  // (carte #167 etapes 1-2).
 
   // ─── Guards ─────────────────────────────────────────────────────
 
