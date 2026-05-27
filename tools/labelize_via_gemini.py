@@ -118,9 +118,16 @@ def call_gemini_direct(api_key, prompt, max_retries=4):
     last_err = None
     for attempt in range(max_retries):
         resp = requests.post(url, json=body, timeout=60)
-        if resp.status_code == 429:
+        # Retry sur 429 (quota / rate limit) ET 503 (model overloaded,
+        # "high demand" temporaire Google). Meme strategie backoff
+        # exponentiel : on tente jusqu'a max_retries puis on abandonne.
+        # Sans le retry sur 503, des lignes valides finissaient
+        # labellisees 'UNKNOWN' juste parce que Google avait un coup
+        # de mou de quelques secondes.
+        if resp.status_code in (429, 503):
             wait = 15 * (2 ** attempt)  # 15s, 30s, 60s, 120s
-            print(f'(429, retry in {wait}s)', end=' ', flush=True)
+            print(f'({resp.status_code}, retry in {wait}s)',
+                  end=' ', flush=True)
             time.sleep(wait)
             continue
         if resp.status_code != 200:
@@ -146,17 +153,33 @@ def call_gemini_direct(api_key, prompt, max_retries=4):
 
 def load_already_done(output_csv):
     """Si output_csv existe deja, retourne (set des images deja labellisees,
-    liste des rows deja ecrites). Sert a reprendre apres interruption."""
+    liste des rows deja ecrites). Sert a reprendre apres interruption.
+
+    Une image est consideree "deja faite" UNIQUEMENT si toutes ses rows
+    ont une classe valide (pas d'UNKNOWN). Sinon on l'efface du done
+    pour qu'elle soit re-traitee au prochain run -- utile quand un
+    503 / 502 / autre fail non-429 a marque les rows UNKNOWN.
+    """
     p = Path(output_csv)
     if not p.exists():
         return set(), []
-    done_images = set()
-    done_rows = []
+    rows_by_image = defaultdict(list)
     with open(output_csv, encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            done_images.add(row['image'])
-            done_rows.append(row)
+            rows_by_image[row['image']].append(row)
+    done_images = set()
+    done_rows = []
+    skipped_unknown = 0
+    for image, rows in rows_by_image.items():
+        has_unknown = any(r.get('class') == 'UNKNOWN' for r in rows)
+        if has_unknown:
+            skipped_unknown += 1
+            continue  # on ne garde PAS ces rows : elles seront refaites
+        done_images.add(image)
+        done_rows.extend(rows)
+    if skipped_unknown:
+        print(f"  ({skipped_unknown} image(s) avec UNKNOWN seront retraitees)")
     return done_images, done_rows
 
 

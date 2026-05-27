@@ -42,14 +42,22 @@ class StatsService {
   }
 
   /// Variante in-memory : prend un [bundle] deja charge et filtre sur
-  /// une sous-fenetre [since]. Permet de partager 1 seule fetch pour
-  /// les cards 7/30/365 jours.
+  /// une sous-fenetre [since, until]. Permet de partager 1 seule fetch
+  /// pour les cards 7/30/365 jours.
+  ///
+  /// Si [until] est fourni, on filtre `since <= date < until` (utile
+  /// pour comparer une fenetre passee, ex S-1 vs S, carte Trello #99).
+  /// Si [until] est null, on prend `[since, +infini]` comme avant.
   static TourneeStats computeFromBundle(
     StatsBundle bundle, {
     required DateTime since,
+    DateTime? until,
   }) {
-    final tournees =
-        bundle.tournees.where((t) => !t.date.isBefore(since)).toList();
+    final tournees = bundle.tournees.where((t) {
+      if (t.date.isBefore(since)) return false;
+      if (until != null && !t.date.isBefore(until)) return false;
+      return true;
+    }).toList();
     if (tournees.isEmpty) return TourneeStats.empty;
     final ids = tournees.map((t) => t.id).toSet();
     final stops =
@@ -267,6 +275,12 @@ class StatsService {
       } else if (s.statutLivraison == 'echec') {
         entry.nbEchecs++;
       }
+      // Compte les photos preuves prises (preuvePhotoPath non null).
+      // Sert d'indicateur "qualite" de saisie : un livreur qui prend
+      // peu de photos = risque de litige client non couvert.
+      if (s.preuvePhotoPath != null && s.preuvePhotoPath!.isNotEmpty) {
+        entry.nbPhotosPreuves++;
+      }
     }
 
     return {
@@ -277,6 +291,7 @@ class StatsService {
           nbLivres: e.value.nbLivres,
           nbEchecs: e.value.nbEchecs,
           colisLivres: e.value.colisLivres,
+          nbPhotosPreuves: e.value.nbPhotosPreuves,
         ),
     };
   }
@@ -567,6 +582,7 @@ class _CoequipierAcc {
   int nbLivres = 0;
   int nbEchecs = 0;
   int colisLivres = 0;
+  int nbPhotosPreuves = 0;
 }
 
 /// Stats agregees pour un coequipier (ou Noah lui-meme si
@@ -578,6 +594,7 @@ class CoequipierStats {
     required this.nbLivres,
     required this.nbEchecs,
     required this.colisLivres,
+    this.nbPhotosPreuves = 0,
   });
 
   /// Null = Noah lui-meme (stops sans affectation).
@@ -587,10 +604,23 @@ class CoequipierStats {
   final int nbEchecs;
   final int colisLivres;
 
+  /// Nombre de stops (parmi nbArrets) pour lesquels une photo preuve a
+  /// ete prise (`preuvePhotoPath != null`). Indicateur qualite de
+  /// saisie : un livreur qui prend peu de photos sur ses livraisons
+  /// = risque accru de litige non couvert.
+  final int nbPhotosPreuves;
+
   /// Taux de reussite (livres / (livres + echecs)). 0 si rien valide.
   double get tauxReussite {
     final total = nbLivres + nbEchecs;
     if (total == 0) return 0;
     return nbLivres / total;
+  }
+
+  /// Taux de couverture photo (nbPhotosPreuves / nbLivres). 0 si pas
+  /// de livraison. Sert au badge "qualite preuves" dans l'UI.
+  double get tauxPhotos {
+    if (nbLivres == 0) return 0;
+    return (nbPhotosPreuves / nbLivres).clamp(0.0, 1.0);
   }
 }

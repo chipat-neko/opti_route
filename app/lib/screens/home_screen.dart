@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/aujourdhui_summary_card.dart';
 import '../widgets/drawer_badge_icon.dart';
 import 'onboarding_screen.dart';
 import 'tournee_du_jour_screen.dart';
@@ -118,49 +119,71 @@ class _NoTourTodayScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.x28),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x16,
+            vertical: AppSpacing.x18,
+          ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: p.creamSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.local_shipping_outlined,
-                  size: 44,
-                  color: p.ink,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.x18),
-              Text(
-                'Pas de tournee aujourd\'hui',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: AppSpacing.x8),
-              Text(
-                'Cree-la maintenant pour commencer a ajouter tes arrets.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: p.textMute,
-                  height: 1.4,
-                ),
-              ),
+              // Resume du jour (carte Trello #100) : visible uniquement
+              // si Noah a deja une tournee planifiee aujourd'hui (ex :
+              // 1 tournee terminee dans la matinee). Sinon SizedBox
+              // shrink -> on retombe direct sur l'empty state.
+              const AujourdhuiSummaryCard(),
               const SizedBox(height: AppSpacing.x22),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const TourneeFormScreen(),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x12,
+                    vertical: AppSpacing.x10,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          color: p.creamSoft,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.local_shipping_outlined,
+                          size: 44,
+                          color: p.ink,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.x18),
+                      Text(
+                        'Pas de tournee aujourd\'hui',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: AppSpacing.x8),
+                      Text(
+                        'Cree-la maintenant pour commencer a ajouter tes arrets.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: p.textMute,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.x22),
+                      FilledButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const TourneeFormScreen(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Creer ma tournee'),
+                      ),
+                    ],
                   ),
                 ),
-                icon: const Icon(Icons.add),
-                label: const Text('Creer ma tournee'),
               ),
             ],
           ),

@@ -291,6 +291,28 @@ a:hover { text-decoration: underline; }
   border: 0;
 }
 
+/* Accessibilité : skip-to-content. Cache hors focus, visible au 1er Tab.
+   Permet aux utilisateurs clavier / lecteur d'écran de sauter le header
+   et le menu en un seul Tab + Enter. */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: 8px;
+  z-index: 100;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 8px;
+  outline: 2px solid var(--lime);
+}
+
 /* Accessibilité : focus clavier toujours visible. Outline lime sur
    fonds clairs, ink sur fonds lime/accent. Respecte prefers-reduced. */
 *:focus-visible {

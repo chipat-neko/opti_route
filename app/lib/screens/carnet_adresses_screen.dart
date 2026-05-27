@@ -42,6 +42,16 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   /// Filtre tag libre (`tagsJson`). Null = aucun filtre tag.
   String? _tagFilter;
 
+  /// Filtre periode d'ajout (`creeLe`). Null = pas de filtre.
+  /// '30d' = derniers 30 jours, '6m' = derniers 6 mois, '1y' = derniere annee.
+  /// Carte Trello #105.
+  String? _periodeFilter;
+
+  /// Filtre regularite (`useCount`). Null = pas de filtre.
+  /// 'reguliers' = useCount >= 5, 'uniques' = useCount == 1.
+  /// Carte Trello #105.
+  String? _regulariteFilter;
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -220,6 +230,101 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
               ],
             ),
           ),
+          // Troisieme row : periode d'ajout + regularite (carte Trello
+          // #105). Compacte : 1 SizedBox 36, 5 chips max (Tous / 30j /
+          // 6 mois / 1 an / reguliers / uniques).
+          SizedBox(
+            height: 36,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x18,
+              ),
+              scrollDirection: Axis.horizontal,
+              children: [
+                TagFilterChip(
+                  label: 'periode: toutes',
+                  selected: _periodeFilter == null,
+                  onSelected: () => setState(() => _periodeFilter = null),
+                ),
+                const SizedBox(width: 8),
+                TagFilterChip(
+                  label: '30 jours',
+                  selected: _periodeFilter == '30d',
+                  onSelected: () => setState(() => _periodeFilter = '30d'),
+                ),
+                const SizedBox(width: 8),
+                TagFilterChip(
+                  label: '6 mois',
+                  selected: _periodeFilter == '6m',
+                  onSelected: () => setState(() => _periodeFilter = '6m'),
+                ),
+                const SizedBox(width: 8),
+                TagFilterChip(
+                  label: '1 an',
+                  selected: _periodeFilter == '1y',
+                  onSelected: () => setState(() => _periodeFilter = '1y'),
+                ),
+                const SizedBox(width: 16),
+                TagFilterChip(
+                  label: 'clients reguliers (>=5)',
+                  selected: _regulariteFilter == 'reguliers',
+                  onSelected: () => setState(() => _regulariteFilter =
+                      _regulariteFilter == 'reguliers' ? null : 'reguliers'),
+                ),
+                const SizedBox(width: 8),
+                TagFilterChip(
+                  label: 'jamais reutilises',
+                  selected: _regulariteFilter == 'uniques',
+                  onSelected: () => setState(() => _regulariteFilter =
+                      _regulariteFilter == 'uniques' ? null : 'uniques'),
+                ),
+              ],
+            ),
+          ),
+          // Badge "X filtres actifs" + bouton reset, visible uniquement
+          // si au moins 1 filtre est en place. Carte Trello #105.
+          if (_activeFiltersCount() > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.x18,
+                AppSpacing.x4,
+                AppSpacing.x18,
+                0,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.filter_alt,
+                    size: 14,
+                    color: context.palette.textMute,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${_activeFiltersCount()} filtre${_activeFiltersCount() > 1 ? "s" : ""} actif${_activeFiltersCount() > 1 ? "s" : ""}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.palette.textMute,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _resetAllFilters,
+                    icon: const Icon(Icons.refresh, size: 14),
+                    label: const Text(
+                      'Reinitialiser',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.x8,
+                      ),
+                      minimumSize: const Size(0, 28),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Deuxieme row : tags libres (uniquement ceux presents dans
           // le carnet). Cachee si aucun tag.
           Consumer(
@@ -562,6 +667,19 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         return tags.any((t) => t.toLowerCase() == tf.toLowerCase());
       });
     }
+    // Carte Trello #105 : filtre periode d'ajout (creeLe).
+    final pf = _periodeFilter;
+    if (pf != null) {
+      final cutoff = _periodeCutoff(pf);
+      filtered = filtered.where((d) => d.creeLe.isAfter(cutoff));
+    }
+    // Carte Trello #105 : filtre regularite (useCount).
+    final rf = _regulariteFilter;
+    if (rf == 'reguliers') {
+      filtered = filtered.where((d) => d.useCount >= 5);
+    } else if (rf == 'uniques') {
+      filtered = filtered.where((d) => d.useCount == 1);
+    }
     if (q.isEmpty) return filtered.toList();
     final norm = _normalize(q);
     return filtered.where((d) {
@@ -569,9 +687,43 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
         d.nomClient ?? '',
         d.adresseDisplay,
         d.ville ?? '',
+        d.codePostal ?? '',
       ].join(' '));
       return hay.contains(norm);
     }).toList();
+  }
+
+  /// Borne inferieure du filtre periode. Exposee pour les tests.
+  static DateTime _periodeCutoff(String periode) {
+    final now = DateTime.now();
+    return switch (periode) {
+      '30d' => now.subtract(const Duration(days: 30)),
+      '6m' => now.subtract(const Duration(days: 30 * 6)),
+      '1y' => now.subtract(const Duration(days: 365)),
+      _ => DateTime(1970),
+    };
+  }
+
+  /// Compte les filtres actifs hors recherche texte (utilise pour le
+  /// badge "X filtres actifs"). Carte Trello #105.
+  int _activeFiltersCount() {
+    var n = 0;
+    if (_colorFilter != null) n++;
+    if (_tagFilter != null) n++;
+    if (_periodeFilter != null) n++;
+    if (_regulariteFilter != null) n++;
+    return n;
+  }
+
+  /// Reset tous les filtres en un coup (sauf la recherche texte).
+  /// Carte Trello #105.
+  void _resetAllFilters() {
+    setState(() {
+      _colorFilter = null;
+      _tagFilter = null;
+      _periodeFilter = null;
+      _regulariteFilter = null;
+    });
   }
 
   static String _normalize(String s) {
