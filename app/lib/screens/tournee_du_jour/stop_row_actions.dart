@@ -162,6 +162,14 @@ class StopRowActions {
         try {
           final tc = await trackingRepo.generateForStop(stop.id);
           final url = TrackingCodesRepository.buildUrl(tc.code);
+          // Carte #81 : pousse le code au cloud pour que l'Edge Function
+          // `track` puisse resoudre le lien. Best-effort silencieux (no-op
+          // si pas connecte / stop pas encore sync / function pas deployee).
+          try {
+            await ref
+                .read(cloudSyncServiceProvider)
+                .pushTrackingCode(tc.code, stop.id);
+          } on Object {/* offline / stop pas sync : lien local quand meme */}
           await Clipboard.setData(ClipboardData(text: url));
           unawaited(HapticFeedback.lightImpact());
           messenger.showSnackBar(
