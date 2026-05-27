@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/ambient_light_service.dart';
 import '../../data/parametres_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -66,6 +67,35 @@ class ApparenceSection extends ConsumerWidget {
             );
           },
         ),
+        // Toggle "Mode auto luminosite" (carte Trello #95). Cache si
+        // la plateforme ne supporte pas le capteur (iOS / desktop /
+        // web) -- sur Android sans capteur, le stream reste vide et le
+        // mode user prevaut, donc pas de regression visuelle.
+        if (AmbientLightService.isSupported)
+          Consumer(
+            builder: (context, ref, _) {
+              final repo = ref.watch(parametresRepositoryProvider);
+              final auto = ref
+                      .watch(ambientLightAutoEnabledProvider)
+                      .asData
+                      ?.value ??
+                  false;
+              return SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: auto,
+                title: const Text('Auto via capteur de luminosite'),
+                subtitle: const Text(
+                  'Bascule clair / sombre selon la lumiere ambiante '
+                  '(tunnel, nuit). Ecrase le choix ci-dessus tant que '
+                  'le toggle est ON.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                onChanged: (v) async {
+                  await repo.setAmbientLightAuto(v);
+                },
+              );
+            },
+          ),
         const SizedBox(height: AppSpacing.x18),
         Text(
           'Palette de couleurs',
