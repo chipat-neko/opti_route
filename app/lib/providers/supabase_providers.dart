@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/carnet_auto_push_service.dart';
 import '../data/cloud_auto_pull_service.dart';
 import '../data/cloud_auto_push_service.dart';
 import '../data/cloud_sync_service.dart';
@@ -103,6 +104,25 @@ final cloudAutoPushServiceProvider = Provider<CloudAutoPushService>((ref) {
   );
   // Cleanup propre si jamais le Provider est dispose (theoriquement
   // pas avant la fin de l'app vu qu'il n'est pas autoDispose).
+  ref.onDispose(service.stop);
+  return service;
+});
+
+/// Service d'auto-push du carnet vers Supabase (carte Trello #57 V2).
+/// Watche la table `saved_destinations` en continu et push debounce 5s
+/// les rows modifiees. Couvre TOUS les sites de modification (carnet
+/// backfill, vCard import, upsertFromValidatedStop a chaque livraison),
+/// complement du push V1 wire dans les 3 ecrans (edit/color/favori).
+///
+/// Singleton : un seul watch a la fois pour eviter les double-push.
+/// Demarre depuis le bootstrap de l'app (cf main.dart / app.dart) ou
+/// au sign-in (cloudUserProvider listen). Stop au sign-out.
+final carnetAutoPushServiceProvider = Provider<CarnetAutoPushService>((ref) {
+  final service = CarnetAutoPushService(
+    ref.watch(cloudSyncServiceProvider),
+    ref.watch(appDatabaseProvider),
+    SupabaseService.instance,
+  );
   ref.onDispose(service.stop);
   return service;
 });
