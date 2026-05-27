@@ -102,10 +102,10 @@ class FuelPriceService {
   /// Carte Trello #39 V4 : permet de localiser les stations pas cheres
   /// pendant les tournees.
   ///
-  /// L'API data.gouv.fr ne supporte pas le filtre geo natif sans un
-  /// where SQL personnalise. On rapatrie un batch (limit 500) au-dessus
-  /// d'un radius approximatif (~0.1 deg = ~11 km), puis on filtre + trie
-  /// cote app pour avoir une distance precise.
+  /// Utilise le filtre `within_distance(geom, geom'POINT(lng lat)', Xkm)`
+  /// natif de l'API ODSql v2.1 -- l'API fait le filtre cote serveur,
+  /// on rapatrie uniquement les stations dans le rayon. La distance
+  /// exacte est recalculee en RAM via haversine pour le tri + l'UI.
   ///
   /// Retourne une liste vide si reseau down, API erreur, ou aucune
   /// station dans le rayon. **Pas de levee d'exception** : best-effort.
@@ -117,25 +117,20 @@ class FuelPriceService {
     Duration timeout = const Duration(seconds: 8),
   }) async {
     try {
-      // Approx 1 deg de latitude = ~111 km. On prend une marge x1.5 pour
-      // ne pas manquer les stations en bordure.
-      final degRadius = (maxKm / 111) * 1.5;
-      final latMin = lat - degRadius;
-      final latMax = lat + degRadius;
-      // La longitude varie avec la latitude. On compense par cos(lat).
-      final lngRadius = degRadius / math.cos(lat * math.pi / 180);
-      final lngMin = lng - lngRadius;
-      final lngMax = lng + lngRadius;
-
+      // L'API ODSql v2.1 : within_distance(geom, geom'POINT(lng lat)', Xkm).
+      // ATTENTION ordre lng/lat dans POINT (WKT standard) et NON lat/lng.
+      // Le 3e argument accepte les suffixes 'km', 'm', etc.
+      // On filtre aussi sur gazole_prix non null (sinon ca renvoie des
+      // stations sans Diesel = donnees inutiles pour Noah).
+      final where = "within_distance(geom, geom'POINT($lng $lat)', "
+          "${maxKm.toInt()}km) and gazole_prix is not null";
       final uri = Uri.parse(_baseUrl).replace(queryParameters: {
-        'where':
-            'geom is not null and gazole_prix is not null '
-            'and latitude > $latMin and latitude < $latMax '
-            'and longitude > $lngMin and longitude < $lngMax',
-        'select':
-            'id,gazole_prix,gazole_maj,latitude,longitude,'
-            'cp,ville,adresse,nom',
-        'limit': '500',
+        'where': where,
+        // 'nom' n'existe pas dans le dataset, on prend juste id +
+        // adresse + cp + ville. La "marque" n'est pas exposee par
+        // data.gouv.fr -- on affichera l'adresse comme label principal.
+        'select': 'id,gazole_prix,gazole_maj,cp,ville,adresse,geom',
+        'limit': '100',
       });
       final resp = await _http.get(uri).timeout(timeout);
       if (resp.statusCode != 200) return const [];
@@ -146,18 +141,23 @@ class FuelPriceService {
       for (final r in results) {
         final m = r as Map<String, dynamic>;
         final p = m['gazole_prix'];
-        final lt = m['latitude'];
-        final lg = m['longitude'];
-        if (p == null || lt == null || lg == null) continue;
+        // `geom` est un objet `{lon: ..., lat: ...}` (geo_point_2d).
+        final g = m['geom'];
+        if (p == null || g is! Map) continue;
+        final stLat = (g['lat'] as num?)?.toDouble();
+        final stLng = (g['lon'] as num?)?.toDouble();
+        if (stLat == null || stLng == null) continue;
         final price = (p as num).toDouble();
         if (price < 0.5 || price > 5.0) continue;
-        final stLat = (lt as num).toDouble();
-        final stLng = (lg as num).toDouble();
         final dKm = _haversineKm(lat, lng, stLat, stLng);
+        // Filtre defensif : l'API a deja filtre mais on re-coupe au cas
+        // ou (precision within_distance vs haversine).
         if (dKm > maxKm) continue;
         stations.add(FuelStation(
           id: (m['id'] as Object?)?.toString() ?? '',
-          name: (m['nom'] as String?)?.trim() ?? '',
+          // Pas de nom : data.gouv.fr ne le fournit pas. On laisse vide,
+          // l'UI affichera l'adresse comme label principal.
+          name: '',
           address: (m['adresse'] as String?)?.trim() ?? '',
           codePostal: (m['cp'] as String?)?.trim() ?? '',
           ville: (m['ville'] as String?)?.trim() ?? '',
