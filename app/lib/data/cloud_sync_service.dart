@@ -1104,10 +1104,6 @@ class CloudSyncService {
   /// idempotent identique au push tournee : cloud_id null -> generer
   /// UUID + INSERT + persister localement. cloud_id set -> UPDATE.
   ///
-  /// User_id envoye uniquement au 1er push (cf [_pushCoequipier]).
-  /// Pas de push de la colonne `photo_path` (chemin local du device
-  /// source, pas valide ailleurs).
-  ///
   /// Best-effort par row : si une row echoue (RLS, conflit, etc.),
   /// on log et on continue avec les suivantes plutot que de tout
   /// arreter.
@@ -1117,42 +1113,8 @@ class CloudSyncService {
   ) async {
     final locals = await _db.select(_db.savedDestinations).get();
     for (final s in locals) {
-      final cloudId = s.cloudId ?? _uuid.v4();
-      final isFirstPush = s.cloudId == null;
-      final row = <String, dynamic>{
-        'id': cloudId,
-        if (isFirstPush) 'user_id': userId,
-        'nom_client': s.nomClient,
-        'adresse_display': s.adresseDisplay,
-        'lat': s.lat,
-        'lng': s.lng,
-        'rue': s.rue,
-        'code_postal': s.codePostal,
-        'ville': s.ville,
-        'use_count': s.useCount,
-        'last_used_at': s.lastUsedAt.toIso8601String(),
-        if (isFirstPush) 'cree_le': s.creeLe.toIso8601String(),
-        'is_favori': s.isFavori,
-        'color_tag': s.colorTag,
-        'notes_carnet': s.notesCarnet,
-        'tags_json': s.tagsJson,
-        // photo_path : volontairement non push (chemin local du device).
-        'code_acces': s.codeAcces,
-        'etage_batiment': s.etageBatiment,
-        'updated_at': s.updatedAt.toUtc().toIso8601String(),
-      };
       try {
-        if (isFirstPush) {
-          await client.from('saved_destinations').insert(row);
-          await (_db.update(_db.savedDestinations)
-                ..where((r) => r.id.equals(s.id)))
-              .write(SavedDestinationsCompanion(cloudId: Value(cloudId)));
-        } else {
-          await client
-              .from('saved_destinations')
-              .update(row)
-              .eq('id', cloudId);
-        }
+        await _pushSavedDestinationRow(client, s, userId);
       } on Object catch (e) {
         debugPrint(
           '[CloudSyncService] Push carnet "${s.nomClient ?? s.adresseDisplay}" '
@@ -1160,6 +1122,67 @@ class CloudSyncService {
         );
         // Continue avec les autres rows.
       }
+    }
+  }
+
+  /// Push public d'une seule entree du carnet identifiee par son id
+  /// local. Sert au carnet partage entre coequipiers (carte Trello #57) :
+  /// quand un livreur ajoute / edite un client, on push immediatement
+  /// pour que les autres devices de l'equipe voient l'entree au prochain
+  /// pull. Best-effort : silencieux si offline ou row introuvable, throw
+  /// [CloudSyncException] uniquement sur erreur de configuration.
+  ///
+  /// Pattern identique a [_pushAllSavedDestinations] mais sur 1 row :
+  /// idempotent (cloud_id null -> INSERT + persist, set -> UPDATE).
+  Future<void> pushSavedDestination(int localId) async {
+    final client = _client();
+    final userId = _requireUserId();
+    final row = await (_db.select(_db.savedDestinations)
+          ..where((d) => d.id.equals(localId)))
+        .getSingleOrNull();
+    if (row == null) return;
+    await _pushSavedDestinationRow(client, row, userId);
+  }
+
+  /// User_id envoye uniquement au 1er push (cf [_pushCoequipier]).
+  /// Pas de push de la colonne `photo_path` (chemin local du device
+  /// source, pas valide ailleurs).
+  Future<void> _pushSavedDestinationRow(
+    SupabaseClient client,
+    SavedDestination s,
+    String userId,
+  ) async {
+    final cloudId = s.cloudId ?? _uuid.v4();
+    final isFirstPush = s.cloudId == null;
+    final row = <String, dynamic>{
+      'id': cloudId,
+      if (isFirstPush) 'user_id': userId,
+      'nom_client': s.nomClient,
+      'adresse_display': s.adresseDisplay,
+      'lat': s.lat,
+      'lng': s.lng,
+      'rue': s.rue,
+      'code_postal': s.codePostal,
+      'ville': s.ville,
+      'use_count': s.useCount,
+      'last_used_at': s.lastUsedAt.toIso8601String(),
+      if (isFirstPush) 'cree_le': s.creeLe.toIso8601String(),
+      'is_favori': s.isFavori,
+      'color_tag': s.colorTag,
+      'notes_carnet': s.notesCarnet,
+      'tags_json': s.tagsJson,
+      // photo_path : volontairement non push (chemin local du device).
+      'code_acces': s.codeAcces,
+      'etage_batiment': s.etageBatiment,
+      'updated_at': s.updatedAt.toUtc().toIso8601String(),
+    };
+    if (isFirstPush) {
+      await client.from('saved_destinations').insert(row);
+      await (_db.update(_db.savedDestinations)
+            ..where((r) => r.id.equals(s.id)))
+          .write(SavedDestinationsCompanion(cloudId: Value(cloudId)));
+    } else {
+      await client.from('saved_destinations').update(row).eq('id', cloudId);
     }
   }
 

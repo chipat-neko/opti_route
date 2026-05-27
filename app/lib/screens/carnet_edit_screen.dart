@@ -7,6 +7,7 @@ import '../data/address_suggestion.dart';
 import '../data/database.dart';
 import '../data/saved_destinations_repository.dart';
 import '../providers/database_providers.dart';
+import '../providers/supabase_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/address_autocomplete_field.dart';
@@ -172,6 +173,12 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
               await ref
                   .read(savedDestinationsRepositoryProvider)
                   .setColorTag(widget.entry.id, tag);
+              // Carte #57 : push silencieux pour propager aux coequipiers.
+              try {
+                await ref
+                    .read(cloudSyncServiceProvider)
+                    .pushSavedDestination(widget.entry.id);
+              } on Object {/* offline / non auth : no-op */}
               if (!context.mounted) return;
               setState(() {});
             },
@@ -247,6 +254,20 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
         if (seen.add(k)) tags.add(t);
       }
       await repo.setTags(widget.entry.id, tags);
+
+      // Carnet partage entre coequipiers (carte Trello #57) : pousse
+      // l'entree modifiee vers Supabase pour que les autres devices
+      // de l'equipe voient la mise a jour au prochain pull. Silencieux
+      // best-effort : un echec (offline, pas connecte, RLS) n'empeche
+      // pas la sortie de l'ecran -- le pull global retroactif (cf
+      // [CloudSyncService.pullAllForCurrentUser]) rattrapera.
+      try {
+        await ref
+            .read(cloudSyncServiceProvider)
+            .pushSavedDestination(widget.entry.id);
+      } on Object {
+        // No-op : pas connecte au cloud OU rejet RLS.
+      }
 
       if (!mounted) return;
       Navigator.of(context).pop();
