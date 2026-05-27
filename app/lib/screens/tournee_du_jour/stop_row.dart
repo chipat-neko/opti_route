@@ -1,37 +1,32 @@
-import 'dart:async';
-
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
-import '../../data/eta_calculator.dart';
-import '../../data/location_service.dart';
-import '../../data/notifications_service.dart';
-import '../../data/preuve_photo_service.dart';
 import '../../data/stop_types.dart';
-import '../../data/cloud_error_humanizer.dart';
-import '../../data/stops_repository.dart';
-import '../../data/tournees_repository.dart';
-import '../../data/tracking_codes_repository.dart';
-import '../../providers/database_providers.dart';
-import '../../providers/supabase_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
-import '../../widgets/stop_action_sheet.dart';
-import '../ajout_arret_screen.dart';
 import 'known_client_badge.dart';
-import '../preuve_photo_viewer_screen.dart';
+import 'stop_row_actions.dart';
+import 'stop_row_visuals.dart';
+
+// Re-exports pour les callers historiques de stop_row.dart qui
+// importent IndexChip / StopTag / CoequipierAvatar / EtaBadge /
+// SegmentBadge depuis ce fichier (carte Trello #150 : extraction
+// des sous-widgets visuels dans stop_row_visuals.dart).
+export 'stop_row_visuals.dart' show IndexChip, StopTag, CoequipierAvatar, EtaBadge, SegmentBadge;
 
 /// Ligne d'arret dans la liste de la tournee du jour. Affiche numero,
 /// nom client / adresse, tags (priorite, GPS manquant, nb colis,
 /// fenetre horaire), avatar coequipier, badge ETA, poignee de drag.
 ///
 /// Tap = ouvre la bottom sheet d'actions (marquer livre / echec /
-/// details / photo). Swipe gauche = supprime (via callback parent).
+/// details / photo). Long-press = dialog preview (carte #96). Swipe
+/// gauche = supprime (via callback parent). Swipe droite = marque
+/// livre directement.
+///
+/// La logique des 15 actions du sealed [StopAction] est extraite
+/// dans `stop_row_actions.dart` ([StopRowActions]), les widgets
+/// visuels dans `stop_row_visuals.dart` (carte Trello #150).
 class StopRow extends ConsumerWidget {
   const StopRow({
     super.key,
@@ -63,6 +58,7 @@ class StopRow extends ConsumerWidget {
     final tags = _buildTags(stop, p);
     final isLivre = stop.statutLivraison == 'livre';
     final isEchec = stop.statutLivraison == 'echec';
+    final actions = StopRowActions(stop);
     return Dismissible(
       key: ValueKey('stop-${stop.id}'),
       // Si l'arret est deja livre, on n'autorise que le swipe vers la
@@ -106,7 +102,7 @@ class StopRow extends ConsumerWidget {
           // Swipe gauche -> droite : marque livre + capture GPS + haptic +
           // SnackBar. Retourne false pour ne pas dismiss le widget (le
           // refresh de la liste vient du watch Drift).
-          await _swipeMarkLivre(context, ref);
+          await actions.handleSwipeLivre(context, ref);
           return false;
         }
         // Swipe droite -> gauche : delegue au parent qui ouvre la
@@ -115,8 +111,8 @@ class StopRow extends ConsumerWidget {
         return false;
       },
       child: InkWell(
-        onTap: () => _onTap(context, ref),
-        onLongPress: () => _showPreviewDialog(context, ref),
+        onTap: () => actions.handleTap(context, ref),
+        onLongPress: () => actions.showPreviewDialog(context, ref),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.x14,
@@ -217,7 +213,7 @@ class StopRow extends ConsumerWidget {
                 ReorderableDragStartListener(
                   index: dragIndex,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.x6,
                       vertical: AppSpacing.x10,
                     ),
@@ -235,376 +231,6 @@ class StopRow extends ConsumerWidget {
     );
   }
 
-  /// Marque l'arret livre depuis un swipe gauche -> droite. Meme logique
-  /// que [MarkLivreAction] dans [_onTap] (capture GPS + markLivre +
-  /// haptic + SnackBar + check fin de tournee), centralise ici pour ne
-  /// pas dupliquer.
-  Future<void> _swipeMarkLivre(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final repo = ref.read(stopsRepositoryProvider);
-    final tourneesRepo = ref.read(tourneesRepositoryProvider);
-    final pos = await _captureGpsPosition();
-    await repo.markLivre(stop.id, position: pos);
-    if (!context.mounted) return;
-    unawaited(HapticFeedback.mediumImpact());
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '${_primaryLine(stop)} '
-          'marque ${stopActionVerbParticipe(stop.type)}',
-        ),
-        backgroundColor: AppColors.emerald,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Photo preuve',
-          textColor: AppColors.ink,
-          onPressed: () => _capturerPreuve(ref, stop.id),
-        ),
-      ),
-    );
-    await _maybeFinishTournee(repo, tourneesRepo, stop.tourneeId);
-  }
-
-  Future<void> _onTap(BuildContext context, WidgetRef ref) async {
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final repo = ref.read(stopsRepositoryProvider);
-    final tourneesRepo = ref.read(tourneesRepositoryProvider);
-
-    final action = await StopActionSheet.show(context, stop);
-    if (action == null) return;
-    var statutChange = false;
-    switch (action) {
-      case MarkLivreAction():
-        final pos = await _captureGpsPosition();
-        await repo.markLivre(stop.id, position: pos);
-        statutChange = true;
-        // Vibration courte de confirmation : terrain gants l'hiver,
-        // Noah ne regarde pas toujours l'ecran apres avoir tape.
-        unawaited(HapticFeedback.mediumImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${_primaryLine(stop)} '
-              'marque ${stopActionVerbParticipe(stop.type)}',
-            ),
-            backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Photo preuve',
-              textColor: AppColors.ink,
-              onPressed: () => _capturerPreuve(ref, stop.id),
-            ),
-          ),
-        );
-      case MarkEchecAction(raison: final r):
-        final pos = await _captureGpsPosition();
-        await repo.markEchec(stop.id, r, position: pos);
-        statutChange = true;
-        // Vibration plus marquee qu'un livre OK : signal "attention,
-        // statut negatif".
-        unawaited(HapticFeedback.heavyImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${_primaryLine(stop)} '
-              '${stop.type == kStopTypeRamasse ? "pas ramasse" : "en echec"} '
-              ': ${_humanRaison(r)}',
-            ),
-            backgroundColor: AppColors.red,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Photo preuve',
-              textColor: AppColors.paper,
-              onPressed: () => _capturerPreuve(ref, stop.id),
-            ),
-          ),
-        );
-      case MarkAaLivrerAction():
-        await repo.markAaLivrer(stop.id);
-        statutChange = true;
-        unawaited(HapticFeedback.lightImpact());
-      case TakePreuvePhotoAction():
-        await _capturerPreuve(ref, stop.id);
-      case ViewPreuvePhotoAction():
-        final path = stop.preuvePhotoPath;
-        if (path == null) return;
-        await navigator.push<void>(
-          MaterialPageRoute(
-            builder: (_) => PreuvePhotoViewerScreen(photoPath: path),
-          ),
-        );
-      case CopyAdresseAction():
-        final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
-        await Clipboard.setData(ClipboardData(text: adresse));
-        unawaited(HapticFeedback.lightImpact());
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Adresse copiee'),
-            backgroundColor: AppColors.emerald,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      case ShareAdresseAction():
-        final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
-        await SharePlus.instance.share(
-          ShareParams(text: adresse, subject: 'Adresse de livraison'),
-        );
-      case GenerateTrackingLinkAction():
-        final repo = ref.read(trackingCodesRepositoryProvider);
-        try {
-          final tc = await repo.generateForStop(stop.id);
-          final url = TrackingCodesRepository.buildUrl(tc.code);
-          await Clipboard.setData(ClipboardData(text: url));
-          unawaited(HapticFeedback.lightImpact());
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Lien tracking copie : $url'),
-              backgroundColor: AppColors.emerald,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        } catch (e) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Generation lien echouee : ${humanizeAnyError(e)}'),
-              backgroundColor: AppColors.red,
-            ),
-          );
-        }
-      case OpenInMapsAction():
-        final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
-        final uri = Uri.parse(
-          'https://www.google.com/maps/search/?api=1'
-          '&query=${Uri.encodeComponent(adresse)}',
-        );
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      case OpenStreetviewAction():
-        final lat = stop.lat;
-        final lng = stop.lng;
-        if (lat == null || lng == null) {
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Adresse pas encore geocodee, Street View indisponible',
-              ),
-              backgroundColor: AppColors.amber,
-              duration: Duration(seconds: 3),
-            ),
-          );
-          return;
-        }
-        final uri = Uri.parse(
-          'https://www.google.com/maps/@?api=1'
-          '&map_action=pano&viewpoint=$lat,$lng',
-        );
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      case OpenDetailsAction():
-        await navigator.push<void>(
-          MaterialPageRoute(
-            builder: (_) => AjoutArretScreen(
-              tourneeId: stop.tourneeId,
-              initial: stop,
-            ),
-          ),
-        );
-      case ConvertTypeAction(newType: final newType):
-        await repo.setType(stop.id, newType);
-        unawaited(HapticFeedback.lightImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${_primaryLine(stop)} converti en '
-              '${newType == kStopTypeRamasse ? "ramasse" : "livraison"}',
-            ),
-            backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      case MoveToTourneeAction(targetTourneeId: final targetId):
-        // Deplace le stop vers la tournee choisie. On invalide
-        // l'optim VROOM des 2 tournees (source + dest), puis on
-        // relance l'auto-reorder local sur les 2.
-        final sourceTourneeId = stop.tourneeId;
-        await repo.moveToTournee(stop.id, targetId);
-        await tourneesRepo.invalidateOptimization(sourceTourneeId);
-        await tourneesRepo.invalidateOptimization(targetId);
-        await ref.read(localReorderServiceProvider).reorder(sourceTourneeId);
-        await ref.read(localReorderServiceProvider).reorder(targetId);
-        unawaited(HapticFeedback.mediumImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-                '${_primaryLine(stop)} deplace vers une autre tournee'),
-            backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-    }
-
-    if (statutChange) {
-      await _maybeFinishTournee(repo, tourneesRepo, stop.tourneeId);
-    }
-  }
-
-  /// Verifie si tous les arrets ont un statut definitif (livre / echec)
-  /// et bascule la tournee en 'terminee' le cas echeant. Si on annule
-  /// un statut, on revient a 'optimisee' / 'en_cours'.
-  Future<void> _maybeFinishTournee(
-    StopsRepository stopsRepo,
-    TourneesRepository tourneesRepo,
-    int tourneeId,
-  ) async {
-    final stops = await stopsRepo.getByTournee(tourneeId);
-    if (stops.isEmpty) return;
-    final tournee = await tourneesRepo.getById(tourneeId);
-    if (tournee == null) return;
-    final tousValides = stops.every(
-      (s) => s.statutLivraison == 'livre' || s.statutLivraison == 'echec',
-    );
-    final wasTerminee = tournee.statut == 'terminee';
-    if (tousValides && !wasTerminee) {
-      await tourneesRepo.update(
-        tourneeId,
-        const TourneesCompanion(statut: Value('terminee')),
-      );
-      // Notif post-tournee : recap livres / echecs / duree.
-      final nbLivres = stops.where((s) => s.statutLivraison == 'livre').length;
-      final nbEchecs = stops.where((s) => s.statutLivraison == 'echec').length;
-      final dureeMin = (tournee.dureeTotaleS ?? 0) ~/ 60;
-      unawaited(
-        NotificationsService.instance.showEndOfRouteSummary(
-          tourneeId: tourneeId,
-          nomTournee: tournee.nom,
-          nbLivres: nbLivres,
-          nbEchecs: nbEchecs,
-          dureeTotaleMin: dureeMin,
-        ),
-      );
-      // Si un rappel matin etait programme et toujours pendant, on
-      // l'annule (la tournee est faite).
-      unawaited(NotificationsService.instance.cancelTourneeRappel(tourneeId));
-    } else if (!tousValides && wasTerminee) {
-      // L'utilisateur a annule un statut deja pose. On retire la
-      // marque "terminee" pour qu'il finisse la tournee.
-      await tourneesRepo.update(
-        tourneeId,
-        const TourneesCompanion(statut: Value('optimisee')),
-      );
-    }
-  }
-
-  static String _humanRaison(String? r) {
-    return switch (r) {
-      'absent' => 'absent',
-      'refuse' => 'refuse',
-      'adresse_fausse' => 'adresse fausse',
-      'autre' => 'autre',
-      _ => 'sans raison',
-    };
-  }
-
-  /// Best-effort : retourne la position GPS actuelle pour servir de
-  /// preuve de passage. Si la permission n'a pas ete accordee ou si
-  /// le GPS est down (offline, batterie faible, indoors), retourne
-  /// null -- on stocke quand meme le statut sans coords.
-  ///
-  /// Timeout court (4 s) : on ne veut pas bloquer l'UX pendant que
-  /// Noah enchaine les "Marquer livre" en sortant des voitures.
-  static Future<({double lat, double lng})?> _captureGpsPosition() async {
-    try {
-      final ok = await LocationService.ensurePermission();
-      if (!ok) return null;
-      final pos = await LocationService.currentPosition()
-          .timeout(const Duration(seconds: 4));
-      return (lat: pos.latitude, lng: pos.longitude);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Lance la camera pour capturer une photo preuve, puis attache le
-  /// chemin au stop. Best-effort : si l'utilisateur annule ou que la
-  /// permission camera est refusee, on ne fait rien.
-  Future<void> _capturerPreuve(WidgetRef ref, int stopId) async {
-    final path = await PreuvePhotoService().capturer(stopId: stopId);
-    if (path == null) return;
-    await ref.read(stopsRepositoryProvider).setPreuvePhoto(stopId, path);
-    // Bypass du debounce 5s : si Noah ferme l'ecran tournee dans la
-    // foulee (typique apres validation livraison via SnackBar), le
-    // dispose appelle cloudAutoPushService.stop() qui cancel le timer
-    // sans push. Le flush() pousse maintenant pour ne pas perdre la
-    // photo cote cloud (bug Trello #69). No-op si pas connecte ou
-    // si rien en attente.
-    await ref.read(cloudAutoPushServiceProvider).flush();
-  }
-
-  /// Carte Trello #96 : preview rapide d'un stop sans engager d'action.
-  /// Long-press sur la row -> dialog modal compact avec nom, adresse,
-  /// nb colis, fenetre horaire, notes. Boutons :
-  /// - "Fermer" : juste pop
-  /// - "Actions" : pop puis ouvre la bottom sheet d'actions classique
-  ///
-  /// Use case : verifier les notes (code interphone) ou l'horaire
-  /// fenetre avant de descendre du vehicule, sans risquer de valider
-  /// un statut par erreur.
-  Future<void> _showPreviewDialog(BuildContext context, WidgetRef ref) async {
-    unawaited(HapticFeedback.lightImpact());
-    final p = context.palette;
-    final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
-    final nom = stop.nomClient?.trim();
-    final fenetreDebut = stop.fenetreDebut;
-    final fenetreFin = stop.fenetreFin;
-    final notes = stop.notes?.trim();
-    final ouvrirActions = await showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: p.paper,
-        title: Text(
-          (nom != null && nom.isNotEmpty) ? nom : _primaryLine(stop),
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _PreviewRow(icon: Icons.place_outlined, text: adresse),
-            const SizedBox(height: AppSpacing.x8),
-            _PreviewRow(
-              icon: Icons.inventory_2_outlined,
-              text: '${stop.nbColis} colis '
-                  '(${stop.type == kStopTypeRamasse ? "ramasse" : "livraison"})',
-            ),
-            if (fenetreDebut != null && fenetreFin != null) ...[
-              const SizedBox(height: AppSpacing.x8),
-              _PreviewRow(
-                icon: Icons.schedule_outlined,
-                text: 'Fenetre $fenetreDebut - $fenetreFin',
-              ),
-            ],
-            if (notes != null && notes.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.x8),
-              _PreviewRow(icon: Icons.notes_outlined, text: notes),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Fermer'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(true),
-            child: const Text('Actions'),
-          ),
-        ],
-      ),
-    );
-    if (ouvrirActions == true && context.mounted) {
-      await _onTap(context, ref);
-    }
-  }
-
   String _primaryLine(Stop s) {
     if (s.nomClient != null && s.nomClient!.isNotEmpty) {
       return s.nomClient!;
@@ -618,6 +244,18 @@ class StopRow extends ConsumerWidget {
     }
     if (s.notes != null && s.notes!.isNotEmpty) return s.notes;
     return null;
+  }
+
+  // Duplique [StopRowActions._humanRaison] : utilise ici pour le label
+  // affiche directement dans la row quand statutLivraison='echec'.
+  String _humanRaison(String? r) {
+    return switch (r) {
+      'absent' => 'absent',
+      'refuse' => 'refuse',
+      'adresse_fausse' => 'adresse fausse',
+      'autre' => 'autre',
+      _ => 'sans raison',
+    };
   }
 
   List<Widget> _buildTags(Stop s, AppPalette p) {
@@ -687,299 +325,5 @@ class StopRow extends ConsumerWidget {
         ),
       _ => null,
     };
-  }
-}
-
-/// Chip carre avec le numero d'ordre du stop. Couleur de fond selon
-/// statut (vert = livre, rouge = echec, ink = priorite figue, paper
-/// par defaut).
-class IndexChip extends StatelessWidget {
-  const IndexChip({
-    super.key,
-    required this.index,
-    required this.priorite,
-    this.statut = 'a_livrer',
-  });
-
-  final int index;
-  final String priorite;
-  final String statut;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    if (statut == 'livre') {
-      return Container(
-        width: 36,
-        height: 36,
-        decoration: const BoxDecoration(
-          color: AppColors.emerald,
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Icon(Icons.check, color: p.paper, size: 20),
-      );
-    }
-    if (statut == 'echec') {
-      return Container(
-        width: 36,
-        height: 36,
-        decoration: const BoxDecoration(
-          color: AppColors.red,
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Icon(Icons.close, color: p.paper, size: 20),
-      );
-    }
-    final isActive =
-        priorite == 'obligatoire_premier' || priorite == 'obligatoire_dernier';
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: isActive ? p.ink : p.paper,
-        border: Border.all(color: p.ink, width: 1.5),
-        borderRadius: BorderRadius.circular(AppRadius.r10),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '$index',
-        style: appMonoStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: isActive ? AppColors.lime : p.ink,
-        ),
-      ),
-    );
-  }
-}
-
-/// Tag (pilule colore) affichant un label court. Utilise pour les
-/// priorites, le nombre de colis, les fenetres horaires, etc.
-class StopTag extends StatelessWidget {
-  const StopTag({
-    super.key,
-    required this.label,
-    required this.bg,
-    required this.fg,
-    this.mono = false,
-  });
-
-  final String label;
-  final Color bg;
-  final Color fg;
-  final bool mono;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = mono
-        ? appMonoStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: fg)
-        : TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
-            color: fg,
-            letterSpacing: 0.4,
-          );
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x8,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppRadius.r6),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: style,
-      ),
-    );
-  }
-}
-
-/// Mini avatar circulaire du coequipier affecte a un arret.
-/// Resolution non-bloquante : si le coequipier n'est pas dans
-/// `coequipiersByIdProvider` (archive ou supprime), on affiche `?`.
-class CoequipierAvatar extends ConsumerWidget {
-  const CoequipierAvatar({super.key, required this.coequipierId});
-
-  final int coequipierId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final byId = ref.watch(coequipiersByIdProvider);
-    final c = byId[coequipierId];
-    final color = c == null
-        ? context.palette.creamSoft
-        : colorFromTag(c.colorTag, defaultColor: AppColors.lime);
-    final label = c == null ? '?' : _avatarInitials(c.nom);
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.x6),
-      child: Tooltip(
-        message: c?.nom ?? 'Coequipier inconnu',
-        child: Container(
-          width: 26,
-          height: 26,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.ink.withValues(alpha: 0.15),
-              width: 1,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: AppColors.ink,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String _avatarInitials(String nom) {
-    final parts = nom.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) {
-      return parts.first.substring(0, 1).toUpperCase();
-    }
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
-        .toUpperCase();
-  }
-}
-
-/// Badge "ETA HH:MM" affiche en regard du nom du client. Watche le
-/// provider `etasParStopProvider` et n'affiche rien tant que le calcul
-/// n'a pas emis ou si l'ETA n'est pas disponible pour ce stop.
-class EtaBadge extends ConsumerWidget {
-  const EtaBadge({
-    super.key,
-    required this.tourneeId,
-    required this.stopId,
-  });
-
-  final int tourneeId;
-  final int stopId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.palette;
-    final etas = ref.watch(etasParStopProvider(tourneeId)).asData?.value;
-    final eta = etas?[stopId];
-    if (eta == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.x6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x6,
-          vertical: 3,
-        ),
-        decoration: BoxDecoration(
-          color: p.inkLine.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(AppRadius.r8),
-        ),
-        child: Text(
-          EtaCalculator.formatEtaHHmm(eta),
-          style: appMonoStyle(
-            fontSize: 10,
-            color: p.textMute,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Badge "8 km · 15 min" affiche en bas du primaire d'un StopRow.
-/// Indique la distance + duree estimee du segment PRECEDENT (depuis
-/// le stop precedent OU depuis le depot pour le 1er stop pending).
-///
-/// Inspire de Spoke route planner ("15 min, 8 km jusqu'au prochain
-/// arret"). Aide Noah a savoir d'un coup d'oeil si c'est juste a cote
-/// ou loin sans avoir a calculer.
-///
-/// Pas affiche si le stop est deja livre/echec OU si pas de coords.
-class SegmentBadge extends ConsumerWidget {
-  const SegmentBadge({
-    super.key,
-    required this.tourneeId,
-    required this.stopId,
-  });
-
-  final int tourneeId;
-  final int stopId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.palette;
-    final segments =
-        ref.watch(segmentsParStopProvider(tourneeId)).asData?.value;
-    final seg = segments?[stopId];
-    if (seg == null) return const SizedBox.shrink();
-    final origin = seg.fromDepot ? 'depart' : 'precedent';
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Row(
-        children: [
-          Icon(
-            Icons.straighten,
-            size: 11,
-            color: p.textMute,
-          ),
-          const SizedBox(width: 3),
-          // Flexible + ellipsis : sans ca, sur les longs segments
-          // ('13 km · 1h05 depuis precedent') le Text depassait
-          // a droite et Flutter affichait 'RIGHT OVERFLOWED BY N
-          // PIXELS' en texte rouge vertical (vu sur Xiaomi Noah
-          // 2026-05-21 : bande rouge qui traverse l'ecran).
-          Flexible(
-            child: Text(
-              '${seg.distanceLabel} · ${seg.durationLabel} depuis $origin',
-              style: appMonoStyle(
-                fontSize: 10,
-                color: p.textMute,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Ligne icone + texte du dialog preview (carte Trello #96). Utilise
-/// pour les infos cles d'un stop (adresse, colis, fenetre, notes).
-class _PreviewRow extends StatelessWidget {
-  const _PreviewRow({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: p.textMute),
-        const SizedBox(width: AppSpacing.x8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 13, color: p.ink, height: 1.35),
-          ),
-        ),
-      ],
-    );
   }
 }
