@@ -82,6 +82,7 @@ class StopsBulkActions {
       }
     } catch (_) {/* best-effort GPS */}
 
+    final pendingIds = pending.map((s) => s.id).toList(growable: false);
     for (final s in pending) {
       await stopsRepo.markLivre(s.id, position: pos);
     }
@@ -90,6 +91,7 @@ class StopsBulkActions {
     final tousValides = refreshed.every(
       (s) => s.statutLivraison == 'livre' || s.statutLivraison == 'echec',
     );
+    final statutAvant = tournee.statut;
     if (tousValides) {
       await tourneesRepo.update(
         tournee.id,
@@ -100,10 +102,34 @@ class StopsBulkActions {
     if (!context.mounted) return;
     // Pulse heavy : batch complet -> evenement marquant.
     unawaited(HapticFeedback.heavyImpact());
+    // Undo bulk (carte #115) : repasse tous les arrets du batch en
+    // 'a_livrer' et restaure le statut de tournee si on l'avait bascule
+    // en 'terminee'.
     messenger.showSnackBar(
       SnackBar(
         content: Text('${pending.length} arret(s) marques livres'),
         backgroundColor: AppColors.emerald,
+        duration: const Duration(seconds: 6),
+        action: SnackBarAction(
+          label: 'Annuler',
+          textColor: AppColors.cream,
+          onPressed: () async {
+            await stopsRepo.markAaLivrerBatch(pendingIds);
+            if (tousValides && statutAvant != 'terminee') {
+              await tourneesRepo.update(
+                tournee.id,
+                TourneesCompanion(statut: Value(statutAvant)),
+              );
+            }
+            messenger.showSnackBar(
+              SnackBar(
+                content:
+                    Text('${pendingIds.length} arret(s) repasses en attente'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

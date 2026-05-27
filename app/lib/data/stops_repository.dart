@@ -294,6 +294,22 @@ class StopsRepository {
     return _markAaLivrerImpl(id, action: 'mark_a_livrer');
   }
 
+  /// Repasse plusieurs arrets en 'a_livrer' d'un coup. Sert a l'annulation
+  /// d'une action en masse (carte #115 : SnackBar "Annuler" apres
+  /// "Tout marquer livre"). Action d'historique dediee `undo_bulk` pour
+  /// tracer que c'est un revert groupe. Retourne le nombre d'arrets
+  /// effectivement repasses (ceux qui n'etaient pas deja 'a_livrer').
+  Future<int> markAaLivrerBatch(List<int> ids) async {
+    var n = 0;
+    for (final id in ids) {
+      final cur = await getById(id);
+      if (cur == null || cur.statutLivraison == 'a_livrer') continue;
+      await _markAaLivrerImpl(id, action: 'undo_bulk');
+      n++;
+    }
+    return n;
+  }
+
   Future<void> _logHistory({
     required int stopId,
     required String action,
