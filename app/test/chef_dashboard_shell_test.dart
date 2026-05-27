@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:opti_route/data/chef_stats_service.dart';
+import 'package:opti_route/providers/database_providers.dart';
 import 'package:opti_route/screens/chef/chef_dashboard_shell.dart';
 import 'package:opti_route/theme/app_theme.dart';
 import 'package:opti_route/theme/app_tokens.dart';
@@ -9,16 +12,22 @@ import 'package:opti_route/theme/app_tokens.dart';
 /// Widget tests du shell "vue d'ensemble chef" (epopee #88, [#88·1]).
 /// Verifie la bascule responsive : grand ecran -> 3 panneaux en
 /// colonnes (pas de hint), ecran etroit -> panneaux empiles + message
-/// "optimise pour grand ecran". Pas de dependance Drift / Riverpod :
-/// c'est un shell de placeholders.
+/// "optimise pour grand ecran". Le panneau stats ([#88·4]) lit
+/// `equipeStatsJourProvider` : on l'override pour ne pas toucher Drift.
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  Widget harness() => MaterialApp(
-        theme: buildAppTheme(preset: AppThemePreset.lime),
-        home: const ChefDashboardShell(),
+  Widget harness() => ProviderScope(
+        overrides: [
+          equipeStatsJourProvider
+              .overrideWith((ref) async => ChefStatsJour.empty),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(preset: AppThemePreset.lime),
+          home: const ChefDashboardShell(),
+        ),
       );
 
   testWidgets('affiche les 3 panneaux avec leur tag sous-carte',

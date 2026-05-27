@@ -12,6 +12,7 @@ import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
 import '../data/resume_hebdo_service.dart';
+import '../data/chef_stats_service.dart';
 import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
@@ -737,6 +738,25 @@ final aujourdhuiResumeProvider =
     premierLivreLe: premier,
     dernierLivreLe: dernier,
   );
+});
+
+/// Stats agregees de la journee pour TOUTE l'equipe (logiciel chef,
+/// epopee #88 / [#88·4]). Recharge quand une tournee du jour change
+/// (depend de `tourneesDuJourProvider`). 1 seule query Drift en plus
+/// (les stops du jour). Le calcul + les alertes vivent dans la fonction
+/// pure [ChefStatsJour.computeFromBundle].
+final equipeStatsJourProvider =
+    FutureProvider<ChefStatsJour>((ref) async {
+  final tournees = ref.watch(tourneesDuJourProvider);
+  if (tournees.isEmpty) return ChefStatsJour.empty;
+
+  final db = ref.watch(appDatabaseProvider);
+  final ids = tournees.map((t) => t.id).toList();
+  final stops = await (db.select(db.stops)
+        ..where((s) => s.tourneeId.isIn(ids)))
+      .get();
+
+  return ChefStatsJour.computeFromBundle(tournees: tournees, stops: stops);
 });
 
 /// Snapshot immuable du resume du jour, consomme par [AujourdhuiResume]
