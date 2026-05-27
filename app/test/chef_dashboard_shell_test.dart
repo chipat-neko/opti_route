@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:opti_route/data/chef_carte_service.dart';
 import 'package:opti_route/data/chef_stats_service.dart';
 import 'package:opti_route/data/chef_tournees_service.dart';
 import 'package:opti_route/providers/database_providers.dart';
@@ -26,6 +27,8 @@ void main() {
               .overrideWith((ref) async => ChefStatsJour.empty),
           equipeTourneesEnCoursProvider
               .overrideWith((ref) async => const <ChefTourneeProgress>[]),
+          equipeCarteJourProvider
+              .overrideWith((ref) async => ChefCarteJour.empty),
         ],
         child: MaterialApp(
           theme: buildAppTheme(preset: AppThemePreset.lime),
@@ -41,7 +44,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tournees en cours'), findsOneWidget);
-    expect(find.text('Carte live'), findsOneWidget);
+    expect(find.text('Carte du jour'), findsOneWidget);
     expect(find.text('Stats du jour'), findsOneWidget);
 
     expect(find.text('[#88·2]'), findsOneWidget);
@@ -74,7 +77,7 @@ void main() {
     );
     // Les 3 panneaux restent presents, juste empiles.
     expect(find.text('Tournees en cours'), findsOneWidget);
-    expect(find.text('Carte live'), findsOneWidget);
+    expect(find.text('Carte du jour'), findsOneWidget);
     expect(find.text('Stats du jour'), findsOneWidget);
   });
 }

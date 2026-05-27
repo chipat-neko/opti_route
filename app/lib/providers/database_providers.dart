@@ -12,6 +12,7 @@ import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
 import '../data/parametres_repository.dart';
 import '../data/resume_hebdo_service.dart';
+import '../data/chef_carte_service.dart';
 import '../data/chef_stats_service.dart';
 import '../data/chef_tournees_service.dart';
 import '../data/client_memory_service.dart';
@@ -780,6 +781,24 @@ final equipeTourneesEnCoursProvider =
     tournees: tournees,
     stops: stops,
   );
+});
+
+/// Points geolocalises du jour (depots + stops) pour la carte du
+/// logiciel chef (epopee #88 / [#88·3]). Meme source que les autres
+/// providers chef. Agregation pure dans
+/// [ChefCarteJour.computeFromBundle].
+final equipeCarteJourProvider =
+    FutureProvider<ChefCarteJour>((ref) async {
+  final tournees = ref.watch(tourneesDuJourProvider);
+  if (tournees.isEmpty) return ChefCarteJour.empty;
+
+  final db = ref.watch(appDatabaseProvider);
+  final ids = tournees.map((t) => t.id).toList();
+  final stops = await (db.select(db.stops)
+        ..where((s) => s.tourneeId.isIn(ids)))
+      .get();
+
+  return ChefCarteJour.computeFromBundle(tournees: tournees, stops: stops);
 });
 
 /// Snapshot immuable du resume du jour, consomme par [AujourdhuiResume]
