@@ -19,6 +19,7 @@ import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
 import '../data/saved_destinations_repository.dart';
+import '../data/secure_screen_service.dart';
 import '../data/sheets_repository.dart';
 import '../data/stats_service.dart';
 import '../data/stops_repository.dart';
@@ -246,6 +247,21 @@ final lockEnabledStreamProvider = StreamProvider<bool>((ref) {
         .getPinHash();
     return hash != null && hash.isNotEmpty;
   });
+});
+
+/// Service FLAG_SECURE : masque l'app dans le selecteur de taches
+/// Android + bloque les captures d'ecran (carte #111). No-op hors
+/// Android. Const (sans etat) -- l'etat vit dans les parametres.
+final secureScreenServiceProvider = Provider<SecureScreenService>((ref) {
+  return const SecureScreenService();
+});
+
+/// Toggle "masquer dans le selecteur d'apps" (FLAG_SECURE, carte #111).
+/// Default false. `main.dart` ecoute ce stream et applique le flag natif
+/// a chaque changement (au demarrage via fireImmediately + a chaque
+/// bascule du toggle dans Parametres > Securite).
+final secureScreenEnabledProvider = StreamProvider<bool>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchSecureScreen();
 });
 
 /// Service de resume hebdomadaire chef (carte Trello #101).

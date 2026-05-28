@@ -109,6 +109,18 @@ class OptiRouteApp extends ConsumerWidget {
     // plan (unawaited) pour ne pas bloquer l'UI au demarrage.
     unawaited(ref.read(autoBackupServiceProvider).maybeRunAutoBackup());
 
+    // Applique le flag Android FLAG_SECURE selon le toggle "masquer
+    // dans le selecteur d'apps" (carte #111). Reactif : le listener se
+    // declenche a la 1ere emission du stream (etat initial au demarrage)
+    // puis a chaque bascule du toggle dans Parametres > Securite. No-op
+    // hors Android.
+    ref.listen<AsyncValue<bool>>(secureScreenEnabledProvider, (_, next) {
+      final enabled = next.asData?.value;
+      if (enabled != null) {
+        ref.read(secureScreenServiceProvider).setSecure(enabled);
+      }
+    });
+
     // Branche le ParametresRepository sur le NotificationsService
     // pour qu'il puisse consulter le creneau quiet hours avant chaque
     // notif immediate (showEndOfRouteSummary, showPendingStopsAlert).
