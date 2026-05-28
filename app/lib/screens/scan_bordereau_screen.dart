@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/bordereau_extraction.dart';
+import '../data/pdf_page_render_service.dart';
 import '../data/bordereau_parser.dart';
 import '../data/chronopost_bordereau_parser.dart';
 import '../data/client_memory_service.dart';
@@ -143,6 +145,14 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
             onPressed: _processing ? null : () => _pick(ImageSource.gallery),
             icon: const Icon(Icons.photo_library_outlined),
             label: const Text('Choisir depuis la galerie'),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          // Import PDF (carte #118) : un bordereau recu par mail, souvent
+          // multi-pages. En mode rafale, toutes les pages sont importees.
+          OutlinedButton.icon(
+            onPressed: _processing ? null : _importPdf,
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Importer un PDF'),
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: AppSpacing.x18),
@@ -378,9 +388,6 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       _processing = true;
       _errorMessage = null;
     });
-    // Chrono pour mesurer la duree totale du pipeline (pick + OCR +
-    // parse + validation BAN). Persiste dans le CSV de stats baseline.
-    final scanStarted = DateTime.now();
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(
@@ -393,8 +400,80 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         setState(() => _processing = false);
         return;
       }
+      await _processFile(File(picked.path));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _processing = false;
+        _errorMessage = 'Echec de la lecture : $e';
+      });
+    }
+  }
 
-      final file = File(picked.path);
+  /// Import d'un bordereau PDF (carte #118) : file_picker -> rendu des
+  /// pages en images (pdfx) -> chaque page passe dans le meme pipeline
+  /// OCR que les photos. En mode rafale [widget.batch], toutes les pages
+  /// sont empilees ; sinon seule la 1re page est traitee (validation
+  /// unitaire) avec un message si le PDF en contient plusieurs.
+  Future<void> _importPdf() async {
+    setState(() {
+      _processing = true;
+      _errorMessage = null;
+    });
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+      final path = picked?.files.singleOrNull?.path;
+      if (path == null) {
+        if (mounted) setState(() => _processing = false);
+        return;
+      }
+      final pages = await PdfPageRenderService().renderToImages(File(path));
+      if (pages.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _processing = false;
+          _errorMessage = 'PDF illisible ou vide.';
+        });
+        return;
+      }
+      // Mode rafale : toutes les pages. Sinon : la 1re seulement.
+      final toProcess = widget.batch ? pages : [pages.first];
+      for (final p in toProcess) {
+        await _processFile(p);
+      }
+      if (mounted) setState(() => _processing = false);
+      if (!widget.batch && pages.length > 1 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'PDF multi-pages : seule la 1re page importee. '
+              'Utilise "Scan rafale" pour tout importer d\'un coup.',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _processing = false;
+        _errorMessage = 'Echec lecture PDF : $e';
+      });
+    }
+  }
+
+  /// Pipeline OCR complet sur un fichier image (photo camera/galerie OU
+  /// page de PDF rendue, carte #118). Blur -> OCR rotations -> parser ->
+  /// BAN -> carnet -> LLM -> stats, puis empile (mode batch) ou affiche
+  /// la validation unitaire. [_processing] est gere par l'appelant.
+  Future<void> _processFile(File file) async {
+    // Chrono pour mesurer la duree totale du pipeline (OCR + parse +
+    // validation BAN). Persiste dans le CSV de stats baseline.
+    final scanStarted = DateTime.now();
+    try {
       // Sprint 2.C : detection de flou en amont. Variance du Laplacien
       // sur l'image downsamplee a 480 px. Si trop floue (< 50), on
       // affiche un avertissement non-bloquant pour que Noah puisse
