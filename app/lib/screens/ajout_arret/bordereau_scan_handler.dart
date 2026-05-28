@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/address_suggestion.dart';
+import '../../data/batch_scan_commit_service.dart';
 import '../../data/bordereau_extraction.dart';
+import '../../providers/database_providers.dart';
 import '../../providers/geocoding_providers.dart';
 import '../scan_bordereau_screen.dart';
 
@@ -118,4 +120,85 @@ Future<BordereauScanResult?> handleBordereauScan(
     nbColis: extraction.nbColis,
     isEnlevement: extraction.format == BordereauFormat.enlevement,
   );
+}
+
+/// Mode rafale (carte #119) : ouvre [ScanBordereauScreen] en mode batch,
+/// recupere le lot d'extractions, geocode chacune (best-effort), et cree
+/// les arrets en masse dans [tourneeId] via [BatchScanCommitService]
+/// (avec deduplication). Retourne le bilan (crees / doublons), ou null
+/// si annule / lot vide.
+Future<BatchCommitSummary?> handleBordereauScanBatch(
+  BuildContext context,
+  WidgetRef ref,
+  int tourneeId,
+) async {
+  final extractions =
+      await Navigator.of(context).push<List<BordereauExtraction>>(
+    MaterialPageRoute(
+      builder: (_) => const ScanBordereauScreen(batch: true),
+    ),
+  );
+  if (extractions == null || extractions.isEmpty || !context.mounted) {
+    return null;
+  }
+  final items = <BatchScanItem>[];
+  for (final e in extractions) {
+    final found = await _geocodeForBatch(ref, e);
+    items.add(BatchScanItem(
+      adresse: found?.adressePostale ??
+          e.adressePostale ??
+          e.rue ??
+          e.nomDestinataire ??
+          'Adresse a preciser',
+      nomClient: e.nomDestinataire,
+      lat: found?.lat,
+      lng: found?.lon,
+      nbColis: e.nbColis ?? 1,
+      isEnlevement: e.format == BordereauFormat.enlevement,
+    ));
+  }
+  return ref
+      .read(batchScanCommitServiceProvider)
+      .commit(tourneeId: tourneeId, items: items);
+}
+
+/// Geocodage best-effort d'une extraction pour le mode batch : cherche
+/// par nom puis par adresse, filtre legerement par CP, retourne le
+/// meilleur candidat ou null. Version compacte de la logique de
+/// [handleBordereauScan] (suffisant pour un pre-remplissage de masse que
+/// Noah peut ajuster ensuite arret par arret).
+Future<AddressSuggestion?> _geocodeForBatch(
+  WidgetRef ref,
+  BordereauExtraction extraction,
+) async {
+  final service = ref.read(geocodingServiceProvider);
+  final results = <AddressSuggestion>[];
+  final nomQuery = extraction.rechercheParNom;
+  if (nomQuery != null && nomQuery.length >= 3) {
+    try {
+      results.addAll(await service.search(nomQuery));
+    } catch (_) {/* on tente l'adresse */}
+  }
+  final addrQuery = extraction.adressePostale;
+  if (addrQuery != null && addrQuery.length >= 3) {
+    try {
+      results.addAll(await service.search(addrQuery));
+    } catch (_) {/* tant pis */}
+  }
+  if (results.isEmpty) return null;
+  final extractedCp = extraction.codePostal;
+  final filtered = extractedCp == null
+      ? results
+      : results
+          .where((r) => r.postcode == null || r.postcode == extractedCp)
+          .toList();
+  final pool = filtered.isEmpty ? results : filtered;
+  int score(AddressSuggestion a) {
+    if (a.isPoi) return 3;
+    if (a.road != null && a.houseNumber != null) return 3;
+    if (a.road != null) return 2;
+    return 1;
+  }
+  pool.sort((a, b) => score(b).compareTo(score(a)));
+  return pool.first;
 }
