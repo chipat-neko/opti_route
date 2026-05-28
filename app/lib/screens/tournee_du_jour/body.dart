@@ -76,6 +76,8 @@ class Body extends StatelessWidget {
             isEnPause: tournee.pauseeLe != null,
           ),
         ],
+        // Alertes anomalies (carte #122) : auto-masquees si aucune.
+        AnomaliesBanner(tournee: tournee, stops: stops),
         if (tournee.statut == 'en_cours') ...[
           const SizedBox(height: AppSpacing.x12),
           ProchainArretCard(stops: stops),
