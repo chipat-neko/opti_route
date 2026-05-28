@@ -1,5 +1,6 @@
 import 'database.dart';
 import 'geo_utils.dart';
+import 'lock_ordering.dart';
 import 'stops_repository.dart';
 import 'tournees_repository.dart';
 
@@ -42,7 +43,17 @@ class LocalReorderService {
       tournee: tournee,
       stops: stops,
     );
-    await _stopsRepo.applyOptimizedOrder(ordered);
+    // Respecte les arrets verrouilles (carte #114) : ils gardent leur
+    // index courant, les autres se reordonnent autour.
+    final finalOrder = LockOrdering.respectLocks(
+      currentOrder: stops.map((s) => s.id).toList(growable: false),
+      proposedOrder: ordered,
+      lockedIds: {
+        for (final s in stops)
+          if (s.positionLocked) s.id,
+      },
+    );
+    await _stopsRepo.applyOptimizedOrder(finalOrder);
   }
 
   /// Variante pure (sans I/O), exposee pour les tests unitaires.

@@ -237,6 +237,20 @@ class StopRowActions {
             duration: const Duration(seconds: 2),
           ),
         );
+      case ToggleLockPositionAction(locked: final locked):
+        await repo.setPositionLocked(stop.id, locked);
+        unawaited(HapticFeedback.lightImpact());
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              locked
+                  ? '${_primaryLine(stop)} verrouille a cette position'
+                  : '${_primaryLine(stop)} deverrouille',
+            ),
+            backgroundColor: AppColors.emerald,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       case MoveToTourneeAction(targetTourneeId: final targetId):
         // Deplace le stop vers la tournee choisie. On invalide
         // l'optim VROOM des 2 tournees (source + dest), puis on
