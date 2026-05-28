@@ -50,6 +50,9 @@ class ParametresRepository {
   // ne veulent pas du switch auto). Seuil par defaut 50 lux (penombre).
   static const _kAmbientLightAuto = 'ambient_light_auto';
   static const _kAmbientLightSeuilLux = 'ambient_light_seuil_lux';
+  // Masquer l'app dans le selecteur de taches Android via FLAG_SECURE
+  // (carte Trello #111). Default OFF.
+  static const _kSecureScreen = 'secure_screen';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -330,6 +333,20 @@ class ParametresRepository {
 
   Future<void> setVerrouActif(bool v) =>
       _write(_kVerrouActif, v ? '1' : '0');
+
+  /// Masquer l'app dans le selecteur de taches Android (FLAG_SECURE,
+  /// carte #111). Si ON : l'apercu multitache est masque et les captures
+  /// d'ecran sont bloquees. Default false (peut gener en debug et n'est
+  /// utile que pour qui manipule des donnees sensibles devant des tiers).
+  /// Android uniquement -- no-op sur les autres plateformes.
+  Future<bool> getSecureScreen() async =>
+      (await _readKey(_kSecureScreen)) == '1';
+
+  Stream<bool> watchSecureScreen() =>
+      _watchKey(_kSecureScreen).map((v) => v == '1');
+
+  Future<void> setSecureScreen(bool v) =>
+      _write(_kSecureScreen, v ? '1' : '0');
 
   /// Hash SHA-256 du PIN choisi par l'utilisateur (4 a 6 chiffres). Le
   /// PIN en clair n'est jamais stocke. Null si verrou desactiv ou PIN

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,7 +41,13 @@ class _SecuriteSectionState extends ConsumerState<SecuriteSection> {
   bool _biometricSupported = false;
   bool _biometricActive = false;
   int _autoLockMinutes = ParametresRepository.defaultAutoLockMinutes;
+  bool _secureScreen = false;
   bool _loading = true;
+
+  /// FLAG_SECURE n'existe que sur Android : on ne montre le toggle que
+  /// la (no-op ailleurs, inutile de l'exposer).
+  static final bool _isAndroid =
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   @override
   void initState() {
@@ -57,11 +65,13 @@ class _SecuriteSectionState extends ConsumerState<SecuriteSection> {
     final supported = await svc.canUseBiometrics();
     final bio = await params.getBiometrieActive();
     final mins = await params.getAutoLockMinutes();
+    final secure = await params.getSecureScreen();
     if (!mounted) return;
     setState(() {
       _biometricSupported = supported;
       _biometricActive = bio;
       _autoLockMinutes = mins;
+      _secureScreen = secure;
       _loading = false;
     });
   }
@@ -153,6 +163,16 @@ class _SecuriteSectionState extends ConsumerState<SecuriteSection> {
     setState(() => _autoLockMinutes = minutes);
   }
 
+  /// Active / desactive FLAG_SECURE (carte #111). On ne fait qu'ecrire
+  /// le parametre : `main.dart` ecoute `secureScreenEnabledProvider` et
+  /// applique le flag natif a chaque changement.
+  Future<void> _toggleSecureScreen(bool v) async {
+    final params = ref.read(parametresRepositoryProvider);
+    await params.setSecureScreen(v);
+    if (!mounted) return;
+    setState(() => _secureScreen = v);
+  }
+
   /// Texte humain pour le delai d'auto-lock. "0 = uniquement au
   /// demarrage" car le lock initial reste actif meme avec 0.
   String _formatAutoLock(int m) {
@@ -239,6 +259,22 @@ class _SecuriteSectionState extends ConsumerState<SecuriteSection> {
             },
           ),
         ],
+        // FLAG_SECURE (carte #111) : independant du verrou PIN, visible
+        // seulement sur Android (no-op ailleurs).
+        if (_isAndroid)
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _secureScreen,
+            title: const Text('Masquer dans le selecteur d\'apps'),
+            subtitle: const Text(
+              'Cache l\'apercu de l\'app (multitache) et bloque les '
+              'captures d\'ecran. Protege adresses, telephones et photos '
+              'preuves d\'un regard par-dessus l\'epaule.',
+              style: TextStyle(fontSize: 12),
+            ),
+            secondary: const Icon(Icons.visibility_off_outlined),
+            onChanged: _toggleSecureScreen,
+          ),
       ],
     );
   }
