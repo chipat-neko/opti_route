@@ -100,6 +100,7 @@ Stop _stop({
     priorite: 'flexible',
     dureeArretMin: 2,
     statutLivraison: statut,
+    positionLocked: false,
     creeLe: now,
     updatedAt: now,
   );

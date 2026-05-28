@@ -427,6 +427,14 @@ class StopsRepository {
     });
   }
 
+  /// Verrouille / deverrouille un arret a sa position courante (carte
+  /// #114). Un arret verrouille n'est pas deplace par le tri rapide,
+  /// l'optim VROOM ni le drag&drop (cf [LockOrdering.respectLocks]).
+  Future<int> setPositionLocked(int stopId, bool locked) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(positionLocked: Value(locked)));
+  }
+
   /// Pose `ordrePriorite = position dans [orderedStopIds]` (1-based)
   /// pour chaque stop. Sert au reorder manuel (drag&drop dans
   /// TourneeDuJourScreen) afin que la prochaine optimisation reprenne

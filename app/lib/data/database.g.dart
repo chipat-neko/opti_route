@@ -1577,6 +1577,21 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _positionLockedMeta = const VerificationMeta(
+    'positionLocked',
+  );
+  @override
+  late final GeneratedColumn<bool> positionLocked = GeneratedColumn<bool>(
+    'position_locked',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("position_locked" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _ordrePrioriteMeta = const VerificationMeta(
     'ordrePriorite',
   );
@@ -1687,6 +1702,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     livreLng,
     livreLe,
     ordreOptimise,
+    positionLocked,
     ordrePriorite,
     preuvePhotoPath,
     coequipierId,
@@ -1850,6 +1866,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('position_locked')) {
+      context.handle(
+        _positionLockedMeta,
+        positionLocked.isAcceptableOrUnknown(
+          data['position_locked']!,
+          _positionLockedMeta,
+        ),
+      );
+    }
     if (data.containsKey('ordre_priorite')) {
       context.handle(
         _ordrePrioriteMeta,
@@ -2002,6 +2027,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.int,
         data['${effectivePrefix}ordre_optimise'],
       ),
+      positionLocked: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}position_locked'],
+      )!,
       ordrePriorite: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}ordre_priorite'],
@@ -2086,6 +2115,13 @@ class Stop extends DataClass implements Insertable<Stop> {
   final DateTime? livreLe;
   final int? ordreOptimise;
 
+  /// Arret "verrouille" a sa position courante (carte #114). Quand true,
+  /// les algos de reordonnancement (tri rapide local, optim VROOM,
+  /// drag&drop) gardent cet arret a son index actuel et reordonnent les
+  /// autres autour. Default false. Use cases : finir par un client precis,
+  /// fenetre horaire stricte en milieu de tournee, priorite client.
+  final bool positionLocked;
+
   /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
   /// priorite egale (obligatoire_premier ou obligatoire_dernier).
   /// 1 = livre en premier de son groupe, 2 = en deuxieme, etc.
@@ -2159,6 +2195,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.livreLng,
     this.livreLe,
     this.ordreOptimise,
+    required this.positionLocked,
     this.ordrePriorite,
     this.preuvePhotoPath,
     this.coequipierId,
@@ -2215,6 +2252,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || ordreOptimise != null) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise);
     }
+    map['position_locked'] = Variable<bool>(positionLocked);
     if (!nullToAbsent || ordrePriorite != null) {
       map['ordre_priorite'] = Variable<int>(ordrePriorite);
     }
@@ -2280,6 +2318,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordreOptimise: ordreOptimise == null && nullToAbsent
           ? const Value.absent()
           : Value(ordreOptimise),
+      positionLocked: Value(positionLocked),
       ordrePriorite: ordrePriorite == null && nullToAbsent
           ? const Value.absent()
           : Value(ordrePriorite),
@@ -2331,6 +2370,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       livreLng: serializer.fromJson<double?>(json['livreLng']),
       livreLe: serializer.fromJson<DateTime?>(json['livreLe']),
       ordreOptimise: serializer.fromJson<int?>(json['ordreOptimise']),
+      positionLocked: serializer.fromJson<bool>(json['positionLocked']),
       ordrePriorite: serializer.fromJson<int?>(json['ordrePriorite']),
       preuvePhotoPath: serializer.fromJson<String?>(json['preuvePhotoPath']),
       coequipierId: serializer.fromJson<int?>(json['coequipierId']),
@@ -2365,6 +2405,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'livreLng': serializer.toJson<double?>(livreLng),
       'livreLe': serializer.toJson<DateTime?>(livreLe),
       'ordreOptimise': serializer.toJson<int?>(ordreOptimise),
+      'positionLocked': serializer.toJson<bool>(positionLocked),
       'ordrePriorite': serializer.toJson<int?>(ordrePriorite),
       'preuvePhotoPath': serializer.toJson<String?>(preuvePhotoPath),
       'coequipierId': serializer.toJson<int?>(coequipierId),
@@ -2397,6 +2438,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<double?> livreLng = const Value.absent(),
     Value<DateTime?> livreLe = const Value.absent(),
     Value<int?> ordreOptimise = const Value.absent(),
+    bool? positionLocked,
     Value<int?> ordrePriorite = const Value.absent(),
     Value<String?> preuvePhotoPath = const Value.absent(),
     Value<int?> coequipierId = const Value.absent(),
@@ -2430,6 +2472,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     ordreOptimise: ordreOptimise.present
         ? ordreOptimise.value
         : this.ordreOptimise,
+    positionLocked: positionLocked ?? this.positionLocked,
     ordrePriorite: ordrePriorite.present
         ? ordrePriorite.value
         : this.ordrePriorite,
@@ -2485,6 +2528,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       ordreOptimise: data.ordreOptimise.present
           ? data.ordreOptimise.value
           : this.ordreOptimise,
+      positionLocked: data.positionLocked.present
+          ? data.positionLocked.value
+          : this.positionLocked,
       ordrePriorite: data.ordrePriorite.present
           ? data.ordrePriorite.value
           : this.ordrePriorite,
@@ -2529,6 +2575,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('livreLng: $livreLng, ')
           ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
+          ..write('positionLocked: $positionLocked, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('preuvePhotoPath: $preuvePhotoPath, ')
           ..write('coequipierId: $coequipierId, ')
@@ -2563,6 +2610,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     livreLng,
     livreLe,
     ordreOptimise,
+    positionLocked,
     ordrePriorite,
     preuvePhotoPath,
     coequipierId,
@@ -2596,6 +2644,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.livreLng == this.livreLng &&
           other.livreLe == this.livreLe &&
           other.ordreOptimise == this.ordreOptimise &&
+          other.positionLocked == this.positionLocked &&
           other.ordrePriorite == this.ordrePriorite &&
           other.preuvePhotoPath == this.preuvePhotoPath &&
           other.coequipierId == this.coequipierId &&
@@ -2627,6 +2676,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<double?> livreLng;
   final Value<DateTime?> livreLe;
   final Value<int?> ordreOptimise;
+  final Value<bool> positionLocked;
   final Value<int?> ordrePriorite;
   final Value<String?> preuvePhotoPath;
   final Value<int?> coequipierId;
@@ -2656,6 +2706,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.livreLng = const Value.absent(),
     this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
+    this.positionLocked = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.preuvePhotoPath = const Value.absent(),
     this.coequipierId = const Value.absent(),
@@ -2686,6 +2737,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.livreLng = const Value.absent(),
     this.livreLe = const Value.absent(),
     this.ordreOptimise = const Value.absent(),
+    this.positionLocked = const Value.absent(),
     this.ordrePriorite = const Value.absent(),
     this.preuvePhotoPath = const Value.absent(),
     this.coequipierId = const Value.absent(),
@@ -2717,6 +2769,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<double>? livreLng,
     Expression<DateTime>? livreLe,
     Expression<int>? ordreOptimise,
+    Expression<bool>? positionLocked,
     Expression<int>? ordrePriorite,
     Expression<String>? preuvePhotoPath,
     Expression<int>? coequipierId,
@@ -2747,6 +2800,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (livreLng != null) 'livre_lng': livreLng,
       if (livreLe != null) 'livre_le': livreLe,
       if (ordreOptimise != null) 'ordre_optimise': ordreOptimise,
+      if (positionLocked != null) 'position_locked': positionLocked,
       if (ordrePriorite != null) 'ordre_priorite': ordrePriorite,
       if (preuvePhotoPath != null) 'preuve_photo_path': preuvePhotoPath,
       if (coequipierId != null) 'coequipier_id': coequipierId,
@@ -2779,6 +2833,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<double?>? livreLng,
     Value<DateTime?>? livreLe,
     Value<int?>? ordreOptimise,
+    Value<bool>? positionLocked,
     Value<int?>? ordrePriorite,
     Value<String?>? preuvePhotoPath,
     Value<int?>? coequipierId,
@@ -2809,6 +2864,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       livreLng: livreLng ?? this.livreLng,
       livreLe: livreLe ?? this.livreLe,
       ordreOptimise: ordreOptimise ?? this.ordreOptimise,
+      positionLocked: positionLocked ?? this.positionLocked,
       ordrePriorite: ordrePriorite ?? this.ordrePriorite,
       preuvePhotoPath: preuvePhotoPath ?? this.preuvePhotoPath,
       coequipierId: coequipierId ?? this.coequipierId,
@@ -2883,6 +2939,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (ordreOptimise.present) {
       map['ordre_optimise'] = Variable<int>(ordreOptimise.value);
     }
+    if (positionLocked.present) {
+      map['position_locked'] = Variable<bool>(positionLocked.value);
+    }
     if (ordrePriorite.present) {
       map['ordre_priorite'] = Variable<int>(ordrePriorite.value);
     }
@@ -2933,6 +2992,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('livreLng: $livreLng, ')
           ..write('livreLe: $livreLe, ')
           ..write('ordreOptimise: $ordreOptimise, ')
+          ..write('positionLocked: $positionLocked, ')
           ..write('ordrePriorite: $ordrePriorite, ')
           ..write('preuvePhotoPath: $preuvePhotoPath, ')
           ..write('coequipierId: $coequipierId, ')
@@ -8364,6 +8424,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<double?> livreLng,
       Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
+      Value<bool> positionLocked,
       Value<int?> ordrePriorite,
       Value<String?> preuvePhotoPath,
       Value<int?> coequipierId,
@@ -8395,6 +8456,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<double?> livreLng,
       Value<DateTime?> livreLe,
       Value<int?> ordreOptimise,
+      Value<bool> positionLocked,
       Value<int?> ordrePriorite,
       Value<String?> preuvePhotoPath,
       Value<int?> coequipierId,
@@ -8582,6 +8644,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<int> get ordreOptimise => $composableBuilder(
     column: $table.ordreOptimise,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get positionLocked => $composableBuilder(
+    column: $table.positionLocked,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8828,6 +8895,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get positionLocked => $composableBuilder(
+    column: $table.positionLocked,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get ordrePriorite => $composableBuilder(
     column: $table.ordrePriorite,
     builder: (column) => ColumnOrderings(column),
@@ -8971,6 +9043,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<int> get ordreOptimise => $composableBuilder(
     column: $table.ordreOptimise,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get positionLocked => $composableBuilder(
+    column: $table.positionLocked,
     builder: (column) => column,
   );
 
@@ -9160,6 +9237,7 @@ class $$StopsTableTableManager
                 Value<double?> livreLng = const Value.absent(),
                 Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
+                Value<bool> positionLocked = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<String?> preuvePhotoPath = const Value.absent(),
                 Value<int?> coequipierId = const Value.absent(),
@@ -9189,6 +9267,7 @@ class $$StopsTableTableManager
                 livreLng: livreLng,
                 livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
+                positionLocked: positionLocked,
                 ordrePriorite: ordrePriorite,
                 preuvePhotoPath: preuvePhotoPath,
                 coequipierId: coequipierId,
@@ -9220,6 +9299,7 @@ class $$StopsTableTableManager
                 Value<double?> livreLng = const Value.absent(),
                 Value<DateTime?> livreLe = const Value.absent(),
                 Value<int?> ordreOptimise = const Value.absent(),
+                Value<bool> positionLocked = const Value.absent(),
                 Value<int?> ordrePriorite = const Value.absent(),
                 Value<String?> preuvePhotoPath = const Value.absent(),
                 Value<int?> coequipierId = const Value.absent(),
@@ -9249,6 +9329,7 @@ class $$StopsTableTableManager
                 livreLng: livreLng,
                 livreLe: livreLe,
                 ordreOptimise: ordreOptimise,
+                positionLocked: positionLocked,
                 ordrePriorite: ordrePriorite,
                 preuvePhotoPath: preuvePhotoPath,
                 coequipierId: coequipierId,

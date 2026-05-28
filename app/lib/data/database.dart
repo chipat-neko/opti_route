@@ -72,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 36;
+  int get schemaVersion => 37;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -318,6 +318,14 @@ class AppDatabase extends _$AppDatabase {
             // pour l'instant : `cloud_pushed` reste false tant que
             // l'Edge Function backend n'est pas deployee. Carte #141.
             await m.createTable(trackingCodes);
+          }
+          if (from < 37) {
+            // Colonne `position_locked` (BOOL, default false) sur stops :
+            // verrouille un arret a sa position courante pour qu'il ne
+            // soit pas deplace par le tri rapide / l'optim VROOM / le
+            // drag&drop. Carte Trello #114. DEFAULT constant (false) ->
+            // compatible ADD COLUMN sur SQLite (cf note migration v32).
+            await m.addColumn(stops, stops.positionLocked);
           }
           if (from < 32) {
             // ════════════════════════════════════════════════════════

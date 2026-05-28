@@ -126,6 +126,12 @@ class StopRow extends ConsumerWidget {
                 priorite: stop.priorite,
                 statut: stop.statutLivraison,
               ),
+              // Cadenas (carte #114) : signale un arret verrouille a sa
+              // position (non deplace par le tri / l'optim / le drag).
+              if (stop.positionLocked) ...[
+                const SizedBox(width: AppSpacing.x4),
+                Icon(Icons.lock, size: 14, color: p.textMute),
+              ],
               const SizedBox(width: AppSpacing.x12),
               Expanded(
                 child: Column(

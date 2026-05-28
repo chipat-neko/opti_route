@@ -113,6 +113,17 @@ class GenerateTrackingLinkAction extends StopAction {
   const GenerateTrackingLinkAction();
 }
 
+/// Verrouille / deverrouille l'arret a sa position courante (carte
+/// #114). Le caller appelle `StopsRepository.setPositionLocked(stopId,
+/// locked)`. Un arret verrouille n'est pas deplace par le tri rapide,
+/// l'optim VROOM ni le drag&drop.
+class ToggleLockPositionAction extends StopAction {
+  const ToggleLockPositionAction(this.locked);
+
+  /// Nouvel etat voulu : true = verrouiller, false = deverrouiller.
+  final bool locked;
+}
+
 /// Bottom sheet de validation d'un arret. Tap sur "Livre" -> retour
 /// immediat avec [MarkLivreAction]. Tap sur "Echec" -> 2e etape pour
 /// choisir la raison, puis retour avec [MarkEchecAction].
@@ -668,6 +679,23 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   stop.type == kStopTypeRamasse
                       ? 'Convertir en livraison'
                       : 'Convertir en ramasse',
+                ),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: p.ink),
+                onPressed: () => Navigator.of(context).pop(
+                  ToggleLockPositionAction(!stop.positionLocked),
+                ),
+                icon: Icon(
+                  stop.positionLocked
+                      ? Icons.lock_open_outlined
+                      : Icons.lock_outline,
+                  size: 18,
+                ),
+                label: Text(
+                  stop.positionLocked
+                      ? 'Deverrouiller la position'
+                      : 'Verrouiller a cette position',
                 ),
               ),
               TextButton.icon(

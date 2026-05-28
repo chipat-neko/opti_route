@@ -48,6 +48,14 @@ class Stops extends Table {
 
   IntColumn get ordreOptimise => integer().nullable()();
 
+  /// Arret "verrouille" a sa position courante (carte #114). Quand true,
+  /// les algos de reordonnancement (tri rapide local, optim VROOM,
+  /// drag&drop) gardent cet arret a son index actuel et reordonnent les
+  /// autres autour. Default false. Use cases : finir par un client precis,
+  /// fenetre horaire stricte en milieu de tournee, priorite client.
+  BoolColumn get positionLocked =>
+      boolean().withDefault(const Constant(false))();
+
   /// Ordre choisi par l'utilisateur **a l'interieur** d'un groupe de
   /// priorite egale (obligatoire_premier ou obligatoire_dernier).
   /// 1 = livre en premier de son groupe, 2 = en deuxieme, etc.

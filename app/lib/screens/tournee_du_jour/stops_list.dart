@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../data/lock_ordering.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -194,6 +195,9 @@ class _StopsListState extends ConsumerState<StopsList> {
             stop: stop,
             index: i + 1,
             dragIndex: i,
+            // Arret verrouille (carte #114) : pas de poignee de drag ->
+            // l'utilisateur ne peut pas le deplacer manuellement.
+            showDragHandle: !stop.positionLocked,
             onDelete: () => _confirmDelete(context, ref, stop),
           );
           return LongPressDraggable<Stop>(
@@ -226,11 +230,20 @@ class _StopsListState extends ConsumerState<StopsList> {
     // Confirmation de drop : pulse "moyen" pour signaler que le
     // nouvel ordre est valide et va etre persiste.
     HapticFeedback.mediumImpact();
+    // Respecte les arrets verrouilles (carte #114) : meme si on a glisse
+    // un autre arret par-dessus, les verrouilles regagnent leur index
+    // d'origine (l'ordre courant pre-drag = widget.stops).
+    final finalOrder = LockOrdering.respectLocks(
+      currentOrder: widget.stops.map((s) => s.id).toList(growable: false),
+      proposedOrder: _local.map((s) => s.id).toList(growable: false),
+      lockedIds: {
+        for (final s in widget.stops)
+          if (s.positionLocked) s.id,
+      },
+    );
     // Persister le nouvel ordre. La liste des stops du stream va etre
     // rafraichie automatiquement avec ces nouveaux ordreOptimise.
-    await ref
-        .read(stopsRepositoryProvider)
-        .applyOptimizedOrder(_local.map((s) => s.id).toList());
+    await ref.read(stopsRepositoryProvider).applyOptimizedOrder(finalOrder);
     _dragging = false;
   }
 

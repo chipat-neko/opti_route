@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
+import '../../data/lock_ordering.dart';
 import '../../data/local_reorder_service.dart';
 import '../../data/tile_prefetch_service.dart';
 import '../../providers/database_providers.dart';
@@ -181,19 +182,32 @@ class OptimTourneeActions {
       // distance avant (ordre actuel) vs apres (propose par VROOM)
       // et confirme. Evite les surprises 'VROOM a optim en boucle
       // c'est contre-intuitif' que Noah avait signale.
+      // Respecte les arrets verrouilles (carte #114) : VROOM ignore le
+      // lock, donc on re-injecte les arrets verrouilles a leur index
+      // courant (parmi les geocodes) avant l'apercu + l'application.
+      final proposedFinal = LockOrdering.respectLocks(
+        currentOrder:
+            geocodedRefreshed.map((s) => s.id).toList(growable: false),
+        proposedOrder: result.orderedStopIds,
+        lockedIds: {
+          for (final s in geocodedRefreshed)
+            if (s.positionLocked) s.id,
+        },
+      );
+
       if (!context.mounted) return;
       final accepted = await OptimPreviewDialog.show(
         context: context,
         tournee: tournee,
         stops: geocodedRefreshed,
-        proposedOrder: result.orderedStopIds,
+        proposedOrder: proposedFinal,
         title: 'Optim avancee : aperçu',
       );
       if (accepted != true || !context.mounted) return;
 
       await ref
           .read(stopsRepositoryProvider)
-          .applyOptimizedOrder(result.orderedStopIds);
+          .applyOptimizedOrder(proposedFinal);
 
       // Serialise la geometry GeoJSON en string JSON pour stockage
       // SQLite. La carte la decodera en LineString a l'affichage.
@@ -409,18 +423,28 @@ class OptimTourneeActions {
       tournee: tournee,
       stops: stops,
     );
+    // Respecte les arrets verrouilles (carte #114) avant l'apercu : ce
+    // que Noah voit dans la preview = ce qui sera applique.
+    final proposedFinal = LockOrdering.respectLocks(
+      currentOrder: stops.map((s) => s.id).toList(growable: false),
+      proposedOrder: proposed,
+      lockedIds: {
+        for (final s in stops)
+          if (s.positionLocked) s.id,
+      },
+    );
     if (!context.mounted) return;
     final accepted = await OptimPreviewDialog.show(
       context: context,
       tournee: tournee,
       stops: stops,
-      proposedOrder: proposed,
+      proposedOrder: proposedFinal,
       title: 'Tri rapide : apercu',
     );
     if (accepted != true || !context.mounted) return;
     await ref
         .read(stopsRepositoryProvider)
-        .applyOptimizedOrder(proposed);
+        .applyOptimizedOrder(proposedFinal);
     if (!context.mounted) return;
     HapticFeedback.mediumImpact();
     messenger.showSnackBar(
