@@ -23,9 +23,12 @@ class SavedDestinationsRepository {
     String? rue,
     String? codePostal,
     String? ville,
+    String? telephone,
   }) async {
     final now = DateTime.now();
     final normalizedNom = nomClient?.trim();
+    final tel = (telephone ?? '').trim();
+    final telValue = tel.isEmpty ? null : tel;
 
     final existing = await _findExisting(
       nomClient: normalizedNom,
@@ -43,6 +46,9 @@ class SavedDestinationsRepository {
         rue: Value(rue),
         codePostal: Value(codePostal),
         ville: Value(ville),
+        // N'ecrase pas un telephone existant par null (import vCard #102).
+        telephone:
+            telValue == null ? const Value.absent() : Value(telValue),
         useCount: Value(existing.useCount + 1),
         lastUsedAt: Value(now),
       ));
@@ -60,6 +66,7 @@ class SavedDestinationsRepository {
             rue: Value(rue),
             codePostal: Value(codePostal),
             ville: Value(ville),
+            telephone: Value(telValue),
           ),
         );
   }

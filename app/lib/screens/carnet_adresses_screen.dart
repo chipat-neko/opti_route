@@ -269,9 +269,22 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
             onSelected: (value) {
               if (value == 'csv') _onImportPressed();
               if (value == 'csv_geo') _onImportGeocodePressed();
+              if (value == 'vcard') _onImportVcardPressed();
               if (value == 'backfill') _onBackfillPressed();
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'vcard',
+                child: ListTile(
+                  leading: Icon(Icons.contact_phone_outlined),
+                  title: Text('Importer vCard'),
+                  subtitle: Text(
+                    'Contacts Google / Android (.vcf), geocode auto',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               PopupMenuItem(
                 value: 'csv',
                 child: ListTile(
@@ -717,6 +730,85 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(summary.isEmpty ? 'Aucune entree' : summary),
+          backgroundColor:
+              result.rejected > 0 ? AppColors.amber : AppColors.emerald,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erreur a l\'import : ${humanizeAnyError(e)}')),
+      );
+    }
+  }
+
+  /// Import vCard (.vcf) depuis Google Contacts (carte #102). Geocode
+  /// les contacts sans coords GEO via BAN. Les contacts sans adresse
+  /// exploitable sont ignores (le carnet = adresses de livraison).
+  Future<void> _onImportVcardPressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['vcf'],
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final path = picked.files.first.path;
+    if (path == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Fichier illisible')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final shouldImport = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Importer ce vCard ?'),
+        content: Text(
+          'Les contacts du fichier (export Google Contacts / Contacts '
+          'Android) seront ajoutes au carnet. L\'app geocode via BAN les '
+          'adresses sans coordonnees. Les contacts sans adresse sont '
+          'ignores. Doublons (meme nom / position) fusionnes.\n\n'
+          '${picked.files.first.name}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Importer'),
+          ),
+        ],
+      ),
+    );
+    if (shouldImport != true || !mounted) return;
+
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Import + geocodage en cours, patiente...'),
+        duration: Duration(seconds: 120),
+      ),
+    );
+    try {
+      final service = CarnetImportService(
+        ref.read(savedDestinationsRepositoryProvider),
+        geocoder: ref.read(geocodingServiceProvider),
+      );
+      final result = await service.importVcardFromFile(File(path));
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      final summary = [
+        if (result.created > 0) '${result.created} ajoute(s)',
+        if (result.merged > 0) '${result.merged} fusionne(s)',
+        if (result.rejected > 0) '${result.rejected} sans adresse',
+      ].join(' · ');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(summary.isEmpty ? 'Aucun contact' : summary),
           backgroundColor:
               result.rejected > 0 ? AppColors.amber : AppColors.emerald,
           duration: const Duration(seconds: 6),
