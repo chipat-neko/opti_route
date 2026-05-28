@@ -7683,6 +7683,542 @@ class TrackingCodesCompanion extends UpdateCompanion<TrackingCode> {
   }
 }
 
+class $TourneeRecurrencesTable extends TourneeRecurrences
+    with TableInfo<$TourneeRecurrencesTable, TourneeRecurrence> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TourneeRecurrencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _templateIdMeta = const VerificationMeta(
+    'templateId',
+  );
+  @override
+  late final GeneratedColumn<int> templateId = GeneratedColumn<int>(
+    'template_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES tournees (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _frequenceMeta = const VerificationMeta(
+    'frequence',
+  );
+  @override
+  late final GeneratedColumn<String> frequence = GeneratedColumn<String>(
+    'frequence',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _jourSemaineMeta = const VerificationMeta(
+    'jourSemaine',
+  );
+  @override
+  late final GeneratedColumn<int> jourSemaine = GeneratedColumn<int>(
+    'jour_semaine',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _jourMoisMeta = const VerificationMeta(
+    'jourMois',
+  );
+  @override
+  late final GeneratedColumn<int> jourMois = GeneratedColumn<int>(
+    'jour_mois',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actifMeta = const VerificationMeta('actif');
+  @override
+  late final GeneratedColumn<bool> actif = GeneratedColumn<bool>(
+    'actif',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("actif" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _derniereGenerationLeMeta =
+      const VerificationMeta('derniereGenerationLe');
+  @override
+  late final GeneratedColumn<DateTime> derniereGenerationLe =
+      GeneratedColumn<DateTime>(
+        'derniere_generation_le',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    templateId,
+    frequence,
+    jourSemaine,
+    jourMois,
+    actif,
+    derniereGenerationLe,
+    creeLe,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tournee_recurrences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TourneeRecurrence> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('template_id')) {
+      context.handle(
+        _templateIdMeta,
+        templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_templateIdMeta);
+    }
+    if (data.containsKey('frequence')) {
+      context.handle(
+        _frequenceMeta,
+        frequence.isAcceptableOrUnknown(data['frequence']!, _frequenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_frequenceMeta);
+    }
+    if (data.containsKey('jour_semaine')) {
+      context.handle(
+        _jourSemaineMeta,
+        jourSemaine.isAcceptableOrUnknown(
+          data['jour_semaine']!,
+          _jourSemaineMeta,
+        ),
+      );
+    }
+    if (data.containsKey('jour_mois')) {
+      context.handle(
+        _jourMoisMeta,
+        jourMois.isAcceptableOrUnknown(data['jour_mois']!, _jourMoisMeta),
+      );
+    }
+    if (data.containsKey('actif')) {
+      context.handle(
+        _actifMeta,
+        actif.isAcceptableOrUnknown(data['actif']!, _actifMeta),
+      );
+    }
+    if (data.containsKey('derniere_generation_le')) {
+      context.handle(
+        _derniereGenerationLeMeta,
+        derniereGenerationLe.isAcceptableOrUnknown(
+          data['derniere_generation_le']!,
+          _derniereGenerationLeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TourneeRecurrence map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TourneeRecurrence(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      templateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}template_id'],
+      )!,
+      frequence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}frequence'],
+      )!,
+      jourSemaine: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}jour_semaine'],
+      ),
+      jourMois: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}jour_mois'],
+      ),
+      actif: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}actif'],
+      )!,
+      derniereGenerationLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}derniere_generation_le'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+    );
+  }
+
+  @override
+  $TourneeRecurrencesTable createAlias(String alias) {
+    return $TourneeRecurrencesTable(attachedDatabase, alias);
+  }
+}
+
+class TourneeRecurrence extends DataClass
+    implements Insertable<TourneeRecurrence> {
+  final int id;
+
+  /// Le template source a cloner (FK Tournees.id, normalement isTemplate).
+  final int templateId;
+  final String frequence;
+
+  /// 1=lundi .. 7=dimanche. Requis si frequence == 'hebdo'.
+  final int? jourSemaine;
+
+  /// 1..31. Requis si frequence == 'mensuel'. Si > nb de jours du mois,
+  /// la recurrence ne se declenche pas ce mois-la (cas rare, ex 31 fev).
+  final int? jourMois;
+  final bool actif;
+
+  /// Jour de la derniere generation reussie. Sert au dedup intra-jour :
+  /// on ne genere pas deux fois la meme tournee le meme jour (si l'app
+  /// est rouverte plusieurs fois). Null = jamais genere.
+  final DateTime? derniereGenerationLe;
+  final DateTime creeLe;
+  const TourneeRecurrence({
+    required this.id,
+    required this.templateId,
+    required this.frequence,
+    this.jourSemaine,
+    this.jourMois,
+    required this.actif,
+    this.derniereGenerationLe,
+    required this.creeLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['template_id'] = Variable<int>(templateId);
+    map['frequence'] = Variable<String>(frequence);
+    if (!nullToAbsent || jourSemaine != null) {
+      map['jour_semaine'] = Variable<int>(jourSemaine);
+    }
+    if (!nullToAbsent || jourMois != null) {
+      map['jour_mois'] = Variable<int>(jourMois);
+    }
+    map['actif'] = Variable<bool>(actif);
+    if (!nullToAbsent || derniereGenerationLe != null) {
+      map['derniere_generation_le'] = Variable<DateTime>(derniereGenerationLe);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    return map;
+  }
+
+  TourneeRecurrencesCompanion toCompanion(bool nullToAbsent) {
+    return TourneeRecurrencesCompanion(
+      id: Value(id),
+      templateId: Value(templateId),
+      frequence: Value(frequence),
+      jourSemaine: jourSemaine == null && nullToAbsent
+          ? const Value.absent()
+          : Value(jourSemaine),
+      jourMois: jourMois == null && nullToAbsent
+          ? const Value.absent()
+          : Value(jourMois),
+      actif: Value(actif),
+      derniereGenerationLe: derniereGenerationLe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(derniereGenerationLe),
+      creeLe: Value(creeLe),
+    );
+  }
+
+  factory TourneeRecurrence.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TourneeRecurrence(
+      id: serializer.fromJson<int>(json['id']),
+      templateId: serializer.fromJson<int>(json['templateId']),
+      frequence: serializer.fromJson<String>(json['frequence']),
+      jourSemaine: serializer.fromJson<int?>(json['jourSemaine']),
+      jourMois: serializer.fromJson<int?>(json['jourMois']),
+      actif: serializer.fromJson<bool>(json['actif']),
+      derniereGenerationLe: serializer.fromJson<DateTime?>(
+        json['derniereGenerationLe'],
+      ),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'templateId': serializer.toJson<int>(templateId),
+      'frequence': serializer.toJson<String>(frequence),
+      'jourSemaine': serializer.toJson<int?>(jourSemaine),
+      'jourMois': serializer.toJson<int?>(jourMois),
+      'actif': serializer.toJson<bool>(actif),
+      'derniereGenerationLe': serializer.toJson<DateTime?>(
+        derniereGenerationLe,
+      ),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+    };
+  }
+
+  TourneeRecurrence copyWith({
+    int? id,
+    int? templateId,
+    String? frequence,
+    Value<int?> jourSemaine = const Value.absent(),
+    Value<int?> jourMois = const Value.absent(),
+    bool? actif,
+    Value<DateTime?> derniereGenerationLe = const Value.absent(),
+    DateTime? creeLe,
+  }) => TourneeRecurrence(
+    id: id ?? this.id,
+    templateId: templateId ?? this.templateId,
+    frequence: frequence ?? this.frequence,
+    jourSemaine: jourSemaine.present ? jourSemaine.value : this.jourSemaine,
+    jourMois: jourMois.present ? jourMois.value : this.jourMois,
+    actif: actif ?? this.actif,
+    derniereGenerationLe: derniereGenerationLe.present
+        ? derniereGenerationLe.value
+        : this.derniereGenerationLe,
+    creeLe: creeLe ?? this.creeLe,
+  );
+  TourneeRecurrence copyWithCompanion(TourneeRecurrencesCompanion data) {
+    return TourneeRecurrence(
+      id: data.id.present ? data.id.value : this.id,
+      templateId: data.templateId.present
+          ? data.templateId.value
+          : this.templateId,
+      frequence: data.frequence.present ? data.frequence.value : this.frequence,
+      jourSemaine: data.jourSemaine.present
+          ? data.jourSemaine.value
+          : this.jourSemaine,
+      jourMois: data.jourMois.present ? data.jourMois.value : this.jourMois,
+      actif: data.actif.present ? data.actif.value : this.actif,
+      derniereGenerationLe: data.derniereGenerationLe.present
+          ? data.derniereGenerationLe.value
+          : this.derniereGenerationLe,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TourneeRecurrence(')
+          ..write('id: $id, ')
+          ..write('templateId: $templateId, ')
+          ..write('frequence: $frequence, ')
+          ..write('jourSemaine: $jourSemaine, ')
+          ..write('jourMois: $jourMois, ')
+          ..write('actif: $actif, ')
+          ..write('derniereGenerationLe: $derniereGenerationLe, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    templateId,
+    frequence,
+    jourSemaine,
+    jourMois,
+    actif,
+    derniereGenerationLe,
+    creeLe,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TourneeRecurrence &&
+          other.id == this.id &&
+          other.templateId == this.templateId &&
+          other.frequence == this.frequence &&
+          other.jourSemaine == this.jourSemaine &&
+          other.jourMois == this.jourMois &&
+          other.actif == this.actif &&
+          other.derniereGenerationLe == this.derniereGenerationLe &&
+          other.creeLe == this.creeLe);
+}
+
+class TourneeRecurrencesCompanion extends UpdateCompanion<TourneeRecurrence> {
+  final Value<int> id;
+  final Value<int> templateId;
+  final Value<String> frequence;
+  final Value<int?> jourSemaine;
+  final Value<int?> jourMois;
+  final Value<bool> actif;
+  final Value<DateTime?> derniereGenerationLe;
+  final Value<DateTime> creeLe;
+  const TourneeRecurrencesCompanion({
+    this.id = const Value.absent(),
+    this.templateId = const Value.absent(),
+    this.frequence = const Value.absent(),
+    this.jourSemaine = const Value.absent(),
+    this.jourMois = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.derniereGenerationLe = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  });
+  TourneeRecurrencesCompanion.insert({
+    this.id = const Value.absent(),
+    required int templateId,
+    required String frequence,
+    this.jourSemaine = const Value.absent(),
+    this.jourMois = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.derniereGenerationLe = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  }) : templateId = Value(templateId),
+       frequence = Value(frequence);
+  static Insertable<TourneeRecurrence> custom({
+    Expression<int>? id,
+    Expression<int>? templateId,
+    Expression<String>? frequence,
+    Expression<int>? jourSemaine,
+    Expression<int>? jourMois,
+    Expression<bool>? actif,
+    Expression<DateTime>? derniereGenerationLe,
+    Expression<DateTime>? creeLe,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (templateId != null) 'template_id': templateId,
+      if (frequence != null) 'frequence': frequence,
+      if (jourSemaine != null) 'jour_semaine': jourSemaine,
+      if (jourMois != null) 'jour_mois': jourMois,
+      if (actif != null) 'actif': actif,
+      if (derniereGenerationLe != null)
+        'derniere_generation_le': derniereGenerationLe,
+      if (creeLe != null) 'cree_le': creeLe,
+    });
+  }
+
+  TourneeRecurrencesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? templateId,
+    Value<String>? frequence,
+    Value<int?>? jourSemaine,
+    Value<int?>? jourMois,
+    Value<bool>? actif,
+    Value<DateTime?>? derniereGenerationLe,
+    Value<DateTime>? creeLe,
+  }) {
+    return TourneeRecurrencesCompanion(
+      id: id ?? this.id,
+      templateId: templateId ?? this.templateId,
+      frequence: frequence ?? this.frequence,
+      jourSemaine: jourSemaine ?? this.jourSemaine,
+      jourMois: jourMois ?? this.jourMois,
+      actif: actif ?? this.actif,
+      derniereGenerationLe: derniereGenerationLe ?? this.derniereGenerationLe,
+      creeLe: creeLe ?? this.creeLe,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (templateId.present) {
+      map['template_id'] = Variable<int>(templateId.value);
+    }
+    if (frequence.present) {
+      map['frequence'] = Variable<String>(frequence.value);
+    }
+    if (jourSemaine.present) {
+      map['jour_semaine'] = Variable<int>(jourSemaine.value);
+    }
+    if (jourMois.present) {
+      map['jour_mois'] = Variable<int>(jourMois.value);
+    }
+    if (actif.present) {
+      map['actif'] = Variable<bool>(actif.value);
+    }
+    if (derniereGenerationLe.present) {
+      map['derniere_generation_le'] = Variable<DateTime>(
+        derniereGenerationLe.value,
+      );
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TourneeRecurrencesCompanion(')
+          ..write('id: $id, ')
+          ..write('templateId: $templateId, ')
+          ..write('frequence: $frequence, ')
+          ..write('jourSemaine: $jourSemaine, ')
+          ..write('jourMois: $jourMois, ')
+          ..write('actif: $actif, ')
+          ..write('derniereGenerationLe: $derniereGenerationLe, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7698,6 +8234,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TourneeMembresTable tourneeMembres = $TourneeMembresTable(this);
   late final $FraisTable frais = $FraisTable(this);
   late final $TrackingCodesTable trackingCodes = $TrackingCodesTable(this);
+  late final $TourneeRecurrencesTable tourneeRecurrences =
+      $TourneeRecurrencesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7714,6 +8252,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tourneeMembres,
     frais,
     trackingCodes,
+    tourneeRecurrences,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -7744,6 +8283,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('tracking_codes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'tournees',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('tournee_recurrences', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -7819,6 +8365,30 @@ final class $$TourneesTableReferences
     ).filter((f) => f.tourneeId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_stopsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TourneeRecurrencesTable, List<TourneeRecurrence>>
+  _tourneeRecurrencesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.tourneeRecurrences,
+        aliasName: $_aliasNameGenerator(
+          db.tournees.id,
+          db.tourneeRecurrences.templateId,
+        ),
+      );
+
+  $$TourneeRecurrencesTableProcessedTableManager get tourneeRecurrencesRefs {
+    final manager = $$TourneeRecurrencesTableTableManager(
+      $_db,
+      $_db.tourneeRecurrences,
+    ).filter((f) => f.templateId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _tourneeRecurrencesRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -7965,6 +8535,31 @@ class $$TourneesTableFilterComposer
           }) => $$StopsTableFilterComposer(
             $db: $db,
             $table: $db.stops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> tourneeRecurrencesRefs(
+    Expression<bool> Function($$TourneeRecurrencesTableFilterComposer f) f,
+  ) {
+    final $$TourneeRecurrencesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tourneeRecurrences,
+      getReferencedColumn: (t) => t.templateId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TourneeRecurrencesTableFilterComposer(
+            $db: $db,
+            $table: $db.tourneeRecurrences,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -8226,6 +8821,32 @@ class $$TourneesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> tourneeRecurrencesRefs<T extends Object>(
+    Expression<T> Function($$TourneeRecurrencesTableAnnotationComposer a) f,
+  ) {
+    final $$TourneeRecurrencesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.tourneeRecurrences,
+          getReferencedColumn: (t) => t.templateId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$TourneeRecurrencesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.tourneeRecurrences,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$TourneesTableTableManager
@@ -8241,7 +8862,7 @@ class $$TourneesTableTableManager
           $$TourneesTableUpdateCompanionBuilder,
           (Tournee, $$TourneesTableReferences),
           Tournee,
-          PrefetchHooks Function({bool stopsRefs})
+          PrefetchHooks Function({bool stopsRefs, bool tourneeRecurrencesRefs})
         > {
   $$TourneesTableTableManager(_$AppDatabase db, $TourneesTable table)
     : super(
@@ -8362,28 +8983,63 @@ class $$TourneesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({stopsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (stopsRefs) db.stops],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (stopsRefs)
-                    await $_getPrefetchedData<Tournee, $TourneesTable, Stop>(
-                      currentTable: table,
-                      referencedTable: $$TourneesTableReferences
-                          ._stopsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$TourneesTableReferences(db, table, p0).stopsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.tourneeId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({stopsRefs = false, tourneeRecurrencesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (stopsRefs) db.stops,
+                    if (tourneeRecurrencesRefs) db.tourneeRecurrences,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (stopsRefs)
+                        await $_getPrefetchedData<
+                          Tournee,
+                          $TourneesTable,
+                          Stop
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TourneesTableReferences
+                              ._stopsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TourneesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stopsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.tourneeId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (tourneeRecurrencesRefs)
+                        await $_getPrefetchedData<
+                          Tournee,
+                          $TourneesTable,
+                          TourneeRecurrence
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TourneesTableReferences
+                              ._tourneeRecurrencesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TourneesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).tourneeRecurrencesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.templateId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -8400,7 +9056,7 @@ typedef $$TourneesTableProcessedTableManager =
       $$TourneesTableUpdateCompanionBuilder,
       (Tournee, $$TourneesTableReferences),
       Tournee,
-      PrefetchHooks Function({bool stopsRefs})
+      PrefetchHooks Function({bool stopsRefs, bool tourneeRecurrencesRefs})
     >;
 typedef $$StopsTableCreateCompanionBuilder =
     StopsCompanion Function({
@@ -12130,6 +12786,396 @@ typedef $$TrackingCodesTableProcessedTableManager =
       TrackingCode,
       PrefetchHooks Function({bool stopId})
     >;
+typedef $$TourneeRecurrencesTableCreateCompanionBuilder =
+    TourneeRecurrencesCompanion Function({
+      Value<int> id,
+      required int templateId,
+      required String frequence,
+      Value<int?> jourSemaine,
+      Value<int?> jourMois,
+      Value<bool> actif,
+      Value<DateTime?> derniereGenerationLe,
+      Value<DateTime> creeLe,
+    });
+typedef $$TourneeRecurrencesTableUpdateCompanionBuilder =
+    TourneeRecurrencesCompanion Function({
+      Value<int> id,
+      Value<int> templateId,
+      Value<String> frequence,
+      Value<int?> jourSemaine,
+      Value<int?> jourMois,
+      Value<bool> actif,
+      Value<DateTime?> derniereGenerationLe,
+      Value<DateTime> creeLe,
+    });
+
+final class $$TourneeRecurrencesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $TourneeRecurrencesTable,
+          TourneeRecurrence
+        > {
+  $$TourneeRecurrencesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $TourneesTable _templateIdTable(_$AppDatabase db) =>
+      db.tournees.createAlias(
+        $_aliasNameGenerator(db.tourneeRecurrences.templateId, db.tournees.id),
+      );
+
+  $$TourneesTableProcessedTableManager get templateId {
+    final $_column = $_itemColumn<int>('template_id')!;
+
+    final manager = $$TourneesTableTableManager(
+      $_db,
+      $_db.tournees,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_templateIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TourneeRecurrencesTableFilterComposer
+    extends Composer<_$AppDatabase, $TourneeRecurrencesTable> {
+  $$TourneeRecurrencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get frequence => $composableBuilder(
+    column: $table.frequence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get jourSemaine => $composableBuilder(
+    column: $table.jourSemaine,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get jourMois => $composableBuilder(
+    column: $table.jourMois,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get derniereGenerationLe => $composableBuilder(
+    column: $table.derniereGenerationLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$TourneesTableFilterComposer get templateId {
+    final $$TourneesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.templateId,
+      referencedTable: $db.tournees,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TourneesTableFilterComposer(
+            $db: $db,
+            $table: $db.tournees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TourneeRecurrencesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TourneeRecurrencesTable> {
+  $$TourneeRecurrencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get frequence => $composableBuilder(
+    column: $table.frequence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get jourSemaine => $composableBuilder(
+    column: $table.jourSemaine,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get jourMois => $composableBuilder(
+    column: $table.jourMois,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get derniereGenerationLe => $composableBuilder(
+    column: $table.derniereGenerationLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$TourneesTableOrderingComposer get templateId {
+    final $$TourneesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.templateId,
+      referencedTable: $db.tournees,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TourneesTableOrderingComposer(
+            $db: $db,
+            $table: $db.tournees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TourneeRecurrencesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TourneeRecurrencesTable> {
+  $$TourneeRecurrencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get frequence =>
+      $composableBuilder(column: $table.frequence, builder: (column) => column);
+
+  GeneratedColumn<int> get jourSemaine => $composableBuilder(
+    column: $table.jourSemaine,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get jourMois =>
+      $composableBuilder(column: $table.jourMois, builder: (column) => column);
+
+  GeneratedColumn<bool> get actif =>
+      $composableBuilder(column: $table.actif, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get derniereGenerationLe => $composableBuilder(
+    column: $table.derniereGenerationLe,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  $$TourneesTableAnnotationComposer get templateId {
+    final $$TourneesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.templateId,
+      referencedTable: $db.tournees,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TourneesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tournees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TourneeRecurrencesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TourneeRecurrencesTable,
+          TourneeRecurrence,
+          $$TourneeRecurrencesTableFilterComposer,
+          $$TourneeRecurrencesTableOrderingComposer,
+          $$TourneeRecurrencesTableAnnotationComposer,
+          $$TourneeRecurrencesTableCreateCompanionBuilder,
+          $$TourneeRecurrencesTableUpdateCompanionBuilder,
+          (TourneeRecurrence, $$TourneeRecurrencesTableReferences),
+          TourneeRecurrence,
+          PrefetchHooks Function({bool templateId})
+        > {
+  $$TourneeRecurrencesTableTableManager(
+    _$AppDatabase db,
+    $TourneeRecurrencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TourneeRecurrencesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TourneeRecurrencesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TourneeRecurrencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> templateId = const Value.absent(),
+                Value<String> frequence = const Value.absent(),
+                Value<int?> jourSemaine = const Value.absent(),
+                Value<int?> jourMois = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime?> derniereGenerationLe = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => TourneeRecurrencesCompanion(
+                id: id,
+                templateId: templateId,
+                frequence: frequence,
+                jourSemaine: jourSemaine,
+                jourMois: jourMois,
+                actif: actif,
+                derniereGenerationLe: derniereGenerationLe,
+                creeLe: creeLe,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int templateId,
+                required String frequence,
+                Value<int?> jourSemaine = const Value.absent(),
+                Value<int?> jourMois = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime?> derniereGenerationLe = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => TourneeRecurrencesCompanion.insert(
+                id: id,
+                templateId: templateId,
+                frequence: frequence,
+                jourSemaine: jourSemaine,
+                jourMois: jourMois,
+                actif: actif,
+                derniereGenerationLe: derniereGenerationLe,
+                creeLe: creeLe,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TourneeRecurrencesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({templateId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (templateId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.templateId,
+                                referencedTable:
+                                    $$TourneeRecurrencesTableReferences
+                                        ._templateIdTable(db),
+                                referencedColumn:
+                                    $$TourneeRecurrencesTableReferences
+                                        ._templateIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TourneeRecurrencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TourneeRecurrencesTable,
+      TourneeRecurrence,
+      $$TourneeRecurrencesTableFilterComposer,
+      $$TourneeRecurrencesTableOrderingComposer,
+      $$TourneeRecurrencesTableAnnotationComposer,
+      $$TourneeRecurrencesTableCreateCompanionBuilder,
+      $$TourneeRecurrencesTableUpdateCompanionBuilder,
+      (TourneeRecurrence, $$TourneeRecurrencesTableReferences),
+      TourneeRecurrence,
+      PrefetchHooks Function({bool templateId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12156,4 +13202,6 @@ class $AppDatabaseManager {
       $$FraisTableTableManager(_db, _db.frais);
   $$TrackingCodesTableTableManager get trackingCodes =>
       $$TrackingCodesTableTableManager(_db, _db.trackingCodes);
+  $$TourneeRecurrencesTableTableManager get tourneeRecurrences =>
+      $$TourneeRecurrencesTableTableManager(_db, _db.tourneeRecurrences);
 }

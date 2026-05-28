@@ -11,6 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 import '../tournee_du_jour_screen.dart';
 import '../tournee_form_screen.dart';
+import 'recurrence_config_sheet.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Widgets d'une ligne de tournee dans la liste principale.
@@ -108,6 +109,10 @@ class TourneeRow extends ConsumerWidget {
                               DefautCoBadge(
                                 coequipierId: tournee.coequipierDefautId!,
                               ),
+                            // Badge recurrence (carte #113) : visible si
+                            // ce template a une recurrence active.
+                            if (tournee.isTemplate)
+                              _RecurrenceBadge(templateId: tournee.id),
                           ],
                         ),
                         if (hasStats) ...[
@@ -390,6 +395,32 @@ class TourneeRow extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.x8),
+                // Recurrence automatique (carte #113) : genere la tournee
+                // depuis ce template au jour prevu, a l'ouverture de l'app.
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: p.paper,
+                    foregroundColor: p.ink,
+                    minimumSize: const Size(0, 52),
+                    alignment: Alignment.centerLeft,
+                  ),
+                  onPressed: () async {
+                    Navigator.of(sheetContext).pop();
+                    if (!context.mounted) return;
+                    await showRecurrenceConfigSheet(
+                      context: context,
+                      ref: ref,
+                      templateId: tournee.id,
+                      templateNom: tournee.nom,
+                    );
+                  },
+                  icon: const Icon(Icons.event_repeat_outlined),
+                  label: const Text(
+                    'Recurrence automatique',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
               ],
             ],
           ),
@@ -461,6 +492,50 @@ class TourneeRow extends ConsumerWidget {
             child: const Text('Supprimer'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Petit badge "Auto" affiche sur un template qui a une recurrence
+/// active (carte #113). Masque si pas de recurrence ou recurrence OFF.
+class _RecurrenceBadge extends ConsumerWidget {
+  const _RecurrenceBadge({required this.templateId});
+
+  final int templateId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rec =
+        ref.watch(recurrenceForTemplateProvider(templateId)).asData?.value;
+    if (rec == null || !rec.actif) return const SizedBox.shrink();
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.x8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x6,
+          vertical: 2,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.lime.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(AppRadius.r6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.event_repeat, size: 11, color: p.ink),
+            const SizedBox(width: 3),
+            Text(
+              'Auto',
+              style: appMonoStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: p.ink,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

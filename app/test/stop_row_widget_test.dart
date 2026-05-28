@@ -64,6 +64,7 @@ void main() {
       nomClient: nomClient,
       coequipierId: coequipierId,
       notes: notes,
+      positionLocked: false,
       creeLe: DateTime(2026, 5, 18),
       updatedAt: DateTime(2026, 5, 18),
     );

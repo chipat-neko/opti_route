@@ -109,6 +109,11 @@ class OptiRouteApp extends ConsumerWidget {
     // plan (unawaited) pour ne pas bloquer l'UI au demarrage.
     unawaited(ref.read(autoBackupServiceProvider).maybeRunAutoBackup());
 
+    // Tournees recurrentes (carte #113) : genere a l'ouverture de l'app
+    // les tournees dont la recurrence cible aujourd'hui (dedup intra-jour).
+    // En arriere-plan, best-effort. Pas de WorkManager (cf RecurrenceService).
+    unawaited(ref.read(recurrenceServiceProvider).runDue());
+
     // Applique le flag Android FLAG_SECURE selon le toggle "masquer
     // dans le selecteur d'apps" (carte #111). Reactif : le listener se
     // declenche a la 1ere emission du stream (etat initial au demarrage)

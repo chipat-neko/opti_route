@@ -18,6 +18,9 @@ import '../data/chef_tournees_service.dart';
 import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
+import '../data/notifications_service.dart';
+import '../data/recurrence_service.dart';
+import '../data/recurrences_repository.dart';
 import '../data/saved_destinations_repository.dart';
 import '../data/secure_screen_service.dart';
 import '../data/sheets_repository.dart';
@@ -262,6 +265,31 @@ final secureScreenServiceProvider = Provider<SecureScreenService>((ref) {
 /// bascule du toggle dans Parametres > Securite).
 final secureScreenEnabledProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchSecureScreen();
+});
+
+/// Repository des recurrences de tournee (carte #113).
+final recurrencesRepositoryProvider =
+    Provider<RecurrencesRepository>((ref) {
+  return RecurrencesRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Recurrence active d'un template donne (pour l'UI de config). Null si
+/// aucune recurrence configuree sur ce template.
+final recurrenceForTemplateProvider =
+    StreamProvider.family<TourneeRecurrence?, int>((ref, templateId) {
+  return ref
+      .watch(recurrencesRepositoryProvider)
+      .watchByTemplate(templateId);
+});
+
+/// Service de generation des tournees recurrentes (carte #113). Appele
+/// a l'ouverture de l'app (main.dart) via [RecurrenceService.runDue].
+final recurrenceServiceProvider = Provider<RecurrenceService>((ref) {
+  return RecurrenceService(
+    ref.watch(recurrencesRepositoryProvider),
+    ref.watch(tourneesRepositoryProvider),
+    NotificationsService.instance,
+  );
 });
 
 /// Service de resume hebdomadaire chef (carte Trello #101).
