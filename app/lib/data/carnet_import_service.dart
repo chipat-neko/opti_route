@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'geocoding_service.dart';
 import 'saved_destinations_repository.dart';
+import 'vcard_parser.dart';
 
 /// Resultat d'un import CSV : combien de lignes lues, combien creees,
 /// combien fusionnees avec une entree existante (meme nomClient ou
@@ -172,6 +173,91 @@ class CarnetImportService {
 
     return CarnetImportResult(
       lineCount: dataLines.length,
+      created: created,
+      merged: merged,
+      rejected: rejected,
+      errors: errors,
+    );
+  }
+
+  /// Importe un fichier vCard (.vcf), typiquement un export Google
+  /// Contacts (carte #102).
+  Future<CarnetImportResult> importVcardFromFile(File file) async {
+    final content = await file.readAsString();
+    return importVcardFromText(content);
+  }
+
+  /// Importe le contenu texte d'un .vcf. Pour chaque contact : prend les
+  /// coords GEO si presentes, sinon geocode l'adresse (si un geocoder
+  /// est fourni). Un contact sans adresse exploitable (ni coords ni
+  /// adresse geocodable) est rejete -- le carnet est un carnet
+  /// d'adresses de livraison, un contact sans adresse n'a pas de sens.
+  Future<CarnetImportResult> importVcardFromText(String content) async {
+    final contacts = VcardParser.parse(content);
+    if (contacts.isEmpty) {
+      return const CarnetImportResult(
+        lineCount: 0,
+        created: 0,
+        merged: 0,
+        rejected: 0,
+        errors: ['Aucun contact trouve dans le fichier vCard'],
+      );
+    }
+
+    final existingBefore = await _repo.count();
+    var rejected = 0;
+    final errors = <String>[];
+
+    for (var i = 0; i < contacts.length; i++) {
+      final c = contacts[i];
+      try {
+        var lat = c.lat;
+        var lng = c.lng;
+        final addr = c.adresseComposee;
+
+        // Geocodage si pas de coords mais une adresse + un geocoder.
+        if ((lat == null || lng == null) &&
+            _geocoder != null &&
+            addr.isNotEmpty) {
+          try {
+            final results = await _geocoder.search(addr, limit: 1);
+            if (results.isNotEmpty) {
+              lat = results.first.lat;
+              lng = results.first.lon;
+            }
+          } catch (_) {
+            // BAN timeout / hors-ligne : rejet ci-dessous.
+          }
+        }
+
+        if (addr.isEmpty || lat == null || lng == null) {
+          rejected++;
+          continue;
+        }
+        await _repo.upsertFromValidatedStop(
+          nomClient: c.nom,
+          adresseDisplay: addr,
+          lat: lat,
+          lng: lng,
+          rue: c.rue,
+          codePostal: c.codePostal,
+          ville: c.ville,
+          telephone: c.telephone,
+        );
+      } catch (e) {
+        rejected++;
+        if (errors.length < 5) {
+          errors.add('Contact ${i + 1} : $e');
+        }
+      }
+    }
+
+    final existingAfter = await _repo.count();
+    final created = existingAfter - existingBefore;
+    final merged = contacts.length - created - rejected;
+
+    return CarnetImportResult(
+      lineCount: contacts.length,
       created: created,
       merged: merged,
       rejected: rejected,
