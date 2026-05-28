@@ -4,6 +4,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'parametres_repository.dart';
+import 'tournee_reminder_plan.dart';
 
 /// Service de notifications locales (rappels "tournee a preparer",
 /// "tournee non finie", + tests). 100% local au telephone via
@@ -188,6 +189,55 @@ class NotificationsService {
     await _plugin.cancel(id: _veilleNotifId(tourneeId));
   }
 
+  /// Programme un rappel "tournee non terminee" (carte #121) : si la
+  /// tournee est encore active [seuil] apres son demarrage [demareeLe],
+  /// une notif invite a la cloturer. Comme les autres rappels, c'est une
+  /// notif planifiee (zonedSchedule, exactAllowWhileIdle) qui se declenche
+  /// meme app fermee -- pas besoin de WorkManager.
+  ///
+  /// Idempotent : on cancel l'ancienne avant de reprogrammer (utile a la
+  /// reprise apres pause, ou demareeLe est inchange). No-op si l'echeance
+  /// est deja passee (la tournee est deja anormalement longue, mais on ne
+  /// "rattrape" pas une notif planifiee dans le passe).
+  Future<void> scheduleTourneeNonTermineeReminder({
+    required int tourneeId,
+    required String nomTournee,
+    required DateTime demareeLe,
+    Duration seuil = TourneeReminderPlan.seuil,
+  }) async {
+    await init();
+    final notifId = _nonTermineeNotifId(tourneeId);
+    await _plugin.cancel(id: notifId);
+    final when = TourneeReminderPlan.reminderAt(demareeLe, seuil: seuil)!;
+    final tzWhen = tz.TZDateTime.from(when, tz.local);
+    final now = tz.TZDateTime.now(tz.local);
+    if (!tzWhen.isAfter(now)) return;
+    await _plugin.zonedSchedule(
+      id: notifId,
+      title: 'Tournee encore active : $nomTournee',
+      body: 'Elle tourne depuis plus de ${seuil.inHours}h. '
+          'Pense a la cloturer si elle est finie.',
+      scheduledDate: tzWhen,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  /// Annule le rappel "tournee non terminee". Safe meme si rien n'etait
+  /// planifie. A appeler a la cloture / mise en pause de la tournee.
+  Future<void> cancelTourneeNonTermineeReminder(int tourneeId) async {
+    await init();
+    await _plugin.cancel(id: _nonTermineeNotifId(tourneeId));
+  }
+
   /// Notification immediate post-tournee : "X livrees / Y echecs / Z min
   /// totales". Affichee a la bascule de la tournee en 'terminee'.
   ///
@@ -325,11 +375,13 @@ class NotificationsService {
   ///   - backup auto : 40000 (id unique, on n'a qu'un seul backup
   ///     auto en cours a la fois -- la prochaine notif remplace
   ///     l'ancienne dans le tray)
+  ///   - tournee non terminee >8h : 50000 - 59999
   ///   - test : 9999 (reserve historique)
   static int _veilleNotifId(int tourneeId) => 10000 + tourneeId;
   static int _endOfRouteNotifId(int tourneeId) => 20000 + tourneeId;
   static int _pendingStopsNotifId(int tourneeId) => 30000 + tourneeId;
   static const _backupSuccessId = 40000;
+  static int _nonTermineeNotifId(int tourneeId) => 50000 + tourneeId;
 
   static const _testId = 9999;
   static const _channelId = 'opti_route_reminders';
