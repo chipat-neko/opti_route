@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/carnet_auto_push_service.dart';
+import '../data/chef_presence_service.dart';
 import '../data/cloud_auto_pull_service.dart';
 import '../data/cloud_auto_push_service.dart';
 import '../data/cloud_sync_service.dart';
@@ -153,4 +156,50 @@ final livePresenceServiceProvider = Provider<LivePresenceService>((ref) {
       LivePresenceService(ref.watch(tourneeRealtimeServiceProvider));
   ref.onDispose(service.stop);
   return service;
+});
+
+/// Service de presence live multi-tournees pour le logiciel chef
+/// (carte #174). Observe les positions de tous les chauffeurs des
+/// tournees d'equipe en cours. autoDispose : on coupe les channels des
+/// que le panneau carte chef se ferme.
+final chefPresenceServiceProvider =
+    Provider.autoDispose<ChefPresenceService>((ref) {
+  final svc = ChefPresenceService();
+  ref.onDispose(() {
+    svc.stop();
+    svc.dispose();
+  });
+  return svc;
+});
+
+/// cloudIds des tournees d'equipe EN COURS a observer (statut en_cours
+/// + cloudId non null = tournee partagee/synchronisee).
+final equipeTourneesActivesCloudIdsProvider =
+    Provider.autoDispose<Set<String>>((ref) {
+  final tournees = ref.watch(tourneesDuJourProvider);
+  return tournees
+      .where((t) => t.statut == 'en_cours' && t.cloudId != null)
+      .map((t) => t.cloudId!)
+      .toSet();
+});
+
+/// Positions GPS live des chauffeurs de l'equipe (carte #174), agregees
+/// sur tous les channels Realtime des tournees en cours. Map
+/// `userCloudId -> LivePosition`. Vide si cloud non configure / pas
+/// connecte / aucune tournee partagee en cours.
+final equipePresenceProvider =
+    StreamProvider.autoDispose<Map<String, LivePosition>>((ref) {
+  if (!SupabaseService.instance.isConfigured) {
+    return Stream.value(const <String, LivePosition>{});
+  }
+  final user = ref.watch(cloudUserProvider).asData?.value;
+  if (user == null) {
+    return Stream.value(const <String, LivePosition>{});
+  }
+  final cloudIds = ref.watch(equipeTourneesActivesCloudIdsProvider);
+  final svc = ref.watch(chefPresenceServiceProvider);
+  // (Re)synchronise les abonnements Realtime quand l'ensemble des
+  // tournees actives change. Best-effort (le service log ses erreurs).
+  unawaited(svc.sync(Supabase.instance.client, cloudIds));
+  return svc.positionsStream;
 });

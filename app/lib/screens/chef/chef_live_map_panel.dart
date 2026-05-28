@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../data/chef_carte_service.dart';
+import '../../data/chef_presence_service.dart';
 import '../../data/cloud_error_humanizer.dart';
+import '../../data/tournee_realtime_service.dart' show LivePosition;
 import '../../providers/database_providers.dart';
+import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
 
 /// Panneau "carte" du logiciel chef (epopee #88, [#88·3]).
@@ -83,14 +86,19 @@ class ChefLiveMapPanel extends ConsumerWidget {
   }
 }
 
-class _Carte extends StatelessWidget {
+class _Carte extends ConsumerWidget {
   const _Carte({required this.carte});
 
   final ChefCarteJour carte;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
+    // Positions live des chauffeurs (carte #174). Vide si cloud off /
+    // pas connecte / aucune tournee partagee en cours.
+    final live = ref.watch(equipePresenceProvider).asData?.value ??
+        const <String, LivePosition>{};
+    final now = DateTime.now();
     final points = [
       for (final pt in carte.points) LatLng(pt.lat, pt.lng),
     ];
@@ -129,9 +137,26 @@ class _Carte extends StatelessWidget {
                   ),
               ],
             ),
+            // Couche live : 1 marker par chauffeur qui broadcast sa
+            // position (carte #174).
+            if (live.isNotEmpty)
+              MarkerLayer(
+                markers: [
+                  for (final pos in live.values)
+                    Marker(
+                      point: LatLng(pos.lat, pos.lng),
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      child: _DriverPin(
+                        freshness: freshnessOf(now.difference(pos.timestamp)),
+                      ),
+                    ),
+                ],
+              ),
           ],
         ),
-        // Bandeau : la couche live arrive avec le cloud temps reel.
+        // Bandeau : nb de chauffeurs en direct, ou note "a venir".
         Positioned(
           left: AppSpacing.x8,
           right: AppSpacing.x8,
@@ -150,13 +175,22 @@ class _Carte extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.my_location_outlined,
-                    size: 14, color: p.textMute),
+                    size: 14,
+                    color: live.isEmpty ? p.textMute : AppColors.emerald),
                 const SizedBox(width: AppSpacing.x6),
                 Expanded(
                   child: Text(
-                    'Positions live des chauffeurs : actives avec le '
-                    'cloud temps reel',
-                    style: TextStyle(fontSize: 10, color: p.textMute),
+                    live.isEmpty
+                        ? 'Positions live des chauffeurs : actives des '
+                            'qu\'un livreur est en tournee partagee'
+                        : '${live.length} chauffeur'
+                            '${live.length > 1 ? "s" : ""} en direct',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: live.isEmpty ? p.textMute : p.ink,
+                      fontWeight:
+                          live.isEmpty ? FontWeight.w400 : FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -190,6 +224,35 @@ class _Pin extends StatelessWidget {
         border: Border.all(color: AppColors.paper, width: 2),
         boxShadow: AppShadows.fab,
       ),
+    );
+  }
+}
+
+/// Marker d'un chauffeur en direct (carte #174). Couleur selon la
+/// fraicheur de la derniere position : emerald < 60s, amber < 300s,
+/// gris attenue au-dela.
+class _DriverPin extends StatelessWidget {
+  const _DriverPin({required this.freshness});
+
+  final LiveFreshness freshness;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (freshness) {
+      LiveFreshness.fresh => AppColors.emerald,
+      LiveFreshness.recent => AppColors.amber,
+      LiveFreshness.stale => AppColors.textFaint,
+    };
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.paper, width: 2),
+        boxShadow: AppShadows.fab,
+      ),
+      alignment: Alignment.center,
+      child: const Icon(Icons.directions_car,
+          size: 18, color: AppColors.paper),
     );
   }
 }
