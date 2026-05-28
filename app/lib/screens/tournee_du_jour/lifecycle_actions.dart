@@ -51,6 +51,16 @@ class LifecycleTourneeActions {
           ),
         );
     if (!context.mounted) return;
+    // Rappel "tournee non terminee >8h" (carte #121) : programme une
+    // notif a demareeLe + seuil. demareeLe est conserve a la reprise, on
+    // reprogramme donc sur la meme echeance (idempotent).
+    unawaited(
+      NotificationsService.instance.scheduleTourneeNonTermineeReminder(
+        tourneeId: tournee.id,
+        nomTournee: tournee.nom,
+        demareeLe: tournee.demareeLe ?? DateTime.now(),
+      ),
+    );
     // Pulse marquant : "ca demarre". Plus fort qu'un simple tap car
     // c'est un evenement de transition important.
     unawaited(HapticFeedback.heavyImpact());
@@ -134,6 +144,11 @@ class LifecycleTourneeActions {
           tournee.id,
           const TourneesCompanion(statut: Value('optimisee')),
         );
+    // La tournee n'est plus en_cours -> on annule le rappel >8h (#121).
+    unawaited(
+      NotificationsService.instance
+          .cancelTourneeNonTermineeReminder(tournee.id),
+    );
     unawaited(HapticFeedback.heavyImpact());
     // Alerte "arrets oublies" : si la tournee est mise en pause avec
     // des stops a_livrer restants, on push une notif rappel.

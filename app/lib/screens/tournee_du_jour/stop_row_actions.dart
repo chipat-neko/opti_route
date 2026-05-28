@@ -381,6 +381,9 @@ class StopRowActions {
       // Si un rappel matin etait programme et toujours pendant, on
       // l'annule (la tournee est faite).
       unawaited(NotificationsService.instance.cancelTourneeRappel(tourneeId));
+      // Idem pour le rappel "tournee non terminee >8h" (#121).
+      unawaited(NotificationsService.instance
+          .cancelTourneeNonTermineeReminder(tourneeId));
     } else if (!tousValides && wasTerminee) {
       // L'utilisateur a annule un statut deja pose. On retire la
       // marque "terminee" pour qu'il finisse la tournee.
