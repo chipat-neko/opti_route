@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../data/anomaly_detection_service.dart';
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_theme.dart';
@@ -136,6 +137,83 @@ class OptimisedBanner extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: AppColors.lime,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bandeau d'alertes anomalies de la tournee en cours (carte #122).
+/// Calcule les anomalies via [AnomalyDetectionService] (taux d'echec
+/// eleve, inactivite > 2h, tournee a cloturer) et les affiche, une par
+/// ligne, coloree selon la gravite. Masque (SizedBox.shrink) si aucune.
+class AnomaliesBanner extends StatelessWidget {
+  const AnomaliesBanner({
+    super.key,
+    required this.tournee,
+    required this.stops,
+  });
+
+  final Tournee tournee;
+  final List<Stop> stops;
+
+  @override
+  Widget build(BuildContext context) {
+    final anomalies = AnomalyDetectionService.detect(
+      tournee: tournee,
+      stops: stops,
+      now: DateTime.now(),
+    );
+    if (anomalies.isEmpty) return const SizedBox.shrink();
+    return Column(
+      children: [
+        for (final a in anomalies)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.x8),
+            child: _AnomalieRow(anomalie: a),
+          ),
+      ],
+    );
+  }
+}
+
+class _AnomalieRow extends StatelessWidget {
+  const _AnomalieRow({required this.anomalie});
+
+  final Anomalie anomalie;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final (color, icon) = switch (anomalie.severite) {
+      AnomalieSeverite.critique => (AppColors.red, Icons.error_outline),
+      AnomalieSeverite.attention =>
+        (AppColors.amber, Icons.warning_amber_outlined),
+      AnomalieSeverite.info => (AppColors.emerald, Icons.info_outline),
+    };
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.r14),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: AppSpacing.x10),
+          Expanded(
+            child: Text(
+              anomalie.message,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: p.ink,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
