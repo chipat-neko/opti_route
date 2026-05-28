@@ -311,6 +311,34 @@ class NotificationsService {
     );
   }
 
+  /// Notification immediate quand une tournee recurrente a ete generee
+  /// automatiquement au demarrage de l'app (carte #113). Respecte le
+  /// mode "ne pas deranger" (skip silencieux en quiet hours).
+  Future<void> showTourneeRecurrenteCreee({
+    required int tourneeId,
+    required String nomTournee,
+  }) async {
+    await init();
+    if (await _isQuietHours()) {
+      debugPrint('[NotificationsService] quiet hours - skip recurrence');
+      return;
+    }
+    await _plugin.show(
+      id: _recurrenceNotifId(tourneeId),
+      title: 'Tournee du jour prete : $nomTournee',
+      body: 'Generee automatiquement depuis ton template recurrent.',
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
   /// Notification immediate apres un backup auto reussi. Discrete
   /// (importance low/default au lieu de high : pas besoin de buzzer
   /// l'user en pleine tournee). Affiche la taille du fichier pour
@@ -376,12 +404,14 @@ class NotificationsService {
   ///     auto en cours a la fois -- la prochaine notif remplace
   ///     l'ancienne dans le tray)
   ///   - tournee non terminee >8h : 50000 - 59999
+  ///   - tournee recurrente creee : 60000 - 69999
   ///   - test : 9999 (reserve historique)
   static int _veilleNotifId(int tourneeId) => 10000 + tourneeId;
   static int _endOfRouteNotifId(int tourneeId) => 20000 + tourneeId;
   static int _pendingStopsNotifId(int tourneeId) => 30000 + tourneeId;
   static const _backupSuccessId = 40000;
   static int _nonTermineeNotifId(int tourneeId) => 50000 + tourneeId;
+  static int _recurrenceNotifId(int tourneeId) => 60000 + tourneeId;
 
   static const _testId = 9999;
   static const _channelId = 'opti_route_reminders';
