@@ -18,6 +18,7 @@ import '../data/chef_tournees_service.dart';
 import '../data/client_memory_service.dart';
 import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
+import '../data/batch_scan_commit_service.dart';
 import '../data/notifications_service.dart';
 import '../data/recurrence_service.dart';
 import '../data/recurrences_repository.dart';
@@ -265,6 +266,13 @@ final secureScreenServiceProvider = Provider<SecureScreenService>((ref) {
 /// bascule du toggle dans Parametres > Securite).
 final secureScreenEnabledProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchSecureScreen();
+});
+
+/// Service de commit du scan batch (carte #119) : dedup + creation en
+/// masse des arrets depuis un lot de bordereaux scannes.
+final batchScanCommitServiceProvider =
+    Provider<BatchScanCommitService>((ref) {
+  return BatchScanCommitService(ref.watch(stopsRepositoryProvider));
 });
 
 /// Repository des recurrences de tournee (carte #113).

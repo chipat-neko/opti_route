@@ -25,6 +25,7 @@ class Fabs extends StatelessWidget {
     required this.onDemarrer,
     required this.onArreter,
     required this.onScannerColis,
+    required this.onScanRafale,
     this.scannerColisKey,
     this.ajouterKey,
   });
@@ -34,6 +35,10 @@ class Fabs extends StatelessWidget {
   final VoidCallback onDemarrer;
   final VoidCallback onArreter;
   final VoidCallback onScannerColis;
+
+  /// Scan bordereaux en rafale (carte #119) : enchaine plusieurs
+  /// bordereaux puis ajout en masse.
+  final VoidCallback onScanRafale;
   // Keys exposes pour les coach marks contextuels (1er lancement)
   final GlobalKey? scannerColisKey;
   final GlobalKey? ajouterKey;
@@ -88,6 +93,16 @@ class Fabs extends StatelessWidget {
           onPressed: onScannerColis,
           tooltip: 'Scanner code-barre colis',
           child: const Icon(Icons.qr_code_scanner_outlined),
+        ),
+        const SizedBox(height: AppSpacing.x10),
+        // Scan bordereaux en rafale (carte #119).
+        FloatingActionButton.small(
+          heroTag: 'fab-scan-rafale',
+          backgroundColor: AppColors.lime,
+          foregroundColor: p.ink,
+          onPressed: onScanRafale,
+          tooltip: 'Scanner des bordereaux en rafale',
+          child: const Icon(Icons.burst_mode_outlined),
         ),
         const SizedBox(height: AppSpacing.x10),
         FloatingActionButton.extended(

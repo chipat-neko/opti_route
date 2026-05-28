@@ -19,6 +19,7 @@ import '../widgets/app_drawer.dart';
 import '../widgets/coach_mark_helper.dart';
 import '../widgets/drawer_badge_icon.dart';
 import 'ajout_arret_screen.dart';
+import 'ajout_arret/bordereau_scan_handler.dart';
 import 'bulk_paste_screen.dart';
 import 'carte_screen.dart';
 import 'nearby_poi_screen.dart';
@@ -348,6 +349,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         onDemarrer: _onDemarrerPressed,
         onArreter: _onArreterPressed,
         onScannerColis: _onScannerColisPressed,
+        onScanRafale: _onScanRafalePressed,
       ),
     );
   }
@@ -546,6 +548,35 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
         ),
       );
     }
+  }
+
+  /// Scan en rafale (carte #119) : enchaine les bordereaux sans valider
+  /// entre chaque, puis ajoute tout le lot d'un coup (dedup auto). Re-tri
+  /// local apres l'ajout en masse.
+  Future<void> _onScanRafalePressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final summary =
+        await handleBordereauScanBatch(context, ref, widget.tournee.id);
+    if (summary == null || !mounted) return;
+    await ref.read(localReorderServiceProvider).reorder(widget.tournee.id);
+    if (!mounted) return;
+    final s = summary.crees > 1 ? 's' : '';
+    final doublonTxt = summary.doublons > 0
+        ? ' (${summary.doublons} doublon${summary.doublons > 1 ? "s" : ""} '
+            'ignore${summary.doublons > 1 ? "s" : ""})'
+        : '';
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.emerald,
+        content: Text(
+          '${summary.crees} arret$s ajoute$s$doublonTxt',
+          style: const TextStyle(
+            color: AppColors.ink,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _onOptimizePressed() => OptimTourneeActions.optimize(

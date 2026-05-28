@@ -37,9 +37,17 @@ import 'scan_bordereau/detection_cards.dart';
 ///    dessous (mode fallback). Auquel cas on pop un
 ///    [BordereauExtraction] avec uniquement `rue` rempli.
 ///
-/// Returns via Navigator.pop : `BordereauExtraction?` (null si annule).
+/// Returns via Navigator.pop : `BordereauExtraction?` (null si annule)
+/// en mode normal, OU `List<BordereauExtraction>` en mode [batch]
+/// (carte #119 : scan en rafale, on accumule sans valider entre chaque
+/// puis "Terminer" renvoie tout le lot).
 class ScanBordereauScreen extends ConsumerStatefulWidget {
-  const ScanBordereauScreen({super.key});
+  const ScanBordereauScreen({super.key, this.batch = false});
+
+  /// Mode rafale (#119) : chaque scan reussi est empile dans un lot au
+  /// lieu d'ouvrir l'ecran de validation. "Terminer" pop la
+  /// `List<BordereauExtraction>`.
+  final bool batch;
 
   @override
   ConsumerState<ScanBordereauScreen> createState() =>
@@ -55,6 +63,9 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
   final Set<int> _selectedLineIndices = {};
   bool _processing = false;
   String? _errorMessage;
+
+  /// Lot accumule en mode batch (#119).
+  final List<BordereauExtraction> _batch = [];
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +167,51 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+          // Mode batch (#119) : compteur + bouton Terminer qui renvoie
+          // le lot accumule a l'appelant.
+          if (widget.batch && _batch.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x18),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              decoration: BoxDecoration(
+                color: AppColors.emerald.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.inventory_2_outlined,
+                      color: AppColors.emerald),
+                  const SizedBox(width: AppSpacing.x10),
+                  Expanded(
+                    child: Text(
+                      '${_batch.length} bordereau'
+                      '${_batch.length > 1 ? "x" : ""} scanne'
+                      '${_batch.length > 1 ? "s" : ""} — '
+                      'continue ou termine.',
+                      style: TextStyle(fontSize: 13, color: p.ink),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.emerald,
+                foregroundColor: p.paper,
+                minimumSize: const Size(0, 52),
+              ),
+              onPressed: _processing
+                  ? null
+                  : () => Navigator.of(context)
+                      .pop(List<BordereauExtraction>.of(_batch)),
+              icon: const Icon(Icons.check),
+              label: Text(
+                'Terminer (${_batch.length})',
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -508,6 +564,27 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         imageFilename: file.path.split(Platform.pathSeparator).last,
       ));
       if (!mounted) return;
+      // Mode batch (#119) : on empile l'extraction et on reste sur
+      // l'ecran de capture pour scanner le suivant (pas de validation
+      // unitaire). Un SnackBar confirme + le compteur s'incremente.
+      if (widget.batch) {
+        setState(() {
+          _batch.add(extraction);
+          _processing = false;
+        });
+        final nom = extraction.nomDestinataire?.trim();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Scanne : ${nom != null && nom.isNotEmpty ? nom : "bordereau"} '
+              '(${_batch.length} au total)',
+            ),
+            backgroundColor: AppColors.emerald,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
       setState(() {
         _imageFile = file;
         _ocr = result;
