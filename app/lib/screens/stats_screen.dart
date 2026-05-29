@@ -5,6 +5,7 @@ import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import 'stats/coequipiers_stats_card.dart';
 import 'stats/export_facturation_cards.dart';
+import 'stats/heatmap_screen.dart';
 import 'stats/jours_semaine_card.dart';
 import 'stats/motivation_card.dart';
 import 'stats/stats_card.dart';
@@ -66,6 +67,8 @@ class StatsScreen extends ConsumerWidget {
             StatsCard(label: 'DEPUIS 1 AN', days: 365),
             SizedBox(height: AppSpacing.x14),
             JoursSemaineCard(),
+            SizedBox(height: AppSpacing.x14),
+            HeatmapCard(),
             SizedBox(height: AppSpacing.x14),
             TopClientsCard(),
             SizedBox(height: AppSpacing.x14),
