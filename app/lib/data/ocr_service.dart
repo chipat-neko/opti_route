@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
@@ -184,10 +185,10 @@ class OcrService {
     int degrees,
   ) async {
     final bytes = await source.readAsBytes();
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) return null;
-    final rotated = img.copyRotate(decoded, angle: degrees);
-    final encoded = img.encodeJpg(rotated, quality: 90);
+    // decode + rotate + encode = CPU-bound -> isolate (#212). I/O disque
+    // + path_provider restent sur l'isolate principal.
+    final encoded = await compute(_rotateIsolate, _RotateArgs(bytes, degrees));
+    if (encoded == null) return null;
     final tmpDir = await getTemporaryDirectory();
     final ts = DateTime.now().microsecondsSinceEpoch;
     final out = File('${tmpDir.path}/ocr_rot_${degrees}_$ts.jpg');
@@ -196,6 +197,21 @@ class OcrService {
   }
 
   void close() => _recognizer.close();
+}
+
+/// Arguments serialisables pour [_rotateIsolate].
+class _RotateArgs {
+  const _RotateArgs(this.bytes, this.degrees);
+  final Uint8List bytes;
+  final int degrees;
+}
+
+/// Decode + tourne + reencode dans un isolate. Null si decode echoue.
+Uint8List? _rotateIsolate(_RotateArgs args) {
+  final decoded = img.decodeImage(args.bytes);
+  if (decoded == null) return null;
+  final rotated = img.copyRotate(decoded, angle: args.degrees);
+  return Uint8List.fromList(img.encodeJpg(rotated, quality: 90));
 }
 
 /// Resultat brut d'un OCR (sortie de [OcrService.extractFromFile]).
