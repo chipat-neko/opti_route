@@ -15,8 +15,8 @@ import '../../data/tile_prefetch_service.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/optimization_providers.dart';
 import '../../providers/tile_provider.dart';
-import '../../theme/app_tokens.dart';
 import '../../widgets/ordre_priorite_dialog.dart';
+import '../../widgets/snack.dart';
 import '../parametres_screen.dart';
 import '../tournee_du_jour_screen.dart';
 import 'optim_preview_dialog.dart';
@@ -48,27 +48,23 @@ class OptimTourneeActions {
       final newId = await repo.duplicate(tournee.id, targetDate: targetDate);
       final newTournee = await repo.getById(newId);
       if (!context.mounted || newTournee == null) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Duplique en "${newTournee.nom}" pour la semaine prochaine',
-          ),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Ouvrir',
-            onPressed: () {
-              navigator.pushReplacement(
-                MaterialPageRoute<void>(
-                  builder: (_) => TourneeDuJourScreen(tournee: newTournee),
-                ),
-              );
-            },
-          ),
+      messenger.showInfo(
+        'Duplique en "${newTournee.nom}" pour la semaine prochaine',
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'Ouvrir',
+          onPressed: () {
+            navigator.pushReplacement(
+              MaterialPageRoute<void>(
+                builder: (_) => TourneeDuJourScreen(tournee: newTournee),
+              ),
+            );
+          },
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')));
+      messenger.showError('Erreur : ${humanizeAnyError(e)}');
     }
   }
 
@@ -90,17 +86,13 @@ class OptimTourneeActions {
   }) async {
     final optimizer = ref.read(optimizationServiceProvider);
     if (optimizer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Cle OpenRouteService manquante. Configure-la dans les Parametres.',
-          ),
-          action: SnackBarAction(
-            label: 'Ouvrir',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ParametresScreen(),
-              ),
+      context.showWarning(
+        'Cle OpenRouteService manquante. Configure-la dans les Parametres.',
+        action: SnackBarAction(
+          label: 'Ouvrir',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ParametresScreen(),
             ),
           ),
         ),
@@ -114,12 +106,7 @@ class OptimTourneeActions {
         stops.where((s) => s.lat != null && s.lng != null).toList();
     if (geocoded.length < 2) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Au moins 2 arrets avec coordonnees sont necessaires.'),
-        ),
-      );
+      context.showInfo('Au moins 2 arrets avec coordonnees sont necessaires.');
       return;
     }
 
@@ -231,17 +218,10 @@ class OptimTourneeActions {
       unawaited(HapticFeedback.heavyImpact());
       final km = (result.totalDistanceMeters / 1000).toStringAsFixed(1);
       final dur = _formatDuration(result.totalDurationSeconds);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tournee optimisee : $km km · $dur'),
-          backgroundColor: AppColors.emerald,
-        ),
-      );
+      context.showSuccess('Tournee optimisee : $km km · $dur');
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur d\'optimisation : ${humanizeAnyError(e)}')),
-      );
+      context.showError('Erreur d\'optimisation : ${humanizeAnyError(e)}');
     } finally {
       if (context.mounted) setOptimizing(false);
     }
@@ -266,20 +246,16 @@ class OptimTourneeActions {
         if (s.lat != null && s.lng != null) LatLng(s.lat!, s.lng!),
     ];
     if (points.length < 2) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Aucun arret geocode. Geolocalise d\'abord les arrets.'),
-      ));
+      messenger.showInfo('Aucun arret geocode. Geolocalise d\'abord les arrets.');
       return;
     }
 
     final estimate = TilePrefetchService.estimate(points: points);
     if (estimate.tiles > TilePrefetchService.maxTiles) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-          'Zone trop large (${estimate.tiles} tuiles). Limite '
-          '${TilePrefetchService.maxTiles}.',
-        ),
-      ));
+      messenger.showWarning(
+        'Zone trop large (${estimate.tiles} tuiles). Limite '
+        '${TilePrefetchService.maxTiles}.',
+      );
       return;
     }
 
@@ -358,17 +334,14 @@ class OptimTourneeActions {
     progress.dispose();
     if (!context.mounted) return;
     if (errorMsg != null) {
-      messenger.showSnackBar(SnackBar(content: Text(errorMsg)));
+      messenger.showError(errorMsg);
       return;
     }
     final failed = estimate.tiles - downloaded;
-    messenger.showSnackBar(SnackBar(
-      content: Text(
-        '$downloaded / ${estimate.tiles} tuiles en cache'
-        '${failed > 0 ? ' ($failed echec(s))' : ''}',
-      ),
-      backgroundColor: AppColors.emerald,
-    ));
+    messenger.showSuccess(
+      '$downloaded / ${estimate.tiles} tuiles en cache'
+      '${failed > 0 ? ' ($failed echec(s))' : ''}',
+    );
   }
 
   /// Tri stable d'arrets par `ordrePriorite` (croissant). Null tombe a
@@ -447,14 +420,9 @@ class OptimTourneeActions {
         .applyOptimizedOrder(proposedFinal);
     if (!context.mounted) return;
     HapticFeedback.mediumImpact();
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Liste triee : du plus proche au plus loin depuis ton depart',
-        ),
-        backgroundColor: AppColors.emerald,
-        duration: Duration(seconds: 2),
-      ),
+    messenger.showSuccess(
+      'Liste triee : du plus proche au plus loin depuis ton depart',
+      duration: const Duration(seconds: 2),
     );
   }
 
