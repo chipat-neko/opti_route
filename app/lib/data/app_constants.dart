@@ -20,72 +20,17 @@
 library;
 
 // ════════════════════════════════════════════════════════════════
-// Statuts livraison (champ `Stops.statutLivraison`)
+// Enums-strings de statut : volontairement en LITTERAUX directs
 // ════════════════════════════════════════════════════════════════
-
-/// Statut initial d'un arret : pas encore traite.
-const String kStopStatutALivrer = 'a_livrer';
-
-/// Statut "livraison reussie" (cas par defaut apres validation).
-const String kStopStatutLivre = 'livre';
-
-/// Statut "echec de livraison" (absent / refus / adresse fausse).
-const String kStopStatutEchec = 'echec';
-
-const List<String> kStopStatutValues = [
-  kStopStatutALivrer,
-  kStopStatutLivre,
-  kStopStatutEchec,
-];
-
-// ════════════════════════════════════════════════════════════════
-// Raisons d'echec (champ `Stops.raisonEchec`)
-// ════════════════════════════════════════════════════════════════
-
-const String kEchecRaisonAbsent = 'absent';
-const String kEchecRaisonRefuse = 'refuse';
-const String kEchecRaisonAdresseFausse = 'adresse_fausse';
-const String kEchecRaisonAutre = 'autre';
-
-const List<String> kEchecRaisonValues = [
-  kEchecRaisonAbsent,
-  kEchecRaisonRefuse,
-  kEchecRaisonAdresseFausse,
-  kEchecRaisonAutre,
-];
-
-// ════════════════════════════════════════════════════════════════
-// Statuts tournee (champ `Tournees.statut`)
-// ════════════════════════════════════════════════════════════════
-
-/// Tournee en cours de creation, pas encore optimisee.
-const String kTourneeStatutBrouillon = 'brouillon';
-
-/// Tournee optimisee (ordre defini par VROOM ou tri local), prete a
-/// demarrer.
-const String kTourneeStatutOptimisee = 'optimisee';
-
-/// Tournee demarree (Noah est en train de la faire).
-const String kTourneeStatutEnCours = 'en_cours';
-
-/// Tournee terminee (tous les arrets traites OU "arreter manuel").
-const String kTourneeStatutTerminee = 'terminee';
-
-const List<String> kTourneeStatutValues = [
-  kTourneeStatutBrouillon,
-  kTourneeStatutOptimisee,
-  kTourneeStatutEnCours,
-  kTourneeStatutTerminee,
-];
-
-// ════════════════════════════════════════════════════════════════
-// Priorites d'arret (champ `Stops.priorite`)
-// ════════════════════════════════════════════════════════════════
-
-const String kStopPrioriteFlexible = 'flexible';
-const String kStopPrioriteObligatoirePremier = 'obligatoire_premier';
-const String kStopPrioriteObligatoireDernier = 'obligatoire_dernier';
-const String kStopPrioriteEviter = 'eviter';
+//
+// Les statuts (`Stops.statutLivraison` = a_livrer/livre/echec,
+// `Tournees.statut` = brouillon/optimisee/en_cours/terminee), raisons
+// d'echec et priorites restent des litteraux directs dans le code ET la
+// DB (Drift). Des constantes equivalentes avaient ete creees au Sprint
+// 3.A mais JAMAIS adoptees (0 usage contre 91 litteraux) -> supprimees
+// (audit #223) pour ne pas garder une double source de verite. Ne PAS
+// les re-ajouter ; pour une vraie securite de type un jour, passer par
+// un enum + TypeConverter Drift (plus gros chantier).
 
 // ════════════════════════════════════════════════════════════════
 // Seuils & timeouts
