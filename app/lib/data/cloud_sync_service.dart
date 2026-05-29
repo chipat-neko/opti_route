@@ -515,7 +515,13 @@ class CloudSyncService {
 
   /// Liste les membres d'une tournee partagee via RPC SECURITY DEFINER
   /// (sous-jalon 3.B). Delegue a [CloudMembresSync].
-  Future<List<TourneeMembreInfo>> listTourneeMembers(int localTourneeId) {
+  // `async` IMPORTANT : sans ca, `_client()` / `_requireUserId()` lancent
+  // leur CloudSyncException de maniere SYNCHRONE a l'appel. Or cette
+  // methode est appelee dans `CoequipiersSection.initState` -> un throw
+  // sync y casse le build de l'ecran tournee (carre gris) quand on n'est
+  // pas connecte au cloud. En async, le throw devient une erreur de
+  // Future, rattrapee par le FutureBuilder (snapshot.hasError).
+  Future<List<TourneeMembreInfo>> listTourneeMembers(int localTourneeId) async {
     final client = _client();
     _requireUserId();
     return _membres.listMembers(client, localTourneeId);

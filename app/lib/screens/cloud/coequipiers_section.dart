@@ -38,7 +38,14 @@ class _CoequipiersSectionState extends ConsumerState<CoequipiersSection> {
   @override
   void initState() {
     super.initState();
-    _membersFuture = _load();
+    // Ne charge les membres QUE si la tournee est partagee (cloudId) ET
+    // qu'on est connecte au cloud. Sinon `listTourneeMembers` leve une
+    // CloudSyncException ici (en initState) -> casse le build de tout
+    // l'ecran tournee ("carre gris") quand on n'est pas connecte.
+    if (widget.tournee.cloudId != null &&
+        SupabaseService.instance.currentUser != null) {
+      _membersFuture = _load();
+    }
     // Bug Trello #70 fix 2B : quand un coequipier quitte la tournee
     // (leaveTournee) il ferme aussi l'ecran tournee -> presence leave
     // emis sur le channel Realtime. Auto-reload la liste membres dans
@@ -74,7 +81,11 @@ class _CoequipiersSectionState extends ConsumerState<CoequipiersSection> {
   @override
   Widget build(BuildContext context) {
     final cloudId = widget.tournee.cloudId;
-    if (cloudId == null) return const SizedBox.shrink();
+    // Pas de section si tournee non partagee, OU si on n'a pas charge les
+    // membres (non connecte au cloud -> _membersFuture reste null).
+    if (cloudId == null || _membersFuture == null) {
+      return const SizedBox.shrink();
+    }
     return FutureBuilder<List<TourneeMembreInfo>>(
       future: _membersFuture,
       builder: (context, snapshot) {
