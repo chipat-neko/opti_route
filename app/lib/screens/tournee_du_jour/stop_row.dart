@@ -160,7 +160,7 @@ class StopRow extends ConsumerWidget {
                         // Carte Trello #94 : badge discret si le client
                         // est deja dans le carnet (>= 2 livraisons, ou
                         // favori). Aide Noah a reconnaitre les habitues.
-                        KnownClientBadge(stopId: stop.id),
+                        KnownClientBadge(nomClient: stop.nomClient),
                       ],
                     ),
                     if (_secondaryLine(stop) != null) ...[

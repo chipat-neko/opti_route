@@ -53,12 +53,31 @@ class ClientMemoryService {
     int maxDistance = defaultMaxDistance,
     double minRatio = defaultMinRatio,
   }) async {
-    final normalized = _normalize(nomDestinataire);
-    if (normalized.length < 3) return null;
-
     // Recupere tout le carnet (taille typique < 1000 entrees, donc OK
     // de tout charger en memoire pour le fuzzy matching).
     final all = await _repo.getAll();
+    return matchInList(
+      nomDestinataire,
+      all,
+      ville: ville,
+      maxDistance: maxDistance,
+      minRatio: minRatio,
+    );
+  }
+
+  /// Variante pure (sans I/O) du fuzzy matching : matche [nomDestinataire]
+  /// contre une liste [all] DEJA chargee. Permet de partager un unique
+  /// chargement du carnet entre plusieurs lookups (ex: badge "client
+  /// connu" sur chaque stop d'une tournee -> evite le N+1, cf audit #213).
+  static SavedDestination? matchInList(
+    String nomDestinataire,
+    List<SavedDestination> all, {
+    String? ville,
+    int maxDistance = defaultMaxDistance,
+    double minRatio = defaultMinRatio,
+  }) {
+    final normalized = _normalize(nomDestinataire);
+    if (normalized.length < 3) return null;
     if (all.isEmpty) return null;
 
     SavedDestination? best;

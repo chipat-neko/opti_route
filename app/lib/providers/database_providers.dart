@@ -106,28 +106,35 @@ final trackingCodesRepositoryProvider =
   return TrackingCodesRepository(ref.watch(appDatabaseProvider));
 });
 
-/// Recherche un client connu (entry [SavedDestinations]) qui matche un
-/// stop donne via fuzzy nom (Levenshtein) + bonus ville. Retourne null
-/// si pas de match. Utilise par le badge "client connu" dans la liste
-/// de stops (carte Trello #94).
+/// Carnet complet, charge UNE seule fois et partage entre tous les
+/// lookups (stream Drift -> se rafraichit auto quand le carnet change).
 ///
-/// Le cache Riverpod (family by stopId) evite de re-faire le fuzzy
-/// matching a chaque rebuild du StopRow (le carnet est tout charge en
-/// memoire dans ClientMemoryService).
+/// Avant (audit #213), chaque badge "client connu" appelait
+/// `findSimilarClient` qui rechargeait tout le carnet via `getAll()` :
+/// une tournee de 50 stops = 50 full-scans de la table. Ce provider
+/// centralise le chargement -> 1 seul scan partage.
+final carnetForMatchingProvider =
+    StreamProvider<List<SavedDestination>>((ref) {
+  return ref.watch(savedDestinationsRepositoryProvider).watchAll();
+});
+
+/// Recherche un client connu (entry [SavedDestinations]) qui matche un
+/// nom via fuzzy nom (Levenshtein) + bonus ville. Retourne null si pas
+/// de match. Utilise par le badge "client connu" dans la liste de stops
+/// (carte Trello #94).
+///
+/// Family keyee par le NOM (et non le stopId) : deux stops du meme
+/// client partagent le meme calcul. Le carnet vient du cache
+/// [carnetForMatchingProvider] -> aucun rechargement par stop (#213).
 final clientHistoryProvider =
-    FutureProvider.family<SavedDestination?, int>((ref, stopId) async {
-  final stop = await ref.read(stopsRepositoryProvider).getById(stopId);
-  if (stop == null) return null;
-  final nom = stop.nomClient;
-  if (nom == null || nom.isEmpty) return null;
-  final svc = ClientMemoryService(
-    ref.read(savedDestinationsRepositoryProvider),
-  );
-  // Stop n'a pas de champ ville dedie -- la ville est dans
-  // adresseNormalisee. Pour le badge "client connu" on se contente du
-  // match nom uniquement (suffit pour distinguer un client deja
-  // livre, le bonus ville sert surtout au scan bordereau).
-  return svc.findSimilarClient(nom);
+    FutureProvider.family<SavedDestination?, String>((ref, nomClient) async {
+  if (nomClient.trim().isEmpty) return null;
+  final all = await ref.watch(carnetForMatchingProvider.future);
+  if (all.isEmpty) return null;
+  // Stop n'a pas de champ ville dedie -- on se contente du match nom
+  // uniquement (suffit pour distinguer un client deja livre, le bonus
+  // ville sert surtout au scan bordereau).
+  return ClientMemoryService.matchInList(nomClient, all);
 });
 
 final coequipiersRepositoryProvider = Provider<CoequipiersRepository>((ref) {

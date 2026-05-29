@@ -16,16 +16,19 @@ import '../../theme/app_tokens.dart';
 ///
 /// Le lookup carnet est fuzzy (Levenshtein + ratio) via
 /// [ClientMemoryService] -> tolerant aux fautes OCR. Le resultat est
-/// cache par Riverpod le temps que le stop ne change pas (basé sur
-/// `stopId`), donc pas de re-query a chaque rebuild.
+/// cache par Riverpod (family par nom) et le carnet n'est charge qu'une
+/// fois pour toute la liste (cf `carnetForMatchingProvider`, audit #213),
+/// donc pas de re-query a chaque rebuild ni par stop.
 class KnownClientBadge extends ConsumerWidget {
-  const KnownClientBadge({super.key, required this.stopId});
+  const KnownClientBadge({super.key, required this.nomClient});
 
-  final int stopId;
+  final String? nomClient;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dest = ref.watch(clientHistoryProvider(stopId)).asData?.value;
+    final nom = nomClient;
+    if (nom == null || nom.trim().isEmpty) return const SizedBox.shrink();
+    final dest = ref.watch(clientHistoryProvider(nom)).asData?.value;
     if (dest == null) return const SizedBox.shrink();
 
     if (dest.isFavori) {
