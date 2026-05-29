@@ -70,7 +70,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
 
   void _addDigit(int d) {
     if (_checking) return;
-    if (_digits.length >= 6) return;
+    if (_digits.length >= _pinLength) return;
     setState(() {
       _digits.add(d);
       _error = false;

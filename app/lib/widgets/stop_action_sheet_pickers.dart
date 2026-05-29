@@ -218,7 +218,11 @@ Future<int?> showTargetTourneePicker({
 /// Helper interne : extrait 1-2 initiales d'un nom de coequipier
 /// pour l'avatar du picker. "Jean Dupont" -> "JD", "Lucas" -> "L".
 String _initialsFor(String nom) {
-  final parts = nom.trim().split(RegExp(r'\s+'));
+  final parts = nom
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) {
     return parts.first.substring(0, 1).toUpperCase();

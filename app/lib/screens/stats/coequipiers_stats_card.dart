@@ -195,7 +195,11 @@ class _CoequipierRow extends StatelessWidget {
   /// Extrait les initiales (max 2 lettres en majuscule) du nom pour
   /// l'avatar. "Lucas" -> "L", "Lucas Dupont" -> "LD".
   static String _initials(String nom) {
-    final parts = nom.trim().split(RegExp(r'\s+'));
+    final parts = nom
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
     return (parts.first.substring(0, 1) + parts.last.substring(0, 1))

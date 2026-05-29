@@ -202,7 +202,12 @@ class OpenRouteOptimizationService implements OptimizationService {
     final orderedStops = [
       ...firsts,
       for (final id in flexiblesOrdered)
-        flexibles.firstWhere((s) => s.id == id),
+        flexibles.firstWhere(
+          (s) => s.id == id,
+          orElse: () => throw OptimizationException(
+            'Reponse du solveur incoherente (id d\'arret inconnu : $id).',
+          ),
+        ),
       ...lasts,
     ];
     final totals = await _computeTotals(tournee, orderedStops);

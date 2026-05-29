@@ -104,7 +104,8 @@ class EtaCalculator {
         lat2: lat,
         lon2: lng,
       );
-      final durationSec = (meters / 1000.0 / avgSpeedKmh * 3600).round();
+      final speed = avgSpeedKmh > 0 ? avgSpeedKmh : 30.0;
+      final durationSec = (meters / 1000.0 / speed * 3600).round();
       out[s.id] = SegmentInfo(
         meters: meters.round(),
         duration: Duration(seconds: durationSec),

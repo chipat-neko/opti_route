@@ -141,6 +141,7 @@ class _BulkPasteScreenState extends ConsumerState<BulkPasteScreen> {
         if (kDebugMode) debugPrint('[BulkPaste] echec insert "$line" : $e');
       }
       if (suggestion == null) _failed++;
+      if (!mounted) return;
       setState(() => _progress++);
       // 1 req/s pour respecter Nominatim usage policy
       await Future.delayed(const Duration(milliseconds: 1100));
