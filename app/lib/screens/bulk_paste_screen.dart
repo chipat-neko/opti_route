@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -123,7 +124,8 @@ class _BulkPasteScreenState extends ConsumerState<BulkPasteScreen> {
         final results = await geocoder.search(line);
         if (results.isNotEmpty) suggestion = results.first;
       } catch (e) {
-        debugPrint('[BulkPaste] echec geocode "$line" : $e');
+        // PII ($line = adresse collee) : debug uniquement (#178).
+        if (kDebugMode) debugPrint('[BulkPaste] echec geocode "$line" : $e');
       }
       final companion = StopsCompanion.insert(
         tourneeId: widget.tourneeId,
@@ -136,7 +138,7 @@ class _BulkPasteScreenState extends ConsumerState<BulkPasteScreen> {
         await repo.create(companion);
         inserted++;
       } catch (e) {
-        debugPrint('[BulkPaste] echec insert "$line" : $e');
+        if (kDebugMode) debugPrint('[BulkPaste] echec insert "$line" : $e');
       }
       if (suggestion == null) _failed++;
       setState(() => _progress++);

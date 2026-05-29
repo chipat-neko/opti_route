@@ -3,7 +3,11 @@
 Usage:
     python tools/labelize_via_gemini.py training_data.csv training_data_labeled_gemini.csv [--max N]
 
-Pre-requis : GEMINI_API_KEY dans app/cloud.env.json.
+Pre-requis : GEMINI_API_KEY dans app/gemini.env.json (fichier dedie,
+gitignore). NE PAS la mettre dans cloud.env.json : ce dernier alimente
+`--dart-define-from-file` au build APK -> la cle finirait embarquee dans
+l'app (extractible). L'app n'a PAS besoin de la cle (elle passe par
+l'Edge Function ocr-enhance, cle cote serveur). Cf audit #175.
 
 Format input  : image,block_id,line_idx,line_text,left,top,right,bottom,...
 Format output : input + class (NOM_CLIENT / RUE / CP_VILLE / TEL / REF / PARASITE)
@@ -33,6 +37,9 @@ except ImportError:
 
 ROOT = Path(__file__).parent.parent
 ENV_FILE = ROOT / 'app' / 'cloud.env.json'
+# Cle Gemini : fichier DEDIE, separe de cloud.env.json (qui part dans le
+# build APK via --dart-define-from-file). Cf audit #175.
+GEMINI_ENV_FILE = ROOT / 'app' / 'gemini.env.json'
 
 CLASSES = [
     'NOM_CLIENT',  # nom destinataire / ramasse
@@ -51,6 +58,33 @@ def load_env():
         sys.exit(1)
     with open(ENV_FILE) as f:
         return json.load(f)
+
+
+def load_gemini_key():
+    """Lit GEMINI_API_KEY depuis le fichier dedie gemini.env.json.
+
+    Fallback retrocompat : si la cle est encore dans cloud.env.json, on
+    la lit mais on avertit qu'il faut la deplacer (sinon elle part dans
+    l'APK via --dart-define-from-file). Cf audit #175.
+    """
+    if GEMINI_ENV_FILE.exists():
+        with open(GEMINI_ENV_FILE) as f:
+            key = json.load(f).get('GEMINI_API_KEY')
+            if key:
+                return key
+    # Fallback : ancienne place (cloud.env.json).
+    if ENV_FILE.exists():
+        with open(ENV_FILE) as f:
+            key = json.load(f).get('GEMINI_API_KEY')
+        if key:
+            print(
+                "[AVERTISSEMENT #175] GEMINI_API_KEY est encore dans "
+                "cloud.env.json -> deplace-la dans app/gemini.env.json "
+                "et retire-la de cloud.env.json (sinon elle est embarquee "
+                "dans l'APK au build)."
+            )
+            return key
+    return None
 
 
 def build_prompt(lines_with_idx):
@@ -195,10 +229,12 @@ def main():
         sys.exit(1)
     input_csv, output_csv = args
 
-    env = load_env()
-    api_key = env.get('GEMINI_API_KEY')
+    api_key = load_gemini_key()
     if not api_key:
-        print("Missing GEMINI_API_KEY in cloud.env.json")
+        print(
+            "Missing GEMINI_API_KEY. Cree app/gemini.env.json avec "
+            '{"GEMINI_API_KEY": "..."} (cf #175).'
+        )
         sys.exit(1)
 
     # Lire input et grouper par image

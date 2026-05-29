@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -43,10 +43,13 @@ class CloudCarnetSync {
       try {
         await _pushRow(client, s, userId);
       } on Object catch (e) {
-        debugPrint(
-          '[CloudCarnetSync] Push "${s.nomClient ?? s.adresseDisplay}" '
-          'echec : $e',
-        );
+        // PII (nom/adresse client) : debug uniquement, pas en release (#178).
+        if (kDebugMode) {
+          debugPrint(
+            '[CloudCarnetSync] Push "${s.nomClient ?? s.adresseDisplay}" '
+            'echec : $e',
+          );
+        }
         // Continue avec les autres rows.
       }
     }

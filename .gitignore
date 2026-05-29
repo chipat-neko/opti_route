@@ -44,6 +44,11 @@ training_data*.csv
 # Regenerables via tools/train_classifier.py.
 *.onnx
 tools/_classifier_report.txt
+# EXCEPTION : le classifier EMBARQUE est un asset Flutter declare dans
+# pubspec (assets/ml/). Il DOIT etre versionne, sinon les builds CI/web
+# embarquent l'app sans modele (audit #235). A re-commit apres chaque
+# reentrainement. Les .onnx d'experimentation restent ignores ci-dessus.
+!app/assets/ml/bordereau_classifier.onnx
 
 # Screenshots / dumps debug temporaires (ADB / UI dumps)
 noah_screen*.png
