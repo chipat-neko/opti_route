@@ -6,6 +6,33 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
+### Session autonome 2026-05-29/30 (boucle nuit, 13+ PR mergées)
+
+Boucle autonome lancée par Noah au soir, objectif : tester en continu et
+améliorer en sécurité jusqu'à 05:00 Paris. Travail réservé aux zones SANS
+risque pour la tournée du lendemain (mark-livré, optimisation, scan,
+sync cloud non touchés).
+
+**Couverture de tests (8 PR, +90 tests environ)** :
+- `cloud_error_humanizer` (#318, 17 cas) — réseau, Postgrest 401/403/42P17/JWT, fallback tronqué.
+- `BordereauTextFilters` (#319, 19 cas) — filtres de rejet OCR : labels, rues, villes, headers, transporteurs.
+- `BordereauFormatDetector` (#320, 7 cas) — détection ENLEVEMENT vs LIVRAISON.
+- `cloud_sync_types` (#321, 11 cas) — CloudPullResult.summary, totalChanged/Skipped, TourneeMembreInfo.
+- `stop_types` (#322, 12 cas) — verbInfinitif/Participe + labels FR.
+- `OverpassPoiService` (#323, 9 cas) — recherche POI avec MockClient + parsing nodes/ways.
+- `StatsCard.formatEur` (#326, 7 cas) — formatage EUR de la facturation.
+- `ShareIntentService.parseSharedText` (#328, 8 cas) — parsing du partage Android (URL Maps + texte).
+
+**Cas-limites enrichis (3 PR, +26 tests)** :
+- `geo_utils` (#327, 8 cas) — équateur, pôles, antipodes, seuils stricts.
+- `heatmap_service` (#329, 8 cas) — cellDeg ≤ 0, hémisphère sud, équateur, agrégation massive.
+- `Levenshtein` (#330, 10 cas) — symétrie, identité, inégalité triangulaire, bornes, closestMatch lazy.
+
+**Site SEO (2 PR, 9 pages enrichies)** :
+- JSON-LD HowTo sur install-apk + guide-csv ; WebPage sur roadmap (#324).
+- JSON-LD WebPage sur changelog, entreprise, gallery, dev, mentions-legales, vs (#325).
+- Le site `site_doc/` couvre maintenant 15/15 pages avec schema.org (FAQPage, HowTo, WebPage, SoftwareApplication).
+
 ### Session autonome 2026-05-11 (Vague 8 quality + features livraison)
 
 **Refactor mode sombre** (17 fichiers, 314 occurrences `AppColors.X` → `p.X`
