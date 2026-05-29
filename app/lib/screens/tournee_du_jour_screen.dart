@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart' show ContentAlign;
 
 import '../data/address_suggestion.dart';
+import '../data/battery_monitor_service.dart';
 import '../data/cloud_error_humanizer.dart';
 import '../data/cloud_sync_service.dart' show TourneeMembreInfo;
 import '../data/database.dart';
@@ -274,6 +275,10 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           ],
         ),
         actions: [
+          // Indicateur batterie (carte #258) : niveau + icone, rouge si
+          // <= 15 %. En tete des actions ; le title est Flexible+ellipsis
+          // donc il cede la place, pas de risque d'overflow.
+          const _BatteryChip(),
           // Tri rapide local (NN) : du plus proche au plus loin
           // depuis le depart, instantane, sans cle ORS, illimite.
           // Style Spoke route planner. C'est le bouton primaire pour
@@ -697,6 +702,44 @@ extension _IterableLastWhereOrNull<E> on Iterable<E> {
 
 // _AutoPushBadge -> extrait dans tournee_du_jour/auto_push_badge.dart
 // (refactor 2026-05-21 : public AutoPushBadge reutilisable).
+
+/// Indicateur batterie compact pour l'AppBar tournee (carte #258).
+/// Icone + pourcentage, rouge si <= 15 %. Rien si le niveau est inconnu
+/// (loading / plateforme sans batterie).
+class _BatteryChip extends ConsumerWidget {
+  const _BatteryChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final level = ref.watch(batteryLevelProvider).asData?.value;
+    if (level == null) return const SizedBox.shrink();
+    final low = level <= 15;
+    final p = context.palette;
+    final color = low ? AppColors.red : p.textMute;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            low ? Icons.battery_alert : Icons.battery_std,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 2),
+          Text(
+            '$level%',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Bandeau secondaire sous l'AppBar tournee : "12,4 km · 1h05 restants
 /// (8 arrets)". Compact, 24px de haut. Carte Trello #93.
