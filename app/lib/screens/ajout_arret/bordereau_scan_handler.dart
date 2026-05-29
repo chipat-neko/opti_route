@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -51,8 +52,11 @@ Future<BordereauScanResult?> handleBordereauScan(
   );
   if (extraction == null || !context.mounted) return null;
 
-  debugPrint('OCRDUMP === ajout_arret recu extraction.format = '
-      '${extraction.format.name}, nomDest = ${extraction.nomDestinataire}');
+  // PII (nom destinataire) : debug uniquement, jamais en release (#178).
+  if (kDebugMode) {
+    debugPrint('OCRDUMP === ajout_arret recu extraction.format = '
+        '${extraction.format.name}, nomDest = ${extraction.nomDestinataire}');
+  }
 
   AddressSuggestion? found;
   final service = ref.read(geocodingServiceProvider);
@@ -98,9 +102,11 @@ Future<BordereauScanResult?> handleBordereauScan(
     }).toList();
 
     if (filtered.isEmpty) {
-      debugPrint('OCRDUMP === geocodage : ${results.length} resultats '
-          'rejetes (CP/ville different de "$extractedCp $extractedVille"). '
-          'Pas de validation auto.');
+      if (kDebugMode) {
+        debugPrint('OCRDUMP === geocodage : ${results.length} resultats '
+            'rejetes (CP/ville different de "$extractedCp $extractedVille"). '
+            'Pas de validation auto.');
+      }
     } else {
       int score(AddressSuggestion a) {
         if (a.isPoi) return 3;

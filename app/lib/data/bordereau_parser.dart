@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 
 import 'app_constants.dart';
 import 'bordereau_extraction.dart';
@@ -6,6 +6,12 @@ import 'bordereau_format_detector.dart';
 import 'bordereau_patterns.dart';
 import 'bordereau_text_filters.dart';
 import 'ocr_service.dart' show OcrBlock;
+
+/// Logs d'instrumentation OCR (contenu = noms/adresses). Guarde par
+/// kDebugMode : jamais de PII dans logcat en release (audit #178).
+void _ocrDump(String message) {
+  if (kDebugMode) debugPrint(message);
+}
 
 /// Parser pour extraire automatiquement les champs cles d'un bordereau
 /// de livraison a partir des lignes OCR.
@@ -103,7 +109,7 @@ class BordereauParser {
         return words.take(2).join(' ');
       }).join(' | ');
       // Position : [left,top,right,bottom]
-      debugPrint(
+      _ocrDump(
           'OCRDUMP-SPATIAL bloc#$i [${b.left.toInt()},${b.top.toInt()},'
           '${b.right.toInt()},${b.bottom.toInt()}] (${b.lines.length}L): $preview');
     }
@@ -114,7 +120,7 @@ class BordereauParser {
       allLines.addAll(b.lines);
     }
     final format = BordereauFormatDetector.detect(allLines);
-    debugPrint('OCRDUMP-SPATIAL detected format = ${format.name} '
+    _ocrDump('OCRDUMP-SPATIAL detected format = ${format.name} '
         '(${allLines.length} lignes scannees)');
 
     // Marqueurs prioritaires selon le format.
@@ -236,7 +242,7 @@ class BordereauParser {
     }
     if (assembledLines.isEmpty) return null;
     // Debug : afficher l'assemblage final pour audit
-    debugPrint(
+    _ocrDump(
         'OCRDUMP-SPATIAL assembled (${assembledLines.length} lignes): '
         '${assembledLines.join(" | ")}');
     return _buildExtractionFromContentLines(

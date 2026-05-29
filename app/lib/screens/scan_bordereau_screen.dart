@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,14 @@ import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import 'scan_bordereau/debug_section.dart';
 import 'scan_bordereau/detection_cards.dart';
+
+/// Logs d'instrumentation OCR (lignes du bordereau = noms/adresses).
+/// Guarde par kDebugMode pour ne JAMAIS exposer de PII dans logcat en
+/// release (audit #178). En debug, garde le workflow
+/// `adb logcat -s flutter:V | grep OCRDUMP`.
+void _ocrDump(String message) {
+  if (kDebugMode) debugPrint(message);
+}
 
 /// Ecran de scan de bordereau de livraison.
 ///
@@ -492,7 +501,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
             ),
           );
         }
-        debugPrint('OCRDUMP === BLUR variance: ${blur.toStringAsFixed(1)}');
+        _ocrDump('OCRDUMP === BLUR variance: ${blur.toStringAsFixed(1)}');
       } catch (_) {
         // silent : pas critique
       }
@@ -509,13 +518,13 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       if (!mounted) return;
       // Dump des lignes OCR dans logcat (filtrable via tag OCRDUMP)
       // pour debug a distance via `adb logcat -s flutter:V | grep OCRDUMP`.
-      debugPrint('OCRDUMP === START (${result.lines.length} lignes, '
+      _ocrDump('OCRDUMP === START (${result.lines.length} lignes, '
           'rotation ${rotated.rotationDegrees} deg, score ${rotated.qualityScore}, '
           'tentatives ${rotated.attemptedRotations}) ===');
       for (var i = 0; i < result.lines.length; i++) {
-        debugPrint('OCRDUMP ${i.toString().padLeft(2, "0")}: ${result.lines[i]}');
+        _ocrDump('OCRDUMP ${i.toString().padLeft(2, "0")}: ${result.lines[i]}');
       }
-      debugPrint('OCRDUMP === END ===');
+      _ocrDump('OCRDUMP === END ===');
 
       // Auto-detection format : Chronopost (tracking XR.../XE...FR)
       // puis Colissimo (6A.../6L...), sinon parser MESEXP par defaut.
@@ -552,7 +561,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         }
         if (spatial != null) {
           extraction = spatial;
-          debugPrint('OCRDUMP === SPATIAL OK (label -> bloc dessous) ===');
+          _ocrDump('OCRDUMP === SPATIAL OK (label -> bloc dessous) ===');
         } else if (result.blocks.isNotEmpty) {
           extraction = BordereauParser().parseFromBlocks(result.blocks);
         } else {
@@ -575,11 +584,11 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         if (validation.validated) {
           extraction = validation.extraction;
           if (validation.correctionsApplied.isNotEmpty) {
-            debugPrint('OCRDUMP === VALIDATION BAN ===');
+            _ocrDump('OCRDUMP === VALIDATION BAN ===');
             for (final c in validation.correctionsApplied) {
-              debugPrint('OCRDUMP corr: $c');
+              _ocrDump('OCRDUMP corr: $c');
             }
-            debugPrint('OCRDUMP score: ${validation.validationScore}');
+            _ocrDump('OCRDUMP score: ${validation.validationScore}');
           }
         }
       } catch (_) {
@@ -595,7 +604,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         final enriched = await memory.enrichWithMemory(extraction);
         if (enriched.source == ExtractionSource.clientMemory) {
           extraction = enriched;
-          debugPrint('OCRDUMP === CLIENT MEMORY MATCH ===');
+          _ocrDump('OCRDUMP === CLIENT MEMORY MATCH ===');
         }
       } catch (_) {
         // silent : carnet vide ou erreur DB, on garde extraction OCR
@@ -616,7 +625,7 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
         );
         if (enhanced != null && _isBetterThan(enhanced, extraction)) {
           extraction = enhanced;
-          debugPrint('OCRDUMP === LLM ENHANCE OK (Gemini) ===');
+          _ocrDump('OCRDUMP === LLM ENHANCE OK (Gemini) ===');
         }
       } catch (_) {
         // silent : on garde l'extraction locale (offline-first)
