@@ -63,6 +63,27 @@ function statusLabel(s: string): string {
   }
 }
 
+// Minimisation RGPD (audit #176) : le code 4 chars est court (contrainte
+// URL <= 20 chars client) et l'endpoint est public sans rate-limit ->
+// un code devine ne doit PAS reveler une identite complete ni un
+// domicile exact. On renvoie donc le prenom + initiale du nom, et des
+// coordonnees arrondies (~110 m).
+function pseudonymizeName(name: string | null): string | null {
+  if (name == null) return null;
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  // Premier mot complet + initiale du dernier mot ("Jean Dupont" -> "Jean D.").
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+
+// Arrondit a 3 decimales (~110 m) : assez precis pour situer le quartier
+// sur la carte de suivi, sans pointer le batiment exact (cf #176/#251).
+function coarsenCoord(v: number | null): number | null {
+  if (v == null) return null;
+  return Math.round(v * 1000) / 1000;
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -82,7 +103,11 @@ serve(async (req: Request) => {
     const seg = url.pathname.split('/').filter(Boolean);
     code = seg.length ? seg[seg.length - 1] : null;
   }
-  if (!code || !/^[a-z0-9]{3,8}$/.test(code)) {
+  // Longueur EXACTE attendue (kTrackingCodeLength = 4 cote app, calibre
+  // sur la contrainte client "URL <= 20 chars" : https://optr.ro/abcd).
+  // On rejette les codes plus courts (ex 3 chars = espace de recherche
+  // reduit) -- audit #176.
+  if (!code || !/^[a-z0-9]{4}$/.test(code)) {
     return jsonResponse({ error: 'Code invalide.' }, 400);
   }
 
@@ -137,13 +162,18 @@ serve(async (req: Request) => {
   }
 
   const body: TrackResponse = {
-    recipient: (stop.nom_client as string | null) ?? null,
+    // Nom pseudonymise (prenom + initiale) et coords arrondies (~110 m)
+    // pour limiter ce qu'un code devine peut reveler -- audit #176.
+    recipient: pseudonymizeName(stop.nom_client as string | null),
     status: stop.statut_livraison as TrackResponse['status'],
     status_label: statusLabel(stop.statut_livraison as string),
-    dest_lat: (stop.lat as number | null) ?? null,
-    dest_lng: (stop.lng as number | null) ?? null,
+    dest_lat: coarsenCoord((stop.lat as number | null) ?? null),
+    dest_lng: coarsenCoord((stop.lng as number | null) ?? null),
     // Position live livreur : pas encore disponible (jalon 3.C
     // live_presence a brancher). Null -> la page affiche la destination.
+    // #177 : QUAND on la branchera, passer OBLIGATOIREMENT les coords par
+    // coarsenCoord() (sinon surveillance temps reel du livreur via un
+    // code devine) et idealement la conditionner a un opt-in du livreur.
     livreur_lat: null,
     livreur_lng: null,
     stops_before: stopsBefore,
