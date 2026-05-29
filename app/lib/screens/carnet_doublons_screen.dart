@@ -53,16 +53,21 @@ class _CarnetDoublonsScreenState
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final paires = ref
-        .watch(carnetDoublonsProvider)
+    final doublonsAsync = ref.watch(carnetDoublonsProvider);
+    final paires = (doublonsAsync.asData?.value ?? const <DoublonPaire>[])
         .where((d) => !_ignored.contains(_key(d)))
         .toList();
+    // 1er calcul (deporte en isolate sur gros carnet, #215) en cours :
+    // spinner plutot que le faux "aucun doublon".
+    final computing = doublonsAsync.isLoading && !doublonsAsync.hasValue;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Doublons du carnet'),
       ),
-      body: paires.isEmpty
+      body: computing
+          ? const Center(child: CircularProgressIndicator())
+          : paires.isEmpty
           ? _EmptyState()
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.x16),

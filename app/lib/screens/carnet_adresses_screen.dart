@@ -1033,7 +1033,7 @@ class _DoublonsBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final n = ref.watch(carnetDoublonsProvider).length;
+    final n = ref.watch(carnetDoublonsProvider).asData?.value.length ?? 0;
     if (n == 0) return const SizedBox.shrink();
     final p = context.palette;
     return Padding(

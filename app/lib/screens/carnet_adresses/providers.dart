@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
@@ -23,11 +24,21 @@ final carnetStreamProvider =
 
 /// Paires de fiches suspectees d'etre des doublons dans le carnet
 /// (carte #103). Derive de [carnetStreamProvider] -> recalcul auto a
-/// chaque modif du carnet (ajout / fusion / suppression). Liste vide
-/// tant que le carnet n'a pas charge.
+/// chaque modif du carnet (ajout / fusion / suppression).
+///
+/// La detection est en O(n²) (Levenshtein + haversine par paire). Sur un
+/// gros carnet, la lancer sur l'isolate UI fige l'ecran (#215) -> on la
+/// deporte dans un isolate via compute() au-dela d'un petit seuil. En
+/// dessous, le cout de spawn de l'isolate dominerait, donc calcul inline.
+const int _kDoublonIsolateThreshold = 150;
+
 final carnetDoublonsProvider =
-    Provider.autoDispose<List<DoublonPaire>>((ref) {
+    FutureProvider.autoDispose<List<DoublonPaire>>((ref) async {
   final entries =
-      ref.watch(carnetStreamProvider).asData?.value ?? const [];
-  return DoublonDetectionService.detect(entries);
+      ref.watch(carnetStreamProvider).asData?.value ?? const <SavedDestination>[];
+  if (entries.length < 2) return const [];
+  if (entries.length < _kDoublonIsolateThreshold) {
+    return DoublonDetectionService.detect(entries);
+  }
+  return compute(DoublonDetectionService.detect, entries);
 });
