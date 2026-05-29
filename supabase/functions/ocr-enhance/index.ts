@@ -45,12 +45,34 @@ interface OcrEnhanceResponse {
   source: 'gemini';
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// CORS restreint (#183). ocr-enhance est verify_jwt=true -> le JWT est le
+// vrai garde-fou, mais on limite quand meme l'origine NAVIGATEUR a l'app
+// web prod + le dev local. Le mobile n'envoie pas d'en-tete Origin et
+// n'est pas soumis a CORS, donc non impacte. Origine inconnue -> on
+// renvoie l'origine prod (le navigateur tiers sera bloque cote client).
+const ALLOWED_ORIGINS = [
+  'https://chipat-neko.github.io', // site + app web (GitHub Pages)
+  'http://localhost', // dev web local (avec port quelconque)
+];
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? '';
+  const allowed = ALLOWED_ORIGINS.some(
+    (o) => origin === o || origin.startsWith(`${o}:`),
+  );
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+}
+
+/// Taille max du body accepte avant parsing (#184). Un bordereau OCR fait
+/// quelques Ko ; on refuse tout ce qui depasse pour eviter de lire un
+/// payload enorme en memoire (DoS leger).
+const kMaxBodyBytes = 16 * 1024;
 
 function buildPrompt(req: OcrEnhanceRequest): string {
   const formatLine = req.format_hint === 'enlevement'
@@ -141,13 +163,14 @@ function parseGeminiJson(raw: string): OcrEnhanceResponse {
 }
 
 serve(async (req: Request): Promise<Response> => {
+  const cors = corsHeaders(req);
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
+    return new Response('ok', { headers: cors });
   }
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+      headers: { ...cors, 'content-type': 'application/json' },
     });
   }
 
@@ -158,7 +181,20 @@ serve(async (req: Request): Promise<Response> => {
         JSON.stringify({ error: 'GEMINI_API_KEY not configured' }),
         {
           status: 500,
-          headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+          headers: { ...cors, 'content-type': 'application/json' },
+        },
+      );
+    }
+    // Garde-fou taille (#184) : refuse un body trop gros AVANT de le lire
+    // en memoire. Content-Length absent (chunked) -> on laisse passer, la
+    // troncature a 4000 chars plus bas limite l'impact.
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    if (contentLength > kMaxBodyBytes) {
+      return new Response(
+        JSON.stringify({ error: 'Payload trop volumineux.' }),
+        {
+          status: 413,
+          headers: { ...cors, 'content-type': 'application/json' },
         },
       );
     }
@@ -168,7 +204,7 @@ serve(async (req: Request): Promise<Response> => {
         JSON.stringify({ error: 'ocr_text required (string)' }),
         {
           status: 400,
-          headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+          headers: { ...cors, 'content-type': 'application/json' },
         },
       );
     }
@@ -180,13 +216,13 @@ serve(async (req: Request): Promise<Response> => {
     const parsed = parseGeminiJson(geminiRaw);
     return new Response(JSON.stringify(parsed), {
       status: 200,
-      headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+      headers: { ...cors, 'content-type': 'application/json' },
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
-      headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+      headers: { ...cors, 'content-type': 'application/json' },
     });
   }
 });

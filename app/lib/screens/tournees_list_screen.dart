@@ -163,7 +163,7 @@ class _TourneesListScreenState extends ConsumerState<TourneesListScreen> {
               },
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Erreur : $err')),
+              error: (err, _) => Center(child: Text('Erreur : ${humanizeAnyError(err)}')),
             ),
           ),
         ],

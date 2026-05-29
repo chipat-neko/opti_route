@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart' show ContentAlign;
 
 import '../data/address_suggestion.dart';
+import '../data/cloud_error_humanizer.dart';
 import '../data/cloud_sync_service.dart' show TourneeMembreInfo;
 import '../data/database.dart';
 import '../data/supabase_service.dart';
@@ -335,7 +336,7 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
       body: stopsAsync.when(
         data: (stops) => Body(tournee: tournee, stops: stops),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Erreur : $err')),
+        error: (err, _) => Center(child: Text('Erreur : ${humanizeAnyError(err)}')),
       ),
       floatingActionButton: Fabs(
         tournee: tournee,

@@ -589,7 +589,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
               },
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Erreur : $e')),
+              error: (e, _) => Center(child: Text('Erreur : ${humanizeAnyError(e)}')),
             ),
           ),
         ],

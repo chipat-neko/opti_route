@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_drawer.dart';
@@ -35,7 +36,7 @@ class HomeScreen extends ConsumerWidget {
       data: (tournee) =>
           tournee == null ? const _NoTourTodayScreen() : TourneeDuJourScreen(tournee: tournee),
       loading: () => const _LoadingScaffold(),
-      error: (err, st) => _ErrorScaffold(error: '$err', stack: '$st'),
+      error: (err, st) => _ErrorScaffold(error: humanizeAnyError(err), stack: '$st'),
     );
   }
 }

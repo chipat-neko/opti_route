@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../providers/geocoding_providers.dart';
 import '../theme/app_tokens.dart';
 
@@ -103,7 +104,7 @@ class OfflineGeocodeBanner extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
       );
     }
   }

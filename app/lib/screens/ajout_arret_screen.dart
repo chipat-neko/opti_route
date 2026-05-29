@@ -451,7 +451,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Recherche d\'adresse echouee : $e')),
+        SnackBar(content: Text('Recherche d\'adresse echouee : ${humanizeAnyError(e)}')),
       );
     }
   }
