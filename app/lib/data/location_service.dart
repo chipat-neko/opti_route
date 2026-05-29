@@ -40,10 +40,11 @@ abstract class LocationService {
   /// batterie).
   static Stream<Position> positionStream({
     int distanceFilterMeters = 25,
+    LocationAccuracy accuracy = LocationAccuracy.high,
   }) {
     return Geolocator.getPositionStream(
       locationSettings: LocationSettings(
-        accuracy: LocationAccuracy.high,
+        accuracy: accuracy,
         distanceFilter: distanceFilterMeters,
       ),
     );

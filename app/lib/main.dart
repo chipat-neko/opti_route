@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'data/backup_service.dart';
+import 'data/battery_monitor_service.dart';
 import 'data/notifications_service.dart';
 import 'data/share_intent_service.dart';
 import 'data/supabase_service.dart';
@@ -110,6 +111,11 @@ class OptiRouteApp extends ConsumerWidget {
     // pas `watch`) car on ne veut pas rebuilder a chaque tentative.
     // Le Provider auto-appelle start() a la 1ere lecture.
     ref.read(offlineGeocodeAutomationProvider);
+
+    // Demarre la surveillance batterie (carte #258) : notif quand le
+    // niveau passe sous le seuil bas en tournee. Auto-start a la 1ere
+    // lecture, comme l'automate de re-geocodage.
+    ref.read(batteryMonitorServiceProvider);
 
     // Auto-backup local : check si la periode est echue et genere
     // un .zip dans /Android/data/.../files/auto_backups/. En arriere-

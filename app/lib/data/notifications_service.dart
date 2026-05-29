@@ -378,6 +378,33 @@ class NotificationsService {
     );
   }
 
+  /// Notification immediate quand la batterie passe sous un seuil bas
+  /// (carte #258). Le service appelant ([BatteryMonitorService]) gere le
+  /// debounce : une seule notif par passage sous le seuil. Respecte le
+  /// mode "ne pas deranger" (skip silencieux pendant le creneau quiet
+  /// hours).
+  Future<void> showLowBatteryAlert({required int level}) async {
+    await init();
+    if (await _isQuietHours()) {
+      debugPrint('[NotificationsService] quiet hours - skip lowBattery');
+      return;
+    }
+    await _plugin.show(
+      id: _lowBatteryId,
+      title: 'Batterie faible ($level %)',
+      body: 'Pense a recharger ton telephone avant la suite de la tournee.',
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'opti_route',
+          channelDescription: 'Rappels de tournee',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
   /// Format compact de taille fichier : "5.2 MB" / "523 KB" / "42 B".
   static String _humanSize(int bytes) {
     const kb = 1024;
@@ -412,6 +439,8 @@ class NotificationsService {
   static const _backupSuccessId = 40000;
   static int _nonTermineeNotifId(int tourneeId) => 50000 + tourneeId;
   static int _recurrenceNotifId(int tourneeId) => 60000 + tourneeId;
+  //   - batterie faible : 70000 (id unique, remplace la precedente)
+  static const _lowBatteryId = 70000;
 
   static const _testId = 9999;
   static const _channelId = 'opti_route_reminders';

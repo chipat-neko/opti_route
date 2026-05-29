@@ -53,6 +53,9 @@ class ParametresRepository {
   // Masquer l'app dans le selecteur de taches Android via FLAG_SECURE
   // (carte Trello #111). Default OFF.
   static const _kSecureScreen = 'secure_screen';
+  // Mode eco batterie (carte #258) : reduit la frequence/precision GPS en
+  // consultation passive. Default OFF.
+  static const _kModeEco = 'mode_eco_batterie';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -347,6 +350,19 @@ class ParametresRepository {
 
   Future<void> setSecureScreen(bool v) =>
       _write(_kSecureScreen, v ? '1' : '0');
+
+  /// Mode eco batterie (carte #258) : en consultation passive (pas de
+  /// navigation turn-by-turn active), reduit la precision GPS a `medium`
+  /// et le filtre de distance a 100 m (vs `high` / 25 m) -> moins de
+  /// reveils GPS, moins de batterie. Default false.
+  Future<bool> getModeEco() async =>
+      (await _readKey(_kModeEco)) == '1';
+
+  Stream<bool> watchModeEco() =>
+      _watchKey(_kModeEco).map((v) => v == '1');
+
+  Future<void> setModeEco(bool v) =>
+      _write(_kModeEco, v ? '1' : '0');
 
   /// Hash SHA-256 du PIN choisi par l'utilisateur (4 a 6 chiffres). Le
   /// PIN en clair n'est jamais stocke. Null si verrou desactiv ou PIN

@@ -430,6 +430,12 @@ final modeChefProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchModeChef();
 });
 
+/// Mode eco batterie (carte #258) : reduit la precision/frequence GPS en
+/// consultation passive. Lu par `currentPositionProvider`.
+final modeEcoProvider = StreamProvider<bool>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchModeEco();
+});
+
 /// Nom de l'entreprise du chef d'equipe (optionnel, affiche dans les
 /// exports PDF / texte).
 final entrepriseNomProvider = StreamProvider<String?>((ref) {
