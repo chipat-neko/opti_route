@@ -201,6 +201,26 @@ class AccessibiliteSection extends ConsumerWidget {
         Consumer(
           builder: (context, ref, _) {
             final repo = ref.watch(parametresRepositoryProvider);
+            final eco = ref.watch(modeEcoProvider).asData?.value ?? false;
+            return SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: eco,
+              title: const Text('Mode eco batterie'),
+              subtitle: const Text(
+                'GPS moins precis / moins frequent quand tu consultes la '
+                'tournee (la navigation active reste precise). Economise '
+                'la batterie en tournee.',
+                style: TextStyle(fontSize: 12),
+              ),
+              onChanged: (v) async {
+                await repo.setModeEco(v);
+              },
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final repo = ref.watch(parametresRepositoryProvider);
             final hhmm = ref
                 .watch(veilleReminderHHmmProvider)
                 .asData
