@@ -20,6 +20,45 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="canonical" href="https://chipat-neko.github.io/opti_route/site/install-apk.html">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Installer l'APK opti_route sur Android",
+  "description": "Guide pas a pas pour sideloader l'app opti_route sur un telephone Android, sans passer par le Play Store.",
+  "totalTime": "PT5M",
+  "supply": [
+    {"@type": "HowToSupply", "name": "Un telephone Android (5.0+)"},
+    {"@type": "HowToSupply", "name": "Le fichier .apk de la release GitHub"}
+  ],
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Telecharger le .apk",
+      "text": "Recuperer le fichier .apk depuis la page Releases GitHub d'opti_route sur le navigateur du telephone."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Autoriser les sources inconnues",
+      "text": "Dans les Parametres Android (Securite ou Apps > Sources inconnues), autoriser l'installation depuis l'application qui a telecharge le fichier (navigateur ou gestionnaire de fichiers)."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Ouvrir le .apk et confirmer l'installation",
+      "text": "Taper sur le fichier .apk telecharge pour lancer l'installation et confirmer l'avertissement Android indiquant que la source est inconnue (c'est normal en sideload)."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 4,
+      "name": "Lancer opti_route",
+      "text": "Une fois l'installation terminee, opti_route apparait dans le tiroir d'applications comme toute autre app Android."
+    }
+  ]
+}
+</script>
 <style>
   .step {
     background: var(--paper);
