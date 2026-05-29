@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show compute;
+
 import 'database.dart';
 import 'levenshtein.dart';
 
@@ -96,81 +98,37 @@ class UnifiedSearchService {
   /// veut.
   ///
   /// Best-effort : si une source crash, on retourne les autres.
+  /// Au-dela de ce total de lignes (tournees+stops+clients), le scoring
+  /// part dans un isolate. En dessous, le cout de spawn dominerait.
+  static const _isolateThreshold = 200;
+
   Future<List<SearchHit>> search(String query) async {
     final q = query.trim().toLowerCase();
     if (q.length < 2) return const [];
 
-    final hits = <SearchHit>[];
-
-    // Fetch global partage entre categories 1 et 2 -- evite 2 SELECTs
-    // identiques. La category 1 filtre par nom, la category 2 utilise
-    // la map pour la jointure stops -> tournee parente.
+    // I/O sur l'isolate principal (rapide, async). Best-effort par source.
     List<Tournee> tournees = const [];
     try {
       tournees = await _db.select(_db.tournees).get();
     } catch (_) {/* best-effort */}
-    final tourneesMap = {for (final t in tournees) t.id: t};
-
-    // 1. Tournees
+    List<Stop> stops = const [];
     try {
-      final tourneeHits = <SearchHitTournee>[];
-      for (final t in tournees) {
-        final score = _scoreFields(q, [t.nom]);
-        if (score <= _scoreThreshold) {
-          tourneeHits.add(SearchHitTournee(tournee: t, score: score));
-        }
-      }
-      tourneeHits.sort((a, b) => a.score.compareTo(b.score));
-      hits.addAll(tourneeHits.take(_maxResultsPerCategory));
+      stops = await _db.select(_db.stops).get();
+    } catch (_) {/* best-effort */}
+    List<SavedDestination> clients = const [];
+    try {
+      clients = await _db.select(_db.savedDestinations).get();
     } catch (_) {/* best-effort */}
 
-    // 2. Stops (joints avec leur tournee parente)
-    try {
-      final stops = await _db.select(_db.stops).get();
-      final stopHits = <SearchHitStop>[];
-      for (final s in stops) {
-        final tournee = tourneesMap[s.tourneeId];
-        if (tournee == null) continue;
-        final score = _scoreFields(q, [
-          s.nomClient,
-          s.adresseBrute,
-          s.adresseNormalisee,
-          s.notes,
-        ]);
-        if (score <= _scoreThreshold) {
-          stopHits.add(SearchHitStop(
-            stop: s,
-            tournee: tournee,
-            score: score,
-          ));
-        }
-      }
-      stopHits.sort((a, b) => a.score.compareTo(b.score));
-      hits.addAll(stopHits.take(_maxResultsPerCategory));
-    } catch (_) {/* best-effort */}
-
-    // 3. Carnet (savedDestinations)
-    try {
-      final clients = await _db.select(_db.savedDestinations).get();
-      final clientHits = <SearchHitClient>[];
-      for (final c in clients) {
-        final score = _scoreFields(q, [
-          c.nomClient,
-          c.adresseDisplay,
-          c.rue,
-          c.ville,
-        ]);
-        if (score <= _scoreThreshold) {
-          clientHits.add(SearchHitClient(client: c, score: score));
-        }
-      }
-      clientHits.sort((a, b) => a.score.compareTo(b.score));
-      hits.addAll(clientHits.take(_maxResultsPerCategory));
-    } catch (_) {/* best-effort */}
-
-    // Tri global par score
-    hits.sort((a, b) => a.score.compareTo(b.score));
-    return hits;
+    // Scoring Levenshtein (par mot, par champ, par ligne) = CPU-bound.
+    // Sur un historique pluriannuel ca fige l'UI a chaque frappe (#216)
+    // -> on le deporte dans un isolate des que le volume le justifie.
+    final input = _SearchInput(q, tournees, stops, clients);
+    final total = tournees.length + stops.length + clients.length;
+    if (total < _isolateThreshold) {
+      return _scoreAllSources(input);
+    }
+    return compute(_scoreAllSources, input);
   }
 
   /// Calcule le score pour une liste de champs (chacun nullable).
@@ -201,4 +159,72 @@ class UnifiedSearchService {
     }
     return best.clamp(0.0, 1.0);
   }
+}
+
+/// Entree serialisable pour le scoring deporte en isolate (#216).
+class _SearchInput {
+  const _SearchInput(this.q, this.tournees, this.stops, this.clients);
+  final String q;
+  final List<Tournee> tournees;
+  final List<Stop> stops;
+  final List<SavedDestination> clients;
+}
+
+/// Score les 3 sources et retourne les hits tries (plus pertinent
+/// d'abord). Fonction PURE (aucun I/O) -> executable dans un isolate via
+/// compute(). Le scoring (Levenshtein par mot/champ/ligne) est identique
+/// a l'ancienne version inline ; seul l'isolate d'execution change.
+List<SearchHit> _scoreAllSources(_SearchInput input) {
+  final q = input.q;
+  final hits = <SearchHit>[];
+  final tourneesMap = {for (final t in input.tournees) t.id: t};
+
+  // 1. Tournees (match sur le nom).
+  final tourneeHits = <SearchHitTournee>[];
+  for (final t in input.tournees) {
+    final score = UnifiedSearchService._scoreFields(q, [t.nom]);
+    if (score <= UnifiedSearchService._scoreThreshold) {
+      tourneeHits.add(SearchHitTournee(tournee: t, score: score));
+    }
+  }
+  tourneeHits.sort((a, b) => a.score.compareTo(b.score));
+  hits.addAll(tourneeHits.take(UnifiedSearchService._maxResultsPerCategory));
+
+  // 2. Stops (joints avec leur tournee parente).
+  final stopHits = <SearchHitStop>[];
+  for (final s in input.stops) {
+    final tournee = tourneesMap[s.tourneeId];
+    if (tournee == null) continue;
+    final score = UnifiedSearchService._scoreFields(q, [
+      s.nomClient,
+      s.adresseBrute,
+      s.adresseNormalisee,
+      s.notes,
+    ]);
+    if (score <= UnifiedSearchService._scoreThreshold) {
+      stopHits.add(SearchHitStop(stop: s, tournee: tournee, score: score));
+    }
+  }
+  stopHits.sort((a, b) => a.score.compareTo(b.score));
+  hits.addAll(stopHits.take(UnifiedSearchService._maxResultsPerCategory));
+
+  // 3. Carnet (savedDestinations).
+  final clientHits = <SearchHitClient>[];
+  for (final c in input.clients) {
+    final score = UnifiedSearchService._scoreFields(q, [
+      c.nomClient,
+      c.adresseDisplay,
+      c.rue,
+      c.ville,
+    ]);
+    if (score <= UnifiedSearchService._scoreThreshold) {
+      clientHits.add(SearchHitClient(client: c, score: score));
+    }
+  }
+  clientHits.sort((a, b) => a.score.compareTo(b.score));
+  hits.addAll(clientHits.take(UnifiedSearchService._maxResultsPerCategory));
+
+  // Tri global par score.
+  hits.sort((a, b) => a.score.compareTo(b.score));
+  return hits;
 }
