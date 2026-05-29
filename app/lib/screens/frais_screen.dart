@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
@@ -120,7 +121,7 @@ class _FraisScreenState extends ConsumerState<FraisScreen> {
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) =>
-                  Center(child: Text('Erreur : $e')),
+                  Center(child: Text('Erreur : ${humanizeAnyError(e)}')),
             ),
           ),
         ],

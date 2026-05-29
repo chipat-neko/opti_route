@@ -4,6 +4,7 @@ import 'package:flutter/services.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../data/fuel_price_service.dart';
 import '../data/location_service.dart';
@@ -215,7 +216,7 @@ class _FraisFormScreenState extends ConsumerState<FraisFormScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       messenger.showSnackBar(
-        SnackBar(content: Text('Erreur enregistrement : $e')),
+        SnackBar(content: Text('Erreur enregistrement : ${humanizeAnyError(e)}')),
       );
     }
   }

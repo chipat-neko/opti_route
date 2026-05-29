@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../data/location_service.dart';
 import '../data/tournee_realtime_service.dart';
@@ -79,7 +80,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Position GPS indisponible : $e')),
+        SnackBar(content: Text('Position GPS indisponible : ${humanizeAnyError(e)}')),
       );
     }
   }
@@ -97,7 +98,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
       body: stopsAsync.when(
         data: _buildMap,
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Erreur : $err')),
+        error: (err, _) => Center(child: Text('Erreur : ${humanizeAnyError(err)}')),
       ),
     );
   }
