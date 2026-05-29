@@ -85,6 +85,12 @@ jobs:
         run: |
           mkdir -p app/build/web/site
           cp -r site_doc/* app/build/web/site/
+          # Audit A6 #238 : investisseurs.html contient des donnees
+          # confidentielles (projections financieres + email perso). Le
+          # `noindex` n'empeche pas l'acces par lien direct -> on ne le
+          # publie PAS. Le fichier reste dans le repo pour usage local
+          # (pitch investisseur hors ligne).
+          rm -f app/build/web/site/investisseurs.html
 
       # Setup Pages : prepare la configuration GitHub Pages (cree
       # l'environnement si premiere fois, recupere l'URL de deploy).

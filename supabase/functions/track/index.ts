@@ -112,7 +112,9 @@ serve(async (req: Request) => {
   // 2. Charge le stop cible.
   const { data: stop, error: stopErr } = await supabase
     .from('stops')
-    .select('id, tournee_id, nom_client, statut_livraison, lat, lng, ordre')
+    .select(
+      'id, tournee_id, nom_client, statut_livraison, lat, lng, ordre_optimise',
+    )
     .eq('id', tc.stop_id as string)
     .maybeSingle();
   if (stopErr || !stop) {
@@ -121,14 +123,16 @@ serve(async (req: Request) => {
 
   // 3. Compte les arrets restants AVANT celui-ci (statut a_livrer +
   // ordre inferieur) dans la meme tournee -> donne "X arrets avant vous".
+  // La colonne reelle est `ordre_optimise` (il n'existe pas de colonne
+  // `ordre` sur stops) -- cf audit A6 #234.
   let stopsBefore: number | null = null;
-  if (stop.ordre != null) {
+  if (stop.ordre_optimise != null) {
     const { count } = await supabase
       .from('stops')
       .select('id', { count: 'exact', head: true })
       .eq('tournee_id', stop.tournee_id as string)
       .eq('statut_livraison', 'a_livrer')
-      .lt('ordre', stop.ordre as number);
+      .lt('ordre_optimise', stop.ordre_optimise as number);
     stopsBefore = count ?? null;
   }
 
