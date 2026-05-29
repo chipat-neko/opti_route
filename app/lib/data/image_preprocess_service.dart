@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
@@ -52,34 +52,16 @@ class ImagePreprocessService {
     bool autoCrop = true,
   }) async {
     final bytes = await source.readAsBytes();
-    // decodeImage peut throw sur certains bytes corrompus (ex: header
-    // PSD malforme leve RangeError) au lieu de retourner null. Wrap
-    // dans try-catch pour garder le contrat "format invalide -> source
-    // intacte" (test ajoute 2026-05-17).
-    img.Image? decoded;
-    try {
-      decoded = img.decodeImage(bytes);
-    } catch (_) {
-      return source;
-    }
-    if (decoded == null) return source; // format non supporte
-
-    // 1. EXIF orientation -- toujours bake (idempotent + leger)
-    img.Image processed = img.bakeOrientation(decoded);
-
-    // 2. Boost contraste si demande
-    if (boostContrast != 1.0) {
-      processed = img.adjustColor(processed, contrast: boostContrast);
-    }
-
-    // 3. Auto-crop sur le bordereau (best-effort)
-    if (autoCrop) {
-      final cropped = _tryAutoCrop(processed);
-      if (cropped != null) processed = cropped;
-    }
-
-    // Encode + ecrit dans /tmp avec un nom horodate.
-    final encoded = img.encodeJpg(processed, quality: 90);
+    // Le calcul pixel (decode + bake + contraste + crop + encode) tourne
+    // dans un isolate via compute() pour ne pas bloquer l'UI pendant le
+    // scan (#212). Le disque + path_provider restent sur l'isolate
+    // principal. Retourne null si le format est invalide -> on garde la
+    // source intacte (contrat teste).
+    final encoded = await compute(
+      _enhanceIsolate,
+      _EnhanceArgs(bytes, boostContrast, autoCrop),
+    );
+    if (encoded == null) return source;
     return _writeTemp(encoded);
   }
 
@@ -105,66 +87,22 @@ class ImagePreprocessService {
   ///
   /// Sprint 2.C audit refactor 2026-05-22.
   Future<double> detectBlur(File source) async {
+    final Uint8List bytes;
     try {
-      final bytes = await source.readAsBytes();
-      var decoded = img.decodeImage(bytes);
-      if (decoded == null) return double.maxFinite;
-      decoded = img.bakeOrientation(decoded);
-      // Downsample a 480 px de large max pour rapidite. La variance
-      // du Laplacien est relativement robuste au downscale.
-      if (decoded.width > 480) {
-        decoded = img.copyResize(decoded, width: 480);
-      }
-      final gray = img.grayscale(decoded);
-      final w = gray.width;
-      final h = gray.height;
-      // Kernel Laplacien 3x3 : [0,1,0;1,-4,1;0,1,0]. On parcourt
-      // l'interieur (1..w-2, 1..h-2) et on accumule les valeurs.
-      final values = <double>[];
-      for (var y = 1; y < h - 1; y++) {
-        for (var x = 1; x < w - 1; x++) {
-          final c = gray.getPixel(x, y).luminance;
-          final up = gray.getPixel(x, y - 1).luminance;
-          final down = gray.getPixel(x, y + 1).luminance;
-          final left = gray.getPixel(x - 1, y).luminance;
-          final right = gray.getPixel(x + 1, y).luminance;
-          final lap = up + down + left + right - 4 * c;
-          values.add(lap.toDouble());
-        }
-      }
-      if (values.isEmpty) return double.maxFinite;
-      // Variance = moyenne des (x - mean)^2.
-      var sum = 0.0;
-      for (final v in values) {
-        sum += v;
-      }
-      final mean = sum / values.length;
-      var sq = 0.0;
-      for (final v in values) {
-        final d = v - mean;
-        sq += d * d;
-      }
-      return sq / values.length;
+      bytes = await source.readAsBytes();
     } catch (_) {
       return double.maxFinite; // ne bloque pas le flow OCR
     }
+    // Convolution Laplacien = CPU-bound -> isolate (#212).
+    return compute(_detectBlurIsolate, bytes);
   }
 
   /// Version "exif-only" : ne fait QUE baker l'orientation EXIF.
   /// Utile en preview (preview a 0 cout) avant decider d'enhancer plus.
   Future<File> bakeExifOnly(File source) async {
     final bytes = await source.readAsBytes();
-    // Cf enhance : decodeImage peut throw. Wrap pour garantir source
-    // intacte en cas de bytes corrompus.
-    img.Image? decoded;
-    try {
-      decoded = img.decodeImage(bytes);
-    } catch (_) {
-      return source;
-    }
-    if (decoded == null) return source;
-    final baked = img.bakeOrientation(decoded);
-    final encoded = img.encodeJpg(baked, quality: 92);
+    final encoded = await compute(_bakeExifIsolate, bytes);
+    if (encoded == null) return source; // bytes corrompus / format invalide
     return _writeTemp(encoded);
   }
 
@@ -240,4 +178,110 @@ class ImagePreprocessService {
   /// Marge en pixels autour de la bbox detectee pour ne pas couper
   /// le texte du bordereau si il est proche du bord.
   static const int _cropMarginPx = 20;
+}
+
+/// ════════════════════════════════════════════════════════════════
+/// Fonctions exécutées dans un isolate via `compute()` (#212).
+/// ════════════════════════════════════════════════════════════════
+/// Elles ne font QUE du calcul pixel (package:image, pur Dart) : aucun
+/// accès disque ni canal plateforme (path_provider reste sur l'isolate
+/// principal). Top-level car `compute` exige une fonction statique.
+
+/// Arguments serialisables pour [_enhanceIsolate] (envoyes par copie a
+/// l'isolate).
+class _EnhanceArgs {
+  const _EnhanceArgs(this.bytes, this.boostContrast, this.autoCrop);
+  final Uint8List bytes;
+  final double boostContrast;
+  final bool autoCrop;
+}
+
+/// Pipeline d'amelioration complet. Retourne les bytes JPG encodes, ou
+/// null si le format est invalide (le caller garde alors la source).
+Uint8List? _enhanceIsolate(_EnhanceArgs args) {
+  // decodeImage peut throw sur bytes corrompus (ex: header PSD malforme
+  // leve RangeError) au lieu de retourner null -> wrap.
+  img.Image? decoded;
+  try {
+    decoded = img.decodeImage(args.bytes);
+  } catch (_) {
+    return null;
+  }
+  if (decoded == null) return null; // format non supporte
+
+  // 1. EXIF orientation -- toujours bake (idempotent + leger)
+  img.Image processed = img.bakeOrientation(decoded);
+
+  // 2. Boost contraste si demande
+  if (args.boostContrast != 1.0) {
+    processed = img.adjustColor(processed, contrast: args.boostContrast);
+  }
+
+  // 3. Auto-crop sur le bordereau (best-effort)
+  if (args.autoCrop) {
+    final cropped = ImagePreprocessService._tryAutoCrop(processed);
+    if (cropped != null) processed = cropped;
+  }
+
+  return Uint8List.fromList(img.encodeJpg(processed, quality: 90));
+}
+
+/// EXIF-only : bake l'orientation et reencode. Null si format invalide.
+Uint8List? _bakeExifIsolate(Uint8List bytes) {
+  img.Image? decoded;
+  try {
+    decoded = img.decodeImage(bytes);
+  } catch (_) {
+    return null;
+  }
+  if (decoded == null) return null;
+  final baked = img.bakeOrientation(decoded);
+  return Uint8List.fromList(img.encodeJpg(baked, quality: 92));
+}
+
+/// Variance du Laplacien (mesure de nettete). Retourne double.maxFinite
+/// si decode echoue (= net, ne bloque pas le flow OCR).
+double _detectBlurIsolate(Uint8List bytes) {
+  try {
+    var decoded = img.decodeImage(bytes);
+    if (decoded == null) return double.maxFinite;
+    decoded = img.bakeOrientation(decoded);
+    // Downsample a 480 px de large max pour rapidite. La variance du
+    // Laplacien est relativement robuste au downscale.
+    if (decoded.width > 480) {
+      decoded = img.copyResize(decoded, width: 480);
+    }
+    final gray = img.grayscale(decoded);
+    final w = gray.width;
+    final h = gray.height;
+    // Kernel Laplacien 3x3 : [0,1,0;1,-4,1;0,1,0]. On parcourt
+    // l'interieur (1..w-2, 1..h-2) et on accumule les valeurs.
+    final values = <double>[];
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        final c = gray.getPixel(x, y).luminance;
+        final up = gray.getPixel(x, y - 1).luminance;
+        final down = gray.getPixel(x, y + 1).luminance;
+        final left = gray.getPixel(x - 1, y).luminance;
+        final right = gray.getPixel(x + 1, y).luminance;
+        final lap = up + down + left + right - 4 * c;
+        values.add(lap.toDouble());
+      }
+    }
+    if (values.isEmpty) return double.maxFinite;
+    // Variance = moyenne des (x - mean)^2.
+    var sum = 0.0;
+    for (final v in values) {
+      sum += v;
+    }
+    final mean = sum / values.length;
+    var sq = 0.0;
+    for (final v in values) {
+      final d = v - mean;
+      sq += d * d;
+    }
+    return sq / values.length;
+  } catch (_) {
+    return double.maxFinite; // ne bloque pas le flow OCR
+  }
 }
