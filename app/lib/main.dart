@@ -74,6 +74,13 @@ final shareIntentServiceProvider = Provider<ShareIntentService>((ref) {
   return svc;
 });
 
+/// Stream des adresses partagees (ACTION_SEND) expose en provider, pour
+/// l'ecouter via ref.listen sans creer un nouvel abonnement a chaque
+/// rebuild de build() (carte #263 : .listen() dans build fuyait).
+final _sharedAddressProvider = StreamProvider(
+  (ref) => ref.watch(shareIntentServiceProvider).addressStream,
+);
+
 /// GlobalKey pour pouvoir push une route depuis le listener
 /// share_intent (qui s'execute hors d'un BuildContext). Set sur le
 /// MaterialApp dans OptiRouteApp.
@@ -151,8 +158,12 @@ class OptiRouteApp extends ConsumerWidget {
       // Force l'init du provider (le listen() ne lit pas le state si
       // on ne fait rien d'autre).
     });
-    final shareSvc = ref.read(shareIntentServiceProvider);
-    shareSvc.addressStream.listen((shared) async {
+    // Carte #263 : ref.listen sur un StreamProvider au lieu de
+    // shareSvc.addressStream.listen() (qui se reabonnait a chaque rebuild
+    // de build() -> fuite de listeners + navigation dupliquee).
+    ref.listen(_sharedAddressProvider, (_, next) async {
+      final shared = next.asData?.value;
+      if (shared == null) return;
       // Cherche une tournee active (en_cours OU date=aujourd'hui).
       final current = ref.read(currentTourneeProvider).asData?.value;
       final nav = _navigatorKey.currentState;

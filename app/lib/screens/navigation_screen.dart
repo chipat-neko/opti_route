@@ -399,6 +399,13 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
         // au boot), sinon null (loader).
         final pos = snapshot.data ?? _fallbackPosition;
 
+        // Carte #269 : stream GPS en erreur (service coupe en cours de
+        // nav) sans position de repli -> ecran "GPS perdu" au lieu de
+        // rester fige sur le loader.
+        if (snapshot.hasError && pos == null) {
+          return _buildGpsTimeout(p);
+        }
+
         if (pos == null) {
           if (_gpsTimedOut) {
             return _buildGpsTimeout(p);

@@ -245,7 +245,11 @@ class CoequipierTile extends ConsumerWidget {
   }
 
   static String _initials(String nom) {
-    final parts = nom.trim().split(RegExp(r'\s+'));
+    final parts = nom
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
       return parts.first.substring(0, 1).toUpperCase();

@@ -24,7 +24,7 @@ String labelForType(String type) {
     'parking' => 'Parking',
     'repas' => 'Repas',
     'autre' => 'Autre',
-    _ => type[0].toUpperCase() + type.substring(1),
+    _ => type.isEmpty ? type : type[0].toUpperCase() + type.substring(1),
   };
 }
 

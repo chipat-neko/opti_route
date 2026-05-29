@@ -542,10 +542,16 @@ class _ReorderablePanelState extends ConsumerState<_ReorderablePanel> {
       _local.insert(adjusted, item);
     });
     HapticFeedback.mediumImpact();
-    await ref
-        .read(stopsRepositoryProvider)
-        .applyOptimizedOrder(_local.map((s) => s.id).toList());
-    _dragging = false;
+    // Carte #264 : _dragging dans un finally -> si applyOptimizedOrder
+    // throw (erreur Drift), on ne reste pas bloque a true (sinon
+    // didUpdateWidget cesse de resync _local depuis le provider).
+    try {
+      await ref
+          .read(stopsRepositoryProvider)
+          .applyOptimizedOrder(_local.map((s) => s.id).toList());
+    } finally {
+      _dragging = false;
+    }
   }
 
   @override
