@@ -144,12 +144,53 @@
     <a href="https://keepachangelog.com/fr/">Keep a Changelog</a>.
   </p>
 
-  <!-- =================== v2.3.0+2016 =================== -->
+  <!-- =================== v2.8.1+2030 =================== -->
   <article class="release latest">
+    <div class="release-head">
+      <span class="release-tag">v2.8.1+2030</span>
+      <span class="release-date">2026-05-29</span>
+      <span class="release-pill">Stable</span>
+    </div>
+    <div class="release-title">Scan bordereaux muscle, carnet, mode chef, terrain</div>
+
+    <div class="changes-group added">
+      <h4>Ajoute</h4>
+      <ul>
+        <li><strong>Scan bordereaux</strong> : ciblage spatial du bon encadre via les bounding boxes ML Kit, detection automatique enlevement vs livraison, scan du code-barre colis avec matching, import depuis un <code>PDF</code> (pas que photo), et mode scan en rafale avec ajout en masse.</li>
+        <li><strong>Carnet d'adresses</strong> : detection + fusion des doublons, edition en masse (selection multiple), import vCard (Google Contacts), champ telephone par client + bouton "Appeler", filtres periode d'ajout / regularite, et badge "client connu" dans la liste d'arrets.</li>
+        <li><strong>Tournee</strong> : bandeau d'alertes anomalies, verrouiller un arret a sa position (exclu de la re-optimisation), rappel "tournee non terminee depuis &gt; 8h", recurrence automatique d'un template, et "annuler" apres un "Tout marquer livre".</li>
+        <li><strong>Mode chef d'equipe</strong> : vue d'ensemble PC (panneaux tournees en cours, carte du jour, stats &amp; alertes), positions live des chauffeurs sur la carte, et cible Windows desktop (<code>opti_route.exe</code>).</li>
+        <li><strong>Stats &amp; frais</strong> : prix du Diesel en temps reel (API gouv.fr) + stations proches, resume hebdo du chef, deltas semaine vs semaine precedente, compteur live "aujourd'hui", compteur de photos preuves par coequipier.</li>
+        <li><strong>Confort</strong> : mode jour/nuit auto (capteur de luminosite), coach marks contextuels + "revoir le tutoriel", "Partager l'adresse" (menu natif), raccourcis Maps / Street View depuis un arret, apercu rapide en appui long, bandeau "X km restants".</li>
+        <li><strong>Securite</strong> : masquage de l'app dans le selecteur d'applications recentes Android (FLAG_SECURE).</li>
+        <li><strong>Site</strong> : pages galerie + guide d'installation APK (sideload Xiaomi/MIUI), donnees structurees SEO (Organization / FAQ / fil d'Ariane), mode presentation du dashboard.</li>
+      </ul>
+    </div>
+
+    <div class="changes-group changed">
+      <h4>Modifie</h4>
+      <ul>
+        <li>Pre-traitement OCR + rotations deportes dans un <em>isolate</em> : plus de gel de l'interface pendant le scan, meme sur telephone modeste.</li>
+        <li>Badge "client connu" : le carnet n'est charge qu'une seule fois pour toute la liste d'arrets (fin d'un effet N+1).</li>
+        <li>Schema local migre jusqu'a v38.</li>
+      </ul>
+    </div>
+
+    <div class="changes-group fixed">
+      <h4>Corrige</h4>
+      <ul>
+        <li>Page de suivi colis : une colonne inexistante cassait la resolution du lien.</li>
+        <li>Version affichee du site mise a jour (v1.1 -&gt; v2.8) et formulations corrigees (retrait d'une mention de chiffrement local inexacte).</li>
+        <li>Plusieurs correctifs du scan : filtres transporteur, coherence code postal / ville lors du geocodage, propagation du format "enlevement".</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- =================== v2.3.0+2016 =================== -->
+  <article class="release">
     <div class="release-head">
       <span class="release-tag">v2.3.0+2016</span>
       <span class="release-date">2026-05-14</span>
-      <span class="release-pill">Stable</span>
     </div>
     <div class="release-title">Sauvegardes, modernisation deps, qualite code</div>
 
