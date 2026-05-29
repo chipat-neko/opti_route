@@ -124,7 +124,7 @@ class _Carte extends ConsumerWidget {
             TileLayer(
               urlTemplate:
                   'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'fr.optiroute.app',
+              userAgentPackageName: 'com.optiroute.opti_route',
             ),
             MarkerLayer(
               markers: [
