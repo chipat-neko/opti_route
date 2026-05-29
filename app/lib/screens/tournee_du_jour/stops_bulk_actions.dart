@@ -12,6 +12,7 @@ import '../../data/notifications_service.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/geocoding_providers.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/snack.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Handlers d'actions en masse sur les stops, extraits de
@@ -37,11 +38,7 @@ class StopsBulkActions {
         all.where((s) => s.statutLivraison == 'a_livrer').toList();
     if (!context.mounted) return;
     if (pending.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Aucun arret en attente de livraison'),
-        ),
-      );
+      messenger.showInfo('Aucun arret en attente de livraison');
       return;
     }
     final confirmed = await showDialog<bool>(
@@ -105,31 +102,25 @@ class StopsBulkActions {
     // Undo bulk (carte #115) : repasse tous les arrets du batch en
     // 'a_livrer' et restaure le statut de tournee si on l'avait bascule
     // en 'terminee'.
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('${pending.length} arret(s) marques livres'),
-        backgroundColor: AppColors.emerald,
-        duration: const Duration(seconds: 6),
-        action: SnackBarAction(
-          label: 'Annuler',
-          textColor: AppColors.cream,
-          onPressed: () async {
-            await stopsRepo.markAaLivrerBatch(pendingIds);
-            if (tousValides && statutAvant != 'terminee') {
-              await tourneesRepo.update(
-                tournee.id,
-                TourneesCompanion(statut: Value(statutAvant)),
-              );
-            }
-            messenger.showSnackBar(
-              SnackBar(
-                content:
-                    Text('${pendingIds.length} arret(s) repasses en attente'),
-                duration: const Duration(seconds: 3),
-              ),
+    messenger.showSuccess(
+      '${pending.length} arret(s) marques livres',
+      duration: const Duration(seconds: 6),
+      action: SnackBarAction(
+        label: 'Annuler',
+        textColor: AppColors.cream,
+        onPressed: () async {
+          await stopsRepo.markAaLivrerBatch(pendingIds);
+          if (tousValides && statutAvant != 'terminee') {
+            await tourneesRepo.update(
+              tournee.id,
+              TourneesCompanion(statut: Value(statutAvant)),
             );
-          },
-        ),
+          }
+          messenger.showInfo(
+            '${pendingIds.length} arret(s) repasses en attente',
+            duration: const Duration(seconds: 3),
+          );
+        },
       ),
     );
   }
@@ -148,11 +139,7 @@ class StopsBulkActions {
       final last = await repo.getLastTransitionedStop(tournee.id);
       if (!context.mounted) return;
       if (last == null) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Aucun statut a annuler dans cette tournee.'),
-          ),
-        );
+        messenger.showInfo('Aucun statut a annuler dans cette tournee.');
         return;
       }
       await repo.revertStatus(last.id);
@@ -161,17 +148,13 @@ class StopsBulkActions {
       final label = last.nomClient?.trim().isNotEmpty == true
           ? last.nomClient!.trim()
           : last.adresseBrute.split(',').first.trim();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('"$label" est repasse en "A livrer"'),
-          duration: const Duration(seconds: 3),
-        ),
+      messenger.showInfo(
+        '"$label" est repasse en "A livrer"',
+        duration: const Duration(seconds: 3),
       );
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
-      );
+      messenger.showError('Erreur : ${humanizeAnyError(e)}');
     }
   }
 
@@ -209,11 +192,7 @@ class StopsBulkActions {
       navigator.pop(); // ferme le loader
       if (!context.mounted) return;
       if (res.totalCandidats == 0) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Aucun arret sans GPS a geolocaliser.'),
-          ),
-        );
+        messenger.showInfo('Aucun arret sans GPS a geolocaliser.');
         return;
       }
       // Si on a resolu au moins 1 stop, l'optim est invalidee : le
@@ -224,24 +203,17 @@ class StopsBulkActions {
             .invalidateOptimization(tournee.id);
         await ref.read(localReorderServiceProvider).reorder(tournee.id);
       }
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            res.unresolved.isEmpty
-                ? '${res.resolved.length} arret(s) geolocalise(s)'
-                : '${res.resolved.length} resolu(s), '
-                    '${res.unresolved.length} echec(s) - '
-                    'verifie l\'adresse manuellement',
-          ),
-          duration: const Duration(seconds: 4),
-        ),
+      messenger.showInfo(
+        res.unresolved.isEmpty
+            ? '${res.resolved.length} arret(s) geolocalise(s)'
+            : '${res.resolved.length} resolu(s), '
+                '${res.unresolved.length} echec(s) - '
+                'verifie l\'adresse manuellement',
       );
     } catch (e) {
       navigator.pop();
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur : ${humanizeAnyError(e)}')),
-      );
+      messenger.showError('Erreur : ${humanizeAnyError(e)}');
     }
   }
 
@@ -258,12 +230,8 @@ class StopsBulkActions {
         await ref.read(coequipiersRepositoryProvider).getAllActifs();
     if (!context.mounted) return;
     if (coequipiers.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
-          ),
-        ),
+      messenger.showInfo(
+        'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
       );
       return;
     }
@@ -273,11 +241,7 @@ class StopsBulkActions {
     final reste =
         stops.where((s) => s.coequipierId == null).toList(growable: false);
     if (reste.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tous les arrets ont deja un coequipier affecte.'),
-        ),
-      );
+      messenger.showInfo('Tous les arrets ont deja un coequipier affecte.');
       return;
     }
 
@@ -338,13 +302,8 @@ class StopsBulkActions {
         .read(stopsRepositoryProvider)
         .setCoequipierForUnassigned(tournee.id, picked.id);
     if (!context.mounted) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '${reste.length} arret${reste.length > 1 ? "s" : ""} affecte${reste.length > 1 ? "s" : ""} a ${picked.nom}',
-        ),
-        backgroundColor: AppColors.emerald,
-      ),
+    messenger.showSuccess(
+      '${reste.length} arret${reste.length > 1 ? "s" : ""} affecte${reste.length > 1 ? "s" : ""} a ${picked.nom}',
     );
   }
 

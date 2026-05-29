@@ -20,6 +20,7 @@ import '../../data/tracking_codes_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/snack.dart';
 import '../../widgets/stop_action_sheet.dart';
 import '../ajout_arret_screen.dart';
 import '../preuve_photo_viewer_screen.dart';
@@ -54,19 +55,13 @@ class StopRowActions {
     await repo.markLivre(stop.id, position: pos);
     if (!context.mounted) return;
     unawaited(HapticFeedback.mediumImpact());
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '${_primaryLine(stop)} '
-          'marque ${stopActionVerbParticipe(stop.type)}',
-        ),
-        backgroundColor: AppColors.emerald,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Photo preuve',
-          textColor: AppColors.ink,
-          onPressed: () => _capturerPreuve(ref, stop.id),
-        ),
+    messenger.showSuccess(
+      '${_primaryLine(stop)} '
+      'marque ${stopActionVerbParticipe(stop.type)}',
+      action: SnackBarAction(
+        label: 'Photo preuve',
+        textColor: AppColors.ink,
+        onPressed: () => _capturerPreuve(ref, stop.id),
       ),
     );
     await _maybeFinishTournee(repo, tourneesRepo, stop.tourneeId);
@@ -89,19 +84,13 @@ class StopRowActions {
         // Vibration courte de confirmation : terrain gants l'hiver,
         // Noah ne regarde pas toujours l'ecran apres avoir tape.
         unawaited(HapticFeedback.mediumImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${_primaryLine(stop)} '
-              'marque ${stopActionVerbParticipe(stop.type)}',
-            ),
-            backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Photo preuve',
-              textColor: AppColors.ink,
-              onPressed: () => _capturerPreuve(ref, stop.id),
-            ),
+        messenger.showSuccess(
+          '${_primaryLine(stop)} '
+          'marque ${stopActionVerbParticipe(stop.type)}',
+          action: SnackBarAction(
+            label: 'Photo preuve',
+            textColor: AppColors.ink,
+            onPressed: () => _capturerPreuve(ref, stop.id),
           ),
         );
       case MarkEchecAction(raison: final r):
@@ -111,20 +100,14 @@ class StopRowActions {
         // Vibration plus marquee qu'un livre OK : signal "attention,
         // statut negatif".
         unawaited(HapticFeedback.heavyImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${_primaryLine(stop)} '
-              '${stop.type == kStopTypeRamasse ? "pas ramasse" : "en echec"} '
-              ': ${_humanRaison(r)}',
-            ),
-            backgroundColor: AppColors.red,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Photo preuve',
-              textColor: AppColors.paper,
-              onPressed: () => _capturerPreuve(ref, stop.id),
-            ),
+        messenger.showError(
+          '${_primaryLine(stop)} '
+          '${stop.type == kStopTypeRamasse ? "pas ramasse" : "en echec"} '
+          ': ${_humanRaison(r)}',
+          action: SnackBarAction(
+            label: 'Photo preuve',
+            textColor: AppColors.paper,
+            onPressed: () => _capturerPreuve(ref, stop.id),
           ),
         );
       case MarkAaLivrerAction():
@@ -145,12 +128,9 @@ class StopRowActions {
         final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
         await Clipboard.setData(ClipboardData(text: adresse));
         unawaited(HapticFeedback.lightImpact());
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Adresse copiee'),
-            backgroundColor: AppColors.emerald,
-            duration: Duration(seconds: 2),
-          ),
+        messenger.showSuccess(
+          'Adresse copiee',
+          duration: const Duration(seconds: 2),
         );
       case ShareAdresseAction():
         final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
@@ -172,20 +152,10 @@ class StopRowActions {
           } on Object {/* offline / stop pas sync : lien local quand meme */}
           await Clipboard.setData(ClipboardData(text: url));
           unawaited(HapticFeedback.lightImpact());
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Lien tracking copie : $url'),
-              backgroundColor: AppColors.emerald,
-              duration: const Duration(seconds: 4),
-            ),
-          );
+          messenger.showSuccess('Lien tracking copie : $url');
         } catch (e) {
-          messenger.showSnackBar(
-            SnackBar(
-              content:
-                  Text('Generation lien echouee : ${humanizeAnyError(e)}'),
-              backgroundColor: AppColors.red,
-            ),
+          messenger.showError(
+            'Generation lien echouee : ${humanizeAnyError(e)}',
           );
         }
       case OpenInMapsAction():
@@ -199,14 +169,9 @@ class StopRowActions {
         final lat = stop.lat;
         final lng = stop.lng;
         if (lat == null || lng == null) {
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Adresse pas encore geocodee, Street View indisponible',
-              ),
-              backgroundColor: AppColors.amber,
-              duration: Duration(seconds: 3),
-            ),
+          messenger.showWarning(
+            'Adresse pas encore geocodee, Street View indisponible',
+            duration: const Duration(seconds: 3),
           );
           return;
         }
@@ -227,29 +192,19 @@ class StopRowActions {
       case ConvertTypeAction(newType: final newType):
         await repo.setType(stop.id, newType);
         unawaited(HapticFeedback.lightImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${_primaryLine(stop)} converti en '
-              '${newType == kStopTypeRamasse ? "ramasse" : "livraison"}',
-            ),
-            backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 2),
-          ),
+        messenger.showSuccess(
+          '${_primaryLine(stop)} converti en '
+          '${newType == kStopTypeRamasse ? "ramasse" : "livraison"}',
+          duration: const Duration(seconds: 2),
         );
       case ToggleLockPositionAction(locked: final locked):
         await repo.setPositionLocked(stop.id, locked);
         unawaited(HapticFeedback.lightImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              locked
-                  ? '${_primaryLine(stop)} verrouille a cette position'
-                  : '${_primaryLine(stop)} deverrouille',
-            ),
-            backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 2),
-          ),
+        messenger.showSuccess(
+          locked
+              ? '${_primaryLine(stop)} verrouille a cette position'
+              : '${_primaryLine(stop)} deverrouille',
+          duration: const Duration(seconds: 2),
         );
       case MoveToTourneeAction(targetTourneeId: final targetId):
         // Deplace le stop vers la tournee choisie. On invalide
@@ -262,13 +217,9 @@ class StopRowActions {
         await ref.read(localReorderServiceProvider).reorder(sourceTourneeId);
         await ref.read(localReorderServiceProvider).reorder(targetId);
         unawaited(HapticFeedback.mediumImpact());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-                '${_primaryLine(stop)} deplace vers une autre tournee'),
-            backgroundColor: AppColors.emerald,
-            duration: const Duration(seconds: 3),
-          ),
+        messenger.showSuccess(
+          '${_primaryLine(stop)} deplace vers une autre tournee',
+          duration: const Duration(seconds: 3),
         );
     }
 
