@@ -86,9 +86,12 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
 
   @override
   Widget build(BuildContext context) {
-    // Avant le 1er check (synchronous startup), on ne lock pas pour
-    // ne pas flasher un LockScreen sur user sans verrou.
-    if (!_initialCheckDone) return widget.child;
+    // Carte #268 : tant que le check verrou async n'est pas termine, on
+    // affiche un ecran neutre -> on ne flashe NI le contenu protege (a un
+    // user verrouille) NI le LockScreen (a un user sans verrou). Le check
+    // = un simple read DB, donc ~1 frame en pratique (apres le splash
+    // natif). Prend le relais du splash sans montrer de donnees.
+    if (!_initialCheckDone) return const Scaffold();
     if (!_locked) return widget.child;
     return LockScreen(onUnlocked: _onUnlocked);
   }

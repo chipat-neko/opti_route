@@ -107,3 +107,16 @@ final batteryMonitorServiceProvider = Provider<BatteryMonitorService>((ref) {
   ref.onDispose(svc.dispose);
   return svc;
 });
+
+/// Niveau de batterie (0-100) pour l'indicateur de l'en-tete tournee
+/// (carte #258). Re-emis a l'ouverture puis toutes les 60 s. `autoDispose`
+/// : s'arrete des qu'aucun widget ne l'observe (ex. hors ecran tournee),
+/// donc zero cout quand on ne l'affiche pas.
+final batteryLevelProvider = StreamProvider.autoDispose<int>((ref) async* {
+  final battery = Battery();
+  try {
+    yield await battery.batteryLevel;
+  } catch (_) {/* pas de batterie (desktop / web / emulateur) */}
+  yield* Stream.periodic(const Duration(seconds: 60))
+      .asyncMap((_) => battery.batteryLevel);
+});
