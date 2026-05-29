@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'secure_supabase_storage.dart';
+
 /// ════════════════════════════════════════════════════════════════
 /// Wrapper Supabase (Phase 2 backend cloud) -- jalon 1 : Auth seule.
 /// ════════════════════════════════════════════════════════════════
@@ -62,8 +64,12 @@ class SupabaseService {
         anonKey: _anonKey,
         // Auth detection desactivee par defaut : pas de deep link
         // dans le jalon 1, OTP par code email suffit.
-        authOptions: const FlutterAuthClientOptions(
+        // Session (refresh_token) stockee CHIFFREE via
+        // SecureSupabaseLocalStorage (audit #179) au lieu du
+        // SharedPreferences en clair par defaut du SDK.
+        authOptions: FlutterAuthClientOptions(
           authFlowType: AuthFlowType.implicit,
+          localStorage: SecureSupabaseLocalStorage(),
         ),
       );
       _initialized = true;
@@ -128,8 +134,8 @@ class SupabaseService {
     return response.user;
   }
 
-  /// Deconnexion. Efface la session locale (Supabase Flutter SDK la
-  /// stocke en SharedPreferences via FlutterSecureStorage).
+  /// Deconnexion. Efface la session locale chiffree (cf
+  /// [SecureSupabaseLocalStorage], audit #179).
   Future<void> signOut() async {
     if (!_initialized) return;
     await Supabase.instance.client.auth.signOut();

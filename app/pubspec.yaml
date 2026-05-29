@@ -80,6 +80,12 @@ dependencies:
   # (Frankfurt/Paris), 500 MB DB, 50k MAUs -- largement assez pour
   # commencer.
   supabase_flutter: ^2.12.0
+  # flutter_secure_storage : stockage chiffre (Keystore Android / Keychain
+  # iOS) de la session Supabase (refresh_token). Sans lui, le SDK retombe
+  # sur SharedPreferences en clair -> token long-lived volable sur device
+  # roote/vole (audit #179). Branche via un LocalStorage custom dans
+  # SupabaseService.init.
+  flutter_secure_storage: ^9.2.2
   # uuid : generation cote app de UUIDs v4 servant de cle primaire dans
   # le schema cloud Supabase (sous-jalon 2.B). Indispensable pour
   # generer l'id LOCALEMENT avant l'INSERT cloud, puis le persister
