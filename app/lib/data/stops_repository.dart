@@ -32,6 +32,15 @@ class StopsRepository {
         .get();
   }
 
+  /// Tous les arrets GEOCODES de toutes les tournees (lat/lng non nuls).
+  /// Sert a la heatmap des zones livrees (carte #98). Pas de tri : le
+  /// consommateur agrege par cellule.
+  Future<List<Stop>> getAllGeocoded() {
+    return (_db.select(_db.stops)
+          ..where((s) => s.lat.isNotNull() & s.lng.isNotNull()))
+        .get();
+  }
+
   Future<Stop?> getById(int id) {
     return (_db.select(_db.stops)..where((s) => s.id.equals(id)))
         .getSingleOrNull();
