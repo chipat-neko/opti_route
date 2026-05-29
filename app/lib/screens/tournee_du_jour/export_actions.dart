@@ -8,6 +8,7 @@ import '../../data/tournee_pdf_service.dart';
 import '../../data/tournee_text_share_service.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/snack.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Handlers d'export / partage extraits de [TourneeDuJourScreen]
@@ -59,9 +60,7 @@ class ExportTourneeActions {
       );
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export PDF : ${humanizeAnyError(e)}')),
-      );
+      messenger.showError('Erreur a l\'export PDF : ${humanizeAnyError(e)}');
     }
   }
 
@@ -83,19 +82,13 @@ class ExportTourneeActions {
         keys.add(s.coequipierId);
       }
       if (keys.isEmpty) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Aucun arret a exporter.')),
-        );
+        messenger.showInfo('Aucun arret a exporter.');
         return;
       }
       if (keys.length == 1) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Tous les arrets ont la meme affectation. Utilise '
-              '"Exporter en PDF" classique.',
-            ),
-          ),
+        messenger.showInfo(
+          'Tous les arrets ont la meme affectation. Utilise '
+          '"Exporter en PDF" classique.',
         );
         return;
       }
@@ -134,19 +127,10 @@ class ExportTourneeActions {
         );
       }
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            '${keys.length} PDF generes (1 par coequipier).',
-          ),
-          backgroundColor: AppColors.emerald,
-        ),
-      );
+      messenger.showSuccess('${keys.length} PDF generes (1 par coequipier).');
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur a l\'export PDF equipe : ${humanizeAnyError(e)}')),
-      );
+      messenger.showError('Erreur a l\'export PDF equipe : ${humanizeAnyError(e)}');
     }
   }
 
@@ -172,9 +156,7 @@ class ExportTourneeActions {
       );
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur au partage : ${humanizeAnyError(e)}')),
-      );
+      messenger.showError('Erreur au partage : ${humanizeAnyError(e)}');
     }
   }
 
@@ -193,12 +175,8 @@ class ExportTourneeActions {
         await ref.read(coequipiersRepositoryProvider).getAllActifs();
     if (!context.mounted) return;
     if (coequipiers.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
-          ),
-        ),
+      messenger.showInfo(
+        'Aucun coequipier. Ajoute-en dans Parametres > Mon equipe.',
       );
       return;
     }
@@ -267,13 +245,9 @@ class ExportTourneeActions {
       final stopsLui =
           allStops.where((s) => s.coequipierId == picked.id).toList();
       if (stopsLui.isEmpty) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Aucun arret affecte a ${picked.nom}. Affecte-lui des '
-              'arrets depuis la bottom sheet d\'un arret.',
-            ),
-          ),
+        messenger.showInfo(
+          'Aucun arret affecte a ${picked.nom}. Affecte-lui des '
+          'arrets depuis la bottom sheet d\'un arret.',
         );
         return;
       }
@@ -315,9 +289,7 @@ class ExportTourneeActions {
       }
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erreur au partage : ${humanizeAnyError(e)}')),
-      );
+      messenger.showError('Erreur au partage : ${humanizeAnyError(e)}');
     }
   }
 

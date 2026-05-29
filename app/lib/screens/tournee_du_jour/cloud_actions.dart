@@ -6,6 +6,7 @@ import '../../data/cloud_sync_service.dart';
 import '../../data/database.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/snack.dart';
 import '../cloud/invitation_code_dialog.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -37,30 +38,17 @@ class CloudTourneeActions {
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final service = ref.read(cloudSyncServiceProvider);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Sync en cours...'),
-        duration: Duration(seconds: 10),
-      ),
+    messenger.showInfo(
+      'Sync en cours...',
+      duration: const Duration(seconds: 10),
     );
     try {
       await service.pushTournee(tournee.id);
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tournee synchronisee au cloud'),
-          backgroundColor: AppColors.emerald,
-        ),
-      );
+      messenger.showSuccess('Tournee synchronisee au cloud');
     } on CloudSyncException catch (e) {
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 6),
-        ),
-      );
+      messenger.showError(e.message, duration: const Duration(seconds: 6));
     }
   }
 
@@ -76,13 +64,7 @@ class CloudTourneeActions {
     try {
       code = await service.createInvitation(tournee.id);
     } on CloudSyncException catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 6),
-        ),
-      );
+      messenger.showError(e.message, duration: const Duration(seconds: 6));
       return;
     }
     if (!context.mounted) return;
@@ -130,22 +112,11 @@ class CloudTourneeActions {
     try {
       await ref.read(cloudSyncServiceProvider).leaveTournee(tournee.id);
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tournee quittee'),
-          backgroundColor: AppColors.emerald,
-        ),
-      );
+      messenger.showSuccess('Tournee quittee');
       onSuccess();
     } on CloudSyncException catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 6),
-        ),
-      );
+      messenger.showError(e.message, duration: const Duration(seconds: 6));
     }
   }
 
@@ -191,10 +162,8 @@ class CloudTourneeActions {
       return true;
     } catch (e) {
       if (!context.mounted) return false;
-      messenger.showSnackBar(
-        SnackBar(
-            content:
-                Text('Erreur lors de la suppression : ${humanizeAnyError(e)}')),
+      messenger.showError(
+        'Erreur lors de la suppression : ${humanizeAnyError(e)}',
       );
       return false;
     }
