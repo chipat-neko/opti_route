@@ -30,6 +30,11 @@ SnackBar _buildSnack(
     // 4 s = duree par defaut de Flutter -> migrer un site sans duree
     // explicite ne change pas son comportement.
     duration: duration ?? const Duration(seconds: 4),
+    // Flutter met persist = (action != null) par defaut : un SnackBar avec
+    // un bouton ne se fermerait JAMAIS tout seul (duration ignore, pas de
+    // timer d'auto-dismiss). On force false pour garder l'auto-fermeture
+    // meme avec une action (ex. "Photo preuve", "Annuler"). cf carte #260.
+    persist: false,
     action: action,
   );
 }
