@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/database.dart';
+import '../../data/local_route_estimate.dart';
 import '../../theme/app_tokens.dart';
 import '../cloud/coequipiers_section.dart';
 import 'autres_tournees_banner.dart';
@@ -36,6 +37,17 @@ class Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fallback : si VROOM n'a pas encore tourne (distanceTotaleM null
+    // ou 0), on calcule une estimation locale via haversine pour ne
+    // pas afficher " - " devant l'utilisateur. Marquee `isEstimate`
+    // pour preffixer les valeurs avec `~` dans la StatRow.
+    final hasVroom = (tournee.distanceTotaleM ?? 0) > 0;
+    final est = hasVroom
+        ? null
+        : LocalRouteEstimate.compute(tournee: tournee, stops: stops);
+    final displayMeters = hasVroom ? tournee.distanceTotaleM : est?.meters;
+    final displaySeconds = hasVroom ? tournee.dureeTotaleS : est?.seconds;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.x18,
@@ -54,8 +66,9 @@ class Body extends StatelessWidget {
         StatRow(
           arretsCount: stops.length,
           colisTotal: stops.fold<int>(0, (sum, s) => sum + s.nbColis),
-          distanceMeters: tournee.distanceTotaleM,
-          durationSeconds: tournee.dureeTotaleS,
+          distanceMeters: displayMeters,
+          durationSeconds: displaySeconds,
+          isEstimate: !hasVroom && (displayMeters ?? 0) > 0,
         ),
         if (tournee.distanceTotaleM != null &&
             tournee.distanceTotaleM! > 0) ...[
