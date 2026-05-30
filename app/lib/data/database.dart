@@ -78,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 43;
+  int get schemaVersion => 44;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -360,6 +360,12 @@ class AppDatabase extends _$AppDatabase {
             // ADD COLUMN sur sqlite + sqlite3.wasm.
             await m.addColumn(
                 savedDestinations, savedDestinations.isProblematique);
+          }
+          if (from < 44) {
+            // Carte #296 : contre-remboursement (COD). Colonnes
+            // montant_cod (real nullable) + cod_paye (bool default false).
+            await m.addColumn(stops, stops.montantCod);
+            await m.addColumn(stops, stops.codPaye);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
