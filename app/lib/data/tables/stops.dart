@@ -110,4 +110,10 @@ class Stops extends Table {
   /// Sert aussi a eviter les doublons : un meme code-barre ne peut pas
   /// etre compte 2x meme si Noah scanne le meme colis 2 fois par erreur.
   TextColumn get trackingNumbers => text().nullable()();
+
+  /// Memo vocal dicte (transcrit en texte via STT on-device) attache
+  /// a un arret, ex: "sonnette HS, passer par l'arriere". Carte #280.
+  /// Plus rapide que taper en conduisant. Texte plutot qu'audio brut
+  /// pour rester lisible / partageable / sans dependance lecteur media.
+  TextColumn get memoVocal => text().nullable()();
 }

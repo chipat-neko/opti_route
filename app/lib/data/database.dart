@@ -78,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 39;
+  int get schemaVersion => 40;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -336,6 +336,11 @@ class AppDatabase extends _$AppDatabase {
             // Noah (carte #279). Une seule session ouverte a la fois
             // (gere cote WorkSessionsRepository).
             await m.createTable(workSessions);
+          }
+          if (from < 40) {
+            // Colonne `memo_vocal` sur stops (carte #280) : memo texte
+            // dicte via STT. DEFAULT NULL = compatible ADD COLUMN.
+            await m.addColumn(stops, stops.memoVocal);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
