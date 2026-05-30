@@ -74,12 +74,12 @@ charge mieux derrière un mini serveur. Au choix :
 
 ```sh
 # Python 3
-cd docs/website
+cd site_doc
 python -m http.server 8000
 # Ouvre http://localhost:8000
 
 # Ou Node
-npx serve docs/website
+npx serve site_doc
 ```
 
 ## Important : limites Phase 1
