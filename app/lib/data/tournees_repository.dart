@@ -153,6 +153,66 @@ class TourneesRepository {
     });
   }
 
+  /// Carte #284 : clone uniquement les stops en `echec` d'une tournee
+  /// terminee vers une nouvelle tournee a la date cible (typiquement
+  /// J+1). Les stops clones repartent en `a_livrer` (reset statut /
+  /// raisonEchec / livreLe / preuvePhotoPath). Garde nom client / nb
+  /// colis / notes / coords.
+  ///
+  /// Retourne l'id de la nouvelle tournee. Throw si source introuvable
+  /// ou si la tournee source n'a aucun echec.
+  Future<int> cloneEchecsToDate({
+    required int sourceId,
+    required DateTime targetDate,
+  }) async {
+    return _db.transaction(() async {
+      final source = await getById(sourceId);
+      if (source == null) {
+        throw StateError('Tournee $sourceId introuvable');
+      }
+      final echecs = await (_db.select(_db.stops)
+            ..where((s) =>
+                s.tourneeId.equals(sourceId) &
+                s.statutLivraison.equals('echec')))
+          .get();
+      if (echecs.isEmpty) {
+        throw StateError('Aucun echec a reprogrammer');
+      }
+      final newId = await _db.into(_db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: '${source.nom} (echecs)',
+              date: targetDate,
+              pointDepartLat: source.pointDepartLat,
+              pointDepartLng: source.pointDepartLng,
+              pointDepartLabel: source.pointDepartLabel,
+              vehiculeCapaciteColis: Value(source.vehiculeCapaciteColis),
+              profilOrs: Value(source.profilOrs),
+              eviterPeages: Value(source.eviterPeages),
+            ),
+          );
+      await _db.batch((batch) {
+        batch.insertAll(_db.stops, [
+          for (final s in echecs)
+            StopsCompanion.insert(
+              tourneeId: newId,
+              adresseBrute: s.adresseBrute,
+              adresseNormalisee: Value(s.adresseNormalisee),
+              lat: Value(s.lat),
+              lng: Value(s.lng),
+              nbColis: Value(s.nbColis),
+              priorite: Value(s.priorite),
+              fenetreDebut: Value(s.fenetreDebut),
+              fenetreFin: Value(s.fenetreFin),
+              dureeArretMin: Value(s.dureeArretMin),
+              notes: Value(s.notes),
+              nomClient: Value(s.nomClient),
+            ),
+        ]);
+      });
+      return newId;
+    });
+  }
+
   static String _suffixCopie(String nom) {
     // Si le nom finit deja par "(copie)" ou "(copie N)", on incremente.
     final reg = RegExp(r'^(.*?)\s*\(copie(?:\s+(\d+))?\)\s*$');
