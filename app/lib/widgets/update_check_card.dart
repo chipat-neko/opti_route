@@ -56,24 +56,42 @@ class _UpdateCheckCardState extends State<UpdateCheckCard> {
     });
   }
 
+  /// Cherche le launcher MAJ dans plusieurs emplacements connus,
+  /// dans l'ordre de préférence : raccourci bureau (.lnk créé par
+  /// Creer_raccourci_bureau.bat) > nouveau .bat scripts/ > ancien
+  /// .bat sur le bureau (compat). Retourne null si rien trouvé.
+  String? _findUpdater() {
+    final home = Platform.environment['USERPROFILE'] ?? '';
+    final candidates = <String>[
+      '$home\\Desktop\\MAJ opti_route chef.lnk',
+      'E:\\opti_route\\scripts\\MAJ_optiroute_chef.bat',
+      'D:\\opti_route\\scripts\\MAJ_optiroute_chef.bat',
+      '$home\\Desktop\\MAJ_optiroute_chef.bat',
+    ];
+    for (final path in candidates) {
+      if (File(path).existsSync()) return path;
+    }
+    return null;
+  }
+
   Future<void> _launchUpdater() async {
     if (kIsWeb || !Platform.isWindows) return;
-    final bat = '${Platform.environment['USERPROFILE'] ?? ''}\\Desktop\\MAJ_optiroute_chef.bat';
-    if (!File(bat).existsSync()) {
+    final launcher = _findUpdater();
+    if (launcher == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
-            'MAJ_optiroute_chef.bat introuvable sur le bureau. '
-            'Télécharge-le depuis scripts/ du repo.',
+            'Launcher MAJ introuvable. Lance Creer_raccourci_bureau.bat '
+            'depuis le dossier scripts/ du repo.',
           ),
         ),
       );
       return;
     }
     try {
-      // Lance le .bat dans une nouvelle fenetre cmd, sans bloquer l'app.
-      await Process.start('cmd', ['/c', 'start', '', bat]);
+      // Lance le .bat ou .lnk dans une nouvelle fenetre cmd, sans bloquer l'app.
+      await Process.start('cmd', ['/c', 'start', '', launcher]);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
