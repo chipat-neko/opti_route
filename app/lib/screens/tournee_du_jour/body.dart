@@ -11,6 +11,7 @@ import 'banners.dart';
 import 'header.dart';
 import 'prochain_arret_card.dart';
 import 'progress_banner.dart';
+import 'recap_depot_card.dart';
 import 'stat_row.dart';
 import 'stops_list.dart';
 import 'stops_section.dart';
@@ -105,6 +106,13 @@ class Body extends ConsumerWidget {
         ],
         // Alertes anomalies (carte #122) : auto-masquees si aucune.
         AnomaliesBanner(tournee: tournee, stops: stops),
+        // Carte #275 : recap des colis a rapporter au depot quand la
+        // tournee est terminee (echecs livraison + ramasses recoltees).
+        // Auto-masque si rien a rapporter.
+        if (tournee.statut == 'terminee') ...[
+          const SizedBox(height: AppSpacing.x12),
+          RecapDepotCard(stops: stops),
+        ],
         if (tournee.statut == 'en_cours') ...[
           const SizedBox(height: AppSpacing.x12),
           ProchainArretCard(stops: stops),
