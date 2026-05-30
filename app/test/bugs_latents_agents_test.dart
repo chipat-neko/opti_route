@@ -22,6 +22,8 @@ Stop _stop({required int id, required double lat, required double lng}) {
     dureeArretMin: 2,
     statutLivraison: 'a_livrer',
     positionLocked: false,
+    deposeSansContact: false,
+    codPaye: false,
     creeLe: now,
     updatedAt: now,
   );

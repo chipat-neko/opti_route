@@ -65,6 +65,8 @@ void main() {
       coequipierId: coequipierId,
       notes: notes,
       positionLocked: false,
+      deposeSansContact: false,
+      codPaye: false,
       creeLe: DateTime(2026, 5, 18),
       updatedAt: DateTime(2026, 5, 18),
     );
