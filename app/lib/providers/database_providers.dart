@@ -10,7 +10,9 @@ import '../data/fuel_price_service.dart';
 import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
+import '../data/app_role.dart';
 import '../data/parametres_repository.dart';
+import '../data/role_service.dart';
 import '../data/resume_hebdo_service.dart';
 import '../data/chef_carte_service.dart';
 import '../data/chef_stats_service.dart';
@@ -227,6 +229,18 @@ final coequipiersByIdProvider = Provider<Map<int, Coequipier>>((ref) {
 
 final parametresRepositoryProvider = Provider<ParametresRepository>((ref) {
   return ParametresRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Service de rôle Chauffeur/Chef (carte split 2026-05-30).
+final roleServiceProvider = Provider<RoleService>((ref) {
+  return RoleService(ref.watch(parametresRepositoryProvider));
+});
+
+/// Rôle courant (toggle local Paramètres). Stream pour gating UI
+/// réactif. L'override serveur est appliqué quand le caller fournit
+/// `serverRoleRaw` via `resolveCurrentRole` (cf RoleService).
+final currentRoleProvider = StreamProvider<AppRole>((ref) {
+  return ref.watch(roleServiceProvider).watchLocalRole();
 });
 
 /// Service de recuperation du prix moyen du carburant en temps reel
