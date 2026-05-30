@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_tokens.dart';
 import '../widgets/pointage_card.dart';
+import '../widgets/role_gated.dart';
+import '../widgets/update_check_card.dart';
 import 'backups_list_screen.dart';
 import 'mentions_legales_screen.dart';
 import 'parametres/aide_section.dart';
@@ -41,6 +43,20 @@ class ParametresScreen extends ConsumerWidget {
           SizedBox(height: AppSpacing.x10),
           PointageCard(),
           _Sep(),
+          // Carte #update_checker : verification + lancement MAJ MSIX
+          // Windows (gatée chef car le workflow build/install est chef).
+          RoleGated(
+            featureKey: 'app.update_checker',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ParametresSectionTitle('Mise à jour'),
+                SizedBox(height: AppSpacing.x10),
+                UpdateCheckCard(),
+                _Sep(),
+              ],
+            ),
+          ),
           ParametresSectionTitle('Geocodage'),
           SizedBox(height: AppSpacing.x10),
           StatusCard(
