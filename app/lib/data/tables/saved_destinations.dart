@@ -108,4 +108,11 @@ class SavedDestinations extends Table {
   /// bloquer le bouton tant que preuvePhotoPath est null.
   BoolColumn get photoObligatoire =>
       boolean().withDefault(const Constant(false))();
+
+  /// Preference persistante du client (carte #335), ex: "Sonner 2 fois",
+  /// "Ne supporte pas le depot sans signature", "Code change tous les
+  /// mois". Affichee en gros a l'arrivee. Distinct de `notesCarnet`
+  /// (libre) : `preferencePersonnalisee` est une consigne forte qu'on
+  /// doit voir avant chaque livraison.
+  TextColumn get preferencePersonnalisee => text().nullable()();
 }

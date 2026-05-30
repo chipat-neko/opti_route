@@ -4706,6 +4706,17 @@ class $SavedDestinationsTable extends SavedDestinations
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _preferencePersonnaliseeMeta =
+      const VerificationMeta('preferencePersonnalisee');
+  @override
+  late final GeneratedColumn<String> preferencePersonnalisee =
+      GeneratedColumn<String>(
+        'preference_personnalisee',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4732,6 +4743,7 @@ class $SavedDestinationsTable extends SavedDestinations
     noteStationnement,
     isProblematique,
     photoObligatoire,
+    preferencePersonnalisee,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4913,6 +4925,15 @@ class $SavedDestinationsTable extends SavedDestinations
         ),
       );
     }
+    if (data.containsKey('preference_personnalisee')) {
+      context.handle(
+        _preferencePersonnaliseeMeta,
+        preferencePersonnalisee.isAcceptableOrUnknown(
+          data['preference_personnalisee']!,
+          _preferencePersonnaliseeMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -5018,6 +5039,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.bool,
         data['${effectivePrefix}photo_obligatoire'],
       )!,
+      preferencePersonnalisee: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preference_personnalisee'],
+      ),
     );
   }
 
@@ -5119,6 +5144,13 @@ class SavedDestination extends DataClass
   /// "livre" sur un stop a cette adresse (carte #301). L'UI doit
   /// bloquer le bouton tant que preuvePhotoPath est null.
   final bool photoObligatoire;
+
+  /// Preference persistante du client (carte #335), ex: "Sonner 2 fois",
+  /// "Ne supporte pas le depot sans signature", "Code change tous les
+  /// mois". Affichee en gros a l'arrivee. Distinct de `notesCarnet`
+  /// (libre) : `preferencePersonnalisee` est une consigne forte qu'on
+  /// doit voir avant chaque livraison.
+  final String? preferencePersonnalisee;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -5144,6 +5176,7 @@ class SavedDestination extends DataClass
     this.noteStationnement,
     required this.isProblematique,
     required this.photoObligatoire,
+    this.preferencePersonnalisee,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5198,6 +5231,11 @@ class SavedDestination extends DataClass
     }
     map['is_problematique'] = Variable<bool>(isProblematique);
     map['photo_obligatoire'] = Variable<bool>(photoObligatoire);
+    if (!nullToAbsent || preferencePersonnalisee != null) {
+      map['preference_personnalisee'] = Variable<String>(
+        preferencePersonnalisee,
+      );
+    }
     return map;
   }
 
@@ -5251,6 +5289,9 @@ class SavedDestination extends DataClass
           : Value(noteStationnement),
       isProblematique: Value(isProblematique),
       photoObligatoire: Value(photoObligatoire),
+      preferencePersonnalisee: preferencePersonnalisee == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferencePersonnalisee),
     );
   }
 
@@ -5286,6 +5327,9 @@ class SavedDestination extends DataClass
       ),
       isProblematique: serializer.fromJson<bool>(json['isProblematique']),
       photoObligatoire: serializer.fromJson<bool>(json['photoObligatoire']),
+      preferencePersonnalisee: serializer.fromJson<String?>(
+        json['preferencePersonnalisee'],
+      ),
     );
   }
   @override
@@ -5316,6 +5360,9 @@ class SavedDestination extends DataClass
       'noteStationnement': serializer.toJson<String?>(noteStationnement),
       'isProblematique': serializer.toJson<bool>(isProblematique),
       'photoObligatoire': serializer.toJson<bool>(photoObligatoire),
+      'preferencePersonnalisee': serializer.toJson<String?>(
+        preferencePersonnalisee,
+      ),
     };
   }
 
@@ -5344,6 +5391,7 @@ class SavedDestination extends DataClass
     Value<String?> noteStationnement = const Value.absent(),
     bool? isProblematique,
     bool? photoObligatoire,
+    Value<String?> preferencePersonnalisee = const Value.absent(),
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -5373,6 +5421,9 @@ class SavedDestination extends DataClass
         : this.noteStationnement,
     isProblematique: isProblematique ?? this.isProblematique,
     photoObligatoire: photoObligatoire ?? this.photoObligatoire,
+    preferencePersonnalisee: preferencePersonnalisee.present
+        ? preferencePersonnalisee.value
+        : this.preferencePersonnalisee,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -5416,6 +5467,9 @@ class SavedDestination extends DataClass
       photoObligatoire: data.photoObligatoire.present
           ? data.photoObligatoire.value
           : this.photoObligatoire,
+      preferencePersonnalisee: data.preferencePersonnalisee.present
+          ? data.preferencePersonnalisee.value
+          : this.preferencePersonnalisee,
     );
   }
 
@@ -5445,7 +5499,8 @@ class SavedDestination extends DataClass
           ..write('updatedAt: $updatedAt, ')
           ..write('noteStationnement: $noteStationnement, ')
           ..write('isProblematique: $isProblematique, ')
-          ..write('photoObligatoire: $photoObligatoire')
+          ..write('photoObligatoire: $photoObligatoire, ')
+          ..write('preferencePersonnalisee: $preferencePersonnalisee')
           ..write(')'))
         .toString();
   }
@@ -5476,6 +5531,7 @@ class SavedDestination extends DataClass
     noteStationnement,
     isProblematique,
     photoObligatoire,
+    preferencePersonnalisee,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -5504,7 +5560,8 @@ class SavedDestination extends DataClass
           other.updatedAt == this.updatedAt &&
           other.noteStationnement == this.noteStationnement &&
           other.isProblematique == this.isProblematique &&
-          other.photoObligatoire == this.photoObligatoire);
+          other.photoObligatoire == this.photoObligatoire &&
+          other.preferencePersonnalisee == this.preferencePersonnalisee);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -5532,6 +5589,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<String?> noteStationnement;
   final Value<bool> isProblematique;
   final Value<bool> photoObligatoire;
+  final Value<String?> preferencePersonnalisee;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -5557,6 +5615,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.noteStationnement = const Value.absent(),
     this.isProblematique = const Value.absent(),
     this.photoObligatoire = const Value.absent(),
+    this.preferencePersonnalisee = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -5583,6 +5642,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.noteStationnement = const Value.absent(),
     this.isProblematique = const Value.absent(),
     this.photoObligatoire = const Value.absent(),
+    this.preferencePersonnalisee = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -5611,6 +5671,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<String>? noteStationnement,
     Expression<bool>? isProblematique,
     Expression<bool>? photoObligatoire,
+    Expression<String>? preferencePersonnalisee,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5637,6 +5698,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (noteStationnement != null) 'note_stationnement': noteStationnement,
       if (isProblematique != null) 'is_problematique': isProblematique,
       if (photoObligatoire != null) 'photo_obligatoire': photoObligatoire,
+      if (preferencePersonnalisee != null)
+        'preference_personnalisee': preferencePersonnalisee,
     });
   }
 
@@ -5665,6 +5728,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<String?>? noteStationnement,
     Value<bool>? isProblematique,
     Value<bool>? photoObligatoire,
+    Value<String?>? preferencePersonnalisee,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -5691,6 +5755,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       noteStationnement: noteStationnement ?? this.noteStationnement,
       isProblematique: isProblematique ?? this.isProblematique,
       photoObligatoire: photoObligatoire ?? this.photoObligatoire,
+      preferencePersonnalisee:
+          preferencePersonnalisee ?? this.preferencePersonnalisee,
     );
   }
 
@@ -5769,6 +5835,11 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (photoObligatoire.present) {
       map['photo_obligatoire'] = Variable<bool>(photoObligatoire.value);
     }
+    if (preferencePersonnalisee.present) {
+      map['preference_personnalisee'] = Variable<String>(
+        preferencePersonnalisee.value,
+      );
+    }
     return map;
   }
 
@@ -5798,7 +5869,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('updatedAt: $updatedAt, ')
           ..write('noteStationnement: $noteStationnement, ')
           ..write('isProblematique: $isProblematique, ')
-          ..write('photoObligatoire: $photoObligatoire')
+          ..write('photoObligatoire: $photoObligatoire, ')
+          ..write('preferencePersonnalisee: $preferencePersonnalisee')
           ..write(')'))
         .toString();
   }
@@ -11799,6 +11871,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<String?> noteStationnement,
       Value<bool> isProblematique,
       Value<bool> photoObligatoire,
+      Value<String?> preferencePersonnalisee,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -11826,6 +11899,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<String?> noteStationnement,
       Value<bool> isProblematique,
       Value<bool> photoObligatoire,
+      Value<String?> preferencePersonnalisee,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -11954,6 +12028,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<bool> get photoObligatoire => $composableBuilder(
     column: $table.photoObligatoire,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preferencePersonnalisee => $composableBuilder(
+    column: $table.preferencePersonnalisee,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12086,6 +12165,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.photoObligatoire,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get preferencePersonnalisee => $composableBuilder(
+    column: $table.preferencePersonnalisee,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -12184,6 +12268,11 @@ class $$SavedDestinationsTableAnnotationComposer
     column: $table.photoObligatoire,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get preferencePersonnalisee => $composableBuilder(
+    column: $table.preferencePersonnalisee,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -12250,6 +12339,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> noteStationnement = const Value.absent(),
                 Value<bool> isProblematique = const Value.absent(),
                 Value<bool> photoObligatoire = const Value.absent(),
+                Value<String?> preferencePersonnalisee = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -12275,6 +12365,7 @@ class $$SavedDestinationsTableTableManager
                 noteStationnement: noteStationnement,
                 isProblematique: isProblematique,
                 photoObligatoire: photoObligatoire,
+                preferencePersonnalisee: preferencePersonnalisee,
               ),
           createCompanionCallback:
               ({
@@ -12302,6 +12393,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> noteStationnement = const Value.absent(),
                 Value<bool> isProblematique = const Value.absent(),
                 Value<bool> photoObligatoire = const Value.absent(),
+                Value<String?> preferencePersonnalisee = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -12327,6 +12419,7 @@ class $$SavedDestinationsTableTableManager
                 noteStationnement: noteStationnement,
                 isProblematique: isProblematique,
                 photoObligatoire: photoObligatoire,
+                preferencePersonnalisee: preferencePersonnalisee,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

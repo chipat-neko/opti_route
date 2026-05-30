@@ -78,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 46;
+  int get schemaVersion => 47;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -377,6 +377,12 @@ class AppDatabase extends _$AppDatabase {
             // Carte #324 : notation emoji 1-clic du client final.
             // Text nullable, valeurs 'happy'/'neutral'/'angry'/null.
             await m.addColumn(stops, stops.notationEmoji);
+          }
+          if (from < 47) {
+            // Carte #335 : preference persistante client (affichee en
+            // gros a l'arrivee, distinct des notes libres).
+            await m.addColumn(
+                savedDestinations, savedDestinations.preferencePersonnalisee);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
