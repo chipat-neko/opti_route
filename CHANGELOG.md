@@ -56,6 +56,15 @@ tests créés ou enrichis. Cibles principales :
   / statutLabel / inferStatut (#381), `frais_form/type_helpers`
   labelForType / colorForType / iconForType (#382).
 
+- **Defensive data classes** : `BatchScanItem` + `BatchCommitSummary`
+  (#384), `CarnetBackfillResult.hasActivity` (#385), `BackupException`
+  (#386), `LowBatteryDecision` 4 combinaisons (#389), `RecurrenceService.
+  shouldGenerate` row variante (#391), `HeatmapService.maxCount` cas
+  degeneres (#392).
+
+- **Verrou schema Drift v38** (#393) : test sentinel qui catch un bump
+  de schemaVersion sans migration onUpgrade associee.
+
 **Site SEO `site_doc/`** : passe de 13 → 14/14 pages user-facing
 totalement uniformisées.
 - JSON-LD HowTo sur install-apk + guide-csv ; WebPage sur roadmap
@@ -66,7 +75,8 @@ totalement uniformisées.
   /investisseurs.html (#383), `og:image:width/height/type` 1200x630
   (#387).
 
-**Doc** : CHANGELOG mis à jour (#331, #388).
+**Doc** : CHANGELOG mis à jour (#331, #388), fix chemin README site_doc
+(#390).
 
 ### Session autonome 2026-05-11 (Vague 8 quality + features livraison)
 
