@@ -20,6 +20,8 @@ import '../data/client_stats_service.dart';
 import '../data/security_service.dart';
 import '../data/batch_scan_commit_service.dart';
 import '../data/notifications_service.dart';
+import '../data/osrm_route_service.dart';
+import '../data/route_metrics_auto_updater.dart';
 import '../data/recurrence_service.dart';
 import '../data/recurrences_repository.dart';
 import '../data/saved_destinations_repository.dart';
@@ -49,6 +51,27 @@ final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
   return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Client OSRM partage (singleton) pour le calcul de distance + duree
+/// routieres exactes via OSM. Pas de cle API, gratuit.
+final osrmRouteServiceProvider = Provider<OsrmRouteService>((ref) {
+  final svc = OsrmRouteService();
+  ref.onDispose(svc.close);
+  return svc;
+});
+
+/// Auto-update des metrics (distance + duree) d'une tournee a chaque
+/// modif de stops. Debounce 500ms pour eviter le spam OSRM quand
+/// l'utilisateur reorganise plusieurs arrets rapidement.
+final routeMetricsAutoUpdaterProvider =
+    Provider<RouteMetricsAutoUpdater>((ref) {
+  final updater = RouteMetricsAutoUpdater(
+    db: ref.watch(appDatabaseProvider),
+    osrm: ref.watch(osrmRouteServiceProvider),
+  );
+  ref.onDispose(updater.dispose);
+  return updater;
 });
 
 /// Service d'export/import de templates de tournee au format JSON.
