@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import 'role_gated.dart';
 import 'snack.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -146,12 +147,21 @@ class _PointageCardState extends ConsumerState<PointageCard> {
                   loading: _loading,
                 ),
               ),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(
-                child: _StatTile(
-                  label: 'Semaine',
-                  value: _fmt(_week),
-                  loading: _loading,
+              // Cumul Semaine = chef-only (le chauffeur n'a pas besoin
+              // de voir ce niveau de stat ; gestion paie). Carte split
+              // chauffeur/chef 2026-05-30 -> registry `pointage.cumul_semaine`.
+              const RoleGated(
+                featureKey: 'pointage.cumul_semaine',
+                child: SizedBox(width: AppSpacing.x12),
+              ),
+              RoleGated(
+                featureKey: 'pointage.cumul_semaine',
+                child: Expanded(
+                  child: _StatTile(
+                    label: 'Semaine',
+                    value: _fmt(_week),
+                    loading: _loading,
+                  ),
                 ),
               ),
             ],
