@@ -1,34 +1,81 @@
 # scripts/
 
-Scripts Windows pour Noah.
+Scripts Windows pour Noah (mise à jour du logiciel chef MSIX sur PC).
 
-## `MAJ_optiroute_chef.bat`
+## Workflow d'update (le plus simple)
 
-Ouvre la dernière version d'opti_route (web app GitHub Pages) dans
-Chrome avec hard-refresh forcé. Remplace l'ancien
-`Installer_optiroute_chef.bat` du bureau.
+Double-clic sur **`MAJ_optiroute_chef.bat`** sur ton bureau. C'est tout.
 
-### Installation
+Le script enchaîne :
+1. `git pull` dans `E:\opti_route`
+2. `flutter pub get`
+3. `flutter build windows --release --dart-define-from-file=cloud.env.json`
+4. `dart run msix:create` (package en MSIX, signé avec ton cert existant)
+5. Lance `Installer_optiroute_chef.bat` (UAC → certutil + Add-AppxPackage)
 
-1. Télécharge ce fichier depuis GitHub :
-   https://raw.githubusercontent.com/chipat-neko/opti_route/main/scripts/MAJ_optiroute_chef.bat
-2. Enregistre-le sur ton bureau (clic droit → Enregistrer sous…)
-3. Supprime l'ancien `Installer_optiroute_chef.bat`
-4. Double-clic sur `MAJ_optiroute_chef.bat` à chaque fois que tu
-   veux ouvrir le mode chef avec la dernière version
+**Durée typique** : 8-12 minutes (le build Flutter Windows est lent).
 
-### Comment ça marche
+**Log** : `%USERPROFILE%\Desktop\optiroute_maj_log.txt` si quelque chose
+casse.
 
-- Ouvre l'URL https://chipat-neko.github.io/opti_route/ (web app)
-- Ajoute un timestamp `?t=...` pour contourner le cache navigateur
-- Cherche Chrome dans `Program Files` (préféré pour la PWA), sinon
-  fallback navigateur par défaut
+---
 
-### Pourquoi pas l'exe ?
+## Les 2 fichiers
 
-La web app est mise à jour automatiquement à chaque merge sur main
-(workflow `.github/workflows/deploy-web.yml`). L'exe Windows nécessite
-de re-télécharger / dézipper / remplacer manuellement à chaque release.
+### `MAJ_optiroute_chef.bat`
+Le **nouveau** script à mettre sur le bureau. Pull + build + install
+en une seule commande. C'est lui que tu lances pour update.
 
-Si tu veux vraiment l'exe : voir `docs/windows-update.md` (workflow
-`build-windows.yml` qui produit un ZIP en artifact GitHub Actions).
+### `Installer_optiroute_chef.bat`
+L'**ancien** script (versionné ici pour ne pas le perdre). Installe le
+MSIX déjà buildé. `MAJ_optiroute_chef.bat` l'appelle automatiquement
+en étape 5.
+
+Si tu le perds du bureau : `copy E:\opti_route\scripts\Installer_optiroute_chef.bat %USERPROFILE%\Desktop\`
+
+---
+
+## Installation initiale
+
+Si tu installes opti_route chef sur **un nouveau PC** :
+
+1. Cloner le repo sur disque NTFS (C: ou E:, pas exFAT) :
+   ```
+   git clone https://github.com/chipat-neko/opti_route.git E:\opti_route
+   ```
+2. Activer **Dev Mode Windows** (Réglages > Espace développeurs)
+3. Installer **VS Build Tools 2022** avec le composant C++ ATL
+4. Télécharger nuget.exe et le mettre dans `C:\Users\Noah\nugettools\`
+5. Copier `cloud.env.json` dans `E:\opti_route\app\` (credentials Supabase, jamais commit)
+6. Copier `Installer_optiroute_chef.bat` et `MAJ_optiroute_chef.bat`
+   sur le bureau
+7. Double-clic `MAJ_optiroute_chef.bat` → premier build complet + install
+
+Détails dans la mémoire de session
+[[feedback-windows-build-exfat]] (build) et
+[[project-logiciel-chef-88]] (#88·5).
+
+---
+
+## Pourquoi un MSIX et pas un .exe ?
+
+- MSIX = vraie app Windows native (apparaît dans le menu Démarrer)
+- Signature cert auto-générée = pas de SmartScreen warning à chaque
+  lancement
+- Update propre via `Add-AppxPackage` (gère la migration auto si
+  `msix_version` > précédente)
+- Désinstallation propre via Réglages > Applications
+
+**À chaque PR mergée qui modifie l'app**, n'oublie pas de bumper
+`msix_version` dans `app/pubspec.yaml` sinon Windows refuse de réinstaller
+("application déjà présente").
+
+---
+
+## Alternative : GitHub Actions Windows artifact
+
+Un workflow `.github/workflows/build-windows.yml` build aussi un .exe
+(pas MSIX) en artifact ZIP téléchargeable. Voir `docs/windows-update.md`.
+Utile si tu changes de PC et que tu veux juste un exe sans tout le
+setup local. Ne remplace pas le MSIX (pas de menu Démarrer, pas de
+cert installé).
