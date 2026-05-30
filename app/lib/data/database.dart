@@ -78,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 41;
+  int get schemaVersion => 42;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -347,6 +347,12 @@ class AppDatabase extends _$AppDatabase {
             // marqueur "depose devant la porte / boite", DEFAULT false
             // constant -> compatible ADD COLUMN sur sqlite + sqlite3.wasm.
             await m.addColumn(stops, stops.deposeSansContact);
+          }
+          if (from < 42) {
+            // Colonne `note_stationnement` sur saved_destinations
+            // (carte #288). DEFAULT NULL = compatible ADD COLUMN.
+            await m.addColumn(
+                savedDestinations, savedDestinations.noteStationnement);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
