@@ -83,6 +83,10 @@ class Body extends ConsumerWidget {
           const SizedBox(height: AppSpacing.x8),
           CoutCarburantBanner(distanceMeters: tournee.distanceTotaleM!),
         ],
+        // Carte #276 : fin estimee de tournee (auto-masque si pas en_cours
+        // ou pas d'ETA calculable).
+        const SizedBox(height: AppSpacing.x8),
+        EndOfTourChip(tournee: tournee),
         if (tournee.statut == 'optimisee') ...[
           const SizedBox(height: AppSpacing.x12),
           OptimisedBanner(tournee: tournee),

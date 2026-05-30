@@ -519,6 +519,42 @@ final etasParStopProvider =
   );
 });
 
+/// Heure de fin de tournee estimee (carte #276). Reactif aux memes
+/// dependances que [etasParStopProvider] : se recalibre a chaque
+/// validation d'arret.
+///
+/// Retourne null si aucun stop pending OU si la tournee n'a pas
+/// d'ETAs calculables (jamais demarree avec stops vides, etc).
+final endOfTourProvider =
+    FutureProvider.family<DateTime?, int>((ref, tourneeId) async {
+  final etas = await ref.watch(etasParStopProvider(tourneeId).future);
+  if (etas.isEmpty) return null;
+  final stops = await ref.read(stopsRepositoryProvider).getByTournee(tourneeId);
+  return EtaCalculator.computeEndOfTour(orderedStops: stops, etas: etas);
+});
+
+/// Statut "ok/early/late/none" du croisement ETA vs fenetre horaire
+/// par stop (carte #276). Permet a [EtaBadge] de colorer / surcharger
+/// son affichage sans connaitre le stop complet.
+final etaWindowStatusProvider =
+    FutureProvider.family<Map<int, EtaWindowStatus>, int>(
+        (ref, tourneeId) async {
+  final etas = await ref.watch(etasParStopProvider(tourneeId).future);
+  if (etas.isEmpty) return const {};
+  final stops = await ref.read(stopsRepositoryProvider).getByTournee(tourneeId);
+  final out = <int, EtaWindowStatus>{};
+  for (final s in stops) {
+    final eta = etas[s.id];
+    if (eta == null) continue;
+    out[s.id] = EtaCalculator.crossWindow(
+      eta: eta,
+      fenetreDebut: s.fenetreDebut,
+      fenetreFin: s.fenetreFin,
+    );
+  }
+  return out;
+});
+
 /// Segments (distance + duree estimee) PAR STOP de la tournee. Sert
 /// au badge "8 km · 15 min" affiche dans chaque [StopRow] (style
 /// Spoke route planner). Watche le stream tournees pour re-calculer

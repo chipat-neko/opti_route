@@ -205,6 +205,15 @@ class EtaBadge extends ConsumerWidget {
     final etas = ref.watch(etasParStopProvider(tourneeId)).asData?.value;
     final eta = etas?[stopId];
     if (eta == null) return const SizedBox.shrink();
+    // Carte #276 : croise ETA et fenetre horaire pour colorer le badge.
+    final statusMap =
+        ref.watch(etaWindowStatusProvider(tourneeId)).asData?.value;
+    final status = statusMap?[stopId] ?? EtaWindowStatus.none;
+    final (bg, fg, suffix) = switch (status) {
+      EtaWindowStatus.late => (AppColors.red, AppColors.paper, ' RETARD'),
+      EtaWindowStatus.early => (AppColors.amber, AppColors.ink, ' AVANCE'),
+      _ => (p.inkLine.withValues(alpha: 0.5), p.textMute, ''),
+    };
     return Padding(
       padding: const EdgeInsets.only(left: AppSpacing.x6),
       child: Container(
@@ -213,14 +222,14 @@ class EtaBadge extends ConsumerWidget {
           vertical: 3,
         ),
         decoration: BoxDecoration(
-          color: p.inkLine.withValues(alpha: 0.5),
+          color: bg,
           borderRadius: BorderRadius.circular(AppRadius.r8),
         ),
         child: Text(
-          EtaCalculator.formatEtaHHmm(eta),
+          '${EtaCalculator.formatEtaHHmm(eta)}$suffix',
           style: appMonoStyle(
             fontSize: 10,
-            color: p.textMute,
+            color: fg,
             fontWeight: FontWeight.w700,
           ),
         ),

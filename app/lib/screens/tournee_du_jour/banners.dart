@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../data/anomaly_detection_service.dart';
 import '../../data/database.dart';
+import '../../data/eta_calculator.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
@@ -215,6 +216,54 @@ class _AnomalieRow extends StatelessWidget {
                 color: p.ink,
                 fontWeight: FontWeight.w600,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Chip "Fin ~HH:MM" affiche en haut de la tournee du jour quand la
+/// tournee est demarree et qu'il reste des stops a livrer (carte #276).
+/// Se recalibre a chaque validation via [endOfTourProvider] (qui depend
+/// de [etasParStopProvider]). Auto-masque si pas d'estimation.
+class EndOfTourChip extends ConsumerWidget {
+  const EndOfTourChip({super.key, required this.tournee});
+
+  final Tournee tournee;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (tournee.statut != 'en_cours') return const SizedBox.shrink();
+    final p = context.palette;
+    final end = ref.watch(endOfTourProvider(tournee.id)).asData?.value;
+    if (end == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x12,
+        vertical: AppSpacing.x8,
+      ),
+      decoration: BoxDecoration(
+        color: p.creamSoft,
+        borderRadius: BorderRadius.circular(AppRadius.r10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.flag_outlined, size: 16, color: p.textMute),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Text(
+              'Fin estimee de tournee',
+              style: TextStyle(fontSize: 12.5, color: p.textMute),
+            ),
+          ),
+          Text(
+            '~${EtaCalculator.formatEtaHHmm(end)}',
+            style: appMonoStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
             ),
           ),
         ],
