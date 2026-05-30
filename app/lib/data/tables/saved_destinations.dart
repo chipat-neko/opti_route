@@ -96,4 +96,10 @@ class SavedDestinations extends Table {
   /// "parking sous-sol entree D" / "place handicapee derriere".
   /// Rejoue a chaque retour chez ce client. Nullable.
   TextColumn get noteStationnement => text().nullable()();
+
+  /// True si l'adresse est marquee "vigilance" (carte #292) : echecs
+  /// repetes, acces camion complique, client agressif, fausse adresse.
+  /// Affiche un badge rouge quand elle reapparait dans une tournee.
+  BoolColumn get isProblematique =>
+      boolean().withDefault(const Constant(false))();
 }

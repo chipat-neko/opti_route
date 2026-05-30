@@ -78,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 42;
+  int get schemaVersion => 43;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -353,6 +353,13 @@ class AppDatabase extends _$AppDatabase {
             // (carte #288). DEFAULT NULL = compatible ADD COLUMN.
             await m.addColumn(
                 savedDestinations, savedDestinations.noteStationnement);
+          }
+          if (from < 43) {
+            // Colonne `is_problematique` sur saved_destinations
+            // (carte #292). DEFAULT false constant = compatible
+            // ADD COLUMN sur sqlite + sqlite3.wasm.
+            await m.addColumn(
+                savedDestinations, savedDestinations.isProblematique);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
