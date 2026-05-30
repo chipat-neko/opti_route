@@ -31,14 +31,11 @@ echo   Cible    : %TARGET%
 echo   Raccourci: %SHORTCUT%
 echo.
 
-powershell -NoProfile -Command ^
-  "$s = New-Object -ComObject WScript.Shell; ^
-   $sc = $s.CreateShortcut('%SHORTCUT%'); ^
-   $sc.TargetPath = '%TARGET%'; ^
-   $sc.WorkingDirectory = '%WORKDIR%'; ^
-   $sc.IconLocation = 'shell32.dll,46'; ^
-   $sc.Description = 'Met a jour le logiciel opti_route chef'; ^
-   $sc.Save()"
+REM Note : tout sur une seule ligne car cmd ne traite pas le `^` de
+REM continuation a l'interieur d'une string entre guillemets (le `^`
+REM est alors envoye tel quel a PowerShell qui le voit comme cmdlet
+REM inconnu et echoue avec "Le terme << ^ >> n'est pas reconnu").
+powershell -NoProfile -Command "$s = New-Object -ComObject WScript.Shell; $sc = $s.CreateShortcut('%SHORTCUT%'); $sc.TargetPath = '%TARGET%'; $sc.WorkingDirectory = '%WORKDIR%'; $sc.IconLocation = 'shell32.dll,46'; $sc.Description = 'Met a jour le logiciel opti_route chef'; $sc.Save()"
 
 if errorlevel 1 (
   echo [ERREUR] Creation du raccourci a echoue.
