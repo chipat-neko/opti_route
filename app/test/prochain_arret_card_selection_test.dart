@@ -101,6 +101,8 @@ Stop _stop({
     dureeArretMin: 2,
     statutLivraison: statut,
     positionLocked: false,
+    deposeSansContact: false,
+    codPaye: false,
     creeLe: now,
     updatedAt: now,
   );

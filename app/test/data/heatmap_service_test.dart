@@ -16,6 +16,8 @@ Stop _stop({required double? lat, required double? lng, int id = 1}) {
     dureeArretMin: 2,
     statutLivraison: 'livre',
     positionLocked: false,
+    deposeSansContact: false,
+    codPaye: false,
     creeLe: now,
     updatedAt: now,
   );

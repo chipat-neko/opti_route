@@ -51,6 +51,8 @@ void main() {
         creeLe: now,
         isFavori: false,
         updatedAt: now,
+        isProblematique: false,
+        photoObligatoire: false,
       );
     }
 
