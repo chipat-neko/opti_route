@@ -20,4 +20,19 @@ if not exist "%PS1%" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1%" %*
-exit /b %errorlevel%
+set "RC=%errorlevel%"
+
+REM Si erreur, pause pour qu'on puisse lire le message avant que la
+REM fenetre cmd se ferme. Le .ps1 fait deja un Read-Host en cas
+REM d'erreur, mais s'il crash avant d'arriver au Read-Host (erreur
+REM de parsing, par exemple), cette pause garantit qu'on voit la
+REM raison.
+if not "%RC%"=="0" (
+  echo.
+  echo ============================================================
+  echo   Le script a echoue avec le code %RC%.
+  echo ============================================================
+  pause
+)
+
+exit /b %RC%
