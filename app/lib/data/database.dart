@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'tables/coequipiers.dart';
 import 'tables/frais.dart';
@@ -93,78 +94,78 @@ class AppDatabase extends _$AppDatabase {
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
-            await m.createTable(sheets);
+            await _safeCreateTable(m, sheets);
           }
           if (from < 3) {
-            await m.createTable(geocodeCache);
+            await _safeCreateTable(m, geocodeCache);
           }
           if (from < 4) {
-            await m.addColumn(tournees, tournees.distanceTotaleM);
-            await m.addColumn(tournees, tournees.dureeTotaleS);
-            await m.addColumn(tournees, tournees.optimiseeLe);
+            await _safeAddColumn(m, tournees, tournees.distanceTotaleM);
+            await _safeAddColumn(m, tournees, tournees.dureeTotaleS);
+            await _safeAddColumn(m, tournees, tournees.optimiseeLe);
           }
           if (from < 5) {
-            await m.createTable(savedDestinations);
+            await _safeCreateTable(m, savedDestinations);
           }
           if (from < 6) {
-            await m.addColumn(stops, stops.ordrePriorite);
+            await _safeAddColumn(m, stops, stops.ordrePriorite);
           }
           if (from < 7) {
-            await m.addColumn(stops, stops.raisonEchec);
+            await _safeAddColumn(m, stops, stops.raisonEchec);
           }
           if (from < 8) {
-            await m.addColumn(tournees, tournees.traceGeojson);
+            await _safeAddColumn(m, tournees, tournees.traceGeojson);
           }
           if (from < 9) {
-            await m.addColumn(stops, stops.livreLat);
-            await m.addColumn(stops, stops.livreLng);
-            await m.addColumn(stops, stops.livreLe);
+            await _safeAddColumn(m, stops, stops.livreLat);
+            await _safeAddColumn(m, stops, stops.livreLng);
+            await _safeAddColumn(m, stops, stops.livreLe);
           }
           if (from < 10) {
-            await m.addColumn(savedDestinations, savedDestinations.isFavori);
+            await _safeAddColumn(m, savedDestinations, savedDestinations.isFavori);
           }
           if (from < 11) {
-            await m.addColumn(tournees, tournees.demareeLe);
+            await _safeAddColumn(m, tournees, tournees.demareeLe);
           }
           if (from < 12) {
-            await m.addColumn(tournees, tournees.isTemplate);
+            await _safeAddColumn(m, tournees, tournees.isTemplate);
           }
           if (from < 13) {
-            await m.addColumn(
+            await _safeAddColumn(m, 
                 savedDestinations, savedDestinations.colorTag);
           }
           if (from < 14) {
-            await m.createTable(stopHistory);
+            await _safeCreateTable(m, stopHistory);
           }
           if (from < 15) {
-            await m.addColumn(tournees, tournees.profilOrs);
-            await m.addColumn(tournees, tournees.eviterPeages);
+            await _safeAddColumn(m, tournees, tournees.profilOrs);
+            await _safeAddColumn(m, tournees, tournees.eviterPeages);
           }
           if (from < 16) {
-            await m.addColumn(tournees, tournees.rappelLe);
+            await _safeAddColumn(m, tournees, tournees.rappelLe);
           }
           if (from < 17) {
-            await m.addColumn(
+            await _safeAddColumn(m, 
                 savedDestinations, savedDestinations.notesCarnet);
           }
           if (from < 18) {
-            await m.addColumn(stops, stops.preuvePhotoPath);
-            await m.addColumn(tournees, tournees.pauseeLe);
-            await m.addColumn(tournees, tournees.pauseeSeconds);
+            await _safeAddColumn(m, stops, stops.preuvePhotoPath);
+            await _safeAddColumn(m, tournees, tournees.pauseeLe);
+            await _safeAddColumn(m, tournees, tournees.pauseeSeconds);
           }
           if (from < 19) {
-            await m.addColumn(savedDestinations, savedDestinations.tagsJson);
-            await m.addColumn(savedDestinations, savedDestinations.photoPath);
-            await m.addColumn(savedDestinations, savedDestinations.codeAcces);
-            await m.addColumn(
+            await _safeAddColumn(m, savedDestinations, savedDestinations.tagsJson);
+            await _safeAddColumn(m, savedDestinations, savedDestinations.photoPath);
+            await _safeAddColumn(m, savedDestinations, savedDestinations.codeAcces);
+            await _safeAddColumn(m, 
                 savedDestinations, savedDestinations.etageBatiment);
           }
           if (from < 20) {
-            await m.createTable(coequipiers);
-            await m.addColumn(stops, stops.coequipierId);
+            await _safeCreateTable(m, coequipiers);
+            await _safeAddColumn(m, stops, stops.coequipierId);
           }
           if (from < 21) {
-            await m.addColumn(tournees, tournees.coequipierDefautId);
+            await _safeAddColumn(m, tournees, tournees.coequipierDefautId);
           }
           if (from < 22) {
             await _createPerfIndexes();
@@ -174,16 +175,16 @@ class AppDatabase extends _$AppDatabase {
             // nullable) sur les 4 tables candidates au sync Supabase.
             // Null = jamais sync ; set = a deja ete push au moins une
             // fois (sert d'idempotence pour les re-push : INSERT/UPDATE).
-            await m.addColumn(tournees, tournees.cloudId);
-            await m.addColumn(stops, stops.cloudId);
-            await m.addColumn(coequipiers, coequipiers.cloudId);
-            await m.addColumn(savedDestinations, savedDestinations.cloudId);
+            await _safeAddColumn(m, tournees, tournees.cloudId);
+            await _safeAddColumn(m, stops, stops.cloudId);
+            await _safeAddColumn(m, coequipiers, coequipiers.cloudId);
+            await _safeAddColumn(m, savedDestinations, savedDestinations.cloudId);
           }
           if (from < 24) {
             // Sous-jalon 2.E : photos preuves vers Supabase Storage.
             // Colonne pour stocker le chemin dans le bucket
             // `<user_id>/<stop_uuid>.jpg` apres upload reussi.
-            await m.addColumn(stops, stops.cloudPhotoPath);
+            await _safeAddColumn(m, stops, stops.cloudPhotoPath);
           }
           if (from < 25) {
             // Sous-jalon 2.D-1c : colonne `updated_at` sur les 4 tables
@@ -238,13 +239,13 @@ class AppDatabase extends _$AppDatabase {
             // cache les adhesions cloud. Sert a l'UI pour distinguer
             // tournee perso vs partagee, et afficher le badge nombre
             // de coequipiers / le role owner/member.
-            await m.createTable(tourneeMembres);
+            await _safeCreateTable(m, tourneeMembres);
           }
           if (from < 27) {
             // Feature ramasses (2026-05-18) : ajout colonne `type` sur
             // stops, 'livraison' default ('livraison' = on depose un
             // colis, 'ramasse' = on en recupere un).
-            await m.addColumn(stops, stops.type);
+            await _safeAddColumn(m, stops, stops.type);
           }
           if (from < 28) {
             // Bug fix 2026-05-18 #160 : backfill stops.type.
@@ -302,20 +303,20 @@ class AppDatabase extends _$AppDatabase {
             // (carburant / peages / parking / repas / autre).
             // 100% local en Phase 1. Cf tables/frais.dart pour le
             // detail des colonnes et le cas d'usage.
-            await m.createTable(frais);
+            await _safeCreateTable(m, frais);
           }
           if (from < 34) {
             // Colonne `tracking_numbers` (TEXT JSON list nullable) sur
             // stops : numeros de codes-barres scannes pour cet arret.
             // Sert au workflow ScanColisScreen pour matcher un scan a
             // un arret existant (-> +1 colis) ou creer un nouvel arret.
-            await m.addColumn(stops, stops.trackingNumbers);
+            await _safeAddColumn(m, stops, stops.trackingNumbers);
           }
           if (from < 35) {
             // Colonne `telephone` (TEXT nullable) sur saved_destinations :
             // numero de tel du client pour bouton "Appeler" dans la fiche
             // carnet. Carte Trello #106.
-            await m.addColumn(savedDestinations, savedDestinations.telephone);
+            await _safeAddColumn(m, savedDestinations, savedDestinations.telephone);
           }
           if (from < 36) {
             // Table `tracking_codes` : codes courts (4 chars) attribues
@@ -323,65 +324,65 @@ class AppDatabase extends _$AppDatabase {
             // par le client final (Amazon Auneau). MVP scaffold local
             // pour l'instant : `cloud_pushed` reste false tant que
             // l'Edge Function backend n'est pas deployee. Carte #141.
-            await m.createTable(trackingCodes);
+            await _safeCreateTable(m, trackingCodes);
           }
           if (from < 38) {
             // Table `tournee_recurrences` : recurrence automatique d'un
             // template de tournee (carte #113). L'app genere la tournee
             // au jour cible a l'ouverture (cf RecurrenceService.runDue).
-            await m.createTable(tourneeRecurrences);
+            await _safeCreateTable(m, tourneeRecurrences);
           }
           if (from < 39) {
             // Table `work_sessions` : pointage debut/fin de service de
             // Noah (carte #279). Une seule session ouverte a la fois
             // (gere cote WorkSessionsRepository).
-            await m.createTable(workSessions);
+            await _safeCreateTable(m, workSessions);
           }
           if (from < 40) {
             // Colonne `memo_vocal` sur stops (carte #280) : memo texte
             // dicte via STT. DEFAULT NULL = compatible ADD COLUMN.
-            await m.addColumn(stops, stops.memoVocal);
+            await _safeAddColumn(m, stops, stops.memoVocal);
           }
           if (from < 41) {
             // Colonne `depose_sans_contact` sur stops (carte #287) :
             // marqueur "depose devant la porte / boite", DEFAULT false
             // constant -> compatible ADD COLUMN sur sqlite + sqlite3.wasm.
-            await m.addColumn(stops, stops.deposeSansContact);
+            await _safeAddColumn(m, stops, stops.deposeSansContact);
           }
           if (from < 42) {
             // Colonne `note_stationnement` sur saved_destinations
             // (carte #288). DEFAULT NULL = compatible ADD COLUMN.
-            await m.addColumn(
+            await _safeAddColumn(m, 
                 savedDestinations, savedDestinations.noteStationnement);
           }
           if (from < 43) {
             // Colonne `is_problematique` sur saved_destinations
             // (carte #292). DEFAULT false constant = compatible
             // ADD COLUMN sur sqlite + sqlite3.wasm.
-            await m.addColumn(
+            await _safeAddColumn(m, 
                 savedDestinations, savedDestinations.isProblematique);
           }
           if (from < 44) {
             // Carte #296 : contre-remboursement (COD). Colonnes
             // montant_cod (real nullable) + cod_paye (bool default false).
-            await m.addColumn(stops, stops.montantCod);
-            await m.addColumn(stops, stops.codPaye);
+            await _safeAddColumn(m, stops, stops.montantCod);
+            await _safeAddColumn(m, stops, stops.codPaye);
           }
           if (from < 45) {
             // Carte #301 : photo preuve obligatoire pour certains
             // clients. Colonne bool default false.
-            await m.addColumn(
+            await _safeAddColumn(m, 
                 savedDestinations, savedDestinations.photoObligatoire);
           }
           if (from < 46) {
             // Carte #324 : notation emoji 1-clic du client final.
             // Text nullable, valeurs 'happy'/'neutral'/'angry'/null.
-            await m.addColumn(stops, stops.notationEmoji);
+            await _safeAddColumn(m, stops, stops.notationEmoji);
           }
           if (from < 47) {
             // Carte #335 : preference persistante client (affichee en
             // gros a l'arrivee, distinct des notes libres).
-            await m.addColumn(
+            await _safeAddColumn(m, 
                 savedDestinations, savedDestinations.preferencePersonnalisee);
           }
           if (from < 37) {
@@ -390,7 +391,7 @@ class AppDatabase extends _$AppDatabase {
             // soit pas deplace par le tri rapide / l'optim VROOM / le
             // drag&drop. Carte Trello #114. DEFAULT constant (false) ->
             // compatible ADD COLUMN sur SQLite (cf note migration v32).
-            await m.addColumn(stops, stops.positionLocked);
+            await _safeAddColumn(m, stops, stops.positionLocked);
           }
           if (from < 32) {
             // ════════════════════════════════════════════════════════
@@ -497,6 +498,46 @@ class AppDatabase extends _$AppDatabase {
         'WHERE id = NEW.id; '
         'END;',
       );
+    }
+  }
+
+  /// `m.addColumn` idempotent : ignore l'erreur SQLite "duplicate
+  /// column" si la colonne existe deja. Indispensable depuis l'incident
+  /// 2026-05-30 ou la DB d'un user etait coincee sur `user_version=36`
+  /// alors que les colonnes des migrations v37+ etaient deja ajoutees
+  /// (migration precedente avait crash entre l'ALTER TABLE et le
+  /// bumppragma user_version). Au prochain boot, Drift relance les
+  /// migrations depuis 36 et croit qu'il doit re-ADD les colonnes
+  /// existantes -> exception non-catched -> tous les FutureBuilder
+  /// (dont AppLockGate) restent en loading -> ecran noir total.
+  Future<void> _safeAddColumn(
+      Migrator m, TableInfo table, GeneratedColumn column) async {
+    try {
+      await _safeAddColumn(m, table, column);
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('duplicate column') ||
+          msg.contains('already exists')) {
+        debugPrint(
+            '[Drift] addColumn ${column.name} sur ${table.actualTableName} '
+            'deja presente, skip.');
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  /// `m.createTable` idempotent (cf [_safeAddColumn]).
+  Future<void> _safeCreateTable(Migrator m, TableInfo table) async {
+    try {
+      await _safeCreateTable(m, table);
+    } catch (e) {
+      if (e.toString().toLowerCase().contains('already exists')) {
+        debugPrint(
+            '[Drift] createTable ${table.actualTableName} deja presente, skip.');
+      } else {
+        rethrow;
+      }
     }
   }
 }

@@ -40,8 +40,22 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
   }
 
   Future<void> _initialCheck() async {
-    final svc = ref.read(securityServiceProvider);
-    final enabled = await svc.isLockEnabled();
+    // Timeout 3s : si Drift est cassee (migration foiree, fichier
+    // corrompu, etc.), `isLockEnabled()` peut ne jamais resoudre.
+    // Sans ce garde-fou, _initialCheckDone restait false a vie et
+    // AppLockGate rendait un Scaffold() vide -> ecran totalement noir
+    // (cf incident Windows 2026-05-30 : migration Drift v40 croyait
+    // devoir re-ADD une colonne deja presente -> tout etait pending).
+    // Fallback : on assume "pas de verrou" et on laisse l'app render
+    // son contenu normal. C'est moins safe en cas de tel vole, mais
+    // c'est INFINIMENT mieux qu'un ecran noir qui force a desinstaller.
+    bool enabled = false;
+    try {
+      final svc = ref.read(securityServiceProvider);
+      enabled = await svc.isLockEnabled().timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('[AppLockGate] check verrou KO : $e -> bypass verrou');
+    }
     if (!mounted) return;
     setState(() {
       _locked = enabled;

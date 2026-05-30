@@ -56,7 +56,19 @@ class NotificationsService {
     tz.setLocalLocation(tz.getLocation('Europe/Paris'));
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const settings = InitializationSettings(android: android);
+    // Windows : sans WindowsInitializationSettings le plugin throw
+    // "Windows settings must be set when targeting Windows platform".
+    // Le guid doit etre un UUID v4 stable (le plugin l'utilise comme
+    // CLSID interne pour le notif handler COM).
+    const windows = WindowsInitializationSettings(
+      appName: 'opti_route',
+      appUserModelId: 'com.calote.optiroute',
+      guid: 'd9b0c0a0-1234-4567-89ab-cdef01234567',
+    );
+    const settings = InitializationSettings(
+      android: android,
+      windows: windows,
+    );
     await _plugin.initialize(settings: settings);
 
     // Demande la permission pour Android 13+ (POST_NOTIFICATIONS).
