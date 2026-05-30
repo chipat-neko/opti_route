@@ -1,0 +1,104 @@
+name: Build Windows (.exe) → artifact
+
+# Build l'app Flutter pour Windows et upload un ZIP téléchargeable
+# depuis la page Actions. Noah dézippe et remplace son exe sur le bureau.
+#
+# Déclenchement :
+# - Push sur main : auto à chaque merge (PR mergée).
+# - workflow_dispatch : bouton "Run workflow" pour relancer à la
+#   demande sans rien pusher.
+"on":
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Si plusieurs push s'enchaînent rapidement, on garde le plus récent
+# et on annule les builds en cours (économise les minutes Actions
+# Windows qui sont plus coûteuses).
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Windows release
+    runs-on: windows-latest
+    # Build Windows Flutter prend ~8-12 min. Timeout 20 min pour
+    # absorber un setup Flutter long ou un cache miss.
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      # Inject le cloud.env.json depuis un GitHub Secret si défini.
+      # Sans secret, on builde en mode local-only (la section "Sync
+      # cloud" affichera "non disponible" mais l'app marche).
+      - name: Write cloud.env.json from secret
+        if: ${{ env.CLOUD_ENV_JSON != '' }}
+        env:
+          CLOUD_ENV_JSON: ${{ secrets.CLOUD_ENV_JSON }}
+        run: |
+          if [ -n "$CLOUD_ENV_JSON" ]; then
+            echo "$CLOUD_ENV_JSON" > cloud.env.json
+            echo "cloud.env.json injected (length: ${#CLOUD_ENV_JSON})"
+          else
+            echo "{}" > cloud.env.json
+            echo "No CLOUD_ENV_JSON secret -> empty config (local-only mode)"
+          fi
+
+      - name: Build windows release
+        run: |
+          if [ -f cloud.env.json ]; then
+            flutter build windows --release --dart-define-from-file=cloud.env.json
+          else
+            flutter build windows --release
+          fi
+
+      # Le binaire + ses DLL sortent dans build/windows/x64/runner/Release/.
+      # On zippe tout le dossier Release/ pour que Noah ait l'exe + ses
+      # dépendances natives au même endroit.
+      - name: Package Release folder into ZIP
+        working-directory: app/build/windows/x64/runner
+        shell: pwsh
+        run: |
+          Compress-Archive -Path Release\* -DestinationPath opti_route-windows.zip -Force
+          Get-ChildItem opti_route-windows.zip | Format-List Length,FullName
+
+      # Cleanup cloud.env.json avant que les artifacts ne capturent
+      # quoi que ce soit (le ZIP ne le contient pas car c'est compilé
+      # dans le binaire via dart-define, mais on supprime par sécurité).
+      - name: Cleanup secret file
+        if: always()
+        run: rm -f cloud.env.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opti_route-windows-${{ github.sha }}
+          path: app/build/windows/x64/runner/opti_route-windows.zip
+          # 14 jours suffisent : Noah download dans la journée du merge.
+          # Plus long = on garde des vieilles versions pour rien.
+          retention-days: 14
