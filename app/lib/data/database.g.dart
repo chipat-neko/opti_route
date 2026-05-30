@@ -1732,6 +1732,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _notationEmojiMeta = const VerificationMeta(
+    'notationEmoji',
+  );
+  @override
+  late final GeneratedColumn<String> notationEmoji = GeneratedColumn<String>(
+    'notation_emoji',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1767,6 +1778,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     deposeSansContact,
     montantCod,
     codPaye,
+    notationEmoji,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2021,6 +2033,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         codPaye.isAcceptableOrUnknown(data['cod_paye']!, _codPayeMeta),
       );
     }
+    if (data.containsKey('notation_emoji')) {
+      context.handle(
+        _notationEmojiMeta,
+        notationEmoji.isAcceptableOrUnknown(
+          data['notation_emoji']!,
+          _notationEmojiMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2162,6 +2183,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.bool,
         data['${effectivePrefix}cod_paye'],
       )!,
+      notationEmoji: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notation_emoji'],
+      ),
     );
   }
 
@@ -2295,6 +2320,11 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// True si le montant COD a ete encaisse (cocher au moment de la
   /// remise). Carte #296. False par defaut.
   final bool codPaye;
+
+  /// Notation 1-clic du client final apres livraison (carte #324) :
+  /// 'happy', 'neutral', 'angry', null. Stocke en texte pour rester
+  /// lisible humain et evoluer sans migration.
+  final String? notationEmoji;
   const Stop({
     required this.id,
     required this.tourneeId,
@@ -2329,6 +2359,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     required this.deposeSansContact,
     this.montantCod,
     required this.codPaye,
+    this.notationEmoji,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2406,6 +2437,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       map['montant_cod'] = Variable<double>(montantCod);
     }
     map['cod_paye'] = Variable<bool>(codPaye);
+    if (!nullToAbsent || notationEmoji != null) {
+      map['notation_emoji'] = Variable<String>(notationEmoji);
+    }
     return map;
   }
 
@@ -2480,6 +2514,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ? const Value.absent()
           : Value(montantCod),
       codPaye: Value(codPaye),
+      notationEmoji: notationEmoji == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notationEmoji),
     );
   }
 
@@ -2524,6 +2561,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       deposeSansContact: serializer.fromJson<bool>(json['deposeSansContact']),
       montantCod: serializer.fromJson<double?>(json['montantCod']),
       codPaye: serializer.fromJson<bool>(json['codPaye']),
+      notationEmoji: serializer.fromJson<String?>(json['notationEmoji']),
     );
   }
   @override
@@ -2563,6 +2601,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'deposeSansContact': serializer.toJson<bool>(deposeSansContact),
       'montantCod': serializer.toJson<double?>(montantCod),
       'codPaye': serializer.toJson<bool>(codPaye),
+      'notationEmoji': serializer.toJson<String?>(notationEmoji),
     };
   }
 
@@ -2600,6 +2639,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     bool? deposeSansContact,
     Value<double?> montantCod = const Value.absent(),
     bool? codPaye,
+    Value<String?> notationEmoji = const Value.absent(),
   }) => Stop(
     id: id ?? this.id,
     tourneeId: tourneeId ?? this.tourneeId,
@@ -2646,6 +2686,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     deposeSansContact: deposeSansContact ?? this.deposeSansContact,
     montantCod: montantCod.present ? montantCod.value : this.montantCod,
     codPaye: codPaye ?? this.codPaye,
+    notationEmoji: notationEmoji.present
+        ? notationEmoji.value
+        : this.notationEmoji,
   );
   Stop copyWithCompanion(StopsCompanion data) {
     return Stop(
@@ -2714,6 +2757,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ? data.montantCod.value
           : this.montantCod,
       codPaye: data.codPaye.present ? data.codPaye.value : this.codPaye,
+      notationEmoji: data.notationEmoji.present
+          ? data.notationEmoji.value
+          : this.notationEmoji,
     );
   }
 
@@ -2752,7 +2798,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('memoVocal: $memoVocal, ')
           ..write('deposeSansContact: $deposeSansContact, ')
           ..write('montantCod: $montantCod, ')
-          ..write('codPaye: $codPaye')
+          ..write('codPaye: $codPaye, ')
+          ..write('notationEmoji: $notationEmoji')
           ..write(')'))
         .toString();
   }
@@ -2792,6 +2839,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     deposeSansContact,
     montantCod,
     codPaye,
+    notationEmoji,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2829,7 +2877,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.memoVocal == this.memoVocal &&
           other.deposeSansContact == this.deposeSansContact &&
           other.montantCod == this.montantCod &&
-          other.codPaye == this.codPaye);
+          other.codPaye == this.codPaye &&
+          other.notationEmoji == this.notationEmoji);
 }
 
 class StopsCompanion extends UpdateCompanion<Stop> {
@@ -2866,6 +2915,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<bool> deposeSansContact;
   final Value<double?> montantCod;
   final Value<bool> codPaye;
+  final Value<String?> notationEmoji;
   const StopsCompanion({
     this.id = const Value.absent(),
     this.tourneeId = const Value.absent(),
@@ -2900,6 +2950,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.deposeSansContact = const Value.absent(),
     this.montantCod = const Value.absent(),
     this.codPaye = const Value.absent(),
+    this.notationEmoji = const Value.absent(),
   });
   StopsCompanion.insert({
     this.id = const Value.absent(),
@@ -2935,6 +2986,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.deposeSansContact = const Value.absent(),
     this.montantCod = const Value.absent(),
     this.codPaye = const Value.absent(),
+    this.notationEmoji = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
   static Insertable<Stop> custom({
@@ -2971,6 +3023,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<bool>? deposeSansContact,
     Expression<double>? montantCod,
     Expression<bool>? codPaye,
+    Expression<String>? notationEmoji,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3006,6 +3059,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (deposeSansContact != null) 'depose_sans_contact': deposeSansContact,
       if (montantCod != null) 'montant_cod': montantCod,
       if (codPaye != null) 'cod_paye': codPaye,
+      if (notationEmoji != null) 'notation_emoji': notationEmoji,
     });
   }
 
@@ -3043,6 +3097,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<bool>? deposeSansContact,
     Value<double?>? montantCod,
     Value<bool>? codPaye,
+    Value<String?>? notationEmoji,
   }) {
     return StopsCompanion(
       id: id ?? this.id,
@@ -3078,6 +3133,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       deposeSansContact: deposeSansContact ?? this.deposeSansContact,
       montantCod: montantCod ?? this.montantCod,
       codPaye: codPaye ?? this.codPaye,
+      notationEmoji: notationEmoji ?? this.notationEmoji,
     );
   }
 
@@ -3183,6 +3239,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (codPaye.present) {
       map['cod_paye'] = Variable<bool>(codPaye.value);
     }
+    if (notationEmoji.present) {
+      map['notation_emoji'] = Variable<String>(notationEmoji.value);
+    }
     return map;
   }
 
@@ -3221,7 +3280,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('memoVocal: $memoVocal, ')
           ..write('deposeSansContact: $deposeSansContact, ')
           ..write('montantCod: $montantCod, ')
-          ..write('codPaye: $codPaye')
+          ..write('codPaye: $codPaye, ')
+          ..write('notationEmoji: $notationEmoji')
           ..write(')'))
         .toString();
   }
@@ -9845,6 +9905,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<bool> deposeSansContact,
       Value<double?> montantCod,
       Value<bool> codPaye,
+      Value<String?> notationEmoji,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
     StopsCompanion Function({
@@ -9881,6 +9942,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<bool> deposeSansContact,
       Value<double?> montantCod,
       Value<bool> codPaye,
+      Value<String?> notationEmoji,
     });
 
 final class $$StopsTableReferences
@@ -10125,6 +10187,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<bool> get codPaye => $composableBuilder(
     column: $table.codPaye,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notationEmoji => $composableBuilder(
+    column: $table.notationEmoji,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10396,6 +10463,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get notationEmoji => $composableBuilder(
+    column: $table.notationEmoji,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TourneesTableOrderingComposer get tourneeId {
     final $$TourneesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -10556,6 +10628,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<bool> get codPaye =>
       $composableBuilder(column: $table.codPaye, builder: (column) => column);
+
+  GeneratedColumn<String> get notationEmoji => $composableBuilder(
+    column: $table.notationEmoji,
+    builder: (column) => column,
+  );
 
   $$TourneesTableAnnotationComposer get tourneeId {
     final $$TourneesTableAnnotationComposer composer = $composerBuilder(
@@ -10722,6 +10799,7 @@ class $$StopsTableTableManager
                 Value<bool> deposeSansContact = const Value.absent(),
                 Value<double?> montantCod = const Value.absent(),
                 Value<bool> codPaye = const Value.absent(),
+                Value<String?> notationEmoji = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
                 tourneeId: tourneeId,
@@ -10756,6 +10834,7 @@ class $$StopsTableTableManager
                 deposeSansContact: deposeSansContact,
                 montantCod: montantCod,
                 codPaye: codPaye,
+                notationEmoji: notationEmoji,
               ),
           createCompanionCallback:
               ({
@@ -10792,6 +10871,7 @@ class $$StopsTableTableManager
                 Value<bool> deposeSansContact = const Value.absent(),
                 Value<double?> montantCod = const Value.absent(),
                 Value<bool> codPaye = const Value.absent(),
+                Value<String?> notationEmoji = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
                 tourneeId: tourneeId,
@@ -10826,6 +10906,7 @@ class $$StopsTableTableManager
                 deposeSansContact: deposeSansContact,
                 montantCod: montantCod,
                 codPaye: codPaye,
+                notationEmoji: notationEmoji,
               ),
           withReferenceMapper: (p0) => p0
               .map(
