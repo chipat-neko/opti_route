@@ -4631,6 +4631,21 @@ class $SavedDestinationsTable extends SavedDestinations
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _photoObligatoireMeta = const VerificationMeta(
+    'photoObligatoire',
+  );
+  @override
+  late final GeneratedColumn<bool> photoObligatoire = GeneratedColumn<bool>(
+    'photo_obligatoire',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("photo_obligatoire" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4656,6 +4671,7 @@ class $SavedDestinationsTable extends SavedDestinations
     updatedAt,
     noteStationnement,
     isProblematique,
+    photoObligatoire,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4828,6 +4844,15 @@ class $SavedDestinationsTable extends SavedDestinations
         ),
       );
     }
+    if (data.containsKey('photo_obligatoire')) {
+      context.handle(
+        _photoObligatoireMeta,
+        photoObligatoire.isAcceptableOrUnknown(
+          data['photo_obligatoire']!,
+          _photoObligatoireMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4929,6 +4954,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.bool,
         data['${effectivePrefix}is_problematique'],
       )!,
+      photoObligatoire: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}photo_obligatoire'],
+      )!,
     );
   }
 
@@ -5025,6 +5054,11 @@ class SavedDestination extends DataClass
   /// repetes, acces camion complique, client agressif, fausse adresse.
   /// Affiche un badge rouge quand elle reapparait dans une tournee.
   final bool isProblematique;
+
+  /// True si une photo de preuve est OBLIGATOIRE pour pouvoir marquer
+  /// "livre" sur un stop a cette adresse (carte #301). L'UI doit
+  /// bloquer le bouton tant que preuvePhotoPath est null.
+  final bool photoObligatoire;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -5049,6 +5083,7 @@ class SavedDestination extends DataClass
     required this.updatedAt,
     this.noteStationnement,
     required this.isProblematique,
+    required this.photoObligatoire,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5102,6 +5137,7 @@ class SavedDestination extends DataClass
       map['note_stationnement'] = Variable<String>(noteStationnement);
     }
     map['is_problematique'] = Variable<bool>(isProblematique);
+    map['photo_obligatoire'] = Variable<bool>(photoObligatoire);
     return map;
   }
 
@@ -5154,6 +5190,7 @@ class SavedDestination extends DataClass
           ? const Value.absent()
           : Value(noteStationnement),
       isProblematique: Value(isProblematique),
+      photoObligatoire: Value(photoObligatoire),
     );
   }
 
@@ -5188,6 +5225,7 @@ class SavedDestination extends DataClass
         json['noteStationnement'],
       ),
       isProblematique: serializer.fromJson<bool>(json['isProblematique']),
+      photoObligatoire: serializer.fromJson<bool>(json['photoObligatoire']),
     );
   }
   @override
@@ -5217,6 +5255,7 @@ class SavedDestination extends DataClass
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'noteStationnement': serializer.toJson<String?>(noteStationnement),
       'isProblematique': serializer.toJson<bool>(isProblematique),
+      'photoObligatoire': serializer.toJson<bool>(photoObligatoire),
     };
   }
 
@@ -5244,6 +5283,7 @@ class SavedDestination extends DataClass
     DateTime? updatedAt,
     Value<String?> noteStationnement = const Value.absent(),
     bool? isProblematique,
+    bool? photoObligatoire,
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -5272,6 +5312,7 @@ class SavedDestination extends DataClass
         ? noteStationnement.value
         : this.noteStationnement,
     isProblematique: isProblematique ?? this.isProblematique,
+    photoObligatoire: photoObligatoire ?? this.photoObligatoire,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -5312,6 +5353,9 @@ class SavedDestination extends DataClass
       isProblematique: data.isProblematique.present
           ? data.isProblematique.value
           : this.isProblematique,
+      photoObligatoire: data.photoObligatoire.present
+          ? data.photoObligatoire.value
+          : this.photoObligatoire,
     );
   }
 
@@ -5340,7 +5384,8 @@ class SavedDestination extends DataClass
           ..write('cloudId: $cloudId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('noteStationnement: $noteStationnement, ')
-          ..write('isProblematique: $isProblematique')
+          ..write('isProblematique: $isProblematique, ')
+          ..write('photoObligatoire: $photoObligatoire')
           ..write(')'))
         .toString();
   }
@@ -5370,6 +5415,7 @@ class SavedDestination extends DataClass
     updatedAt,
     noteStationnement,
     isProblematique,
+    photoObligatoire,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -5397,7 +5443,8 @@ class SavedDestination extends DataClass
           other.cloudId == this.cloudId &&
           other.updatedAt == this.updatedAt &&
           other.noteStationnement == this.noteStationnement &&
-          other.isProblematique == this.isProblematique);
+          other.isProblematique == this.isProblematique &&
+          other.photoObligatoire == this.photoObligatoire);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -5424,6 +5471,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<DateTime> updatedAt;
   final Value<String?> noteStationnement;
   final Value<bool> isProblematique;
+  final Value<bool> photoObligatoire;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -5448,6 +5496,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.updatedAt = const Value.absent(),
     this.noteStationnement = const Value.absent(),
     this.isProblematique = const Value.absent(),
+    this.photoObligatoire = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -5473,6 +5522,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.updatedAt = const Value.absent(),
     this.noteStationnement = const Value.absent(),
     this.isProblematique = const Value.absent(),
+    this.photoObligatoire = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -5500,6 +5550,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<DateTime>? updatedAt,
     Expression<String>? noteStationnement,
     Expression<bool>? isProblematique,
+    Expression<bool>? photoObligatoire,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5525,6 +5576,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (noteStationnement != null) 'note_stationnement': noteStationnement,
       if (isProblematique != null) 'is_problematique': isProblematique,
+      if (photoObligatoire != null) 'photo_obligatoire': photoObligatoire,
     });
   }
 
@@ -5552,6 +5604,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<DateTime>? updatedAt,
     Value<String?>? noteStationnement,
     Value<bool>? isProblematique,
+    Value<bool>? photoObligatoire,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -5577,6 +5630,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       updatedAt: updatedAt ?? this.updatedAt,
       noteStationnement: noteStationnement ?? this.noteStationnement,
       isProblematique: isProblematique ?? this.isProblematique,
+      photoObligatoire: photoObligatoire ?? this.photoObligatoire,
     );
   }
 
@@ -5652,6 +5706,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (isProblematique.present) {
       map['is_problematique'] = Variable<bool>(isProblematique.value);
     }
+    if (photoObligatoire.present) {
+      map['photo_obligatoire'] = Variable<bool>(photoObligatoire.value);
+    }
     return map;
   }
 
@@ -5680,7 +5737,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('cloudId: $cloudId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('noteStationnement: $noteStationnement, ')
-          ..write('isProblematique: $isProblematique')
+          ..write('isProblematique: $isProblematique, ')
+          ..write('photoObligatoire: $photoObligatoire')
           ..write(')'))
         .toString();
   }
@@ -11659,6 +11717,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<String?> noteStationnement,
       Value<bool> isProblematique,
+      Value<bool> photoObligatoire,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -11685,6 +11744,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<String?> noteStationnement,
       Value<bool> isProblematique,
+      Value<bool> photoObligatoire,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -11808,6 +11868,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<bool> get isProblematique => $composableBuilder(
     column: $table.isProblematique,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get photoObligatoire => $composableBuilder(
+    column: $table.photoObligatoire,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11935,6 +12000,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.isProblematique,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get photoObligatoire => $composableBuilder(
+    column: $table.photoObligatoire,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -12028,6 +12098,11 @@ class $$SavedDestinationsTableAnnotationComposer
     column: $table.isProblematique,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get photoObligatoire => $composableBuilder(
+    column: $table.photoObligatoire,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -12093,6 +12168,7 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> noteStationnement = const Value.absent(),
                 Value<bool> isProblematique = const Value.absent(),
+                Value<bool> photoObligatoire = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -12117,6 +12193,7 @@ class $$SavedDestinationsTableTableManager
                 updatedAt: updatedAt,
                 noteStationnement: noteStationnement,
                 isProblematique: isProblematique,
+                photoObligatoire: photoObligatoire,
               ),
           createCompanionCallback:
               ({
@@ -12143,6 +12220,7 @@ class $$SavedDestinationsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> noteStationnement = const Value.absent(),
                 Value<bool> isProblematique = const Value.absent(),
+                Value<bool> photoObligatoire = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -12167,6 +12245,7 @@ class $$SavedDestinationsTableTableManager
                 updatedAt: updatedAt,
                 noteStationnement: noteStationnement,
                 isProblematique: isProblematique,
+                photoObligatoire: photoObligatoire,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

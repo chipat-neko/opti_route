@@ -78,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 44;
+  int get schemaVersion => 45;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -366,6 +366,12 @@ class AppDatabase extends _$AppDatabase {
             // montant_cod (real nullable) + cod_paye (bool default false).
             await m.addColumn(stops, stops.montantCod);
             await m.addColumn(stops, stops.codPaye);
+          }
+          if (from < 45) {
+            // Carte #301 : photo preuve obligatoire pour certains
+            // clients. Colonne bool default false.
+            await m.addColumn(
+                savedDestinations, savedDestinations.photoObligatoire);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
