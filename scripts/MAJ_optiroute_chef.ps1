@@ -220,16 +220,47 @@ Invoke-WithProgress -Command 'dart' -ArgList @('run', 'msix:create') `
     -WorkDir $App
 
 # ---- 6. Install (sauf si -NoInstall) ----
+# Si le cert MSIX est deja trusted dans LocalMachine\TrustedPeople
+# (premiere install passee), on fait `Add-AppxPackage` user-scope
+# directement -> pas d'UAC. Sinon fallback sur l'installeur legacy
+# qui demande UAC (premiere fois).
 if ($NoInstall) {
     Write-Host "[6/6] (-NoInstall) installation skip." -ForegroundColor Yellow
 } else {
-    Write-Host "[6/6] Lancement de l'installeur (UAC va demander admin)..."
-    Write-Progress -Id 1 -Activity 'MAJ opti_route chef (MSIX)' -Status 'Installation (UAC)' -PercentComplete 95
-    if (-not (Test-Path $Installer)) {
-        throw "Installer_optiroute_chef.bat introuvable : $Installer. Copie-le depuis $Repo\scripts\."
+    Write-Progress -Id 1 -Activity 'MAJ opti_route chef (MSIX)' -Status 'Installation MSIX' -PercentComplete 95
+    $ReleaseDir = Join-Path $App 'build\windows\x64\runner\Release'
+    $msix = Get-ChildItem $ReleaseDir -Filter '*.msix' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $msix) {
+        throw "Aucun .msix trouve dans $ReleaseDir (le build n'a pas produit de package)."
     }
-    Start-Process -FilePath $Installer -Wait
-    Write-Host "  OK" -ForegroundColor Green
+
+    # Cert deja installe ?
+    $certTrusted = $false
+    try {
+        $certs = Get-ChildItem Cert:\LocalMachine\TrustedPeople -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Subject -match 'Msix Testing' }
+        if ($certs) { $certTrusted = $true }
+    } catch { $certTrusted = $false }
+
+    if ($certTrusted) {
+        Write-Host "[6/6] Installation MSIX (cert trusted, pas d'UAC)..."
+        $start = Get-Date
+        Add-AppxPackage -Path $msix.FullName -ForceApplicationShutdown -ErrorAction Stop
+        Start-Sleep -Seconds 2
+        $pkg = Get-AppxPackage com.calote.optiroute -ErrorAction SilentlyContinue
+        if (-not $pkg) {
+            throw "Add-AppxPackage n'a leve aucune erreur mais le package est introuvable."
+        }
+        $elapsed = (Get-Date) - $start
+        Write-Host "  OK (version $($pkg.Version), $([int]$elapsed.TotalSeconds) s)" -ForegroundColor Green
+    } else {
+        Write-Host "[6/6] Lancement de l'installeur legacy (UAC va demander admin)..."
+        if (-not (Test-Path $Installer)) {
+            throw "Installer_optiroute_chef.bat introuvable : $Installer. Copie-le depuis $Repo\scripts\."
+        }
+        Start-Process -FilePath $Installer -Wait
+        Write-Host "  OK" -ForegroundColor Green
+    }
 }
 
 # ---- Fini ----
