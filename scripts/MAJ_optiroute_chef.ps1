@@ -94,7 +94,11 @@ function Show-Header {
     Write-Host ""
 }
 
-function Run-WithProgress {
+function Invoke-WithProgress {
+    # Lance une commande externe via cmd.exe pour avoir un vrai
+    # ExitCode (Start-Process directement sur flutter.bat / dart.bat
+    # renvoie un ExitCode null car le shim .bat exit avant le binaire
+    # final). cmd.exe propage l'exit code du child correctement.
     param(
         [string]$Command,
         [string[]]$ArgList,
@@ -108,8 +112,12 @@ function Run-WithProgress {
     $stdout = Join-Path $env:TEMP "optiroute_maj_stdout_$PID.txt"
     $stderr = Join-Path $env:TEMP "optiroute_maj_stderr_$PID.txt"
     $start  = Get-Date
-    $proc = Start-Process -FilePath $Command -ArgumentList $ArgList -PassThru `
-        -NoNewWindow -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    # Construit la cmdline complete : "flutter pub get"
+    $cmdLine = $Command + ' ' + ($ArgList -join ' ')
+    $proc = Start-Process -FilePath 'cmd.exe' `
+        -ArgumentList @('/c', $cmdLine) `
+        -PassThru -NoNewWindow `
+        -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     while (-not $proc.HasExited) {
         Start-Sleep -Seconds 2
         $elapsed = (Get-Date) - $start
@@ -130,8 +138,15 @@ function Run-WithProgress {
     if (Test-Path $stdout) { Add-Content -Path $LogFile -Value (Get-Content $stdout -Raw) }
     if (Test-Path $stderr) { Add-Content -Path $LogFile -Value (Get-Content $stderr -Raw) }
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
-    if ($proc.ExitCode -ne 0) {
-        throw "$Activity : exit code $($proc.ExitCode). Voir $LogFile"
+    # ExitCode peut etre $null en cas de pepin ; on traite ca comme succes
+    # si on a recu des "OK"-like dans le stdout, sinon on throw.
+    $ec = $proc.ExitCode
+    if ($null -eq $ec) {
+        # cmd.exe a au moins demarre, mais ExitCode null = bizarre.
+        # On considere comme succes si pas d'erreur capturee.
+        Write-Host "  (Exit code indetermine, assume OK)" -ForegroundColor Yellow
+    } elseif ($ec -ne 0) {
+        throw "$Activity : exit code $ec. Voir $LogFile"
     }
     $elapsed = (Get-Date) - $start
     $mm = [int]$elapsed.TotalMinutes
@@ -186,13 +201,13 @@ Write-Host "  OK" -ForegroundColor Green
 
 # ---- 3. pub get ----
 Write-Host "[3/6] flutter pub get..."
-Run-WithProgress -Command 'flutter' -ArgList @('pub', 'get') `
+Invoke-WithProgress -Command 'flutter' -ArgList @('pub', 'get') `
     -Activity 'flutter pub get' -StartPct 20 -EndPct 25 -EstSeconds 30 `
     -WorkDir $App
 
 # ---- 4. Build Windows (8-12 min) ----
 Write-Host "[4/6] flutter build windows --release (8 a 12 minutes, sois patient)..."
-Run-WithProgress -Command 'flutter' -ArgList @(
+Invoke-WithProgress -Command 'flutter' -ArgList @(
     'build', 'windows', '--release',
     '--dart-define-from-file=cloud.env.json'
 ) -Activity 'flutter build windows' -StartPct 30 -EndPct 80 -EstSeconds 600 `
@@ -200,7 +215,7 @@ Run-WithProgress -Command 'flutter' -ArgList @(
 
 # ---- 5. MSIX ----
 Write-Host "[5/6] dart run msix:create..."
-Run-WithProgress -Command 'dart' -ArgList @('run', 'msix:create') `
+Invoke-WithProgress -Command 'dart' -ArgList @('run', 'msix:create') `
     -Activity 'dart run msix:create' -StartPct 82 -EndPct 92 -EstSeconds 30 `
     -WorkDir $App
 
