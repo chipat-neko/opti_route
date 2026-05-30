@@ -4498,6 +4498,18 @@ class $SavedDestinationsTable extends SavedDestinations
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _noteStationnementMeta = const VerificationMeta(
+    'noteStationnement',
+  );
+  @override
+  late final GeneratedColumn<String> noteStationnement =
+      GeneratedColumn<String>(
+        'note_stationnement',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4521,6 +4533,7 @@ class $SavedDestinationsTable extends SavedDestinations
     telephone,
     cloudId,
     updatedAt,
+    noteStationnement,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4675,6 +4688,15 @@ class $SavedDestinationsTable extends SavedDestinations
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('note_stationnement')) {
+      context.handle(
+        _noteStationnementMeta,
+        noteStationnement.isAcceptableOrUnknown(
+          data['note_stationnement']!,
+          _noteStationnementMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4768,6 +4790,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      noteStationnement: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note_stationnement'],
+      ),
     );
   }
 
@@ -4854,6 +4880,11 @@ class SavedDestination extends DataClass
   /// quand le contenu de la fiche elle-meme est edite (notes carnet,
   /// favori, color tag, photo, etc.). Sert au last-write-wins pull.
   final DateTime updatedAt;
+
+  /// Note libre sur ou se garer pour cette adresse (carte #288), ex:
+  /// "parking sous-sol entree D" / "place handicapee derriere".
+  /// Rejoue a chaque retour chez ce client. Nullable.
+  final String? noteStationnement;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -4876,6 +4907,7 @@ class SavedDestination extends DataClass
     this.telephone,
     this.cloudId,
     required this.updatedAt,
+    this.noteStationnement,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4925,6 +4957,9 @@ class SavedDestination extends DataClass
       map['cloud_id'] = Variable<String>(cloudId);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || noteStationnement != null) {
+      map['note_stationnement'] = Variable<String>(noteStationnement);
+    }
     return map;
   }
 
@@ -4973,6 +5008,9 @@ class SavedDestination extends DataClass
           ? const Value.absent()
           : Value(cloudId),
       updatedAt: Value(updatedAt),
+      noteStationnement: noteStationnement == null && nullToAbsent
+          ? const Value.absent()
+          : Value(noteStationnement),
     );
   }
 
@@ -5003,6 +5041,9 @@ class SavedDestination extends DataClass
       telephone: serializer.fromJson<String?>(json['telephone']),
       cloudId: serializer.fromJson<String?>(json['cloudId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      noteStationnement: serializer.fromJson<String?>(
+        json['noteStationnement'],
+      ),
     );
   }
   @override
@@ -5030,6 +5071,7 @@ class SavedDestination extends DataClass
       'telephone': serializer.toJson<String?>(telephone),
       'cloudId': serializer.toJson<String?>(cloudId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'noteStationnement': serializer.toJson<String?>(noteStationnement),
     };
   }
 
@@ -5055,6 +5097,7 @@ class SavedDestination extends DataClass
     Value<String?> telephone = const Value.absent(),
     Value<String?> cloudId = const Value.absent(),
     DateTime? updatedAt,
+    Value<String?> noteStationnement = const Value.absent(),
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -5079,6 +5122,9 @@ class SavedDestination extends DataClass
     telephone: telephone.present ? telephone.value : this.telephone,
     cloudId: cloudId.present ? cloudId.value : this.cloudId,
     updatedAt: updatedAt ?? this.updatedAt,
+    noteStationnement: noteStationnement.present
+        ? noteStationnement.value
+        : this.noteStationnement,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -5113,6 +5159,9 @@ class SavedDestination extends DataClass
       telephone: data.telephone.present ? data.telephone.value : this.telephone,
       cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      noteStationnement: data.noteStationnement.present
+          ? data.noteStationnement.value
+          : this.noteStationnement,
     );
   }
 
@@ -5139,7 +5188,8 @@ class SavedDestination extends DataClass
           ..write('etageBatiment: $etageBatiment, ')
           ..write('telephone: $telephone, ')
           ..write('cloudId: $cloudId, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('noteStationnement: $noteStationnement')
           ..write(')'))
         .toString();
   }
@@ -5167,6 +5217,7 @@ class SavedDestination extends DataClass
     telephone,
     cloudId,
     updatedAt,
+    noteStationnement,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -5192,7 +5243,8 @@ class SavedDestination extends DataClass
           other.etageBatiment == this.etageBatiment &&
           other.telephone == this.telephone &&
           other.cloudId == this.cloudId &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.noteStationnement == this.noteStationnement);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -5217,6 +5269,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<String?> telephone;
   final Value<String?> cloudId;
   final Value<DateTime> updatedAt;
+  final Value<String?> noteStationnement;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -5239,6 +5292,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.telephone = const Value.absent(),
     this.cloudId = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.noteStationnement = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -5262,6 +5316,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.telephone = const Value.absent(),
     this.cloudId = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.noteStationnement = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -5287,6 +5342,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<String>? telephone,
     Expression<String>? cloudId,
     Expression<DateTime>? updatedAt,
+    Expression<String>? noteStationnement,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5310,6 +5366,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (telephone != null) 'telephone': telephone,
       if (cloudId != null) 'cloud_id': cloudId,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (noteStationnement != null) 'note_stationnement': noteStationnement,
     });
   }
 
@@ -5335,6 +5392,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<String?>? telephone,
     Value<String?>? cloudId,
     Value<DateTime>? updatedAt,
+    Value<String?>? noteStationnement,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -5358,6 +5416,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       telephone: telephone ?? this.telephone,
       cloudId: cloudId ?? this.cloudId,
       updatedAt: updatedAt ?? this.updatedAt,
+      noteStationnement: noteStationnement ?? this.noteStationnement,
     );
   }
 
@@ -5427,6 +5486,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (noteStationnement.present) {
+      map['note_stationnement'] = Variable<String>(noteStationnement.value);
+    }
     return map;
   }
 
@@ -5453,7 +5515,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('etageBatiment: $etageBatiment, ')
           ..write('telephone: $telephone, ')
           ..write('cloudId: $cloudId, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('noteStationnement: $noteStationnement')
           ..write(')'))
         .toString();
   }
@@ -11390,6 +11453,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<String?> telephone,
       Value<String?> cloudId,
       Value<DateTime> updatedAt,
+      Value<String?> noteStationnement,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -11414,6 +11478,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<String?> telephone,
       Value<String?> cloudId,
       Value<DateTime> updatedAt,
+      Value<String?> noteStationnement,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -11527,6 +11592,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get noteStationnement => $composableBuilder(
+    column: $table.noteStationnement,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11644,6 +11714,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get noteStationnement => $composableBuilder(
+    column: $table.noteStationnement,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -11727,6 +11802,11 @@ class $$SavedDestinationsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get noteStationnement => $composableBuilder(
+    column: $table.noteStationnement,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -11790,6 +11870,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> telephone = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> noteStationnement = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -11812,6 +11893,7 @@ class $$SavedDestinationsTableTableManager
                 telephone: telephone,
                 cloudId: cloudId,
                 updatedAt: updatedAt,
+                noteStationnement: noteStationnement,
               ),
           createCompanionCallback:
               ({
@@ -11836,6 +11918,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> telephone = const Value.absent(),
                 Value<String?> cloudId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> noteStationnement = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -11858,6 +11941,7 @@ class $$SavedDestinationsTableTableManager
                 telephone: telephone,
                 cloudId: cloudId,
                 updatedAt: updatedAt,
+                noteStationnement: noteStationnement,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

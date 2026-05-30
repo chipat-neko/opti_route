@@ -91,4 +91,9 @@ class SavedDestinations extends Table {
   /// favori, color tag, photo, etc.). Sert au last-write-wins pull.
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime)();
+
+  /// Note libre sur ou se garer pour cette adresse (carte #288), ex:
+  /// "parking sous-sol entree D" / "place handicapee derriere".
+  /// Rejoue a chaque retour chez ce client. Nullable.
+  TextColumn get noteStationnement => text().nullable()();
 }
