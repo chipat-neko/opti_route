@@ -139,6 +139,77 @@ class LocalReorderService {
     ];
   }
 
+  /// Calcule l'ordre des arrets RESTANTS (`a_livrer`) en partant d'une
+  /// origine arbitraire (typiquement la position GPS courante de Noah),
+  /// PAS depuis le depot. Carte #278 : "Recalculer depuis ma position"
+  /// quand on a sauté un client / pris du retard et qu'on veut savoir
+  /// dans quel ordre attaquer les arrets restants depuis ou on est.
+  ///
+  /// Strategie identique a [computeOrder] (NN + 2-opt, respect des
+  /// priorites premier/dernier/eviter), seul change le point de depart
+  /// utilise pour le NN sur les flexibles.
+  ///
+  /// Retourne uniquement les ids des stops `a_livrer` dans le nouvel
+  /// ordre. Les stops livre/echec/sans-coords sont ignores - le caller
+  /// se charge de les re-injecter a leur position courante via
+  /// [LockOrdering.respectLocks].
+  static List<int> computeOrderForPending({
+    required double originLat,
+    required double originLng,
+    required List<Stop> pendingStops,
+  }) {
+    final premiers = <Stop>[];
+    final flexibles = <Stop>[];
+    final derniers = <Stop>[];
+    final eviter = <Stop>[];
+    final sansCoords = <Stop>[];
+
+    for (final s in pendingStops) {
+      if (s.statutLivraison != 'a_livrer') continue;
+      if (s.lat == null || s.lng == null) {
+        sansCoords.add(s);
+        continue;
+      }
+      switch (s.priorite) {
+        case 'obligatoire_premier':
+          premiers.add(s);
+        case 'obligatoire_dernier':
+          derniers.add(s);
+        case 'eviter':
+          eviter.add(s);
+        default:
+          flexibles.add(s);
+      }
+    }
+
+    premiers.sort(_compareOrdrePriorite);
+    derniers.sort(_compareOrdrePriorite);
+    eviter.sort((a, b) => a.id.compareTo(b.id));
+
+    final startLat = premiers.isNotEmpty ? premiers.last.lat! : originLat;
+    final startLng = premiers.isNotEmpty ? premiers.last.lng! : originLng;
+    final flexiblesNN =
+        _nearestNeighbor(start: (startLat, startLng), stops: flexibles);
+
+    (double, double)? endHint;
+    if (derniers.isNotEmpty) {
+      endHint = (derniers.first.lat!, derniers.first.lng!);
+    }
+    final flexiblesOrdered = _twoOpt(
+      start: (startLat, startLng),
+      end: endHint,
+      stops: flexiblesNN,
+    );
+
+    return [
+      ...premiers.map((s) => s.id),
+      ...flexiblesOrdered.map((s) => s.id),
+      ...derniers.map((s) => s.id),
+      ...eviter.map((s) => s.id),
+      ...sansCoords.map((s) => s.id),
+    ];
+  }
+
   /// Compare deux stops par `ordrePriorite` (null > non-null pour eviter
   /// que les non-renseignes ne se mettent devant les renseignes). Tie-break
   /// sur `id` pour rester stable.
