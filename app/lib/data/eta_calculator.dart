@@ -63,6 +63,65 @@ class EtaCalculator {
     return '$h:$m';
   }
 
+  /// Compare une ETA estimee a la fenetre horaire [fenetreDebut, fenetreFin]
+  /// (format "HH:MM") d'un stop pour decider si on est dans les clous,
+  /// en avance ou en retard. Carte #276.
+  ///
+  /// Les heures de fenetre sont rapportees a la meme date que [eta]
+  /// pour permettre la comparaison (les fenetres ne contiennent pas de
+  /// date dans la base, juste un wall-clock).
+  static EtaWindowStatus crossWindow({
+    required DateTime eta,
+    required String? fenetreDebut,
+    required String? fenetreFin,
+  }) {
+    if ((fenetreDebut == null || fenetreDebut.isEmpty) &&
+        (fenetreFin == null || fenetreFin.isEmpty)) {
+      return EtaWindowStatus.none;
+    }
+    final debut = _parseTimeOfDay(fenetreDebut, eta);
+    final fin = _parseTimeOfDay(fenetreFin, eta);
+    if (fin != null && eta.isAfter(fin)) return EtaWindowStatus.late;
+    if (debut != null && eta.isBefore(debut)) return EtaWindowStatus.early;
+    return EtaWindowStatus.ok;
+  }
+
+  /// Construit un DateTime "wall-clock" en fixant heure/minute parses
+  /// depuis "HH:MM" sur la date de [anchor]. Retourne null si parse KO.
+  static DateTime? _parseTimeOfDay(String? hhmm, DateTime anchor) {
+    if (hhmm == null || hhmm.isEmpty) return null;
+    final parts = hhmm.split(':');
+    if (parts.length != 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return DateTime(anchor.year, anchor.month, anchor.day, h, m);
+  }
+
+  /// Estime l'heure de fin de tournee = ETA du dernier stop pending +
+  /// sa duree d'arret. Retourne null si pas de stop pending ou pas
+  /// d'ETA calculable. Carte #276.
+  ///
+  /// Note : `etasParStopProvider` calcule les ETAs depuis demareeLe ou
+  /// `now`, donc le resultat se recalibre naturellement au fur et a
+  /// mesure des validations (chaque "marquer livre" reduit le pending,
+  /// donc la fin estimee diminue).
+  static DateTime? computeEndOfTour({
+    required List<Stop> orderedStops,
+    required Map<int, DateTime> etas,
+  }) {
+    if (etas.isEmpty) return null;
+    Stop? last;
+    for (final s in orderedStops) {
+      if (etas.containsKey(s.id)) last = s;
+    }
+    if (last == null) return null;
+    final etaLast = etas[last.id];
+    if (etaLast == null) return null;
+    return etaLast.add(Duration(minutes: last.dureeArretMin));
+  }
+
   /// Calcule pour chaque stop (par id) la distance + duree estimee
   /// du segment PRECEDENT (depuis le stop precedent OU depuis le
   /// depot pour le 1er stop).
@@ -118,6 +177,13 @@ class EtaCalculator {
     return out;
   }
 }
+
+/// Statut du croisement ETA vs fenetre horaire d'un stop (carte #276).
+/// - [ok] : eta est dans la fenetre [fenetreDebut, fenetreFin]
+/// - [early] : eta < fenetreDebut (on serait sur place trop tot)
+/// - [late] : eta > fenetreFin (on va arriver apres la fin de la fenetre)
+/// - [none] : pas de fenetre definie sur le stop
+enum EtaWindowStatus { ok, early, late, none }
 
 /// Info de segment (depuis le stop precedent vers ce stop).
 class SegmentInfo {

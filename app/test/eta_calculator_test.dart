@@ -214,6 +214,119 @@ void main() {
     });
   });
 
+  group('EtaCalculator.crossWindow (#276)', () {
+    final dDay = DateTime(2026, 5, 30, 10, 30);
+
+    test('pas de fenetre -> none', () {
+      expect(
+        EtaCalculator.crossWindow(
+            eta: dDay, fenetreDebut: null, fenetreFin: null),
+        EtaWindowStatus.none,
+      );
+      expect(
+        EtaCalculator.crossWindow(eta: dDay, fenetreDebut: '', fenetreFin: ''),
+        EtaWindowStatus.none,
+      );
+    });
+
+    test('eta dans la fenetre -> ok', () {
+      expect(
+        EtaCalculator.crossWindow(
+            eta: dDay, fenetreDebut: '09:00', fenetreFin: '12:00'),
+        EtaWindowStatus.ok,
+      );
+    });
+
+    test('eta apres fenetreFin -> late', () {
+      expect(
+        EtaCalculator.crossWindow(
+            eta: dDay, fenetreDebut: '08:00', fenetreFin: '10:00'),
+        EtaWindowStatus.late,
+      );
+    });
+
+    test('eta avant fenetreDebut -> early', () {
+      expect(
+        EtaCalculator.crossWindow(
+            eta: dDay, fenetreDebut: '11:00', fenetreFin: '14:00'),
+        EtaWindowStatus.early,
+      );
+    });
+
+    test('seul fenetreFin defini : pas d\'early possible', () {
+      expect(
+        EtaCalculator.crossWindow(
+            eta: dDay, fenetreDebut: null, fenetreFin: '12:00'),
+        EtaWindowStatus.ok,
+      );
+      expect(
+        EtaCalculator.crossWindow(
+            eta: dDay, fenetreDebut: '', fenetreFin: '09:00'),
+        EtaWindowStatus.late,
+      );
+    });
+
+    test('format invalide -> traite comme absent', () {
+      expect(
+        EtaCalculator.crossWindow(
+            eta: dDay, fenetreDebut: 'oops', fenetreFin: '99:99'),
+        EtaWindowStatus.ok,
+        reason: 'parses null, donc pas de borne -> on tombe dans le defaut ok',
+      );
+    });
+  });
+
+  group('EtaCalculator.computeEndOfTour (#276)', () {
+    test('etas vides -> null', () {
+      expect(
+        EtaCalculator.computeEndOfTour(orderedStops: const [], etas: const {}),
+        isNull,
+      );
+    });
+
+    test('1 stop pending -> eta + dureeArretMin', () async {
+      final s = await mkStop(lat: 48.0, lng: 1.0, duree: 5);
+      final eta = DateTime(2026, 5, 30, 14, 0);
+      final end = EtaCalculator.computeEndOfTour(
+        orderedStops: [s],
+        etas: {s.id: eta},
+      );
+      expect(end, eta.add(const Duration(minutes: 5)));
+    });
+
+    test('3 stops pending -> dernier + sa duree', () async {
+      final s1 = await mkStop(lat: 48.0, lng: 1.0);
+      final s2 = await mkStop(lat: 48.1, lng: 1.0);
+      final s3 = await mkStop(lat: 48.2, lng: 1.0, duree: 7);
+      final etas = {
+        s1.id: DateTime(2026, 5, 30, 14, 0),
+        s2.id: DateTime(2026, 5, 30, 14, 30),
+        s3.id: DateTime(2026, 5, 30, 15, 0),
+      };
+      final end = EtaCalculator.computeEndOfTour(
+        orderedStops: [s1, s2, s3],
+        etas: etas,
+      );
+      expect(end, DateTime(2026, 5, 30, 15, 7));
+    });
+
+    test('mix livres + pending : derniere ETA = dernier pending dans l\'ordre',
+        () async {
+      final s1 = await mkStop(lat: 48.0, lng: 1.0);
+      final s2 = await mkStop(lat: 48.1, lng: 1.0, statut: 'livre');
+      final s3 = await mkStop(lat: 48.2, lng: 1.0, duree: 4);
+      final etas = {
+        s1.id: DateTime(2026, 5, 30, 14, 0),
+        s3.id: DateTime(2026, 5, 30, 14, 45),
+      };
+      final end = EtaCalculator.computeEndOfTour(
+        orderedStops: [s1, s2, s3],
+        etas: etas,
+      );
+      expect(end, DateTime(2026, 5, 30, 14, 49));
+    });
+  });
+
   group('SegmentInfo labels', () {
     test('distanceLabel : "X m" si < 1000m, sinon "X.X km"', () {
       const a = SegmentInfo(
