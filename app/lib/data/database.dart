@@ -513,7 +513,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _safeAddColumn(
       Migrator m, TableInfo table, GeneratedColumn column) async {
     try {
-      await _safeAddColumn(m, table, column);
+      await m.addColumn(table, column);
     } catch (e) {
       final msg = e.toString().toLowerCase();
       if (msg.contains('duplicate column') ||
@@ -530,7 +530,7 @@ class AppDatabase extends _$AppDatabase {
   /// `m.createTable` idempotent (cf [_safeAddColumn]).
   Future<void> _safeCreateTable(Migrator m, TableInfo table) async {
     try {
-      await _safeCreateTable(m, table);
+      await m.createTable(table);
     } catch (e) {
       if (e.toString().toLowerCase().contains('already exists')) {
         debugPrint(
