@@ -1706,6 +1706,32 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _montantCodMeta = const VerificationMeta(
+    'montantCod',
+  );
+  @override
+  late final GeneratedColumn<double> montantCod = GeneratedColumn<double>(
+    'montant_cod',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _codPayeMeta = const VerificationMeta(
+    'codPaye',
+  );
+  @override
+  late final GeneratedColumn<bool> codPaye = GeneratedColumn<bool>(
+    'cod_paye',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("cod_paye" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1739,6 +1765,8 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     trackingNumbers,
     memoVocal,
     deposeSansContact,
+    montantCod,
+    codPaye,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1981,6 +2009,18 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         ),
       );
     }
+    if (data.containsKey('montant_cod')) {
+      context.handle(
+        _montantCodMeta,
+        montantCod.isAcceptableOrUnknown(data['montant_cod']!, _montantCodMeta),
+      );
+    }
+    if (data.containsKey('cod_paye')) {
+      context.handle(
+        _codPayeMeta,
+        codPaye.isAcceptableOrUnknown(data['cod_paye']!, _codPayeMeta),
+      );
+    }
     return context;
   }
 
@@ -2114,6 +2154,14 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.bool,
         data['${effectivePrefix}depose_sans_contact'],
       )!,
+      montantCod: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}montant_cod'],
+      ),
+      codPaye: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}cod_paye'],
+      )!,
     );
   }
 
@@ -2239,6 +2287,14 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// Le stop reste statutLivraison='livre' (succes), c'est juste un
   /// marqueur pour les litiges et la facturation.
   final bool deposeSansContact;
+
+  /// Montant a percevoir en contre-remboursement (especes/cheque) lors
+  /// de la livraison, en EUR. Carte #296. Null = pas de COD.
+  final double? montantCod;
+
+  /// True si le montant COD a ete encaisse (cocher au moment de la
+  /// remise). Carte #296. False par defaut.
+  final bool codPaye;
   const Stop({
     required this.id,
     required this.tourneeId,
@@ -2271,6 +2327,8 @@ class Stop extends DataClass implements Insertable<Stop> {
     this.trackingNumbers,
     this.memoVocal,
     required this.deposeSansContact,
+    this.montantCod,
+    required this.codPaye,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2344,6 +2402,10 @@ class Stop extends DataClass implements Insertable<Stop> {
       map['memo_vocal'] = Variable<String>(memoVocal);
     }
     map['depose_sans_contact'] = Variable<bool>(deposeSansContact);
+    if (!nullToAbsent || montantCod != null) {
+      map['montant_cod'] = Variable<double>(montantCod);
+    }
+    map['cod_paye'] = Variable<bool>(codPaye);
     return map;
   }
 
@@ -2414,6 +2476,10 @@ class Stop extends DataClass implements Insertable<Stop> {
           ? const Value.absent()
           : Value(memoVocal),
       deposeSansContact: Value(deposeSansContact),
+      montantCod: montantCod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(montantCod),
+      codPaye: Value(codPaye),
     );
   }
 
@@ -2456,6 +2522,8 @@ class Stop extends DataClass implements Insertable<Stop> {
       trackingNumbers: serializer.fromJson<String?>(json['trackingNumbers']),
       memoVocal: serializer.fromJson<String?>(json['memoVocal']),
       deposeSansContact: serializer.fromJson<bool>(json['deposeSansContact']),
+      montantCod: serializer.fromJson<double?>(json['montantCod']),
+      codPaye: serializer.fromJson<bool>(json['codPaye']),
     );
   }
   @override
@@ -2493,6 +2561,8 @@ class Stop extends DataClass implements Insertable<Stop> {
       'trackingNumbers': serializer.toJson<String?>(trackingNumbers),
       'memoVocal': serializer.toJson<String?>(memoVocal),
       'deposeSansContact': serializer.toJson<bool>(deposeSansContact),
+      'montantCod': serializer.toJson<double?>(montantCod),
+      'codPaye': serializer.toJson<bool>(codPaye),
     };
   }
 
@@ -2528,6 +2598,8 @@ class Stop extends DataClass implements Insertable<Stop> {
     Value<String?> trackingNumbers = const Value.absent(),
     Value<String?> memoVocal = const Value.absent(),
     bool? deposeSansContact,
+    Value<double?> montantCod = const Value.absent(),
+    bool? codPaye,
   }) => Stop(
     id: id ?? this.id,
     tourneeId: tourneeId ?? this.tourneeId,
@@ -2572,6 +2644,8 @@ class Stop extends DataClass implements Insertable<Stop> {
         : this.trackingNumbers,
     memoVocal: memoVocal.present ? memoVocal.value : this.memoVocal,
     deposeSansContact: deposeSansContact ?? this.deposeSansContact,
+    montantCod: montantCod.present ? montantCod.value : this.montantCod,
+    codPaye: codPaye ?? this.codPaye,
   );
   Stop copyWithCompanion(StopsCompanion data) {
     return Stop(
@@ -2636,6 +2710,10 @@ class Stop extends DataClass implements Insertable<Stop> {
       deposeSansContact: data.deposeSansContact.present
           ? data.deposeSansContact.value
           : this.deposeSansContact,
+      montantCod: data.montantCod.present
+          ? data.montantCod.value
+          : this.montantCod,
+      codPaye: data.codPaye.present ? data.codPaye.value : this.codPaye,
     );
   }
 
@@ -2672,7 +2750,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('updatedAt: $updatedAt, ')
           ..write('trackingNumbers: $trackingNumbers, ')
           ..write('memoVocal: $memoVocal, ')
-          ..write('deposeSansContact: $deposeSansContact')
+          ..write('deposeSansContact: $deposeSansContact, ')
+          ..write('montantCod: $montantCod, ')
+          ..write('codPaye: $codPaye')
           ..write(')'))
         .toString();
   }
@@ -2710,6 +2790,8 @@ class Stop extends DataClass implements Insertable<Stop> {
     trackingNumbers,
     memoVocal,
     deposeSansContact,
+    montantCod,
+    codPaye,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2745,7 +2827,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.updatedAt == this.updatedAt &&
           other.trackingNumbers == this.trackingNumbers &&
           other.memoVocal == this.memoVocal &&
-          other.deposeSansContact == this.deposeSansContact);
+          other.deposeSansContact == this.deposeSansContact &&
+          other.montantCod == this.montantCod &&
+          other.codPaye == this.codPaye);
 }
 
 class StopsCompanion extends UpdateCompanion<Stop> {
@@ -2780,6 +2864,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<String?> trackingNumbers;
   final Value<String?> memoVocal;
   final Value<bool> deposeSansContact;
+  final Value<double?> montantCod;
+  final Value<bool> codPaye;
   const StopsCompanion({
     this.id = const Value.absent(),
     this.tourneeId = const Value.absent(),
@@ -2812,6 +2898,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.trackingNumbers = const Value.absent(),
     this.memoVocal = const Value.absent(),
     this.deposeSansContact = const Value.absent(),
+    this.montantCod = const Value.absent(),
+    this.codPaye = const Value.absent(),
   });
   StopsCompanion.insert({
     this.id = const Value.absent(),
@@ -2845,6 +2933,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.trackingNumbers = const Value.absent(),
     this.memoVocal = const Value.absent(),
     this.deposeSansContact = const Value.absent(),
+    this.montantCod = const Value.absent(),
+    this.codPaye = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
   static Insertable<Stop> custom({
@@ -2879,6 +2969,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<String>? trackingNumbers,
     Expression<String>? memoVocal,
     Expression<bool>? deposeSansContact,
+    Expression<double>? montantCod,
+    Expression<bool>? codPaye,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2912,6 +3004,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (trackingNumbers != null) 'tracking_numbers': trackingNumbers,
       if (memoVocal != null) 'memo_vocal': memoVocal,
       if (deposeSansContact != null) 'depose_sans_contact': deposeSansContact,
+      if (montantCod != null) 'montant_cod': montantCod,
+      if (codPaye != null) 'cod_paye': codPaye,
     });
   }
 
@@ -2947,6 +3041,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<String?>? trackingNumbers,
     Value<String?>? memoVocal,
     Value<bool>? deposeSansContact,
+    Value<double?>? montantCod,
+    Value<bool>? codPaye,
   }) {
     return StopsCompanion(
       id: id ?? this.id,
@@ -2980,6 +3076,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       trackingNumbers: trackingNumbers ?? this.trackingNumbers,
       memoVocal: memoVocal ?? this.memoVocal,
       deposeSansContact: deposeSansContact ?? this.deposeSansContact,
+      montantCod: montantCod ?? this.montantCod,
+      codPaye: codPaye ?? this.codPaye,
     );
   }
 
@@ -3079,6 +3177,12 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (deposeSansContact.present) {
       map['depose_sans_contact'] = Variable<bool>(deposeSansContact.value);
     }
+    if (montantCod.present) {
+      map['montant_cod'] = Variable<double>(montantCod.value);
+    }
+    if (codPaye.present) {
+      map['cod_paye'] = Variable<bool>(codPaye.value);
+    }
     return map;
   }
 
@@ -3115,7 +3219,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('updatedAt: $updatedAt, ')
           ..write('trackingNumbers: $trackingNumbers, ')
           ..write('memoVocal: $memoVocal, ')
-          ..write('deposeSansContact: $deposeSansContact')
+          ..write('deposeSansContact: $deposeSansContact, ')
+          ..write('montantCod: $montantCod, ')
+          ..write('codPaye: $codPaye')
           ..write(')'))
         .toString();
   }
@@ -9679,6 +9785,8 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<String?> trackingNumbers,
       Value<String?> memoVocal,
       Value<bool> deposeSansContact,
+      Value<double?> montantCod,
+      Value<bool> codPaye,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
     StopsCompanion Function({
@@ -9713,6 +9821,8 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<String?> trackingNumbers,
       Value<String?> memoVocal,
       Value<bool> deposeSansContact,
+      Value<double?> montantCod,
+      Value<bool> codPaye,
     });
 
 final class $$StopsTableReferences
@@ -9947,6 +10057,16 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<bool> get deposeSansContact => $composableBuilder(
     column: $table.deposeSansContact,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get montantCod => $composableBuilder(
+    column: $table.montantCod,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get codPaye => $composableBuilder(
+    column: $table.codPaye,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10208,6 +10328,16 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get montantCod => $composableBuilder(
+    column: $table.montantCod,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get codPaye => $composableBuilder(
+    column: $table.codPaye,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TourneesTableOrderingComposer get tourneeId {
     final $$TourneesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -10360,6 +10490,14 @@ class $$StopsTableAnnotationComposer
     column: $table.deposeSansContact,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get montantCod => $composableBuilder(
+    column: $table.montantCod,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get codPaye =>
+      $composableBuilder(column: $table.codPaye, builder: (column) => column);
 
   $$TourneesTableAnnotationComposer get tourneeId {
     final $$TourneesTableAnnotationComposer composer = $composerBuilder(
@@ -10524,6 +10662,8 @@ class $$StopsTableTableManager
                 Value<String?> trackingNumbers = const Value.absent(),
                 Value<String?> memoVocal = const Value.absent(),
                 Value<bool> deposeSansContact = const Value.absent(),
+                Value<double?> montantCod = const Value.absent(),
+                Value<bool> codPaye = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
                 tourneeId: tourneeId,
@@ -10556,6 +10696,8 @@ class $$StopsTableTableManager
                 trackingNumbers: trackingNumbers,
                 memoVocal: memoVocal,
                 deposeSansContact: deposeSansContact,
+                montantCod: montantCod,
+                codPaye: codPaye,
               ),
           createCompanionCallback:
               ({
@@ -10590,6 +10732,8 @@ class $$StopsTableTableManager
                 Value<String?> trackingNumbers = const Value.absent(),
                 Value<String?> memoVocal = const Value.absent(),
                 Value<bool> deposeSansContact = const Value.absent(),
+                Value<double?> montantCod = const Value.absent(),
+                Value<bool> codPaye = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
                 tourneeId: tourneeId,
@@ -10622,6 +10766,8 @@ class $$StopsTableTableManager
                 trackingNumbers: trackingNumbers,
                 memoVocal: memoVocal,
                 deposeSansContact: deposeSansContact,
+                montantCod: montantCod,
+                codPaye: codPaye,
               ),
           withReferenceMapper: (p0) => p0
               .map(

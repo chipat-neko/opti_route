@@ -125,4 +125,13 @@ class Stops extends Table {
   /// marqueur pour les litiges et la facturation.
   BoolColumn get deposeSansContact =>
       boolean().withDefault(const Constant(false))();
+
+  /// Montant a percevoir en contre-remboursement (especes/cheque) lors
+  /// de la livraison, en EUR. Carte #296. Null = pas de COD.
+  RealColumn get montantCod => real().nullable()();
+
+  /// True si le montant COD a ete encaisse (cocher au moment de la
+  /// remise). Carte #296. False par defaut.
+  BoolColumn get codPaye =>
+      boolean().withDefault(const Constant(false))();
 }
