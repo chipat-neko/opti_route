@@ -1,20 +1,24 @@
 # MAJ_optiroute_chef.ps1
 #
-# Met à jour le logiciel chef opti_route (MSIX) :
-#   1. Vérifie si on est déjà à jour avec origin/main (skip si oui)
+# Met a jour le logiciel chef opti_route (MSIX) :
+#   1. Verifie si on est deja a jour avec origin/main (skip si oui)
 #   2. git pull
 #   3. flutter pub get
 #   4. flutter build windows --release (8-12 min, barre de progression)
 #   5. dart run msix:create
 #   6. Lance Installer_optiroute_chef.bat (UAC)
 #
-# Anti double-run : un mutex fichier (lock) empêche 2 instances en
-# parallèle (cause de la boucle infinie observée 2026-05-30).
+# Anti double-run : un mutex fichier (lock) empeche 2 instances en
+# parallele (cause de la boucle infinie observee 2026-05-30).
 #
 # Usage : double-clic sur MAJ_optiroute_chef.bat (wrapper).
 #         OU : powershell -File MAJ_optiroute_chef.ps1 [-Force] [-NoInstall]
-#   -Force : rebuild même si déjà à jour
+#   -Force : rebuild meme si deja a jour
 #   -NoInstall : build seulement, ne lance pas l'installeur
+#
+# NB : ce script est volontairement ASCII pur (pas d'accents) car
+# PowerShell parse les .ps1 UTF-8 sans BOM en CP1252, ce qui casse
+# le parsing si y'a des caracteres accentues.
 
 [CmdletBinding()]
 param(
@@ -48,31 +52,31 @@ if (Test-Path $LockFile) {
     }
     if ($stillAlive) {
         Write-Host ""
-        Write-Host "Une autre MAJ est déjà en cours (PID $existingPid)." -ForegroundColor Yellow
-        Write-Host "Attends qu'elle finisse ou ferme la fenêtre cmd correspondante."
+        Write-Host "Une autre MAJ est deja en cours (PID $existingPid)." -ForegroundColor Yellow
+        Write-Host "Attends qu'elle finisse ou ferme la fenetre cmd correspondante."
         Write-Host ""
-        Read-Host "Appuie Entrée pour fermer"
+        Read-Host "Appuie Entree pour fermer"
         exit 1
     } else {
-        # Lock orphelin (la précédente instance a crashé), on nettoie
+        # Lock orphelin (la precedente instance a crashe), on nettoie
         Remove-Item $LockFile -Force -ErrorAction SilentlyContinue
     }
 }
 "$PID" | Out-File $LockFile -Force -Encoding ASCII
 
-# Toujours nettoyer le lock à la sortie (succès, erreur, Ctrl+C)
+# Toujours nettoyer le lock a la sortie (succes, erreur, Ctrl+C)
 trap {
     Remove-Item $LockFile -ErrorAction SilentlyContinue
     Write-Host ""
-    Write-Host "ÉCHEC : $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Log détaillé : $LogFile"
-    Read-Host "Appuie Entrée pour fermer"
+    Write-Host "ECHEC : $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Log detaille : $LogFile"
+    Read-Host "Appuie Entree pour fermer"
     exit 1
 }
 
 # ---- Sanity checks ----
 if (-not (Test-Path (Join-Path $App 'pubspec.yaml'))) {
-    throw "Repo introuvable : $App. Édite ce script et change `$Repo en haut."
+    throw "Repo introuvable : $App. Edite ce script et change `$Repo en haut."
 }
 if (-not (Test-Path (Join-Path $App 'cloud.env.json'))) {
     Write-Host "[ATTENTION] $App\cloud.env.json manquant." -ForegroundColor Yellow
@@ -118,7 +122,7 @@ function Run-WithProgress {
         $ss = $elapsed.Seconds.ToString('00')
         Write-Progress -Id 1 `
             -Activity 'MAJ opti_route chef (MSIX)' `
-            -Status "$Activity — $mm min $ss s écoulées" `
+            -Status "$Activity - ${mm} min ${ss} s ecoulees" `
             -PercentComplete $pct
     }
     # Append stdout/stderr au log
@@ -132,40 +136,52 @@ function Run-WithProgress {
     $elapsed = (Get-Date) - $start
     $mm = [int]$elapsed.TotalMinutes
     $ss = $elapsed.Seconds.ToString('00')
-    Write-Host "  OK ($mm min $ss s)" -ForegroundColor Green
+    Write-Host "  OK (${mm} min ${ss} s)" -ForegroundColor Green
 }
 
-# ---- Démarrage ----
-Show-Header 'Mise à jour opti_route chef (MSIX)'
+# ---- Demarrage ----
+Show-Header 'Mise a jour opti_route chef (MSIX)'
 "opti_route MAJ $(Get-Date)" | Out-File $LogFile -Force
 $globalStart = Get-Date
 
 Set-Location $Repo
 
-# ---- 1. Check si à jour ----
-Write-Progress -Id 1 -Activity 'MAJ opti_route chef (MSIX)' -Status 'Vérification version distante' -PercentComplete 5
-Write-Host "[1/6] Vérification version distante..."
-git fetch origin main 2>&1 | Out-Null
+# ---- 1. Check si a jour ----
+# Note : on baisse temporairement ErrorActionPreference pour git car
+# git fetch imprime "From https://github.com/..." sur stderr meme en
+# cas de succes, ce qui en mode Stop est traite comme une exception.
+Write-Progress -Id 1 -Activity 'MAJ opti_route chef (MSIX)' -Status 'Verification version distante' -PercentComplete 5
+Write-Host "[1/6] Verification version distante..."
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+git fetch origin main 2>$null
+$fetchExit = $LASTEXITCODE
+$ErrorActionPreference = $prevEAP
+if ($fetchExit -ne 0) { throw "git fetch a echoue (exit $fetchExit)" }
 $behindRaw = (git rev-list --count HEAD..origin/main) | Out-String
 $behind = $behindRaw.Trim()
 if ($behind -eq '0' -and -not $Force) {
     Write-Progress -Id 1 -Activity 'MAJ opti_route chef (MSIX)' -Completed
     Write-Host ""
-    Write-Host "Déjà à jour avec origin/main. Rien à faire." -ForegroundColor Green
-    Write-Host "(Pour forcer un rebuild quand même : relance avec -Force)"
+    Write-Host "Deja a jour avec origin/main. Rien a faire." -ForegroundColor Green
+    Write-Host "(Pour forcer un rebuild quand meme : relance avec -Force)"
     Write-Host ""
     Remove-Item $LockFile -ErrorAction SilentlyContinue
-    Read-Host "Appuie Entrée pour fermer"
+    Read-Host "Appuie Entree pour fermer"
     exit 0
 }
-Write-Host "  $behind commit(s) à pull."
+Write-Host "  $behind commit(s) a pull."
 
 # ---- 2. Pull ----
-Write-Host "[2/6] Pull dernière version GitHub..."
+Write-Host "[2/6] Pull derniere version GitHub..."
 Write-Progress -Id 1 -Activity 'MAJ opti_route chef (MSIX)' -Status 'git pull' -PercentComplete 15
-$pullResult = git pull --ff-only 2>&1
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+$pullResult = & git pull --ff-only 2>&1 | Out-String
+$pullExit = $LASTEXITCODE
+$ErrorActionPreference = $prevEAP
 Add-Content -Path $LogFile -Value "=== git pull ===`n$pullResult"
-if ($LASTEXITCODE -ne 0) { throw "git pull a échoué (exit $LASTEXITCODE)" }
+if ($pullExit -ne 0) { throw "git pull a echoue (exit $pullExit). Voir $LogFile" }
 Write-Host "  OK" -ForegroundColor Green
 
 # ---- 3. pub get ----
@@ -175,7 +191,7 @@ Run-WithProgress -Command 'flutter' -ArgList @('pub', 'get') `
     -WorkDir $App
 
 # ---- 4. Build Windows (8-12 min) ----
-Write-Host "[4/6] flutter build windows --release (8-12 min, sois patient)..."
+Write-Host "[4/6] flutter build windows --release (8 a 12 minutes, sois patient)..."
 Run-WithProgress -Command 'flutter' -ArgList @(
     'build', 'windows', '--release',
     '--dart-define-from-file=cloud.env.json'
@@ -206,7 +222,7 @@ $totalElapsed = (Get-Date) - $globalStart
 $mm = [int]$totalElapsed.TotalMinutes
 $ss = $totalElapsed.Seconds.ToString('00')
 Write-Progress -Id 1 -Activity 'MAJ opti_route chef (MSIX)' -Completed
-Show-Header "Terminé en $mm min $ss s — cherche opti_route dans le menu Démarrer"
+Show-Header "Termine en ${mm} min ${ss} s - cherche opti_route dans le menu Demarrer"
 Remove-Item $LockFile -ErrorAction SilentlyContinue
-Read-Host "Appuie Entrée pour fermer"
+Read-Host "Appuie Entree pour fermer"
 exit 0
