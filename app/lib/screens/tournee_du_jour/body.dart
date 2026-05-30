@@ -87,8 +87,10 @@ class Body extends ConsumerWidget {
           const SizedBox(height: AppSpacing.x12),
           OptimisedBanner(tournee: tournee),
         ],
-        if (stops.any((s) =>
-            s.statutLivraison == 'livre' || s.statutLivraison == 'echec')) ...[
+        // Carte #274 : ProgressBanner visible des que la tournee a demarre
+        // (avant on attendait la 1ere livraison), pour avoir un compteur
+        // "X colis dans le camion" visible en permanence.
+        if (tournee.demareeLe != null) ...[
           const SizedBox(height: AppSpacing.x12),
           ProgressBanner(
             stops: stops,
