@@ -102,4 +102,10 @@ class SavedDestinations extends Table {
   /// Affiche un badge rouge quand elle reapparait dans une tournee.
   BoolColumn get isProblematique =>
       boolean().withDefault(const Constant(false))();
+
+  /// True si une photo de preuve est OBLIGATOIRE pour pouvoir marquer
+  /// "livre" sur un stop a cette adresse (carte #301). L'UI doit
+  /// bloquer le bouton tant que preuvePhotoPath est null.
+  BoolColumn get photoObligatoire =>
+      boolean().withDefault(const Constant(false))();
 }
