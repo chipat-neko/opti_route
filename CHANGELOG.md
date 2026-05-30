@@ -6,32 +6,67 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
-### Session autonome 2026-05-29/30 (boucle nuit, 13+ PR mergées)
+### Session autonome 2026-05-29/30 (boucle nuit, 70+ PR mergées)
 
-Boucle autonome lancée par Noah au soir, objectif : tester en continu et
-améliorer en sécurité jusqu'à 05:00 Paris. Travail réservé aux zones SANS
-risque pour la tournée du lendemain (mark-livré, optimisation, scan,
-sync cloud non touchés).
+Boucle autonome lancée par Noah au soir (PR #318 → #387+), objectif :
+tester en continu et améliorer en sécurité jusqu'à 05:00 Paris. Travail
+réservé aux zones SANS risque pour la tournée du lendemain (mark-livré,
+optimisation, scan, sync cloud non touchés).
 
-**Couverture de tests (8 PR, +90 tests environ)** :
-- `cloud_error_humanizer` (#318, 17 cas) — réseau, Postgrest 401/403/42P17/JWT, fallback tronqué.
-- `BordereauTextFilters` (#319, 19 cas) — filtres de rejet OCR : labels, rues, villes, headers, transporteurs.
-- `BordereauFormatDetector` (#320, 7 cas) — détection ENLEVEMENT vs LIVRAISON.
-- `cloud_sync_types` (#321, 11 cas) — CloudPullResult.summary, totalChanged/Skipped, TourneeMembreInfo.
-- `stop_types` (#322, 12 cas) — verbInfinitif/Participe + labels FR.
-- `OverpassPoiService` (#323, 9 cas) — recherche POI avec MockClient + parsing nodes/ways.
-- `StatsCard.formatEur` (#326, 7 cas) — formatage EUR de la facturation.
-- `ShareIntentService.parseSharedText` (#328, 8 cas) — parsing du partage Android (URL Maps + texte).
+**Couverture de tests app** : +800 cas environ sur 50+ fichiers de
+tests créés ou enrichis. Cibles principales :
 
-**Cas-limites enrichis (3 PR, +26 tests)** :
-- `geo_utils` (#327, 8 cas) — équateur, pôles, antipodes, seuils stricts.
-- `heatmap_service` (#329, 8 cas) — cellDeg ≤ 0, hémisphère sud, équateur, agrégation massive.
-- `Levenshtein` (#330, 10 cas) — symétrie, identité, inégalité triangulaire, bornes, closestMatch lazy.
+- **Services data/** edge : `cloud_error_humanizer` (#318, #362),
+  `bordereau_text_filters` (#319), `BordereauFormatDetector` (#320),
+  `cloud_sync_types` (#321), `stop_types` (#322), `OverpassPoiService`
+  (#323), `geo_utils` (#327), `heatmap_service` (#329), `Levenshtein`
+  proprietes (#330), `BordereauValidator` (#332), `BordereauExtraction`
+  (#333), `AddressSuggestion` (#334), `BanGeocodingService` (#335),
+  `LocalReorderService` (#336), `LockOrdering` (#337),
+  `AnomalyDetection` (#338), `app_constants` (#339),
+  `DoublonDetection` (#345), `ChefStatsService` (#348),
+  `ChefCarteService` (#349), `EtaCalculator` (#350),
+  `RechercheEntreprisesService` (#354), `PhotonService` (#355),
+  `RouteService` (#356), `VcardParser` (#357), `FuelPriceService`
+  (#358), `TilePrefetchService` (#359), `NavigationService` (#360),
+  `AmbientLightService` themeModeStream (#361),
+  `SecureSupabaseLocalStorage` (#353).
 
-**Site SEO (2 PR, 9 pages enrichies)** :
-- JSON-LD HowTo sur install-apk + guide-csv ; WebPage sur roadmap (#324).
-- JSON-LD WebPage sur changelog, entreprise, gallery, dev, mentions-legales, vs (#325).
-- Le site `site_doc/` couvre maintenant 15/15 pages avec schema.org (FAQPage, HowTo, WebPage, SoftwareApplication).
+- **Repos Drift** (DB mémoire schema v37 inchangé) : `Recurrences`
+  (#340), `Frais` (#341), `Security` (#346), `Sheets` (#366).
+
+- **Helpers ParametresRepository** (4 PR groupés) : quietHours +
+  parseHHmm (#351), recentSearches LRU (#352), entreprise/thème/UI
+  (#367), sécurité/ambient/coach/quietHours (#368), defauts
+  capacité/durée/navApp (#370), autoBackup/coach (#369).
+
+- **Plugins natifs** mock MethodChannel : `SecureScreenService`
+  (#342), `evaluateLowBattery` (#344), `CachedTileProvider` cache
+  disque (#380).
+
+- **Data classes pures** (getters + invariants) : `ChefTourneeProgress`
+  (#364), `ChefPresenceService.freshnessOf` (#365), `SharedAddress`
+  (#363), `OcrBaselineStats` (#377), `stats_service` (TourneeStats /
+  StatsBundle / MotivationStats / CoequipierStats) (#378), `realtime`
+  PresenceDelta + LivePosition (#374), `cloud_sync_helpers` LWW (#373),
+  `BatchScanItem` + `BatchCommitSummary` (#384),
+  `CarnetBackfillResult.hasActivity` (#385), `BackupException` (#386).
+
+- **Helpers top-level pures** : `tournee_pdf_widgets` formatPdfDuration
+  / statutLabel / inferStatut (#381), `frais_form/type_helpers`
+  labelForType / colorForType / iconForType (#382).
+
+**Site SEO `site_doc/`** : passe de 13 → 14/14 pages user-facing
+totalement uniformisées.
+- JSON-LD HowTo sur install-apk + guide-csv ; WebPage sur roadmap
+  (#324) + 6 dernières pages (#325). 15/15 pages avec schema.org.
+- sitemap.xml `<lastmod>` (#343), `og:site_name` (#371), `theme-color`
+  manquant sur dashboard + guide-csv (#372), `apple-touch-icon` (#375),
+  404.html enrichie (#376), `meta author` (#379), `robots.txt` Disallow
+  /investisseurs.html (#383), `og:image:width/height/type` 1200x630
+  (#387).
+
+**Doc** : CHANGELOG mis à jour (#331, #388).
 
 ### Session autonome 2026-05-11 (Vague 8 quality + features livraison)
 
