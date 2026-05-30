@@ -134,4 +134,9 @@ class Stops extends Table {
   /// remise). Carte #296. False par defaut.
   BoolColumn get codPaye =>
       boolean().withDefault(const Constant(false))();
+
+  /// Notation 1-clic du client final apres livraison (carte #324) :
+  /// 'happy', 'neutral', 'angry', null. Stocke en texte pour rester
+  /// lisible humain et evoluer sans migration.
+  TextColumn get notationEmoji => text().nullable()();
 }
