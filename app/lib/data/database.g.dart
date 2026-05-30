@@ -8219,6 +8219,356 @@ class TourneeRecurrencesCompanion extends UpdateCompanion<TourneeRecurrence> {
   }
 }
 
+class $WorkSessionsTable extends WorkSessions
+    with TableInfo<$WorkSessionsTable, WorkSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WorkSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endedAtMeta = const VerificationMeta(
+    'endedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endedAt = GeneratedColumn<DateTime>(
+    'ended_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, startedAt, endedAt, notes, creeLe];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'work_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WorkSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('ended_at')) {
+      context.handle(
+        _endedAtMeta,
+        endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WorkSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WorkSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+      endedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ended_at'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+    );
+  }
+
+  @override
+  $WorkSessionsTable createAlias(String alias) {
+    return $WorkSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class WorkSession extends DataClass implements Insertable<WorkSession> {
+  final int id;
+
+  /// Timestamp de debut de service (tap "Commencer le service").
+  final DateTime startedAt;
+
+  /// Timestamp de fin de service (tap "Terminer le service"). Null
+  /// si la session est encore en cours.
+  final DateTime? endedAt;
+
+  /// Notes libres optionnelles (ex: "tournee Chartres + retour 18h").
+  /// Pas utilisees aujourd'hui mais reservees pour une future UI.
+  final String? notes;
+  final DateTime creeLe;
+  const WorkSession({
+    required this.id,
+    required this.startedAt,
+    this.endedAt,
+    this.notes,
+    required this.creeLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    if (!nullToAbsent || endedAt != null) {
+      map['ended_at'] = Variable<DateTime>(endedAt);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    return map;
+  }
+
+  WorkSessionsCompanion toCompanion(bool nullToAbsent) {
+    return WorkSessionsCompanion(
+      id: Value(id),
+      startedAt: Value(startedAt),
+      endedAt: endedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endedAt),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      creeLe: Value(creeLe),
+    );
+  }
+
+  factory WorkSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WorkSession(
+      id: serializer.fromJson<int>(json['id']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'endedAt': serializer.toJson<DateTime?>(endedAt),
+      'notes': serializer.toJson<String?>(notes),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+    };
+  }
+
+  WorkSession copyWith({
+    int? id,
+    DateTime? startedAt,
+    Value<DateTime?> endedAt = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    DateTime? creeLe,
+  }) => WorkSession(
+    id: id ?? this.id,
+    startedAt: startedAt ?? this.startedAt,
+    endedAt: endedAt.present ? endedAt.value : this.endedAt,
+    notes: notes.present ? notes.value : this.notes,
+    creeLe: creeLe ?? this.creeLe,
+  );
+  WorkSession copyWithCompanion(WorkSessionsCompanion data) {
+    return WorkSession(
+      id: data.id.present ? data.id.value : this.id,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkSession(')
+          ..write('id: $id, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('notes: $notes, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, startedAt, endedAt, notes, creeLe);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WorkSession &&
+          other.id == this.id &&
+          other.startedAt == this.startedAt &&
+          other.endedAt == this.endedAt &&
+          other.notes == this.notes &&
+          other.creeLe == this.creeLe);
+}
+
+class WorkSessionsCompanion extends UpdateCompanion<WorkSession> {
+  final Value<int> id;
+  final Value<DateTime> startedAt;
+  final Value<DateTime?> endedAt;
+  final Value<String?> notes;
+  final Value<DateTime> creeLe;
+  const WorkSessionsCompanion({
+    this.id = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  });
+  WorkSessionsCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime startedAt,
+    this.endedAt = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.creeLe = const Value.absent(),
+  }) : startedAt = Value(startedAt);
+  static Insertable<WorkSession> custom({
+    Expression<int>? id,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? endedAt,
+    Expression<String>? notes,
+    Expression<DateTime>? creeLe,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startedAt != null) 'started_at': startedAt,
+      if (endedAt != null) 'ended_at': endedAt,
+      if (notes != null) 'notes': notes,
+      if (creeLe != null) 'cree_le': creeLe,
+    });
+  }
+
+  WorkSessionsCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? startedAt,
+    Value<DateTime?>? endedAt,
+    Value<String?>? notes,
+    Value<DateTime>? creeLe,
+  }) {
+    return WorkSessionsCompanion(
+      id: id ?? this.id,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      notes: notes ?? this.notes,
+      creeLe: creeLe ?? this.creeLe,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (endedAt.present) {
+      map['ended_at'] = Variable<DateTime>(endedAt.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('notes: $notes, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8236,6 +8586,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TrackingCodesTable trackingCodes = $TrackingCodesTable(this);
   late final $TourneeRecurrencesTable tourneeRecurrences =
       $TourneeRecurrencesTable(this);
+  late final $WorkSessionsTable workSessions = $WorkSessionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8253,6 +8604,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     frais,
     trackingCodes,
     tourneeRecurrences,
+    workSessions,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -13176,6 +13528,200 @@ typedef $$TourneeRecurrencesTableProcessedTableManager =
       TourneeRecurrence,
       PrefetchHooks Function({bool templateId})
     >;
+typedef $$WorkSessionsTableCreateCompanionBuilder =
+    WorkSessionsCompanion Function({
+      Value<int> id,
+      required DateTime startedAt,
+      Value<DateTime?> endedAt,
+      Value<String?> notes,
+      Value<DateTime> creeLe,
+    });
+typedef $$WorkSessionsTableUpdateCompanionBuilder =
+    WorkSessionsCompanion Function({
+      Value<int> id,
+      Value<DateTime> startedAt,
+      Value<DateTime?> endedAt,
+      Value<String?> notes,
+      Value<DateTime> creeLe,
+    });
+
+class $$WorkSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $WorkSessionsTable> {
+  $$WorkSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WorkSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $WorkSessionsTable> {
+  $$WorkSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WorkSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WorkSessionsTable> {
+  $$WorkSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+}
+
+class $$WorkSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WorkSessionsTable,
+          WorkSession,
+          $$WorkSessionsTableFilterComposer,
+          $$WorkSessionsTableOrderingComposer,
+          $$WorkSessionsTableAnnotationComposer,
+          $$WorkSessionsTableCreateCompanionBuilder,
+          $$WorkSessionsTableUpdateCompanionBuilder,
+          (
+            WorkSession,
+            BaseReferences<_$AppDatabase, $WorkSessionsTable, WorkSession>,
+          ),
+          WorkSession,
+          PrefetchHooks Function()
+        > {
+  $$WorkSessionsTableTableManager(_$AppDatabase db, $WorkSessionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WorkSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WorkSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WorkSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime?> endedAt = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => WorkSessionsCompanion(
+                id: id,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                notes: notes,
+                creeLe: creeLe,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime startedAt,
+                Value<DateTime?> endedAt = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+              }) => WorkSessionsCompanion.insert(
+                id: id,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                notes: notes,
+                creeLe: creeLe,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WorkSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WorkSessionsTable,
+      WorkSession,
+      $$WorkSessionsTableFilterComposer,
+      $$WorkSessionsTableOrderingComposer,
+      $$WorkSessionsTableAnnotationComposer,
+      $$WorkSessionsTableCreateCompanionBuilder,
+      $$WorkSessionsTableUpdateCompanionBuilder,
+      (
+        WorkSession,
+        BaseReferences<_$AppDatabase, $WorkSessionsTable, WorkSession>,
+      ),
+      WorkSession,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13204,4 +13750,6 @@ class $AppDatabaseManager {
       $$TrackingCodesTableTableManager(_db, _db.trackingCodes);
   $$TourneeRecurrencesTableTableManager get tourneeRecurrences =>
       $$TourneeRecurrencesTableTableManager(_db, _db.tourneeRecurrences);
+  $$WorkSessionsTableTableManager get workSessions =>
+      $$WorkSessionsTableTableManager(_db, _db.workSessions);
 }

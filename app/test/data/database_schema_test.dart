@@ -7,10 +7,10 @@ import 'package:opti_route/data/database.dart';
 // et force l'ajout d'une etape de migration dans la PR.
 void main() {
   group('AppDatabase — schema', () {
-    test('schemaVersion = 38 (verrou de version)', () {
+    test('schemaVersion = 39 (verrou de version)', () {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
-      expect(db.schemaVersion, 38,
+      expect(db.schemaVersion, 39,
           reason:
               'Si tu bump la version, ajoute la migration dans le '
               'onUpgrade(...) de database.dart ET mets a jour ce test.');
