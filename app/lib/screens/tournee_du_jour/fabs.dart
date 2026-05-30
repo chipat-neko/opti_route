@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/database.dart';
 import '../../theme/app_tokens.dart';
+import 'voice_command_fab.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Pile de FloatingActionButtons en bas a droite de l'ecran tournee
@@ -82,6 +83,14 @@ class Fabs extends StatelessWidget {
             ),
           ),
         if (showDemarrer || isEnCours) const SizedBox(height: AppSpacing.x10),
+        // FAB commande vocale mains-libres (carte #273). Visible uniquement
+        // quand la tournee est en cours : il annonce le prochain arret puis
+        // ecoute "livre / echec / passer / stop" pour valider sans toucher
+        // l'ecran.
+        if (isEnCours) ...[
+          VoiceCommandFab(tournee: tournee),
+          const SizedBox(height: AppSpacing.x10),
+        ],
         // Mini FAB scanner code-barre colis. Place au-dessus du FAB
         // principal "Ajouter un arret" pour acces rapide en plein
         // workflow (Noah scanne plusieurs colis a la suite).
