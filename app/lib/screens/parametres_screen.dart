@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_tokens.dart';
+import '../widgets/pointage_card.dart';
 import 'backups_list_screen.dart';
 import 'mentions_legales_screen.dart';
 import 'parametres/aide_section.dart';
@@ -35,6 +36,11 @@ class ParametresScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x18),
         children: const [
+          // Carte #279 : pointage debut/fin de service + cumul jour/semaine.
+          ParametresSectionTitle('Temps de travail'),
+          SizedBox(height: AppSpacing.x10),
+          PointageCard(),
+          _Sep(),
           ParametresSectionTitle('Geocodage'),
           SizedBox(height: AppSpacing.x10),
           StatusCard(

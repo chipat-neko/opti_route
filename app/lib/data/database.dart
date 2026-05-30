@@ -13,6 +13,7 @@ import 'tables/tournee_membres.dart';
 import 'tables/tournee_recurrences.dart';
 import 'tables/tournees.dart';
 import 'tables/tracking_codes.dart';
+import 'tables/work_sessions.dart';
 
 // Re-export des tables pour que les modules historiques qui faisaient
 // `import 'database.dart'` puissent continuer a utiliser
@@ -29,6 +30,7 @@ export 'tables/tournee_membres.dart';
 export 'tables/tournee_recurrences.dart';
 export 'tables/tournees.dart';
 export 'tables/tracking_codes.dart';
+export 'tables/work_sessions.dart';
 
 part 'database.g.dart';
 
@@ -46,6 +48,7 @@ part 'database.g.dart';
     Frais,
     TrackingCodes,
     TourneeRecurrences,
+    WorkSessions,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -75,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 38;
+  int get schemaVersion => 39;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -327,6 +330,12 @@ class AppDatabase extends _$AppDatabase {
             // template de tournee (carte #113). L'app genere la tournee
             // au jour cible a l'ouverture (cf RecurrenceService.runDue).
             await m.createTable(tourneeRecurrences);
+          }
+          if (from < 39) {
+            // Table `work_sessions` : pointage debut/fin de service de
+            // Noah (carte #279). Une seule session ouverte a la fois
+            // (gere cote WorkSessionsRepository).
+            await m.createTable(workSessions);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :

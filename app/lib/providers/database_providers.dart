@@ -33,6 +33,7 @@ import '../data/template_share_service.dart';
 import '../data/tournees_repository.dart';
 import '../data/tracking_codes_repository.dart';
 import '../data/unified_search_service.dart';
+import '../data/work_sessions_repository.dart';
 import '../theme/app_tokens.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -51,6 +52,17 @@ final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
   return StopsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Repository des sessions de travail (pointage debut/fin, carte #279).
+final workSessionsRepositoryProvider = Provider<WorkSessionsRepository>((ref) {
+  return WorkSessionsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Session de travail en cours (null si aucune ouverte). Stream pour
+/// que l'UI du toggle "Commencer / Terminer" se mette a jour en live.
+final currentWorkSessionProvider = StreamProvider<WorkSession?>((ref) {
+  return ref.watch(workSessionsRepositoryProvider).watchCurrent();
 });
 
 /// Client OSRM partage (singleton) pour le calcul de distance + duree
