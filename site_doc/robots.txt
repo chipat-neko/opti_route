@@ -1,3 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /investisseurs.html
+
 Sitemap: https://chipat-neko.github.io/opti_route/site/sitemap.xml
