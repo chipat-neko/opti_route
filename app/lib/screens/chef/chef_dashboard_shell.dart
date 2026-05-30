@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import 'chef_compta_panel.dart';
+import 'chef_equipe_panel.dart';
 import 'chef_live_map_panel.dart';
+import 'chef_logistique_panel.dart';
 import 'chef_stats_panel.dart';
 import 'chef_tournees_panel.dart';
+import 'chef_vehicule_panel.dart';
 
 /// Largeur minimale (en px logiques) au-dela de laquelle on bascule en
 /// disposition "grand ecran" multi-panneaux. En dessous, les panneaux
@@ -35,6 +39,47 @@ class ChefDashboardShell extends StatelessWidget {
       backgroundColor: p.cream,
       appBar: AppBar(
         title: const Text('Mode chef — Vue d\'ensemble'),
+        actions: [
+          PopupMenuButton<_ChefSubPanel>(
+            tooltip: 'Plus de panneaux',
+            icon: const Icon(Icons.dashboard_customize_outlined),
+            onSelected: (panel) => _openSubPanel(context, panel),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: _ChefSubPanel.compta,
+                child: ListTile(
+                  leading: Icon(Icons.euro),
+                  title: Text('Compta'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: _ChefSubPanel.vehicule,
+                child: ListTile(
+                  leading: Icon(Icons.directions_car_outlined),
+                  title: Text('Véhicule'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: _ChefSubPanel.equipe,
+                child: ListTile(
+                  leading: Icon(Icons.groups_outlined),
+                  title: Text('Équipe'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: _ChefSubPanel.logistique,
+                child: ListTile(
+                  leading: Icon(Icons.inventory_2_outlined),
+                  title: Text('Logistique'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(20),
           child: Padding(
@@ -165,6 +210,47 @@ class _StatsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ChefStatsPanel();
+  }
+}
+
+/// Sous-panneaux chef accessibles via le menu de l'AppBar (compta /
+/// véhicule / équipe / logistique). Chacun ouvre une page séparée
+/// pour ne pas surcharger le shell 3-en-grid.
+enum _ChefSubPanel { compta, vehicule, equipe, logistique }
+
+void _openSubPanel(BuildContext context, _ChefSubPanel panel) {
+  final (title, body) = switch (panel) {
+    _ChefSubPanel.compta => ('Compta', const ChefComptaPanel()),
+    _ChefSubPanel.vehicule => ('Véhicule', const ChefVehiculePanel()),
+    _ChefSubPanel.equipe => ('Équipe', const ChefEquipePanel()),
+    _ChefSubPanel.logistique =>
+      ('Logistique', const ChefLogistiquePanel()),
+  };
+  Navigator.of(context).push(MaterialPageRoute<void>(
+    builder: (_) => _ChefSubPanelScreen(title: title, child: body),
+  ));
+}
+
+/// Wrapper Scaffold pour ouvrir un sub-panel en page individuelle.
+class _ChefSubPanelScreen extends StatelessWidget {
+  const _ChefSubPanelScreen({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Scaffold(
+      backgroundColor: p.cream,
+      appBar: AppBar(title: Text(title)),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          child: child,
+        ),
+      ),
+    );
   }
 }
 
