@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../data/cloud_error_humanizer.dart';
@@ -367,6 +368,99 @@ class OptimTourneeActions {
     await ref
         .read(stopsRepositoryProvider)
         .applyOrdrePriorite(orderedIds);
+  }
+
+  /// Recalculer depuis ma position GPS courante (carte #278). Demande
+  /// la position via Geolocator, ne re-ordonne que les stops `a_livrer`
+  /// (les livres / echecs gardent leur position courante via le pattern
+  /// "locked"), respecte aussi les `positionLocked` manuels. Preview +
+  /// apply.
+  ///
+  /// No-op silencieux si :
+  /// - permission GPS refusee / service desactive
+  /// - < 2 stops a_livrer (pas la peine de re-ordonner)
+  static Future<void> recalcFromMyPosition({
+    required BuildContext context,
+    required WidgetRef ref,
+    required Tournee tournee,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    Position? pos;
+    try {
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        if (!context.mounted) return;
+        messenger.showWarning(
+          'Permission GPS refusee. Active-la dans les reglages.',
+        );
+        return;
+      }
+      pos = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showError(
+        'Position indisponible : ${humanizeAnyError(e)}',
+      );
+      return;
+    }
+    final stops =
+        await ref.read(stopsRepositoryProvider).getByTournee(tournee.id);
+    final pending = stops.where((s) => s.statutLivraison == 'a_livrer').toList();
+    if (pending.length < 2) {
+      if (!context.mounted) return;
+      messenger.showInfo(
+        'Moins de 2 arrets a livrer : rien a re-ordonner.',
+      );
+      return;
+    }
+    final pendingNewOrder = LocalReorderService.computeOrderForPending(
+      originLat: pos.latitude,
+      originLng: pos.longitude,
+      pendingStops: pending,
+    );
+    // Construit l'ordre complet : on traite tout sauf les a_livrer comme
+    // "locked" (livres/echecs gardent leur position courante) + on
+    // respecte aussi les positionLocked manuels du user.
+    final lockedIds = <int>{
+      for (final s in stops)
+        if (s.statutLivraison != 'a_livrer' || s.positionLocked) s.id,
+    };
+    // proposedOrder doit couvrir le meme set d'ids que currentOrder.
+    // Pour les locked, leur position dans proposedOrder n'importe pas
+    // (LockOrdering les place a leur index courant). On met les
+    // locked en tete puis les a_livrer dans le nouvel ordre.
+    final proposedOrder = <int>[
+      ...stops.where((s) => lockedIds.contains(s.id)).map((s) => s.id),
+      ...pendingNewOrder.where((id) => !lockedIds.contains(id)),
+    ];
+    final finalOrder = LockOrdering.respectLocks(
+      currentOrder: stops.map((s) => s.id).toList(growable: false),
+      proposedOrder: proposedOrder,
+      lockedIds: lockedIds,
+    );
+    if (!context.mounted) return;
+    final accepted = await OptimPreviewDialog.show(
+      context: context,
+      tournee: tournee,
+      stops: stops,
+      proposedOrder: finalOrder,
+      title: 'Recalcul depuis ma position : apercu',
+    );
+    if (accepted != true || !context.mounted) return;
+    await ref.read(stopsRepositoryProvider).applyOptimizedOrder(finalOrder);
+    if (!context.mounted) return;
+    HapticFeedback.mediumImpact();
+    messenger.showSuccess(
+      'Arrets restants reordonnes depuis ta position GPS',
+      duration: const Duration(seconds: 2),
+    );
   }
 
   /// Tri rapide local (NN haversine + 2-opt) : du plus proche au plus

@@ -19,6 +19,7 @@ import '../../theme/app_tokens.dart';
 /// la logique (state + ref + navigator + setStat...).
 enum PlusAction {
   pauseShort,
+  recalcFromPosition,
   batchLivre,
   undoLast,
   retryGeocode,
@@ -73,6 +74,19 @@ class PlusMenu extends StatelessWidget {
               ),
               subtitle: const Text(
                 'Met le chrono en pause sans arreter la tournee',
+                style: TextStyle(fontSize: 11),
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        if (tournee.statut == 'en_cours')
+          const PopupMenuItem(
+            value: PlusAction.recalcFromPosition,
+            child: ListTile(
+              leading: Icon(Icons.my_location, color: AppColors.lime),
+              title: Text('Recalculer depuis ma position'),
+              subtitle: Text(
+                'Reordonne les arrets restants depuis ou tu es',
                 style: TextStyle(fontSize: 11),
               ),
               contentPadding: EdgeInsets.zero,

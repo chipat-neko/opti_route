@@ -368,6 +368,8 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     switch (action) {
       case PlusAction.pauseShort:
         _onPauseShortPressed();
+      case PlusAction.recalcFromPosition:
+        _onRecalcFromPositionPressed();
       case PlusAction.batchLivre:
         _onBatchLivrePressed();
       case PlusAction.undoLast:
@@ -457,6 +459,16 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   /// une confirmation et propose de basculer dessus.
   Future<void> _onDuplicatePlus7Pressed() =>
       OptimTourneeActions.duplicatePlus7(
+        context: context,
+        ref: ref,
+        tournee: widget.tournee,
+      );
+
+  /// Carte #278 : recalcule l'ordre des arrets restants depuis la
+  /// position GPS courante (utile si on a sauté un arret / pris du
+  /// retard / changé d'avis). Garde les livres/echecs/locked figes.
+  Future<void> _onRecalcFromPositionPressed() =>
+      OptimTourneeActions.recalcFromMyPosition(
         context: context,
         ref: ref,
         tournee: widget.tournee,
