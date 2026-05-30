@@ -4510,6 +4510,21 @@ class $SavedDestinationsTable extends SavedDestinations
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _isProblematiqueMeta = const VerificationMeta(
+    'isProblematique',
+  );
+  @override
+  late final GeneratedColumn<bool> isProblematique = GeneratedColumn<bool>(
+    'is_problematique',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_problematique" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4534,6 +4549,7 @@ class $SavedDestinationsTable extends SavedDestinations
     cloudId,
     updatedAt,
     noteStationnement,
+    isProblematique,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4697,6 +4713,15 @@ class $SavedDestinationsTable extends SavedDestinations
         ),
       );
     }
+    if (data.containsKey('is_problematique')) {
+      context.handle(
+        _isProblematiqueMeta,
+        isProblematique.isAcceptableOrUnknown(
+          data['is_problematique']!,
+          _isProblematiqueMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4794,6 +4819,10 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.string,
         data['${effectivePrefix}note_stationnement'],
       ),
+      isProblematique: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_problematique'],
+      )!,
     );
   }
 
@@ -4885,6 +4914,11 @@ class SavedDestination extends DataClass
   /// "parking sous-sol entree D" / "place handicapee derriere".
   /// Rejoue a chaque retour chez ce client. Nullable.
   final String? noteStationnement;
+
+  /// True si l'adresse est marquee "vigilance" (carte #292) : echecs
+  /// repetes, acces camion complique, client agressif, fausse adresse.
+  /// Affiche un badge rouge quand elle reapparait dans une tournee.
+  final bool isProblematique;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -4908,6 +4942,7 @@ class SavedDestination extends DataClass
     this.cloudId,
     required this.updatedAt,
     this.noteStationnement,
+    required this.isProblematique,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4960,6 +4995,7 @@ class SavedDestination extends DataClass
     if (!nullToAbsent || noteStationnement != null) {
       map['note_stationnement'] = Variable<String>(noteStationnement);
     }
+    map['is_problematique'] = Variable<bool>(isProblematique);
     return map;
   }
 
@@ -5011,6 +5047,7 @@ class SavedDestination extends DataClass
       noteStationnement: noteStationnement == null && nullToAbsent
           ? const Value.absent()
           : Value(noteStationnement),
+      isProblematique: Value(isProblematique),
     );
   }
 
@@ -5044,6 +5081,7 @@ class SavedDestination extends DataClass
       noteStationnement: serializer.fromJson<String?>(
         json['noteStationnement'],
       ),
+      isProblematique: serializer.fromJson<bool>(json['isProblematique']),
     );
   }
   @override
@@ -5072,6 +5110,7 @@ class SavedDestination extends DataClass
       'cloudId': serializer.toJson<String?>(cloudId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'noteStationnement': serializer.toJson<String?>(noteStationnement),
+      'isProblematique': serializer.toJson<bool>(isProblematique),
     };
   }
 
@@ -5098,6 +5137,7 @@ class SavedDestination extends DataClass
     Value<String?> cloudId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> noteStationnement = const Value.absent(),
+    bool? isProblematique,
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -5125,6 +5165,7 @@ class SavedDestination extends DataClass
     noteStationnement: noteStationnement.present
         ? noteStationnement.value
         : this.noteStationnement,
+    isProblematique: isProblematique ?? this.isProblematique,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -5162,6 +5203,9 @@ class SavedDestination extends DataClass
       noteStationnement: data.noteStationnement.present
           ? data.noteStationnement.value
           : this.noteStationnement,
+      isProblematique: data.isProblematique.present
+          ? data.isProblematique.value
+          : this.isProblematique,
     );
   }
 
@@ -5189,7 +5233,8 @@ class SavedDestination extends DataClass
           ..write('telephone: $telephone, ')
           ..write('cloudId: $cloudId, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('noteStationnement: $noteStationnement')
+          ..write('noteStationnement: $noteStationnement, ')
+          ..write('isProblematique: $isProblematique')
           ..write(')'))
         .toString();
   }
@@ -5218,6 +5263,7 @@ class SavedDestination extends DataClass
     cloudId,
     updatedAt,
     noteStationnement,
+    isProblematique,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -5244,7 +5290,8 @@ class SavedDestination extends DataClass
           other.telephone == this.telephone &&
           other.cloudId == this.cloudId &&
           other.updatedAt == this.updatedAt &&
-          other.noteStationnement == this.noteStationnement);
+          other.noteStationnement == this.noteStationnement &&
+          other.isProblematique == this.isProblematique);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -5270,6 +5317,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<String?> cloudId;
   final Value<DateTime> updatedAt;
   final Value<String?> noteStationnement;
+  final Value<bool> isProblematique;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -5293,6 +5341,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.cloudId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.noteStationnement = const Value.absent(),
+    this.isProblematique = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -5317,6 +5366,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.cloudId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.noteStationnement = const Value.absent(),
+    this.isProblematique = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -5343,6 +5393,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<String>? cloudId,
     Expression<DateTime>? updatedAt,
     Expression<String>? noteStationnement,
+    Expression<bool>? isProblematique,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5367,6 +5418,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (cloudId != null) 'cloud_id': cloudId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (noteStationnement != null) 'note_stationnement': noteStationnement,
+      if (isProblematique != null) 'is_problematique': isProblematique,
     });
   }
 
@@ -5393,6 +5445,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<String?>? cloudId,
     Value<DateTime>? updatedAt,
     Value<String?>? noteStationnement,
+    Value<bool>? isProblematique,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -5417,6 +5470,7 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       cloudId: cloudId ?? this.cloudId,
       updatedAt: updatedAt ?? this.updatedAt,
       noteStationnement: noteStationnement ?? this.noteStationnement,
+      isProblematique: isProblematique ?? this.isProblematique,
     );
   }
 
@@ -5489,6 +5543,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     if (noteStationnement.present) {
       map['note_stationnement'] = Variable<String>(noteStationnement.value);
     }
+    if (isProblematique.present) {
+      map['is_problematique'] = Variable<bool>(isProblematique.value);
+    }
     return map;
   }
 
@@ -5516,7 +5573,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('telephone: $telephone, ')
           ..write('cloudId: $cloudId, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('noteStationnement: $noteStationnement')
+          ..write('noteStationnement: $noteStationnement, ')
+          ..write('isProblematique: $isProblematique')
           ..write(')'))
         .toString();
   }
@@ -11454,6 +11512,7 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<String?> cloudId,
       Value<DateTime> updatedAt,
       Value<String?> noteStationnement,
+      Value<bool> isProblematique,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -11479,6 +11538,7 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<String?> cloudId,
       Value<DateTime> updatedAt,
       Value<String?> noteStationnement,
+      Value<bool> isProblematique,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -11597,6 +11657,11 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<String> get noteStationnement => $composableBuilder(
     column: $table.noteStationnement,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isProblematique => $composableBuilder(
+    column: $table.isProblematique,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11719,6 +11784,11 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.noteStationnement,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isProblematique => $composableBuilder(
+    column: $table.isProblematique,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -11807,6 +11877,11 @@ class $$SavedDestinationsTableAnnotationComposer
     column: $table.noteStationnement,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isProblematique => $composableBuilder(
+    column: $table.isProblematique,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -11871,6 +11946,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> cloudId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> noteStationnement = const Value.absent(),
+                Value<bool> isProblematique = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -11894,6 +11970,7 @@ class $$SavedDestinationsTableTableManager
                 cloudId: cloudId,
                 updatedAt: updatedAt,
                 noteStationnement: noteStationnement,
+                isProblematique: isProblematique,
               ),
           createCompanionCallback:
               ({
@@ -11919,6 +11996,7 @@ class $$SavedDestinationsTableTableManager
                 Value<String?> cloudId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> noteStationnement = const Value.absent(),
+                Value<bool> isProblematique = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -11942,6 +12020,7 @@ class $$SavedDestinationsTableTableManager
                 cloudId: cloudId,
                 updatedAt: updatedAt,
                 noteStationnement: noteStationnement,
+                isProblematique: isProblematique,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
