@@ -1691,6 +1691,21 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _deposeSansContactMeta = const VerificationMeta(
+    'deposeSansContact',
+  );
+  @override
+  late final GeneratedColumn<bool> deposeSansContact = GeneratedColumn<bool>(
+    'depose_sans_contact',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("depose_sans_contact" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1723,6 +1738,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     updatedAt,
     trackingNumbers,
     memoVocal,
+    deposeSansContact,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1956,6 +1972,15 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         memoVocal.isAcceptableOrUnknown(data['memo_vocal']!, _memoVocalMeta),
       );
     }
+    if (data.containsKey('depose_sans_contact')) {
+      context.handle(
+        _deposeSansContactMeta,
+        deposeSansContact.isAcceptableOrUnknown(
+          data['depose_sans_contact']!,
+          _deposeSansContactMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2085,6 +2110,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}memo_vocal'],
       ),
+      deposeSansContact: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}depose_sans_contact'],
+      )!,
     );
   }
 
@@ -2202,6 +2231,14 @@ class Stop extends DataClass implements Insertable<Stop> {
   /// Plus rapide que taper en conduisant. Texte plutot qu'audio brut
   /// pour rester lisible / partageable / sans dependance lecteur media.
   final String? memoVocal;
+
+  /// True si le colis a ete depose devant la porte / dans la boite a
+  /// lettres sans remise en main propre (client absent mais joignable
+  /// qui a autorise). Carte #287. Combine avec preuvePhotoPath + GPS
+  /// (livreLat/Lng) + livreLe = preuve opposable au donneur d'ordre.
+  /// Le stop reste statutLivraison='livre' (succes), c'est juste un
+  /// marqueur pour les litiges et la facturation.
+  final bool deposeSansContact;
   const Stop({
     required this.id,
     required this.tourneeId,
@@ -2233,6 +2270,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     required this.updatedAt,
     this.trackingNumbers,
     this.memoVocal,
+    required this.deposeSansContact,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2305,6 +2343,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     if (!nullToAbsent || memoVocal != null) {
       map['memo_vocal'] = Variable<String>(memoVocal);
     }
+    map['depose_sans_contact'] = Variable<bool>(deposeSansContact);
     return map;
   }
 
@@ -2374,6 +2413,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       memoVocal: memoVocal == null && nullToAbsent
           ? const Value.absent()
           : Value(memoVocal),
+      deposeSansContact: Value(deposeSansContact),
     );
   }
 
@@ -2415,6 +2455,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       trackingNumbers: serializer.fromJson<String?>(json['trackingNumbers']),
       memoVocal: serializer.fromJson<String?>(json['memoVocal']),
+      deposeSansContact: serializer.fromJson<bool>(json['deposeSansContact']),
     );
   }
   @override
@@ -2451,6 +2492,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'trackingNumbers': serializer.toJson<String?>(trackingNumbers),
       'memoVocal': serializer.toJson<String?>(memoVocal),
+      'deposeSansContact': serializer.toJson<bool>(deposeSansContact),
     };
   }
 
@@ -2485,6 +2527,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     DateTime? updatedAt,
     Value<String?> trackingNumbers = const Value.absent(),
     Value<String?> memoVocal = const Value.absent(),
+    bool? deposeSansContact,
   }) => Stop(
     id: id ?? this.id,
     tourneeId: tourneeId ?? this.tourneeId,
@@ -2528,6 +2571,7 @@ class Stop extends DataClass implements Insertable<Stop> {
         ? trackingNumbers.value
         : this.trackingNumbers,
     memoVocal: memoVocal.present ? memoVocal.value : this.memoVocal,
+    deposeSansContact: deposeSansContact ?? this.deposeSansContact,
   );
   Stop copyWithCompanion(StopsCompanion data) {
     return Stop(
@@ -2589,6 +2633,9 @@ class Stop extends DataClass implements Insertable<Stop> {
           ? data.trackingNumbers.value
           : this.trackingNumbers,
       memoVocal: data.memoVocal.present ? data.memoVocal.value : this.memoVocal,
+      deposeSansContact: data.deposeSansContact.present
+          ? data.deposeSansContact.value
+          : this.deposeSansContact,
     );
   }
 
@@ -2624,7 +2671,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('cloudPhotoPath: $cloudPhotoPath, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('trackingNumbers: $trackingNumbers, ')
-          ..write('memoVocal: $memoVocal')
+          ..write('memoVocal: $memoVocal, ')
+          ..write('deposeSansContact: $deposeSansContact')
           ..write(')'))
         .toString();
   }
@@ -2661,6 +2709,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     updatedAt,
     trackingNumbers,
     memoVocal,
+    deposeSansContact,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2695,7 +2744,8 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.cloudPhotoPath == this.cloudPhotoPath &&
           other.updatedAt == this.updatedAt &&
           other.trackingNumbers == this.trackingNumbers &&
-          other.memoVocal == this.memoVocal);
+          other.memoVocal == this.memoVocal &&
+          other.deposeSansContact == this.deposeSansContact);
 }
 
 class StopsCompanion extends UpdateCompanion<Stop> {
@@ -2729,6 +2779,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<DateTime> updatedAt;
   final Value<String?> trackingNumbers;
   final Value<String?> memoVocal;
+  final Value<bool> deposeSansContact;
   const StopsCompanion({
     this.id = const Value.absent(),
     this.tourneeId = const Value.absent(),
@@ -2760,6 +2811,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.updatedAt = const Value.absent(),
     this.trackingNumbers = const Value.absent(),
     this.memoVocal = const Value.absent(),
+    this.deposeSansContact = const Value.absent(),
   });
   StopsCompanion.insert({
     this.id = const Value.absent(),
@@ -2792,6 +2844,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.updatedAt = const Value.absent(),
     this.trackingNumbers = const Value.absent(),
     this.memoVocal = const Value.absent(),
+    this.deposeSansContact = const Value.absent(),
   }) : tourneeId = Value(tourneeId),
        adresseBrute = Value(adresseBrute);
   static Insertable<Stop> custom({
@@ -2825,6 +2878,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<DateTime>? updatedAt,
     Expression<String>? trackingNumbers,
     Expression<String>? memoVocal,
+    Expression<bool>? deposeSansContact,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2857,6 +2911,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (trackingNumbers != null) 'tracking_numbers': trackingNumbers,
       if (memoVocal != null) 'memo_vocal': memoVocal,
+      if (deposeSansContact != null) 'depose_sans_contact': deposeSansContact,
     });
   }
 
@@ -2891,6 +2946,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<DateTime>? updatedAt,
     Value<String?>? trackingNumbers,
     Value<String?>? memoVocal,
+    Value<bool>? deposeSansContact,
   }) {
     return StopsCompanion(
       id: id ?? this.id,
@@ -2923,6 +2979,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       updatedAt: updatedAt ?? this.updatedAt,
       trackingNumbers: trackingNumbers ?? this.trackingNumbers,
       memoVocal: memoVocal ?? this.memoVocal,
+      deposeSansContact: deposeSansContact ?? this.deposeSansContact,
     );
   }
 
@@ -3019,6 +3076,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     if (memoVocal.present) {
       map['memo_vocal'] = Variable<String>(memoVocal.value);
     }
+    if (deposeSansContact.present) {
+      map['depose_sans_contact'] = Variable<bool>(deposeSansContact.value);
+    }
     return map;
   }
 
@@ -3054,7 +3114,8 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('cloudPhotoPath: $cloudPhotoPath, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('trackingNumbers: $trackingNumbers, ')
-          ..write('memoVocal: $memoVocal')
+          ..write('memoVocal: $memoVocal, ')
+          ..write('deposeSansContact: $deposeSansContact')
           ..write(')'))
         .toString();
   }
@@ -9496,6 +9557,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<String?> trackingNumbers,
       Value<String?> memoVocal,
+      Value<bool> deposeSansContact,
     });
 typedef $$StopsTableUpdateCompanionBuilder =
     StopsCompanion Function({
@@ -9529,6 +9591,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<String?> trackingNumbers,
       Value<String?> memoVocal,
+      Value<bool> deposeSansContact,
     });
 
 final class $$StopsTableReferences
@@ -9758,6 +9821,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get memoVocal => $composableBuilder(
     column: $table.memoVocal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deposeSansContact => $composableBuilder(
+    column: $table.deposeSansContact,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10014,6 +10082,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get deposeSansContact => $composableBuilder(
+    column: $table.deposeSansContact,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TourneesTableOrderingComposer get tourneeId {
     final $$TourneesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -10161,6 +10234,11 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<String> get memoVocal =>
       $composableBuilder(column: $table.memoVocal, builder: (column) => column);
+
+  GeneratedColumn<bool> get deposeSansContact => $composableBuilder(
+    column: $table.deposeSansContact,
+    builder: (column) => column,
+  );
 
   $$TourneesTableAnnotationComposer get tourneeId {
     final $$TourneesTableAnnotationComposer composer = $composerBuilder(
@@ -10324,6 +10402,7 @@ class $$StopsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> trackingNumbers = const Value.absent(),
                 Value<String?> memoVocal = const Value.absent(),
+                Value<bool> deposeSansContact = const Value.absent(),
               }) => StopsCompanion(
                 id: id,
                 tourneeId: tourneeId,
@@ -10355,6 +10434,7 @@ class $$StopsTableTableManager
                 updatedAt: updatedAt,
                 trackingNumbers: trackingNumbers,
                 memoVocal: memoVocal,
+                deposeSansContact: deposeSansContact,
               ),
           createCompanionCallback:
               ({
@@ -10388,6 +10468,7 @@ class $$StopsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> trackingNumbers = const Value.absent(),
                 Value<String?> memoVocal = const Value.absent(),
+                Value<bool> deposeSansContact = const Value.absent(),
               }) => StopsCompanion.insert(
                 id: id,
                 tourneeId: tourneeId,
@@ -10419,6 +10500,7 @@ class $$StopsTableTableManager
                 updatedAt: updatedAt,
                 trackingNumbers: trackingNumbers,
                 memoVocal: memoVocal,
+                deposeSansContact: deposeSansContact,
               ),
           withReferenceMapper: (p0) => p0
               .map(

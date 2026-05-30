@@ -116,4 +116,13 @@ class Stops extends Table {
   /// Plus rapide que taper en conduisant. Texte plutot qu'audio brut
   /// pour rester lisible / partageable / sans dependance lecteur media.
   TextColumn get memoVocal => text().nullable()();
+
+  /// True si le colis a ete depose devant la porte / dans la boite a
+  /// lettres sans remise en main propre (client absent mais joignable
+  /// qui a autorise). Carte #287. Combine avec preuvePhotoPath + GPS
+  /// (livreLat/Lng) + livreLe = preuve opposable au donneur d'ordre.
+  /// Le stop reste statutLivraison='livre' (succes), c'est juste un
+  /// marqueur pour les litiges et la facturation.
+  BoolColumn get deposeSansContact =>
+      boolean().withDefault(const Constant(false))();
 }

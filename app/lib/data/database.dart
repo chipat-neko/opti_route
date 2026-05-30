@@ -78,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 40;
+  int get schemaVersion => 41;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -341,6 +341,12 @@ class AppDatabase extends _$AppDatabase {
             // Colonne `memo_vocal` sur stops (carte #280) : memo texte
             // dicte via STT. DEFAULT NULL = compatible ADD COLUMN.
             await m.addColumn(stops, stops.memoVocal);
+          }
+          if (from < 41) {
+            // Colonne `depose_sans_contact` sur stops (carte #287) :
+            // marqueur "depose devant la porte / boite", DEFAULT false
+            // constant -> compatible ADD COLUMN sur sqlite + sqlite3.wasm.
+            await m.addColumn(stops, stops.deposeSansContact);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
