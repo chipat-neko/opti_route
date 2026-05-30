@@ -26,6 +26,9 @@ class FeatureRegistry {
   /// Si une feature n'est PAS dans la map -> default `chauffeur` (= visible par tous).
   /// Naming convention : `<module>.<feature>` en snake_case.
   static const Map<String, AppRole> _registry = {
+    // ===== App / système =====
+    'app.update_checker': AppRole.chef,
+
     // ===== Pointage & temps =====
     'pointage.toggle_service': AppRole.chauffeur,
     'pointage.cumul_jour': AppRole.chauffeur,
