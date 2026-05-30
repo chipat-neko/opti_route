@@ -50,9 +50,29 @@ class AnomalyDetectionService {
     required List<Stop> stops,
     required DateTime now,
   }) {
-    // On ne surveille que les tournees en cours.
-    if (tournee.statut != 'en_cours') return const [];
     if (stops.isEmpty) return const [];
+
+    // Cas particulier #274 : tournee marquee terminee mais reste des
+    // arrets a_livrer (statut force depuis tournees_list_screen, ou
+    // bug de bascule). On alerte au cas ou des colis traineraient
+    // encore dans le camion.
+    if (tournee.statut == 'terminee') {
+      final aLivrer = stops.where((s) => s.statutLivraison == 'a_livrer');
+      if (aLivrer.isNotEmpty) {
+        final colisOublies = aLivrer.fold<int>(0, (sum, s) => sum + s.nbColis);
+        return [
+          Anomalie(
+            AnomalieSeverite.critique,
+            'Tournee terminee mais ${aLivrer.length} arret(s) jamais '
+            'valide(s) ($colisOublies colis). Verifie le camion !',
+          ),
+        ];
+      }
+      return const [];
+    }
+
+    // Au-dela : on ne surveille que les tournees en cours.
+    if (tournee.statut != 'en_cours') return const [];
 
     final livres = stops.where((s) => s.statutLivraison == 'livre').length;
     final echecs = stops.where((s) => s.statutLivraison == 'echec').length;

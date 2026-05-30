@@ -66,10 +66,43 @@ void main() {
   bool has(List<Anomalie> a, AnomalieSeverite s) =>
       a.any((x) => x.severite == s);
 
-  test('tournee non en_cours -> aucune anomalie', () async {
+  test('tournee terminee, tout valide -> aucune anomalie', () async {
     final t = await seedTournee(statut: 'terminee', demareeLe: now);
     await seedStop(t, 'livre', livreLe: now);
     expect(await detect(t), isEmpty);
+  });
+
+  test('tournee brouillon/optimisee -> aucune anomalie', () async {
+    final t = await seedTournee(statut: 'brouillon');
+    await seedStop(t, 'a_livrer');
+    expect(await detect(t), isEmpty);
+  });
+
+  test('#274 tournee terminee mais reste a_livrer -> critique', () async {
+    final t = await seedTournee(statut: 'terminee', demareeLe: now);
+    await seedStop(t, 'livre', livreLe: now);
+    await seedStop(t, 'a_livrer');
+    await seedStop(t, 'a_livrer');
+    final a = await detect(t);
+    expect(has(a, AnomalieSeverite.critique), isTrue,
+        reason: 'colis pas valide => alerte camion');
+    expect(a.first.message, contains('2 arret'));
+    expect(a.first.message, contains('Verifie le camion'));
+  });
+
+  test('#274 message inclut le nb de colis (pas que d\'arrets)', () async {
+    final t = await seedTournee(statut: 'terminee', demareeLe: now);
+    // 1 arret a_livrer avec 4 colis -> message doit dire "4 colis"
+    final sId = await db.into(db.stops).insert(
+          StopsCompanion.insert(
+            tourneeId: t,
+            adresseBrute: 'A',
+            nbColis: const Value(4),
+          ),
+        );
+    expect(sId, isNotNull);
+    final a = await detect(t);
+    expect(a.first.message, contains('4 colis'));
   });
 
   test('taux d\'echec > 20% sur >=5 tentatives -> critique', () async {

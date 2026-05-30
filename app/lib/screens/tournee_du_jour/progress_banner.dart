@@ -44,6 +44,12 @@ class ProgressBanner extends StatelessWidget {
         .where((s) => s.statutLivraison == 'livre')
         .fold<int>(0, (sum, s) => sum + s.nbColis);
     final colisTotal = stops.fold<int>(0, (sum, s) => sum + s.nbColis);
+    // Colis encore dans le camion = arrets pas encore valides (livraisons
+    // ou ramasses). Affiche un compteur "embarques" tant que > 0.
+    // Carte #274 : evite l'oubli d'un colis dans le camion.
+    final colisDansCamion = stops
+        .where((s) => s.statutLivraison == 'a_livrer')
+        .fold<int>(0, (sum, s) => sum + s.nbColis);
 
     final bg = tourneeTerminee ? AppColors.emerald : p.paper;
     final fg = tourneeTerminee ? p.paper : p.ink;
@@ -200,6 +206,19 @@ class ProgressBanner extends StatelessWidget {
                   icon: Icons.schedule,
                   color: AppColors.amber,
                   label: '$restants a livrer',
+                  fg: fg,
+                  mute: mute,
+                ),
+              // Carte #274 : compteur explicite colis encore dans le camion.
+              // Affiche en parallele de "X a livrer" quand au moins un arret
+              // restant contient > 1 colis (sinon redondant).
+              if (!tourneeTerminee &&
+                  colisDansCamion > 0 &&
+                  colisDansCamion != restants)
+                _ProgressStat(
+                  icon: Icons.local_shipping_outlined,
+                  color: AppColors.amber,
+                  label: '$colisDansCamion colis camion',
                   fg: fg,
                   mute: mute,
                 ),
