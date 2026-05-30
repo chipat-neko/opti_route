@@ -13,6 +13,7 @@ class StatRow extends StatelessWidget {
     required this.colisTotal,
     this.distanceMeters,
     this.durationSeconds,
+    this.isEstimate = false,
   });
 
   final int arretsCount;
@@ -20,11 +21,17 @@ class StatRow extends StatelessWidget {
   final int? distanceMeters;
   final int? durationSeconds;
 
+  /// Vrai si distance/duree viennent d'un calcul local (haversine
+  /// vol d'oiseau a 30 km/h) plutot que VROOM/ORS. Affiche un `~`
+  /// devant chaque valeur pour signaler "ordre de grandeur".
+  final bool isEstimate;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final hasDistance = distanceMeters != null && distanceMeters! > 0;
     final hasDuration = durationSeconds != null && durationSeconds! > 0;
+    final prefix = isEstimate ? '~' : '';
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -44,14 +51,16 @@ class StatRow extends StatelessWidget {
           _StatTile(
             label: 'Distance',
             value: hasDistance
-                ? (distanceMeters! / 1000).toStringAsFixed(1)
+                ? '$prefix${(distanceMeters! / 1000).toStringAsFixed(1)}'
                 : ' - ',
             unit: hasDistance ? 'km' : null,
           ),
           const _StatDivider(),
           _StatTile(
             label: 'Duree',
-            value: hasDuration ? _formatDuration(durationSeconds!) : ' - ',
+            value: hasDuration
+                ? '$prefix${_formatDuration(durationSeconds!)}'
+                : ' - ',
           ),
         ],
       ),
