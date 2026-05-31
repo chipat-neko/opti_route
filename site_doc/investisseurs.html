@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Opportunite investissement &mdash; opti_route</title>
 <meta name="description" content="opti_route leve un Seed 100-250 k EUR pour scaler la solution SaaS de tournees de livraison made-in-France. Marche, traction, modele economique, equipe.">
@@ -607,15 +610,15 @@
   <!-- ============ HERO ============ -->
   <section class="inv-hero">
     <span class="eyebrow">Document confidentiel &middot; usage investisseur uniquement</span>
-    <h1>Construire le <span style="color: var(--lime);">GPS de tournees</span> made-in-France pour les PME de la livraison.</h1>
+    <h1>Construire le <span style="color: var(--lime);">GPS de tournées</span> made-in-France pour les PME de la livraison.</h1>
     <p class="lead">
-      opti_route est une app mobile de planification de tournees pour les
-      <strong>livreurs independants et les chefs d'equipe</strong> (1 a 20 chauffeurs).
+      opti_route est une app mobile de planification de tournées pour les
+      <strong>livreurs independants et les chefs d'équipe</strong> (1 a 20 chauffeurs).
       Construite par un livreur en activite, avec une vraie comprehension du
       terrain. <strong>MVP live sur Android</strong>. On leve pour
       <strong>publier l'app sur les stores officiels (Play Store + App Store), s'equiper
-      du materiel iOS necessaire (Mac + iPhone)</strong>, et debloquer le developpement
-      des <strong>Phases 2 (cloud temps reel) et 3 (GPS turn-by-turn, multi-vehicules)</strong>.
+      du materiel iOS necessaire (Mac + iPhone)</strong>, et debloquer le développement
+      des <strong>Phases 2 (cloud temps reel) et 3 (GPS turn-by-turn, multi-véhicules)</strong>.
     </p>
     <div class="inv-badges">
       <span class="inv-badge solid">Seed 100&ndash;250 k EUR</span>
@@ -638,7 +641,7 @@
       <li><a href="#traction">Traction</a></li>
       <li><a href="#defense">Defensibilite</a></li>
       <li><a href="#funds">Utilisation des fonds</a></li>
-      <li><a href="#equipe">Equipe</a></li>
+      <li><a href="#equipe">Équipe</a></li>
       <li><a href="#risques">Risques</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
@@ -662,7 +665,7 @@
       <div class="inv-kpi">
         <div class="inv-kpi-value">v1.1</div>
         <div class="inv-kpi-label">APK stable terrain</div>
-        <div class="inv-kpi-sub">Utilise quotidiennement sur tournees reelles depuis avril 2026.</div>
+        <div class="inv-kpi-sub">Utilise quotidiennement sur tournées reelles depuis avril 2026.</div>
       </div>
       <div class="inv-kpi">
         <div class="inv-kpi-value">0 EUR</div>
@@ -675,13 +678,13 @@
   <!-- ============ MARCHE ============ -->
   <section class="inv-section" id="marche">
     <span class="eyebrow">Opportunite de marche</span>
-    <h2>Un marche FR sous-equipe</h2>
+    <h2>Un marche FR sous-équipe</h2>
     <p style="max-width: 720px; margin-bottom: var(--space-22);">
       Le marche francais de la livraison du dernier kilometre depasse <strong>15 Md EUR</strong>
       (Xerfi 2024). Cote outils logiciels, les leaders sont anglo-saxons (Onfleet, Circuit,
       Routific) avec des tarifs et une UX pensees pour des flottes nord-americaines.
       <strong>Aucun n'integre les formats bordereaux francais</strong> (MESEXP, Colissimo,
-      Chronopost) ni le mode chef d'equipe local sans backend.
+      Chronopost) ni le mode chef d'équipe local sans backend.
     </p>
 
     <div class="market-grid">
@@ -699,7 +702,7 @@
         <div class="market-val">~600 M EUR</div>
         <div class="market-sub">
           Outils SaaS de planification pour PME transport / VTC
-          livraison FR (5&ndash;50 vehicules), ~60 000 entreprises
+          livraison FR (5&ndash;50 véhicules), ~60 000 entreprises
           cibles + 80 000 livreurs independants (auto-entrepreneurs).
         </div>
       </div>
@@ -707,8 +710,8 @@
         <h3>SOM 3 ans</h3>
         <div class="market-val">~5 M EUR ARR</div>
         <div class="market-sub">
-          Cible realiste : <strong>~2 000 equipes payantes</strong>
-          (sur 60k+ adressables) en plan Equipe 19 EUR/mois ou
+          Cible realiste : <strong>~2 000 équipes payantes</strong>
+          (sur 60k+ adressables) en plan Équipe 19 EUR/mois ou
           Entreprise. Bootstrap commercial via livreurs-fondateurs.
         </div>
       </div>
@@ -724,7 +727,7 @@
       <div class="probsol-card prob">
         <h3>Le marche FR PME</h3>
         <ul>
-          <li><strong>Routific</strong> 144 EUR/mois pour 5 vehicules (US, anglais, EUR forte)</li>
+          <li><strong>Routific</strong> 144 EUR/mois pour 5 véhicules (US, anglais, EUR forte)</li>
           <li><strong>Onfleet</strong> 149 USD/utilisateur/mois (cible enterprise)</li>
           <li><strong>Circuit</strong> 30 GBP/mois (UK, pas de scan FR)</li>
           <li><strong>Aucun</strong> ne parse les bordereaux MESEXP / Colissimo / Chronopost</li>
@@ -735,9 +738,9 @@
       <div class="probsol-card sol">
         <h3>opti_route</h3>
         <ul>
-          <li><strong>9 EUR/mois</strong> (Solo) <strong>/ 19 EUR/mois</strong> (Equipe 1&ndash;10 chauffeurs)</li>
+          <li><strong>9 EUR/mois</strong> (Solo) <strong>/ 19 EUR/mois</strong> (Équipe 1&ndash;10 chauffeurs)</li>
           <li><strong>Scan OCR</strong> on-device des 3 transporteurs francais majeurs</li>
-          <li><strong>Mode chef d'equipe local</strong> (un seul phone) qui marche en Phase 1 gratuit</li>
+          <li><strong>Mode chef d'équipe local</strong> (un seul phone) qui marche en Phase 1 gratuit</li>
           <li><strong>RGPD-natif</strong> : architecture local-first, Phase 2 sur Supabase region UE</li>
           <li><strong>Made-in-France</strong> par un livreur en activite (Noah CALOTE, depuis 2026-04-09)</li>
           <li>4 palettes + mode XL conduite + contraste eleve plein soleil (UX terrain)</li>
@@ -758,18 +761,18 @@
     <p style="max-width: 720px; margin-bottom: var(--space-14);">
       Free perpetuel pour acquerir massivement, puis upsell sur les
       features cloud (Phase 2) qui demandent un cout d'infra. Cible
-      principale : <strong>plan Equipe</strong>, marge brute 85%+.
+      principale : <strong>plan Équipe</strong>, marge brute 85%+.
     </p>
 
     <div class="pricing-grid">
       <div class="price-card">
         <div class="price-tier">Free</div>
         <div class="price-amount">0 EUR<small> /mois</small></div>
-        <div class="price-target">Livreur solo, 1 phone, Phase 1 complete</div>
+        <div class="price-target">Livreur solo, 1 phone, Phase 1 complète</div>
         <ul class="price-feats">
           <li>Optimisation VROOM (500/jour)</li>
           <li>Scan bordereaux OCR</li>
-          <li>Mode chef d'equipe local</li>
+          <li>Mode chef d'équipe local</li>
           <li>Exports PDF / CSV</li>
         </ul>
       </div>
@@ -785,14 +788,14 @@
         </ul>
       </div>
       <div class="price-card featured">
-        <div class="price-tier">Equipe</div>
+        <div class="price-tier">Équipe</div>
         <div class="price-amount">19 EUR<small> /mois (1&ndash;10)</small></div>
         <div class="price-target">Chef + 1 a 10 livreurs sur leur phone</div>
         <ul class="price-feats">
           <li>Solo+ +</li>
           <li>Sync temps reel chef &harr; livreurs</li>
-          <li>Suivi GPS live equipe</li>
-          <li>Chat intra-equipe</li>
+          <li>Suivi GPS live équipe</li>
+          <li>Chat intra-équipe</li>
         </ul>
       </div>
       <div class="price-card">
@@ -800,7 +803,7 @@
         <div class="price-amount">99 EUR<small> + 15 EUR/livreur</small></div>
         <div class="price-target">Multi-depots, 10+ livreurs, ERP</div>
         <ul class="price-feats">
-          <li>Equipe +</li>
+          <li>Équipe +</li>
           <li>Multi-depots</li>
           <li>API publique + webhooks</li>
           <li>Facturation TVA + ERP integration</li>
@@ -809,7 +812,7 @@
     </div>
 
     <p style="font-size: 0.88rem; color: var(--text-mute); font-style: italic; margin-top: var(--space-12);">
-      Breakeven infrastructure Phase 2 : ~10 equipes payantes (~25-50 USD/mois cloud Supabase + Twilio).
+      Breakeven infrastructure Phase 2 : ~10 équipes payantes (~25-50 USD/mois cloud Supabase + Twilio).
     </p>
   </section>
 
@@ -820,7 +823,7 @@
     <p style="max-width: 720px; margin-bottom: var(--space-14);">
       Hypothese : acquisition organique via bouche-a-oreille livreurs +
       partenariats federations transport + content marketing SEO
-      (FAQ, guides, dashboard ROI). Conversion Free &rarr; Equipe ~3%.
+      (FAQ, guides, dashboard ROI). Conversion Free &rarr; Équipe ~3%.
     </p>
 
     <div style="overflow-x: auto;">
@@ -829,7 +832,7 @@
           <tr>
             <th>Annee</th>
             <th>Utilisateurs Free</th>
-            <th>Equipes payantes</th>
+            <th>Équipes payantes</th>
             <th>MRR moyen</th>
             <th>ARR</th>
             <th>Charges</th>
@@ -869,7 +872,7 @@
     </div>
     <p style="font-size: 0.82rem; color: var(--text-mute); font-style: italic;">
       Projections indicatives basees sur taux de conversion freemium SaaS B2B FR (1-5%) et le panier
-      moyen Equipe 19 EUR. ARR cible Y3 = 1,5x runway investi. Atteinte breakeven Q1 Y3.
+      moyen Équipe 19 EUR. ARR cible Y3 = 1,5x runway investi. Atteinte breakeven Q1 Y3.
     </p>
   </section>
 
@@ -884,14 +887,14 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h3>MVP utilise en production</h3>
-        <p>L'APK v1.1.0 tourne sur les tournees du fondateur depuis avril 2026. Stress-testee sur des journees 80+ arrets, MESEXP / Colissimo / Chronopost.</p>
+        <p>L'APK v1.1.0 tourne sur les tournées du fondateur depuis avril 2026. Stress-testée sur des journees 80+ arrêts, MESEXP / Colissimo / Chronopost.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h3>Infrastructure Phase 2 prete</h3>
-        <p>7 jalons Supabase (auth + sync + push) deja codes et mergees. SQL schema deploye. Reste l'activation production + UX onboarding multi-device.</p>
+        <p>7 jalons Supabase (auth + sync + push) déjà codes et mergees. SQL schema deploye. Reste l'activation production + UX onboarding multi-device.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -912,14 +915,14 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h3>Backlog priorise</h3>
-        <p>Plan d'audit produit + site existant, 17+ items prioritaires identifies (securite PIN, SEO Schema.org, refactor, Onboarding). Pas de dette technique majeure.</p>
+        <p>Plan d'audit produit + site existant, 17+ items prioritaires identifies (sécurité PIN, SEO Schema.org, refactor, Onboarding). Pas de dette technique majeure.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h3>Conformite legale en cours</h3>
-        <p>Mentions legales en ligne, RGPD natif (donnees locales Phase 1), preparation CGU + CGV pour bascule payante (Phase 2 Q3 2026).</p>
+        <p>Mentions legales en ligne, RGPD natif (données locales Phase 1), preparation CGU + CGV pour bascule payante (Phase 2 Q3 2026).</p>
       </div>
     </div>
   </section>
@@ -933,16 +936,16 @@
       <div class="probsol-card sol">
         <h3>Fit produit-marche</h3>
         <ul>
-          <li><strong>Fondateur-utilisateur</strong> : chaque feature est validee sur le terrain reel. Cycle de feedback ultra-court (memes journees).</li>
+          <li><strong>Fondateur-utilisateur</strong> : chaque feature est validee sur le terrain reel. Cycle de feedback ultra-court (mêmes journees).</li>
           <li><strong>Parsers OCR FR</strong> : 6 mois de R&amp;D OCR specifique aux formats francais. Difficile a rattraper pour un concurrent US sans les bordereaux a la main.</li>
-          <li><strong>Mode chef d'equipe Phase 1</strong> : aucun concurrent n'offre la gestion d'equipe sans backend (donc sans abonnement). Acquisition virale via bouche-a-oreille livreurs.</li>
+          <li><strong>Mode chef d'équipe Phase 1</strong> : aucun concurrent n'offre la gestion d'équipe sans backend (donc sans abonnement). Acquisition virale via bouche-a-oreille livreurs.</li>
         </ul>
       </div>
       <div class="probsol-card sol">
         <h3>Avantages structurels</h3>
         <ul>
           <li><strong>Cout marginal ~0 EUR en Phase 1</strong> : on peut acquerir des dizaines de milliers de Free sans charges. Permet d'attendre le bon moment pour le upsell.</li>
-          <li><strong>Architecture local-first</strong> : differenciateur RGPD natif. Argument clef pour les transporteurs sous-traitants de La Poste / Amazon FR / Colis Prive.</li>
+          <li><strong>Architecture local-first</strong> : differenciateur RGPD natif. Argument clé pour les transporteurs sous-traitants de La Poste / Amazon FR / Colis Privé.</li>
           <li><strong>Code privatif</strong> avec roadmap publique : transparence cote utilisateurs, defense competitive cote code.</li>
         </ul>
       </div>
@@ -990,12 +993,12 @@
         <h3 style="font-size: 1rem;">3. Phase 2 + Phase 3</h3>
         <p style="font-size: 0.92rem; color: var(--text); margin-bottom: var(--space-10);">
           <strong>Phase 2</strong> : backend cloud (Supabase), sync chef &harr; livreurs
-          temps reel, GPS live equipe, push cross-app, ETA SMS auto.<br>
-          <strong>Phase 3</strong> : GPS turn-by-turn integre (Mapbox), multi-vehicules,
+          temps reel, GPS live équipe, push cross-app, ETA SMS auto.<br>
+          <strong>Phase 3</strong> : GPS turn-by-turn integre (Mapbox), multi-véhicules,
           Android Auto / CarPlay, integration ERP.
         </p>
         <p style="font-size: 0.88rem; color: var(--text-mute);">
-          C'est ce qui rend possible la monetisation (plans Equipe / Entreprise).
+          C'est ce qui rend possible la monetisation (plans Équipe / Entreprise).
         </p>
       </div>
     </div>
@@ -1009,11 +1012,11 @@
     <div class="funds-list">
       <div class="fund-item">
         <div class="fund-row">
-          <span class="fund-label">Developpement Phases 2 &amp; 3</span>
+          <span class="fund-label">Développement Phases 2 &amp; 3</span>
           <span class="fund-value">70 k EUR</span>
         </div>
         <div class="fund-bar"><div class="fund-fill" style="width: 47%;"></div></div>
-        <div class="fund-sub">Backend Supabase, sync temps reel, GPS live equipe, push cross-app, ETA SMS Twilio, puis lancement Phase 3 (GPS turn-by-turn, multi-vehicules). Realise par le fondateur en plein temps + missions freelance ponctuelles (UI iOS, audit secu).</div>
+        <div class="fund-sub">Backend Supabase, sync temps reel, GPS live équipe, push cross-app, ETA SMS Twilio, puis lancement Phase 3 (GPS turn-by-turn, multi-véhicules). Realise par le fondateur en plein temps + missions freelance ponctuelles (UI iOS, audit secu).</div>
       </div>
       <div class="fund-item">
         <div class="fund-row">
@@ -1021,7 +1024,7 @@
           <span class="fund-value">30 k EUR</span>
         </div>
         <div class="fund-bar"><div class="fund-fill" style="width: 20%;"></div></div>
-        <div class="fund-sub">Partenariats federations transport (FNTR, OTRE), webinars chef d'equipe, content SEO blog (guide TVA, RGPD, optimisation tournees), publicite ciblee Google / LinkedIn.</div>
+        <div class="fund-sub">Partenariats federations transport (FNTR, OTRE), webinars chef d'équipe, content SEO blog (guide TVA, RGPD, optimisation tournées), publicite ciblee Google / LinkedIn.</div>
       </div>
       <div class="fund-item">
         <div class="fund-row">
@@ -1060,7 +1063,7 @@
 
   <!-- ============ EQUIPE ============ -->
   <section class="inv-section" id="equipe">
-    <span class="eyebrow">Equipe</span>
+    <span class="eyebrow">Équipe</span>
     <h2>Founder</h2>
 
     <div class="team-card">
@@ -1071,13 +1074,13 @@
         <p>
           Chauffeur-livreur en activite. Genese du projet : la frustration
           quotidienne des bordereaux papier et de l'optimisation manuelle
-          des tournees. Auto-formation Flutter en 2026, puis developpement
-          integral de l'app (infrastructure Phase 2 deja codee).
+          des tournées. Auto-formation Flutter en 2026, puis développement
+          integral de l'app (infrastructure Phase 2 déjà codee).
         </p>
         <p style="color: var(--text-mute); font-size: 0.88rem;">
           <strong>Unfair advantage :</strong> chaque journee de travail est un round de
           user research natif. Pas de friction entre l'utilisateur cible et
-          le designer du produit. Le fondateur execute lui-meme l'ensemble de
+          le designer du produit. Le fondateur execute lui-même l'ensemble de
           la roadmap technique et produit avec une velocite eprouvee
           (~22 PR/mois depuis le lancement).
         </p>
@@ -1094,9 +1097,9 @@
       <div class="risk-card">
         <h4>Quotas ORS 500/jour</h4>
         <p class="mitig">
-          Limite ~30 tournees/jour par compte. <strong>Mitigation :</strong>
+          Limite ~30 tournées/jour par compte. <strong>Mitigation :</strong>
           escalation Google Maps Platform (pay-per-use 5 USD / 1000 req) ou
-          OSRM self-host pour les comptes Equipe / Entreprise.
+          OSRM self-host pour les comptes Équipe / Entreprise.
         </p>
       </div>
       <div class="risk-card">
@@ -1127,7 +1130,7 @@
       <div class="risk-card">
         <h4>RGPD Phase 2 plus strict que prevu</h4>
         <p class="mitig">
-          Positions GPS coequipiers = donnees personnelles sensibles.
+          Positions GPS coéquipiers = données personnelles sensibles.
           <strong>Mitigation :</strong> hebergement Supabase region UE, opt-in
           explicite, audit pro inclus dans use of funds (15k EUR legal).
         </p>
@@ -1149,7 +1152,7 @@
     <p>
       Reponse sous 24h ouvrees. Demo possible en visio ou IRL (Paris / Ile-de-France).
       Sur demande : business plan detaille, schema technique, dump SQL Supabase de
-      staging, acces APK / GitHub prive.
+      staging, accès APK / GitHub privé.
     </p>
     <div class="contact-list">
       <a class="contact-link primary" href="mailto:noah.trillon28@gmail.com?subject=opti_route%20%E2%80%94%20interet%20investisseur">

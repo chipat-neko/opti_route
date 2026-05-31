@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FAQ — opti_route</title>
 <meta name="description" content="Foire aux questions sur l'app opti_route : installation, gestion d'equipe, prix, donnees, Play Store.">
@@ -287,8 +290,8 @@
     <div class="answer">
       <p>
         Pas encore en Phase 1. La publication Play Store coute 25 USD
-        (compte developpeur a vie) et necessite une CB. Tant que je
-        peux installer manuellement l'APK sur mon telephone et celui
+        (compte développeur a vie) et necessite une CB. Tant que je
+        peux installer manuellement l'APK sur mon téléphone et celui
         de quelques beta-testeurs, c'est suffisant.
       </p>
       <p>
@@ -301,15 +304,15 @@
     <summary>Comment installer l'APK sans Play Store ?</summary>
     <div class="answer">
       <p>
-        1. Telecharge le fichier <code>.apk</code> depuis les releases
+        1. Télécharge le fichier <code>.apk</code> depuis les releases
         GitHub.
       </p>
       <p>
-        2. Sur ton Android, va dans <strong>Parametres &rarr; Securite &rarr; Sources inconnues</strong>
+        2. Sur ton Android, va dans <strong>Parametres &rarr; Sécurité &rarr; Sources inconnues</strong>
         (ou autorise ton navigateur a installer des apps).
       </p>
       <p>
-        3. Ouvre le fichier APK telecharge et confirme l'installation.
+        3. Ouvre le fichier APK télécharge et confirme l'installation.
       </p>
       <p>
         Android te previent que l'app vient d'une source inconnue : c'est
@@ -324,7 +327,7 @@
     <div class="answer">
       <p>
         L'app cible <code>targetSdk 36</code> (Android 16) et <code>minSdk 21</code>
-        (Android 5.0, Lollipop). En pratique, tout telephone Android datant de
+        (Android 5.0, Lollipop). En pratique, tout téléphone Android datant de
         moins de 8-9 ans devrait fonctionner.
       </p>
     </div>
@@ -334,7 +337,7 @@
     <summary>Et sur iPhone ?</summary>
     <div class="answer">
       <p>
-        Pas en Phase 1. Le projet est ne sur Android (le telephone de
+        Pas en Phase 1. Le projet est ne sur Android (le téléphone de
         Noah). Une fois le code stabilise, ajouter iOS demanderait :
         un Mac pour la build, 99 USD/an pour l'App Store, et adapter
         ~5% du code Flutter aux specificites iOS. C'est un objectif
@@ -359,7 +362,7 @@
         Les seuls couts sont :
       </p>
       <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
-        <li>OpenRouteService : <strong>500 optimisations/jour gratuites</strong> (largement suffisant pour un livreur solo ou une petite equipe).</li>
+        <li>OpenRouteService : <strong>500 optimisations/jour gratuites</strong> (largement suffisant pour un livreur solo ou une petite équipe).</li>
         <li>Tres rarement, si l'usage explose, il faudra passer en plan ORS payant (~25 USD/mois).</li>
       </ul>
     </div>
@@ -369,7 +372,7 @@
     <summary>Comment va se monetiser l'app en Phase 2 ?</summary>
     <div class="answer">
       <p>
-        Phase 2 ajoute la sync multi-appareils (chef + coequipiers
+        Phase 2 ajoute la sync multi-appareils (chef + coéquipiers
         chacun sur son phone). Ca demande un backend Firebase ou Supabase
         (~25-50 USD/mois). Si tu veux cette feature, l'app aura une
         option payante.
@@ -382,35 +385,35 @@
   </details>
 
   <!-- ===== Categorie : Gestion d'equipe ===== -->
-  <div class="faq-cat-title">Gestion d'equipe</div>
+  <div class="faq-cat-title">Gestion d'équipe</div>
 
   <details class="faq">
-    <summary>Comment fonctionne le mode chef d'equipe en Phase 1 ?</summary>
+    <summary>Comment fonctionne le mode chef d'équipe en Phase 1 ?</summary>
     <div class="answer">
       <p>
-        Tout est <strong>local au telephone du chef</strong>. Le chef cree
-        une tournee, ajoute des arrets, affecte chaque arret a un
-        coequipier (depuis la bottom sheet). Puis il partage les fiches :
+        Tout est <strong>local au téléphone du chef</strong>. Le chef créé
+        une tournée, ajoute des arrêts, affecte chaque arrêt a un
+        coéquipier (depuis la bottom sheet). Puis il partage les fiches :
       </p>
       <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
-        <li><strong>WhatsApp/SMS cible</strong> : "Partager a Lucas" pre-rempli avec ses arrets + son numero</li>
-        <li><strong>PDF individuel</strong> : "Exporter PDF par coequipier" genere un fichier par personne</li>
-        <li><strong>Tableau de bord agrege</strong> sur le telephone du chef (vue globale)</li>
+        <li><strong>WhatsApp/SMS cible</strong> : "Partager a Lucas" pre-rempli avec ses arrêts + son numéro</li>
+        <li><strong>PDF individuel</strong> : "Exporter PDF par coéquipier" généré un fichier par personne</li>
+        <li><strong>Tableau de bord agrege</strong> sur le téléphone du chef (vue globale)</li>
       </ul>
       <p>
-        Le coequipier execute la tournee comme il veut (papier, son
-        telephone perso, etc.). Le chef met a jour les statuts sur SON
+        Le coéquipier execute la tournée comme il veut (papier, son
+        téléphone perso, etc.). Le chef met a jour les statuts sur SON
         phone (ou par retour SMS).
       </p>
     </div>
   </details>
 
   <details class="faq">
-    <summary>Quand est-ce que les coequipiers auront leur propre app ?</summary>
+    <summary>Quand est-ce que les coéquipiers auront leur propre app ?</summary>
     <div class="answer">
       <p>
         Phase 2 (<a href="roadmap.html">voir roadmap</a>). Chaque
-        coequipier aura un compte (email/password), recevra ses tournees
+        coéquipier aura un compte (email/password), recevra ses tournées
         en temps reel, et le chef verra l'avancement en direct sans
         que personne n'ait a partager manuellement.
       </p>
@@ -421,29 +424,29 @@
   </details>
 
   <!-- ===== Categorie : Donnees & confidentialite ===== -->
-  <div class="faq-cat-title">Donnees & confidentialite</div>
+  <div class="faq-cat-title">Données & confidentialite</div>
 
   <details class="faq">
-    <summary>Mes donnees clients sont-elles uploadees quelque part ?</summary>
+    <summary>Mes données clients sont-elles uploadees quelque part ?</summary>
     <div class="answer">
       <p>
-        <strong>Non.</strong> Toutes les donnees clients (nom, adresse,
-        telephone, codes interphones, notes) restent dans une base SQLite
-        sur ton telephone. Aucun serveur opti_route n'existe en Phase 1.
+        <strong>Non.</strong> Toutes les données clients (nom, adresse,
+        téléphone, codes interphones, notes) restent dans une base SQLite
+        sur ton téléphone. Aucun serveur opti_route n'existe en Phase 1.
       </p>
       <p>
         Seules les <strong>adresses</strong> que tu cherches sont envoyees
-        a des APIs publiques pour le geocodage (BAN, SIRENE, Photon). Pas
-        de nom de client, pas de telephone.
+        a des APIs publiques pour le géocodage (BAN, SIRENE, Photon). Pas
+        de nom de client, pas de téléphone.
       </p>
       <p>
-        Cf. <a href="mentions-legales.html">Mentions legales</a> pour le detail.
+        Cf. <a href="mentions-legales.html">Mentions legales</a> pour le détail.
       </p>
     </div>
   </details>
 
   <details class="faq">
-    <summary>Comment sauvegarder mes donnees ?</summary>
+    <summary>Comment sauvegarder mes données ?</summary>
     <div class="answer">
       <p>
         Plusieurs exports a faire regulierement :
@@ -451,7 +454,7 @@
       <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
         <li><strong>Carnet d'adresses</strong> : Carnet &rarr; bouton "Exporter" &rarr; CSV ou vCard. La vCard s'importe directement dans les Contacts Android pour double sauvegarde.</li>
         <li><strong>Stats annuelles</strong> : Statistiques &rarr; "Exporter en CSV" envoie a Drive/Gmail/Mail.</li>
-        <li><strong>Tournees PDF</strong> : Menu Plus de chaque tournee &rarr; "Exporter en PDF".</li>
+        <li><strong>Tournées PDF</strong> : Menu Plus de chaque tournée &rarr; "Exporter en PDF".</li>
       </ul>
       <p>
         Conseil : sauvegarde le CSV carnet sur Google Drive 1x/mois. En
@@ -464,7 +467,7 @@
     <summary>Si je desinstalle l'app, je perds tout ?</summary>
     <div class="answer">
       <p>
-        Oui, Android efface les donnees privees de l'app a la
+        Oui, Android efface les données privees de l'app a la
         desinstallation. Fais des exports avant de desinstaller. C'est
         une limite de la <strong>Phase 1 sans backend</strong>. En Phase 2,
         un backup cloud automatique reglerait ca.
@@ -476,7 +479,7 @@
   <div class="faq-cat-title">Tableau de bord web</div>
 
   <details class="faq">
-    <summary>Le dashboard web suit-il mes tournees en temps reel ?</summary>
+    <summary>Le dashboard web suit-il mes tournées en temps reel ?</summary>
     <div class="answer">
       <p>
         Non, c'est un <strong>viewer statique</strong> en Phase 1. Tu
@@ -494,26 +497,26 @@
   </details>
 
   <details class="faq">
-    <summary>Mes donnees sont-elles uploadees quand j'utilise le dashboard ?</summary>
+    <summary>Mes données sont-elles uploadees quand j'utilise le dashboard ?</summary>
     <div class="answer">
       <p>
         <strong>Non.</strong> Le dashboard parse ton CSV dans le navigateur,
-        en memoire. Quand tu fermes l'onglet, les donnees disparaissent.
+        en memoire. Quand tu fermes l'onglet, les données disparaissent.
         Aucun upload, aucun serveur tiers.
       </p>
     </div>
   </details>
 
   <!-- ===== Categorie : Optimisation & geocodage ===== -->
-  <div class="faq-cat-title">Optimisation & geocodage</div>
+  <div class="faq-cat-title">Optimisation & géocodage</div>
 
   <details class="faq">
     <summary>Pourquoi j'ai besoin d'une cle OpenRouteService ?</summary>
     <div class="answer">
       <p>
-        Pour optimiser l'ordre des arrets, l'app envoie la liste des
+        Pour optimiser l'ordre des arrêts, l'app envoie la liste des
         coordonnees a l'algorithme VROOM via OpenRouteService. Sans cle,
-        impossible d'optimiser : tu peux quand meme ajouter des arrets
+        impossible d'optimiser : tu peux quand même ajouter des arrêts
         manuellement et naviguer via Google Maps / Waze, mais l'app ne
         proposera pas d'ordre optimal.
       </p>
@@ -532,12 +535,12 @@
         Partiellement. Sans internet :
       </p>
       <ul style="margin-left: var(--space-22); margin-top: var(--space-10);">
-        <li><strong>OK</strong> : creer une tournee, ajouter des arrets manuellement (sans geocoder), marquer livre/echec, photo preuve, exporter</li>
-        <li><strong>KO</strong> : autocompletion adresse, optimisation ORS, scan bordereau (l'OCR fonctionne, mais le geocodage du resultat non)</li>
+        <li><strong>OK</strong> : créer une tournée, ajouter des arrêts manuellement (sans geocoder), marquer livré/échec, photo preuve, exporter</li>
+        <li><strong>KO</strong> : autocompletion adresse, optimisation ORS, scan bordereau (l'OCR fonctionne, mais le géocodage du resultat non)</li>
       </ul>
       <p>
         Quand tu retrouves la connexion, un bouton "Geolocaliser hors-ligne"
-        dans le menu Plus rejoint l'adresse aux arrets cree offline.
+        dans le menu Plus rejoint l'adresse aux arrêts créé offline.
       </p>
     </div>
   </details>
@@ -556,7 +559,7 @@
       <p>
         D'autres transporteurs (UPS, DHL, FedEx) sont prevus. Si tu as un
         type de bordereau qui n'est pas reconnu, ouvre une issue GitHub
-        avec une photo (visage / numero de tracking floutes si besoin).
+        avec une photo (visage / numéro de tracking floutes si besoin).
       </p>
     </div>
   </details>

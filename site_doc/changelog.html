@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Changelog — opti_route</title>
 <meta name="description" content="Historique des versions et nouveautes de l'app opti_route, par ordre antechronologique.">
@@ -178,21 +181,21 @@
       <h4>Ajoute</h4>
       <ul>
         <li><strong>Scan bordereaux</strong> : ciblage spatial du bon encadre via les bounding boxes ML Kit, detection automatique enlevement vs livraison, scan du code-barre colis avec matching, import depuis un <code>PDF</code> (pas que photo), et mode scan en rafale avec ajout en masse.</li>
-        <li><strong>Carnet d'adresses</strong> : detection + fusion des doublons, edition en masse (selection multiple), import vCard (Google Contacts), champ telephone par client + bouton "Appeler", filtres periode d'ajout / regularite, et badge "client connu" dans la liste d'arrets.</li>
-        <li><strong>Tournee</strong> : bandeau d'alertes anomalies, verrouiller un arret a sa position (exclu de la re-optimisation), rappel "tournee non terminee depuis &gt; 8h", recurrence automatique d'un template, et "annuler" apres un "Tout marquer livre".</li>
-        <li><strong>Mode chef d'equipe</strong> : vue d'ensemble PC (panneaux tournees en cours, carte du jour, stats &amp; alertes), positions live des chauffeurs sur la carte, et cible Windows desktop (<code>opti_route.exe</code>).</li>
-        <li><strong>Stats &amp; frais</strong> : prix du Diesel en temps reel (API gouv.fr) + stations proches, resume hebdo du chef, deltas semaine vs semaine precedente, compteur live "aujourd'hui", compteur de photos preuves par coequipier.</li>
-        <li><strong>Confort</strong> : mode jour/nuit auto (capteur de luminosite), coach marks contextuels + "revoir le tutoriel", "Partager l'adresse" (menu natif), raccourcis Maps / Street View depuis un arret, apercu rapide en appui long, bandeau "X km restants".</li>
-        <li><strong>Securite</strong> : masquage de l'app dans le selecteur d'applications recentes Android (FLAG_SECURE).</li>
-        <li><strong>Site</strong> : pages galerie + guide d'installation APK (sideload Xiaomi/MIUI), donnees structurees SEO (Organization / FAQ / fil d'Ariane), mode presentation du dashboard.</li>
+        <li><strong>Carnet d'adresses</strong> : detection + fusion des doublons, edition en masse (selection multiple), import vCard (Google Contacts), champ téléphone par client + bouton "Appeler", filtres periode d'ajout / regularite, et badge "client connu" dans la liste d'arrêts.</li>
+        <li><strong>Tournée</strong> : bandeau d'alertes anomalies, verrouiller un arrêt a sa position (exclu de la re-optimisation), rappel "tournée non terminee depuis &gt; 8h", recurrence automatique d'un template, et "annuler" apres un "Tout marquer livré".</li>
+        <li><strong>Mode chef d'équipe</strong> : vue d'ensemble PC (panneaux tournées en cours, carte du jour, stats &amp; alertes), positions live des chauffeurs sur la carte, et cible Windows desktop (<code>opti_route.exe</code>).</li>
+        <li><strong>Stats &amp; frais</strong> : prix du Diesel en temps reel (API gouv.fr) + stations proches, resume hebdo du chef, deltas semaine vs semaine precedente, compteur live "aujourd'hui", compteur de photos preuves par coéquipier.</li>
+        <li><strong>Confort</strong> : mode jour/nuit auto (capteur de luminosite), coach marks contextuels + "revoir le tutoriel", "Partager l'adresse" (menu natif), raccourcis Maps / Street View depuis un arrêt, apercu rapide en appui long, bandeau "X km restants".</li>
+        <li><strong>Sécurité</strong> : masquage de l'app dans le selecteur d'applications recentes Android (FLAG_SECURE).</li>
+        <li><strong>Site</strong> : pages galerie + guide d'installation APK (sideload Xiaomi/MIUI), données structurees SEO (Organization / FAQ / fil d'Ariane), mode presentation du dashboard.</li>
       </ul>
     </div>
 
     <div class="changes-group changed">
       <h4>Modifie</h4>
       <ul>
-        <li>Pre-traitement OCR + rotations deportes dans un <em>isolate</em> : plus de gel de l'interface pendant le scan, meme sur telephone modeste.</li>
-        <li>Badge "client connu" : le carnet n'est charge qu'une seule fois pour toute la liste d'arrets (fin d'un effet N+1).</li>
+        <li>Pre-traitement OCR + rotations deportes dans un <em>isolate</em> : plus de gel de l'interface pendant le scan, même sur téléphone modeste.</li>
+        <li>Badge "client connu" : le carnet n'est charge qu'une seule fois pour toute la liste d'arrêts (fin d'un effet N+1).</li>
         <li>Schema local migre jusqu'a v38.</li>
       </ul>
     </div>
@@ -202,7 +205,7 @@
       <ul>
         <li>Page de suivi colis : une colonne inexistante cassait la resolution du lien.</li>
         <li>Version affichee du site mise a jour (v1.1 -&gt; v2.8) et formulations corrigees (retrait d'une mention de chiffrement local inexacte).</li>
-        <li>Plusieurs correctifs du scan : filtres transporteur, coherence code postal / ville lors du geocodage, propagation du format "enlevement".</li>
+        <li>Plusieurs correctifs du scan : filtres transporteur, coherence code postal / ville lors du géocodage, propagation du format "enlevement".</li>
       </ul>
     </div>
   </article>
@@ -218,11 +221,11 @@
     <div class="changes-group added">
       <h4>Ajoute</h4>
       <ul>
-        <li>Sauvegarde complete de l'app dans un <code>.zip</code> portable (DB SQLite + photos preuves + manifest), partageable via Drive / mail / clef USB.</li>
+        <li>Sauvegarde complète de l'app dans un <code>.zip</code> portable (DB SQLite + photos preuves + manifest), partageable via Drive / mail / clé USB.</li>
         <li>Restore depuis un <code>.zip</code> avec <em>deferred swap</em> au prochain boot (evite les conflits Drift open/close).</li>
         <li>Auto-backup local periodique (jamais / hebdo / mensuel) dans <code>/Android/data/&lt;pkg&gt;/files/auto_backups/</code>, rotation des 5 derniers.</li>
         <li>Page "Mes backups" : lister, restaurer, partager, supprimer les .zip generes automatiquement.</li>
-        <li>FAB "Backup maintenant" : creer un .zip manuel a la demande sans attendre la prochaine echeance auto.</li>
+        <li>FAB "Backup maintenant" : créer un .zip manuel a la demande sans attendre la prochaine echeance auto.</li>
         <li>Notification post-backup auto (importance low, respecte le creneau "ne pas deranger").</li>
         <li>22 tests E2E couvrant BackupService, AutoBackupService et BackupsListService.</li>
       </ul>
@@ -232,7 +235,7 @@
       <h4>Modifie</h4>
       <ul>
         <li>Modernisation des dependances (7 paquets bumpes) : <code>connectivity_plus 6→7</code>, <code>share_plus 11→12</code>, <code>file_picker 8→11</code>, <code>flutter_local_notifications 18→21</code>, <code>timezone 0.10→0.11</code>, <code>local_auth 2→3</code>, <code>local_auth_android 1→2</code>.</li>
-        <li>Refactor <code>parametres_screen.dart</code> : 1522 → 1107 lignes (-27 %). Sections Donnees et "Ne pas deranger" extraites en fichiers dedies.</li>
+        <li>Refactor <code>parametres_screen.dart</code> : 1522 → 1107 lignes (-27 %). Sections Données et "Ne pas deranger" extraites en fichiers dédiés.</li>
         <li>Suite de tests : 570/570 verts (+8 BackupsListService), 0 issue analyzer.</li>
       </ul>
     </div>
@@ -244,13 +247,13 @@
       <span class="release-tag">v1.1.0+2</span>
       <span class="release-date">2026-05-13</span>
     </div>
-    <div class="release-title">Mode terrain, securite & accessibilite web</div>
+    <div class="release-title">Mode terrain, sécurité & accessibilite web</div>
 
     <div class="changes-group added">
       <h4>Ajoute</h4>
       <ul>
-        <li>Compteur de colis sur la stat-row + bandeau de progression en haut de la tournee.</li>
-        <li>Re-ordonner manuellement les arrets en drag-and-drop (intra-tournee).</li>
+        <li>Compteur de colis sur la stat-row + bandeau de progression en haut de la tournée.</li>
+        <li>Re-ordonner manuellement les arrêts en drag-and-drop (intra-tournée).</li>
         <li>Nouvelle icone d'app (pin + route, palette Claude Design) et splash screen cream.</li>
         <li>Pages site : <a href="changelog.html">changelog</a>, install-apk, gallery.</li>
         <li>Schema.org JSON-LD <code>SoftwareApplication</code> sur la home (SEO rich snippet Google).</li>
@@ -280,17 +283,17 @@
       <span class="release-tag">v1.1.0</span>
       <span class="release-date">2026-05-10</span>
     </div>
-    <div class="release-title">Vagues A a H : facturation, parsers bordereaux, chef d'equipe</div>
+    <div class="release-title">Vagues A a H : facturation, parsers bordereaux, chef d'équipe</div>
 
     <div class="changes-group added">
       <h4>Ajoute</h4>
       <ul>
-        <li><strong>Mode chef d'equipe</strong> : creation tournees, affectation des arrets aux coequipiers, partage WhatsApp/SMS cible, export PDF par coequipier.</li>
-        <li><strong>Facturation indicative</strong> : recap mensuel HT (par arret / par colis / au km), cout carburant estime, marge brute. NB : pas une facture officielle (sans TVA / mentions legales).</li>
+        <li><strong>Mode chef d'équipe</strong> : creation tournées, affectation des arrêts aux coéquipiers, partage WhatsApp/SMS cible, export PDF par coéquipier.</li>
+        <li><strong>Facturation indicative</strong> : recap mensuel HT (par arrêt / par colis / au km), cout carburant estime, marge brute. NB : pas une facture officielle (sans TVA / mentions legales).</li>
         <li><strong>Parsers bordereaux</strong> : MESEXP (format generique), Colissimo / La Poste, Chronopost.</li>
         <li><strong>4 palettes</strong> : cream (defaut), parchment, mist, dark.</li>
         <li><strong>Carnet d'adresses</strong> avec import/export CSV + vCard pour double sauvegarde dans les Contacts Android.</li>
-        <li><strong>Statistiques</strong> : revenus, km, distance moyenne, colis livres, exports CSV.</li>
+        <li><strong>Statistiques</strong> : revenus, km, distance moyenne, colis livrés, exports CSV.</li>
         <li>Site web 10 pages : home, features, roadmap, entreprise (avec calculateur ROI), faq, guide-csv, dashboard CSV viewer, mentions legales.</li>
       </ul>
     </div>
@@ -315,12 +318,12 @@
     <div class="changes-group added">
       <h4>Ajoute</h4>
       <ul>
-        <li>Creation, edition, optimisation de tournees via OpenRouteService (algorithme VROOM).</li>
-        <li>Cascade de geocodage : BAN (Base Adresse Nationale FR) -> SIRENE -> Photon.</li>
-        <li>Marquage livre / echec / a passer + photo de preuve a la livraison.</li>
+        <li>Creation, edition, optimisation de tournées via OpenRouteService (algorithme VROOM).</li>
+        <li>Cascade de géocodage : BAN (Base Adresse Nationale FR) -> SIRENE -> Photon.</li>
+        <li>Marquage livré / échec / a passer + photo de preuve a la livraison.</li>
         <li>Profils <code>driving-car</code> et <code>driving-hgv</code> (poids lourd).</li>
-        <li>Export PDF des tournees, parametres carburant (L/100km, prix carburant), tarifs.</li>
-        <li>Mode hors-ligne partiel : creation manuelle d'arrets sans connexion, geocodage differe quand reseau revient.</li>
+        <li>Export PDF des tournées, parametres carburant (L/100km, prix carburant), tarifs.</li>
+        <li>Mode hors-ligne partiel : creation manuelle d'arrêts sans connexion, géocodage differe quand reseau revient.</li>
       </ul>
     </div>
   </article>

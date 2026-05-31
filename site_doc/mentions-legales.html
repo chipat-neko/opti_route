@@ -2,8 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mentions legales & vie privee — opti_route</title>
+<title>Mentions legales & vie privée — opti_route</title>
 <meta name="description" content="Mentions legales, politique de confidentialite et conditions d'utilisation de l'app opti_route.">
 <meta name="author" content="CALOTE Noah">
 <!-- Open Graph (preview au partage WhatsApp / Twitter / LinkedIn) -->
@@ -73,7 +76,7 @@
 <main id="main-content" class="container" style="padding: var(--space-64) 0; max-width: 820px;">
 
   <span class="eyebrow">Cadre legal & confidentialite</span>
-  <h1>Mentions legales & vie privee.</h1>
+  <h1>Mentions legales & vie privée.</h1>
   <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-40);">
     Mise a jour : <strong>13 mai 2026</strong>. Cette page resume la
     politique de confidentialite et les conditions d'utilisation de
@@ -95,34 +98,34 @@
   <h2 style="margin-bottom: var(--space-14);">2. Hebergement</h2>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
     <li><strong>Site web</strong> : heberge par GitHub Pages (GitHub Inc., San Francisco, USA).</li>
-    <li><strong>Application Android</strong> : installee localement sur le telephone de l'utilisateur. Aucun serveur opti_route n'heberge de donnees utilisateur.</li>
+    <li><strong>Application Android</strong> : installee localement sur le téléphone de l'utilisateur. Aucun serveur opti_route n'heberge de données utilisateur.</li>
   </ul>
 
   <!-- Donnees -->
-  <h2 style="margin-bottom: var(--space-14);">3. Donnees personnelles (RGPD)</h2>
+  <h2 style="margin-bottom: var(--space-14);">3. Données personnelles (RGPD)</h2>
 
-  <h3 style="margin: var(--space-22) 0 var(--space-10);">3.1. Ce qui reste sur ton telephone</h3>
+  <h3 style="margin: var(--space-22) 0 var(--space-10);">3.1. Ce qui reste sur ton téléphone</h3>
   <p style="margin-bottom: var(--space-14);">
-    Toutes les donnees que tu saisies dans l'app sont stockees
+    Toutes les données que tu saisies dans l'app sont stockees
     <strong>localement</strong> dans une base SQLite (via Drift) :
   </p>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
-    <li>Tournees, arrets, statuts (livre/echec), raisons d'echec</li>
+    <li>Tournées, arrêts, statuts (livré/échec), raisons d'échec</li>
     <li>Carnet d'adresses : nom client, adresse, GPS, photos eventuelles</li>
-    <li>Coequipiers : nom, telephone, couleur</li>
-    <li>Photos preuves de livraison (repertoire prive de l'app)</li>
+    <li>Coéquipiers : nom, téléphone, couleur</li>
+    <li>Photos preuves de livraison (repertoire privé de l'app)</li>
     <li>Profil entreprise : nom, SIRET, slogan (si renseigne)</li>
-    <li>Position GPS au moment du "Marquer livre / echec" (preuve de passage)</li>
+    <li>Position GPS au moment du "Marquer livré / échec" (preuve de passage)</li>
   </ul>
   <p style="margin-bottom: var(--space-22);">
     <strong>Rien de tout cela n'est uploade sur un serveur tiers.</strong>
-    Les donnees sortent uniquement quand TU les exportes
+    Les données sortent uniquement quand TU les exportes
     explicitement (PDF, CSV, vCard, partage WhatsApp/SMS, etc.).
   </p>
 
   <h3 style="margin: var(--space-22) 0 var(--space-10);">3.2. APIs externes utilisees</h3>
   <p style="margin-bottom: var(--space-14);">
-    Pour le geocodage et l'optimisation, l'app interroge ces APIs
+    Pour le géocodage et l'optimisation, l'app interroge ces APIs
     publiques :
   </p>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
@@ -145,30 +148,30 @@
       <strong>OpenRouteService (ORS)</strong> — <code>api.openrouteservice.org</code>.
       Service de routing open-source (HeiGIT, Allemagne). Cle API requise
       (gratuite, 500 optimisations/jour, sans CB). Envoie : liste de
-      coordonnees a optimiser. Recoit : ordre optimal + duree + distance + trace.
+      coordonnees a optimiser. Recoit : ordre optimal + durée + distance + trace.
     </li>
   </ul>
   <p style="margin-bottom: var(--space-22);">
-    <strong>Aucune donnee personnelle identifiable</strong> n'est
+    <strong>Aucune donnée personnelle identifiable</strong> n'est
     envoyee a ces APIs : seulement des adresses et coordonnees.
   </p>
 
   <h3 style="margin: var(--space-22) 0 var(--space-10);">3.3. Permissions Android demandees</h3>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
-    <li><code>INTERNET</code> : appels aux APIs de geocodage et ORS</li>
-    <li><code>ACCESS_FINE_LOCATION</code> : GPS pour le mode tournee en cours et la preuve de passage</li>
+    <li><code>INTERNET</code> : appels aux APIs de géocodage et ORS</li>
+    <li><code>ACCESS_FINE_LOCATION</code> : GPS pour le mode tournée en cours et la preuve de passage</li>
     <li><code>CAMERA</code> : scan bordereaux + photo preuve</li>
-    <li><code>POST_NOTIFICATIONS</code> (Android 13+) : rappels de tournee</li>
+    <li><code>POST_NOTIFICATIONS</code> (Android 13+) : rappels de tournée</li>
     <li><code>SCHEDULE_EXACT_ALARM</code> : notifs precises a l'heure choisie</li>
   </ul>
 
   <h3 style="margin: var(--space-22) 0 var(--space-10);">3.4. Tes droits RGPD</h3>
   <p style="margin-bottom: var(--space-14);">
-    Comme aucune donnee n'est centralisee, tes droits s'exercent
+    Comme aucune donnée n'est centralisee, tes droits s'exercent
     directement :
   </p>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
-    <li><strong>Droit d'acces</strong> : tout est dans l'app, tu peux exporter en CSV/vCard a tout moment.</li>
+    <li><strong>Droit d'accès</strong> : tout est dans l'app, tu peux exporter en CSV/vCard a tout moment.</li>
     <li><strong>Droit a l'effacement</strong> : Parametres &rarr; Cache &rarr; "Reinitialiser la base" supprime tout. Desinstaller l'app efface egalement la base.</li>
     <li><strong>Droit a la portabilite</strong> : exports CSV/vCard standards (RFC 4180, RFC 2426).</li>
     <li><strong>Droit d'opposition</strong> : ne pas installer l'app.</li>
@@ -181,7 +184,7 @@
     n'utilise :
   </p>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
-    <li><strong>Pas de cookies</strong> (saufs ceux strictement techniques de GitHub Pages, hors notre controle)</li>
+    <li><strong>Pas de cookies</strong> (saufs ceux strictement techniques de GitHub Pages, hors notre contrôle)</li>
     <li><strong>Pas de tracking analytique</strong> (Google Analytics, Plausible, etc.)</li>
     <li><strong>Pas de publicite</strong></li>
     <li><strong>Pas de formulaire contact</strong> qui collecterait des emails</li>
@@ -194,14 +197,14 @@
   <p style="margin-bottom: var(--space-22);">
     Le <strong>dashboard CSV</strong> (`dashboard.html`) parse ton
     fichier CSV <em>dans le navigateur</em>, en memoire. Aucun upload
-    serveur. Quand tu fermes l'onglet, les donnees sont perdues.
+    serveur. Quand tu fermes l'onglet, les données sont perdues.
   </p>
 
   <!-- Propriete intellectuelle -->
   <h2 style="margin-bottom: var(--space-14);">5. Propriete intellectuelle</h2>
   <p style="margin-bottom: var(--space-22);">
     Le code source de l'app et du site est sous <strong>licence
-    libre</strong> (voir le repo GitHub pour le detail). Le nom
+    libre</strong> (voir le repo GitHub pour le détail). Le nom
     "opti_route" et le logo sont la propriete de CALOTE Noah. Les
     marques tierces citees (Chronopost, Colissimo, etc.) appartiennent
     a leurs detenteurs respectifs ; leur citation est purement
@@ -215,10 +218,10 @@
     sorte. L'utilisateur reste responsable de :
   </p>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
-    <li>La sauvegarde de ses donnees (exports CSV/vCard reguliers)</li>
-    <li>La conformite des donnees clients qu'il y stocke (RGPD si professionnel)</li>
-    <li>Le respect des regles de la route (l'app ne se substitue pas a un GPS legal)</li>
-    <li>La verification des optimisations proposees (l'algorithme peut suggerer une route non praticable selon le vehicule)</li>
+    <li>La sauvegarde de ses données (exports CSV/vCard reguliers)</li>
+    <li>La conformite des données clients qu'il y stocke (RGPD si professionnel)</li>
+    <li>Le respect des règles de la route (l'app ne se substitue pas a un GPS legal)</li>
+    <li>La verification des optimisations proposees (l'algorithme peut suggerer une route non praticable selon le véhicule)</li>
   </ul>
 
   <!-- Contact -->
@@ -235,7 +238,7 @@
       <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
     </svg>
     <span>
-      Resume : <strong>aucune donnee ne quitte ton telephone sans ton accord explicite.</strong>
+      Resume : <strong>aucune donnée ne quitte ton téléphone sans ton accord explicite.</strong>
       L'app est un outil pro local, pas un service en ligne.
     </span>
   </div>
@@ -245,7 +248,7 @@
 <footer class="site-footer">
   <div class="container">
     <p class="footer-copy">
-      <a href="index.html">opti_route</a> · 100% prive · <span class="mono">© CALOTE Noah, 2026</span> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
+      <a href="index.html">opti_route</a> · 100% privé · <span class="mono">© CALOTE Noah, 2026</span> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
     </p>
   </div>
 </footer>

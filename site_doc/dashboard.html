@@ -2,9 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0E1410">
-<title>Tableau de bord chef d'equipe — opti_route</title>
+<title>Tableau de bord chef d'équipe — opti_route</title>
 <meta name="description" content="Dashboard web interactif pour visualiser tes tournees opti_route exportees en CSV depuis ton telephone.">
 <meta name="author" content="CALOTE Noah">
 <!-- Open Graph (preview au partage WhatsApp / Twitter / LinkedIn) -->
@@ -23,7 +26,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- QW7 audit #339 : defer (non-blocking parse) + SRI hash (integrite si CDN compromis). -->
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+        integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g"
+        crossorigin="anonymous"></script>
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/favicon.svg">
 <link rel="canonical" href="https://chipat-neko.github.io/opti_route/site/dashboard.html">
@@ -68,12 +74,12 @@
 
 <main id="main-content" class="container dashboard-shell">
 
-  <span class="eyebrow">Tableau de bord chef d'equipe</span>
-  <h1>Visualise tes tournees exportees.</h1>
+  <span class="eyebrow">Tableau de bord chef d'équipe</span>
+  <h1>Visualise tes tournées exportees.</h1>
   <p class="sub">
-    Upload le CSV genere par <strong>Statistiques &rarr; Exporter en CSV</strong> sur ton telephone
+    Upload le CSV généré par <strong>Statistiques &rarr; Exporter en CSV</strong> sur ton téléphone
     (<a href="guide-csv.html">voir le guide pas a pas</a>).
-    Toutes les donnees restent dans ton navigateur — rien n'est uploade, rien n'est partage.
+    Toutes les données restent dans ton navigateur — rien n'est uploade, rien n'est partage.
   </p>
 
   <!-- Zone d'upload -->
@@ -83,7 +89,7 @@
       <polyline points="17 8 12 3 7 8"/>
       <line x1="12" y1="3" x2="12" y2="15"/>
     </svg>
-    <h3>Depose ton CSV ici</h3>
+    <h3>Dépose ton CSV ici</h3>
     <p>ou <span class="browse">clique pour parcourir</span></p>
     <input type="file" id="fileInput" accept=".csv,text/csv">
     <p style="margin-top: var(--space-22); font-size: 0.85rem;">
@@ -100,7 +106,7 @@
         <line x1="12" y1="16" x2="12" y2="12"/>
         <line x1="12" y1="8" x2="12.01" y2="8"/>
       </svg>
-      <span><strong id="bannerSummary">N tournees</strong> chargees depuis ton CSV. <a href="#" id="resetBtn" style="color: inherit; text-decoration: underline;">Remplacer le fichier</a></span>
+      <span><strong id="bannerSummary">N tournées</strong> chargees depuis ton CSV. <a href="#" id="resetBtn" style="color: inherit; text-decoration: underline;">Remplacer le fichier</a></span>
     </div>
 
     <!-- Bouton mode presentation : utile en demo client/chef ou pitch.
@@ -121,15 +127,15 @@
     <div class="dashboard-stats">
       <div class="stat-card">
         <div class="stat-value" id="statTournees">—</div>
-        <div class="stat-label">Tournees</div>
+        <div class="stat-label">Tournées</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statArrets">—</div>
-        <div class="stat-label">Arrets total</div>
+        <div class="stat-label">Arrêts total</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statColis">—</div>
-        <div class="stat-label">Colis livres</div>
+        <div class="stat-label">Colis livrés</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statKm">—</div>
@@ -137,14 +143,14 @@
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statDuree">—</div>
-        <div class="stat-label">Duree totale</div>
+        <div class="stat-label">Durée totale</div>
       </div>
     </div>
 
     <!-- Graphes : skeleton anime visible avant que Chart.js render -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: var(--space-22); margin-bottom: var(--space-22);">
       <div class="chart-wrap" id="wrapColis">
-        <h3>Colis livres par tournee</h3>
+        <h3>Colis livrés par tournée</h3>
         <div class="chart-skeleton" aria-hidden="true"></div>
         <canvas id="chartColis"></canvas>
       </div>
@@ -174,16 +180,16 @@
     </div>
     <div class="dashboard-table-wrap">
       <table class="dashboard-table" id="dataTable">
-        <caption class="sr-only">Tournees du CSV charge (clique une colonne pour trier)</caption>
+        <caption class="sr-only">Tournées du CSV charge (clique une colonne pour trier)</caption>
         <thead>
           <tr>
             <th scope="col" data-sort-key="date" aria-sort="none"><button type="button" class="th-sort">Date <span class="th-arrow" aria-hidden="true"></span></button></th>
             <th scope="col" data-sort-key="nom" aria-sort="none"><button type="button" class="th-sort">Nom <span class="th-arrow" aria-hidden="true"></span></button></th>
             <th scope="col" data-sort-key="statut" aria-sort="none"><button type="button" class="th-sort">Statut <span class="th-arrow" aria-hidden="true"></span></button></th>
-            <th scope="col" data-sort-key="arrets" aria-sort="none"><button type="button" class="th-sort">Arrets <span class="th-arrow" aria-hidden="true"></span></button></th>
-            <th scope="col" data-sort-key="colisLivres" aria-sort="none"><button type="button" class="th-sort">Colis livres <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="arrets" aria-sort="none"><button type="button" class="th-sort">Arrêts <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="colisLivres" aria-sort="none"><button type="button" class="th-sort">Colis livrés <span class="th-arrow" aria-hidden="true"></span></button></th>
             <th scope="col" data-sort-key="km" aria-sort="none"><button type="button" class="th-sort">Km <span class="th-arrow" aria-hidden="true"></span></button></th>
-            <th scope="col" data-sort-key="dureeMin" aria-sort="none"><button type="button" class="th-sort">Duree (min) <span class="th-arrow" aria-hidden="true"></span></button></th>
+            <th scope="col" data-sort-key="dureeMin" aria-sort="none"><button type="button" class="th-sort">Durée (min) <span class="th-arrow" aria-hidden="true"></span></button></th>
             <th scope="col" data-sort-key="pauseMin" aria-sort="none"><button type="button" class="th-sort">Pause (min) <span class="th-arrow" aria-hidden="true"></span></button></th>
           </tr>
         </thead>
@@ -198,7 +204,7 @@
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Re-telecharger en CSV propre
+        Re-télécharger en CSV propre
       </button>
       <button class="btn btn-ghost" id="printBtn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

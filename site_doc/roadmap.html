@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Roadmap — opti_route</title>
 <meta name="description" content="Vision et roadmap opti_route : Phase 1 (gratuit, local), Phase 2 (CB, backend), Phase 3 (mobile pro, flotte).">
@@ -160,14 +163,14 @@
       <div class="phase-num">1</div>
       <div>
         <h3>Phase 1 — Local & gratuit</h3>
-        <span class="phase-meta">Avril 2026 → en cours · Aucune CB · Tout reste sur le telephone</span>
+        <span class="phase-meta">Avril 2026 → en cours · Aucune CB · Tout reste sur le téléphone</span>
       </div>
       <span class="phase-status live">LIVE</span>
     </div>
     <p style="margin-bottom: var(--space-14);">
-      Tout ce qu'un livreur ou un petit chef d'equipe local peut vouloir.
+      Tout ce qu'un livreur ou un petit chef d'équipe local peut vouloir.
       <strong>Aucun backend, aucun abonnement.</strong> La base SQLite
-      Drift reste sur le telephone. Les APIs externes utilisees (BAN,
+      Drift reste sur le téléphone. Les APIs externes utilisees (BAN,
       SIRENE, Photon, OpenRouteService) sont publiques et gratuites,
       avec des quotas confortables.
     </p>
@@ -182,7 +185,7 @@
       </div>
       <div class="phase-feat done">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Gestion equipe locale (un seul phone)
+        Gestion équipe locale (un seul phone)
       </div>
       <div class="phase-feat done">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -190,7 +193,7 @@
       </div>
       <div class="phase-feat done">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Stats annuelles + top raisons echec
+        Stats annuelles + top raisons échec
       </div>
       <div class="phase-feat done">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -218,8 +221,8 @@
       <span class="phase-status next">PROCHAIN</span>
     </div>
     <p style="margin-bottom: var(--space-14);">
-      Le chef d'equipe gere son equipe a distance. Chaque coequipier a
-      son propre telephone avec son propre compte. Les tournees sont
+      Le chef d'équipe gère son équipe a distance. Chaque coéquipier a
+      son propre téléphone avec son propre compte. Les tournées sont
       envoyees du chef vers les livreurs <strong>en temps reel</strong>,
       sans CSV manuel. Les statuts remontent automatiquement.
     </p>
@@ -234,11 +237,11 @@
       </div>
       <div class="phase-feat planned">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Dashboard chef live (positions GPS coequipiers)
+        Dashboard chef live (positions GPS coéquipiers)
       </div>
       <div class="phase-feat planned">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Notification push "X a fini sa tournee"
+        Notification push "X a fini sa tournée"
       </div>
       <div class="phase-feat planned">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -271,7 +274,7 @@
     </div>
     <p style="margin-bottom: var(--space-14);">
       Outils pour entreprises de livraison structurees : plusieurs
-      vehicules, RH simple, integration ERP, GPS turn-by-turn embarque.
+      véhicules, RH simple, integration ERP, GPS turn-by-turn embarque.
     </p>
     <div class="phase-feats">
       <div class="phase-feat planned">
@@ -280,7 +283,7 @@
       </div>
       <div class="phase-feat planned">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Optimisation multi-vehicules (VROOM avance)
+        Optimisation multi-véhicules (VROOM avance)
       </div>
       <div class="phase-feat planned">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -288,7 +291,7 @@
       </div>
       <div class="phase-feat planned">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Facturation auto (PDF tournee -> client)
+        Facturation auto (PDF tournée -> client)
       </div>
       <div class="phase-feat planned">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>

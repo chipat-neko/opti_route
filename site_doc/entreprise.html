@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pour les entreprises — opti_route</title>
 <meta name="description" content="Solution opti_route pour les entreprises de livraison : gestion d'equipe, suivi GPS temps reel, facturation client, integration ERP. Phase 1 gratuit, Phase 2 cloud.">
@@ -316,10 +319,10 @@
 <main id="main-content" class="container" style="padding: var(--space-64) 0; max-width: 1100px;">
 
   <span class="eyebrow">Pour les entreprises de livraison</span>
-  <h1>Outil pro pour <span style="color: var(--emerald);">flottes & equipes structurees</span>.</h1>
+  <h1>Outil pro pour <span style="color: var(--emerald);">flottes & équipes structurees</span>.</h1>
   <p style="font-size: 1.1rem; margin: var(--space-22) 0 var(--space-40); max-width: 720px;">
     opti_route s'adapte du livreur solo au gestionnaire de flotte.
-    Decouvre les features pro, le calculateur ROI, et la difference
+    Découvre les features pro, le calculateur ROI, et la difference
     entre Phase 1 (gratuit, local) et Phase 2 (cloud, temps reel).
   </p>
 
@@ -329,7 +332,7 @@
     <h2 style="margin-bottom: var(--space-18);">Calculateur de gain de temps</h2>
     <p style="margin-bottom: var(--space-18); max-width: 680px;">
       Combien de temps tu fais perdre a tes livreurs en planifiant les
-      tournees a la main ? Combien gagnes-tu avec une optimisation
+      tournées a la main ? Combien gagnes-tu avec une optimisation
       VROOM automatique ? Joue avec les valeurs.
     </p>
 
@@ -338,13 +341,13 @@
         <div>
           <div class="roi-input">
             <label>Nombre de livreurs
-              <small>Coequipiers actifs dans ton equipe</small>
+              <small>Coéquipiers actifs dans ton équipe</small>
             </label>
             <input type="number" id="roiLivreurs" min="1" max="100" value="3">
           </div>
           <div class="roi-input">
-            <label>Arrets / tournee / livreur
-              <small>Moyenne d'arrets quotidiens par personne</small>
+            <label>Arrêts / tournée / livreur
+              <small>Moyenne d'arrêts quotidiens par personne</small>
             </label>
             <input type="number" id="roiArrets" min="1" max="200" value="20">
           </div>
@@ -361,7 +364,7 @@
             <input type="number" id="roiCout" min="0" max="200" step="0.5" value="18">
           </div>
           <div class="roi-input">
-            <label>Gain estime par tournee (min)
+            <label>Gain estime par tournée (min)
               <small>Optimisation + scan bordereaux. Defaut 15 min/personne/jour</small>
             </label>
             <input type="number" id="roiGain" min="0" max="120" value="15">
@@ -410,11 +413,11 @@
       <div class="price-card">
         <div class="price-tier">Free</div>
         <div class="price-amount">0 EUR<small>par mois, pour toujours</small></div>
-        <div class="price-target">Livreur solo, 1 phone, Phase 1 complete</div>
+        <div class="price-target">Livreur solo, 1 phone, Phase 1 complète</div>
         <ul class="price-feats">
           <li>Optimisation VROOM (500/jour)</li>
           <li>Scan bordereaux OCR FR</li>
-          <li>Mode chef d'equipe local</li>
+          <li>Mode chef d'équipe local</li>
           <li>Exports PDF / CSV / vCard</li>
           <li>4 palettes + mode XL</li>
         </ul>
@@ -436,14 +439,14 @@
       </div>
 
       <div class="price-card featured">
-        <div class="price-tier">Equipe</div>
+        <div class="price-tier">Équipe</div>
         <div class="price-amount">19 EUR<small>par mois, 1 a 10 chauffeurs</small></div>
         <div class="price-target">Chef + livreurs sur leurs propres phones</div>
         <ul class="price-feats">
           <li>Tout Solo+, plus :</li>
           <li>Sync temps reel chef &harr; livreurs</li>
-          <li>Suivi GPS live de l'equipe</li>
-          <li>Chat intra-equipe integre</li>
+          <li>Suivi GPS live de l'équipe</li>
+          <li>Chat intra-équipe integre</li>
           <li>Notifications push cross-app</li>
           <li>Affectation drag-and-drop</li>
         </ul>
@@ -455,8 +458,8 @@
         <div class="price-amount">99 EUR<small>+ 15 EUR/livreur supplementaire</small></div>
         <div class="price-target">Multi-depots, ERP, 10+ livreurs</div>
         <ul class="price-feats">
-          <li>Tout Equipe, plus :</li>
-          <li>Multi-depots / multi-equipes</li>
+          <li>Tout Équipe, plus :</li>
+          <li>Multi-depots / multi-équipes</li>
           <li>API publique + webhooks</li>
           <li>Facturation TVA + export Sage / Pennylane</li>
           <li>SLA + dedicated success manager</li>
@@ -467,7 +470,7 @@
 
     <p style="font-size: 0.85rem; color: var(--text-mute); font-style: italic; margin-top: var(--space-14);">
       Le passage payant ne casse jamais la Phase 1. Si tu te desabonnes, tu retombes sur le plan Free
-      avec tes donnees intactes (le backup cloud reste lisible 90 jours).
+      avec tes données intactes (le backup cloud reste lisible 90 jours).
     </p>
   </section>
 
@@ -490,17 +493,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td>Optimisation tournee VROOM</td><td class="yes">✓ 500/jour</td><td class="yes highlight">✓ 10K+/mois</td></tr>
+          <tr><td>Optimisation tournée VROOM</td><td class="yes">✓ 500/jour</td><td class="yes highlight">✓ 10K+/mois</td></tr>
           <tr><td>Scan bordereaux OCR</td><td class="yes">✓ Local</td><td class="yes highlight">✓ + transporteurs additionnels</td></tr>
-          <tr><td>Gestion equipe locale (1 phone)</td><td class="yes">✓</td><td class="yes highlight">✓</td></tr>
+          <tr><td>Gestion équipe locale (1 phone)</td><td class="yes">✓</td><td class="yes highlight">✓</td></tr>
           <tr><td>Tableau de bord web (CSV)</td><td class="yes">✓ Upload manuel</td><td class="yes highlight">✓ Sync temps reel</td></tr>
-          <tr><td>App par coequipier (chacun son phone)</td><td class="no">— Non</td><td class="yes highlight">✓ Auth + sync</td></tr>
+          <tr><td>App par coéquipier (chacun son phone)</td><td class="no">— Non</td><td class="yes highlight">✓ Auth + sync</td></tr>
           <tr><td>Suivi GPS temps reel des livreurs</td><td class="no">— Non</td><td class="yes highlight">✓ Map live</td></tr>
           <tr><td>Notifications push (chef &harr; livreurs)</td><td class="partial">~ Locales seulement</td><td class="yes highlight">✓ Cross-app</td></tr>
           <tr><td>Backup cloud automatique</td><td class="no">— Exports manuels</td><td class="yes highlight">✓ Chiffre</td></tr>
-          <tr><td>Stats consolidees multi-livreurs</td><td class="partial">~ Local au chef</td><td class="yes highlight">✓ Vue equipe live</td></tr>
+          <tr><td>Stats consolidees multi-livreurs</td><td class="partial">~ Local au chef</td><td class="yes highlight">✓ Vue équipe live</td></tr>
           <tr><td>Facturation client mensuelle</td><td class="yes">✓ PDF local</td><td class="yes highlight">✓ + envoi mail auto</td></tr>
-          <tr><td>RGPD compliant (donnees en France/UE)</td><td class="yes">✓ Tout local</td><td class="yes highlight">✓ Region UE configurable</td></tr>
+          <tr><td>RGPD compliant (données en France/UE)</td><td class="yes">✓ Tout local</td><td class="yes highlight">✓ Region UE configurable</td></tr>
         </tbody>
       </table>
     </div>
@@ -519,7 +522,7 @@
           </svg>
         </div>
         <h3>Livreur independant</h3>
-        <p>30 a 80 arrets/jour, gere son propre carnet et ses tournees. Phase 1 suffit largement, 0 cout.</p>
+        <p>30 a 80 arrêts/jour, gère son propre carnet et ses tournées. Phase 1 suffit largement, 0 cout.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -527,8 +530,8 @@
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </div>
-        <h3>Petit chef d'equipe (2-5)</h3>
-        <p>Repartit les tournees, recoit les retours via WhatsApp/SMS. Phase 1 OK avec affectation + partage cible.</p>
+        <h3>Petit chef d'équipe (2-5)</h3>
+        <p>Repartit les tournées, recoit les retours via WhatsApp/SMS. Phase 1 OK avec affectation + partage cible.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -537,7 +540,7 @@
           </svg>
         </div>
         <h3>Entreprise structuree (5-20)</h3>
-        <p>Plusieurs vehicules, planification quotidienne, facturation client. Phase 1 possible avec discipline ; Phase 2 recommande pour la sync.</p>
+        <p>Plusieurs véhicules, planification quotidienne, facturation client. Phase 1 possible avec discipline ; Phase 2 recommande pour la sync.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -546,7 +549,7 @@
           </svg>
         </div>
         <h3>Flotte pro (20+)</h3>
-        <p>ERP integration, suivi RH, conformite RGPD avancee. Cible Phase 3 avec API publique + multi-vehicules VROOM.</p>
+        <p>ERP integration, suivi RH, conformite RGPD avancée. Cible Phase 3 avec API publique + multi-véhicules VROOM.</p>
       </div>
     </div>
   </section>
