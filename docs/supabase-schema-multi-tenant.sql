@@ -199,6 +199,23 @@ returns boolean language sql security definer stable as $$
   )
 $$;
 
+-- True si user est chef_entrepot d'AU MOINS UN entrepot de l'entreprise
+-- donnée. SECURITY DEFINER + search_path : indispensable car appelée
+-- depuis la policy `ins_entrepots` — un sous-SELECT sur `entrepots` dans
+-- une policy de `entrepots` provoquerait une recursion RLS (42P17).
+create or replace function public.is_chef_of_entreprise(p_entreprise_id uuid)
+returns boolean language sql security definer stable
+set search_path = public as $$
+  select exists (
+    select 1 from public.entrepot_users eu
+    join public.entrepots e on e.cloud_id = eu.entrepot_id
+    where eu.user_id = auth.uid()
+      and eu.role = 'chef_entrepot'
+      and eu.statut = 'actif'
+      and e.entreprise_id = p_entreprise_id
+  )
+$$;
+
 -- ─────────────────────────────────────────────────────────────────
 -- 6. RLS (Row Level Security) — strict multi-tenant
 -- ─────────────────────────────────────────────────────────────────
@@ -239,13 +256,12 @@ create policy ins_entrepots on public.entrepots
   for insert with check (
     public.is_admin_entreprise(entreprise_id)
     -- ou chef entrepot peut créer un nouvel entrepot dans son entreprise (Q4).
-    -- Note : on join entrepots pour récupérer entreprise_id (entrepot_users
-    -- n'a que entrepot_id, donc l'alias est `e.entreprise_id` pas `eu.entreprise_id`).
-    or entreprise_id in (
-      select e.entreprise_id from public.entrepot_users eu
-      join public.entrepots e on e.cloud_id = eu.entrepot_id
-      where eu.user_id = auth.uid() and eu.role = 'chef_entrepot' and eu.statut = 'actif'
-    )
+    -- ⚠️ On passe par une fonction SECURITY DEFINER : un sous-SELECT direct
+    -- sur `entrepots` DANS une policy de `entrepots` declenche une recursion
+    -- RLS (Postgres 42P17 "infinite recursion detected in policy"). La
+    -- fonction (definer + search_path) bypasse la RLS et casse la boucle.
+    -- Cf bug terrain 2026-05-31 (creation entrepot KO).
+    or public.is_chef_of_entreprise(entreprise_id)
   );
 drop policy if exists upd_entrepots on public.entrepots;
 create policy upd_entrepots on public.entrepots
