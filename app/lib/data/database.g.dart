@@ -4717,6 +4717,28 @@ class $SavedDestinationsTable extends SavedDestinations
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _entrepriseIdMeta = const VerificationMeta(
+    'entrepriseId',
+  );
+  @override
+  late final GeneratedColumn<String> entrepriseId = GeneratedColumn<String>(
+    'entreprise_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _entrepotIdMeta = const VerificationMeta(
+    'entrepotId',
+  );
+  @override
+  late final GeneratedColumn<String> entrepotId = GeneratedColumn<String>(
+    'entrepot_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4744,6 +4766,8 @@ class $SavedDestinationsTable extends SavedDestinations
     isProblematique,
     photoObligatoire,
     preferencePersonnalisee,
+    entrepriseId,
+    entrepotId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4934,6 +4958,21 @@ class $SavedDestinationsTable extends SavedDestinations
         ),
       );
     }
+    if (data.containsKey('entreprise_id')) {
+      context.handle(
+        _entrepriseIdMeta,
+        entrepriseId.isAcceptableOrUnknown(
+          data['entreprise_id']!,
+          _entrepriseIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('entrepot_id')) {
+      context.handle(
+        _entrepotIdMeta,
+        entrepotId.isAcceptableOrUnknown(data['entrepot_id']!, _entrepotIdMeta),
+      );
+    }
     return context;
   }
 
@@ -5043,6 +5082,14 @@ class $SavedDestinationsTable extends SavedDestinations
         DriftSqlType.string,
         data['${effectivePrefix}preference_personnalisee'],
       ),
+      entrepriseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entreprise_id'],
+      ),
+      entrepotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entrepot_id'],
+      ),
     );
   }
 
@@ -5151,6 +5198,18 @@ class SavedDestination extends DataClass
   /// (libre) : `preferencePersonnalisee` est une consigne forte qu'on
   /// doit voir avant chaque livraison.
   final String? preferencePersonnalisee;
+
+  /// Carnet partage entreprise (epopee #361, carte #362). UUID de
+  /// `entreprises.cloud_id`. Si NULL : adresse perso au user.
+  /// Si set + entrepotId NULL : adresse partagee au niveau entreprise
+  /// entier (mutualisee tous les entrepots).
+  /// Si set + entrepotId set : adresse rattachee a un entrepot
+  /// specifique (carnet entrepot local).
+  final String? entrepriseId;
+
+  /// FK locale optionnelle vers `entrepots.cloud_id`. Voir
+  /// `entrepriseId` ci-dessus pour la semantique.
+  final String? entrepotId;
   const SavedDestination({
     required this.id,
     this.nomClient,
@@ -5177,6 +5236,8 @@ class SavedDestination extends DataClass
     required this.isProblematique,
     required this.photoObligatoire,
     this.preferencePersonnalisee,
+    this.entrepriseId,
+    this.entrepotId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5236,6 +5297,12 @@ class SavedDestination extends DataClass
         preferencePersonnalisee,
       );
     }
+    if (!nullToAbsent || entrepriseId != null) {
+      map['entreprise_id'] = Variable<String>(entrepriseId);
+    }
+    if (!nullToAbsent || entrepotId != null) {
+      map['entrepot_id'] = Variable<String>(entrepotId);
+    }
     return map;
   }
 
@@ -5292,6 +5359,12 @@ class SavedDestination extends DataClass
       preferencePersonnalisee: preferencePersonnalisee == null && nullToAbsent
           ? const Value.absent()
           : Value(preferencePersonnalisee),
+      entrepriseId: entrepriseId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entrepriseId),
+      entrepotId: entrepotId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entrepotId),
     );
   }
 
@@ -5330,6 +5403,8 @@ class SavedDestination extends DataClass
       preferencePersonnalisee: serializer.fromJson<String?>(
         json['preferencePersonnalisee'],
       ),
+      entrepriseId: serializer.fromJson<String?>(json['entrepriseId']),
+      entrepotId: serializer.fromJson<String?>(json['entrepotId']),
     );
   }
   @override
@@ -5363,6 +5438,8 @@ class SavedDestination extends DataClass
       'preferencePersonnalisee': serializer.toJson<String?>(
         preferencePersonnalisee,
       ),
+      'entrepriseId': serializer.toJson<String?>(entrepriseId),
+      'entrepotId': serializer.toJson<String?>(entrepotId),
     };
   }
 
@@ -5392,6 +5469,8 @@ class SavedDestination extends DataClass
     bool? isProblematique,
     bool? photoObligatoire,
     Value<String?> preferencePersonnalisee = const Value.absent(),
+    Value<String?> entrepriseId = const Value.absent(),
+    Value<String?> entrepotId = const Value.absent(),
   }) => SavedDestination(
     id: id ?? this.id,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
@@ -5424,6 +5503,8 @@ class SavedDestination extends DataClass
     preferencePersonnalisee: preferencePersonnalisee.present
         ? preferencePersonnalisee.value
         : this.preferencePersonnalisee,
+    entrepriseId: entrepriseId.present ? entrepriseId.value : this.entrepriseId,
+    entrepotId: entrepotId.present ? entrepotId.value : this.entrepotId,
   );
   SavedDestination copyWithCompanion(SavedDestinationsCompanion data) {
     return SavedDestination(
@@ -5470,6 +5551,12 @@ class SavedDestination extends DataClass
       preferencePersonnalisee: data.preferencePersonnalisee.present
           ? data.preferencePersonnalisee.value
           : this.preferencePersonnalisee,
+      entrepriseId: data.entrepriseId.present
+          ? data.entrepriseId.value
+          : this.entrepriseId,
+      entrepotId: data.entrepotId.present
+          ? data.entrepotId.value
+          : this.entrepotId,
     );
   }
 
@@ -5500,7 +5587,9 @@ class SavedDestination extends DataClass
           ..write('noteStationnement: $noteStationnement, ')
           ..write('isProblematique: $isProblematique, ')
           ..write('photoObligatoire: $photoObligatoire, ')
-          ..write('preferencePersonnalisee: $preferencePersonnalisee')
+          ..write('preferencePersonnalisee: $preferencePersonnalisee, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('entrepotId: $entrepotId')
           ..write(')'))
         .toString();
   }
@@ -5532,6 +5621,8 @@ class SavedDestination extends DataClass
     isProblematique,
     photoObligatoire,
     preferencePersonnalisee,
+    entrepriseId,
+    entrepotId,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -5561,7 +5652,9 @@ class SavedDestination extends DataClass
           other.noteStationnement == this.noteStationnement &&
           other.isProblematique == this.isProblematique &&
           other.photoObligatoire == this.photoObligatoire &&
-          other.preferencePersonnalisee == this.preferencePersonnalisee);
+          other.preferencePersonnalisee == this.preferencePersonnalisee &&
+          other.entrepriseId == this.entrepriseId &&
+          other.entrepotId == this.entrepotId);
 }
 
 class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
@@ -5590,6 +5683,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
   final Value<bool> isProblematique;
   final Value<bool> photoObligatoire;
   final Value<String?> preferencePersonnalisee;
+  final Value<String?> entrepriseId;
+  final Value<String?> entrepotId;
   const SavedDestinationsCompanion({
     this.id = const Value.absent(),
     this.nomClient = const Value.absent(),
@@ -5616,6 +5711,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.isProblematique = const Value.absent(),
     this.photoObligatoire = const Value.absent(),
     this.preferencePersonnalisee = const Value.absent(),
+    this.entrepriseId = const Value.absent(),
+    this.entrepotId = const Value.absent(),
   });
   SavedDestinationsCompanion.insert({
     this.id = const Value.absent(),
@@ -5643,6 +5740,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     this.isProblematique = const Value.absent(),
     this.photoObligatoire = const Value.absent(),
     this.preferencePersonnalisee = const Value.absent(),
+    this.entrepriseId = const Value.absent(),
+    this.entrepotId = const Value.absent(),
   }) : adresseDisplay = Value(adresseDisplay),
        lat = Value(lat),
        lng = Value(lng);
@@ -5672,6 +5771,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Expression<bool>? isProblematique,
     Expression<bool>? photoObligatoire,
     Expression<String>? preferencePersonnalisee,
+    Expression<String>? entrepriseId,
+    Expression<String>? entrepotId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5700,6 +5801,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       if (photoObligatoire != null) 'photo_obligatoire': photoObligatoire,
       if (preferencePersonnalisee != null)
         'preference_personnalisee': preferencePersonnalisee,
+      if (entrepriseId != null) 'entreprise_id': entrepriseId,
+      if (entrepotId != null) 'entrepot_id': entrepotId,
     });
   }
 
@@ -5729,6 +5832,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
     Value<bool>? isProblematique,
     Value<bool>? photoObligatoire,
     Value<String?>? preferencePersonnalisee,
+    Value<String?>? entrepriseId,
+    Value<String?>? entrepotId,
   }) {
     return SavedDestinationsCompanion(
       id: id ?? this.id,
@@ -5757,6 +5862,8 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
       photoObligatoire: photoObligatoire ?? this.photoObligatoire,
       preferencePersonnalisee:
           preferencePersonnalisee ?? this.preferencePersonnalisee,
+      entrepriseId: entrepriseId ?? this.entrepriseId,
+      entrepotId: entrepotId ?? this.entrepotId,
     );
   }
 
@@ -5840,6 +5947,12 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
         preferencePersonnalisee.value,
       );
     }
+    if (entrepriseId.present) {
+      map['entreprise_id'] = Variable<String>(entrepriseId.value);
+    }
+    if (entrepotId.present) {
+      map['entrepot_id'] = Variable<String>(entrepotId.value);
+    }
     return map;
   }
 
@@ -5870,7 +5983,9 @@ class SavedDestinationsCompanion extends UpdateCompanion<SavedDestination> {
           ..write('noteStationnement: $noteStationnement, ')
           ..write('isProblematique: $isProblematique, ')
           ..write('photoObligatoire: $photoObligatoire, ')
-          ..write('preferencePersonnalisee: $preferencePersonnalisee')
+          ..write('preferencePersonnalisee: $preferencePersonnalisee, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('entrepotId: $entrepotId')
           ..write(')'))
         .toString();
   }
@@ -9101,6 +9216,2996 @@ class WorkSessionsCompanion extends UpdateCompanion<WorkSession> {
   }
 }
 
+class $EntreprisesTable extends Entreprises
+    with TableInfo<$EntreprisesTable, Entreprise> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntreprisesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cloudIdMeta = const VerificationMeta(
+    'cloudId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudId = GeneratedColumn<String>(
+    'cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nomMeta = const VerificationMeta('nom');
+  @override
+  late final GeneratedColumn<String> nom = GeneratedColumn<String>(
+    'nom',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _siretMeta = const VerificationMeta('siret');
+  @override
+  late final GeneratedColumn<String> siret = GeneratedColumn<String>(
+    'siret',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cloudId,
+    nom,
+    siret,
+    createdBy,
+    creeLe,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entreprises';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Entreprise> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cloud_id')) {
+      context.handle(
+        _cloudIdMeta,
+        cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cloudIdMeta);
+    }
+    if (data.containsKey('nom')) {
+      context.handle(
+        _nomMeta,
+        nom.isAcceptableOrUnknown(data['nom']!, _nomMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomMeta);
+    }
+    if (data.containsKey('siret')) {
+      context.handle(
+        _siretMeta,
+        siret.isAcceptableOrUnknown(data['siret']!, _siretMeta),
+      );
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cloudId};
+  @override
+  Entreprise map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Entreprise(
+      cloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_id'],
+      )!,
+      nom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nom'],
+      )!,
+      siret: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}siret'],
+      ),
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_by'],
+      )!,
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EntreprisesTable createAlias(String alias) {
+    return $EntreprisesTable(attachedDatabase, alias);
+  }
+}
+
+class Entreprise extends DataClass implements Insertable<Entreprise> {
+  /// `cloud_id` UUID v4 (TEXT) = clé primaire locale ET cloud.
+  /// Pas d'auto-increment : l'ID est généré côté Supabase puis miroir
+  /// local. Simplifie la sync (1 ID partout, pas de mapping).
+  final String cloudId;
+  final String nom;
+
+  /// SIRET (14 chiffres) optionnel. Stocké en TEXT pour préserver
+  /// les zéros de tête (ex: "01234567890123").
+  final String? siret;
+
+  /// User qui a créé l'entreprise (= admin_entreprise initial).
+  /// Stocke l'UUID Supabase de auth.users.
+  final String createdBy;
+  final DateTime creeLe;
+  final DateTime updatedAt;
+  const Entreprise({
+    required this.cloudId,
+    required this.nom,
+    this.siret,
+    required this.createdBy,
+    required this.creeLe,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cloud_id'] = Variable<String>(cloudId);
+    map['nom'] = Variable<String>(nom);
+    if (!nullToAbsent || siret != null) {
+      map['siret'] = Variable<String>(siret);
+    }
+    map['created_by'] = Variable<String>(createdBy);
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  EntreprisesCompanion toCompanion(bool nullToAbsent) {
+    return EntreprisesCompanion(
+      cloudId: Value(cloudId),
+      nom: Value(nom),
+      siret: siret == null && nullToAbsent
+          ? const Value.absent()
+          : Value(siret),
+      createdBy: Value(createdBy),
+      creeLe: Value(creeLe),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Entreprise.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Entreprise(
+      cloudId: serializer.fromJson<String>(json['cloudId']),
+      nom: serializer.fromJson<String>(json['nom']),
+      siret: serializer.fromJson<String?>(json['siret']),
+      createdBy: serializer.fromJson<String>(json['createdBy']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cloudId': serializer.toJson<String>(cloudId),
+      'nom': serializer.toJson<String>(nom),
+      'siret': serializer.toJson<String?>(siret),
+      'createdBy': serializer.toJson<String>(createdBy),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Entreprise copyWith({
+    String? cloudId,
+    String? nom,
+    Value<String?> siret = const Value.absent(),
+    String? createdBy,
+    DateTime? creeLe,
+    DateTime? updatedAt,
+  }) => Entreprise(
+    cloudId: cloudId ?? this.cloudId,
+    nom: nom ?? this.nom,
+    siret: siret.present ? siret.value : this.siret,
+    createdBy: createdBy ?? this.createdBy,
+    creeLe: creeLe ?? this.creeLe,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Entreprise copyWithCompanion(EntreprisesCompanion data) {
+    return Entreprise(
+      cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      nom: data.nom.present ? data.nom.value : this.nom,
+      siret: data.siret.present ? data.siret.value : this.siret,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Entreprise(')
+          ..write('cloudId: $cloudId, ')
+          ..write('nom: $nom, ')
+          ..write('siret: $siret, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(cloudId, nom, siret, createdBy, creeLe, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Entreprise &&
+          other.cloudId == this.cloudId &&
+          other.nom == this.nom &&
+          other.siret == this.siret &&
+          other.createdBy == this.createdBy &&
+          other.creeLe == this.creeLe &&
+          other.updatedAt == this.updatedAt);
+}
+
+class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
+  final Value<String> cloudId;
+  final Value<String> nom;
+  final Value<String?> siret;
+  final Value<String> createdBy;
+  final Value<DateTime> creeLe;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const EntreprisesCompanion({
+    this.cloudId = const Value.absent(),
+    this.nom = const Value.absent(),
+    this.siret = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EntreprisesCompanion.insert({
+    required String cloudId,
+    required String nom,
+    this.siret = const Value.absent(),
+    required String createdBy,
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cloudId = Value(cloudId),
+       nom = Value(nom),
+       createdBy = Value(createdBy);
+  static Insertable<Entreprise> custom({
+    Expression<String>? cloudId,
+    Expression<String>? nom,
+    Expression<String>? siret,
+    Expression<String>? createdBy,
+    Expression<DateTime>? creeLe,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (nom != null) 'nom': nom,
+      if (siret != null) 'siret': siret,
+      if (createdBy != null) 'created_by': createdBy,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EntreprisesCompanion copyWith({
+    Value<String>? cloudId,
+    Value<String>? nom,
+    Value<String?>? siret,
+    Value<String>? createdBy,
+    Value<DateTime>? creeLe,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return EntreprisesCompanion(
+      cloudId: cloudId ?? this.cloudId,
+      nom: nom ?? this.nom,
+      siret: siret ?? this.siret,
+      createdBy: createdBy ?? this.createdBy,
+      creeLe: creeLe ?? this.creeLe,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cloudId.present) {
+      map['cloud_id'] = Variable<String>(cloudId.value);
+    }
+    if (nom.present) {
+      map['nom'] = Variable<String>(nom.value);
+    }
+    if (siret.present) {
+      map['siret'] = Variable<String>(siret.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntreprisesCompanion(')
+          ..write('cloudId: $cloudId, ')
+          ..write('nom: $nom, ')
+          ..write('siret: $siret, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EntrepotsTable extends Entrepots
+    with TableInfo<$EntrepotsTable, Entrepot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntrepotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cloudIdMeta = const VerificationMeta(
+    'cloudId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudId = GeneratedColumn<String>(
+    'cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entrepriseIdMeta = const VerificationMeta(
+    'entrepriseId',
+  );
+  @override
+  late final GeneratedColumn<String> entrepriseId = GeneratedColumn<String>(
+    'entreprise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES entreprises (cloud_id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nomMeta = const VerificationMeta('nom');
+  @override
+  late final GeneratedColumn<String> nom = GeneratedColumn<String>(
+    'nom',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _adresseMeta = const VerificationMeta(
+    'adresse',
+  );
+  @override
+  late final GeneratedColumn<String> adresse = GeneratedColumn<String>(
+    'adresse',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _latMeta = const VerificationMeta('lat');
+  @override
+  late final GeneratedColumn<double> lat = GeneratedColumn<double>(
+    'lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lngMeta = const VerificationMeta('lng');
+  @override
+  late final GeneratedColumn<double> lng = GeneratedColumn<double>(
+    'lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cloudId,
+    entrepriseId,
+    nom,
+    adresse,
+    lat,
+    lng,
+    creeLe,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entrepots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Entrepot> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cloud_id')) {
+      context.handle(
+        _cloudIdMeta,
+        cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cloudIdMeta);
+    }
+    if (data.containsKey('entreprise_id')) {
+      context.handle(
+        _entrepriseIdMeta,
+        entrepriseId.isAcceptableOrUnknown(
+          data['entreprise_id']!,
+          _entrepriseIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_entrepriseIdMeta);
+    }
+    if (data.containsKey('nom')) {
+      context.handle(
+        _nomMeta,
+        nom.isAcceptableOrUnknown(data['nom']!, _nomMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomMeta);
+    }
+    if (data.containsKey('adresse')) {
+      context.handle(
+        _adresseMeta,
+        adresse.isAcceptableOrUnknown(data['adresse']!, _adresseMeta),
+      );
+    }
+    if (data.containsKey('lat')) {
+      context.handle(
+        _latMeta,
+        lat.isAcceptableOrUnknown(data['lat']!, _latMeta),
+      );
+    }
+    if (data.containsKey('lng')) {
+      context.handle(
+        _lngMeta,
+        lng.isAcceptableOrUnknown(data['lng']!, _lngMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cloudId};
+  @override
+  Entrepot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Entrepot(
+      cloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_id'],
+      )!,
+      entrepriseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entreprise_id'],
+      )!,
+      nom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nom'],
+      )!,
+      adresse: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}adresse'],
+      ),
+      lat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lat'],
+      ),
+      lng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lng'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EntrepotsTable createAlias(String alias) {
+    return $EntrepotsTable(attachedDatabase, alias);
+  }
+}
+
+class Entrepot extends DataClass implements Insertable<Entrepot> {
+  final String cloudId;
+
+  /// FK vers `entreprises.cloudId`.
+  final String entrepriseId;
+  final String nom;
+
+  /// Adresse postale du site (texte libre, géocodée optionnellement).
+  final String? adresse;
+  final double? lat;
+  final double? lng;
+  final DateTime creeLe;
+  final DateTime updatedAt;
+  const Entrepot({
+    required this.cloudId,
+    required this.entrepriseId,
+    required this.nom,
+    this.adresse,
+    this.lat,
+    this.lng,
+    required this.creeLe,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cloud_id'] = Variable<String>(cloudId);
+    map['entreprise_id'] = Variable<String>(entrepriseId);
+    map['nom'] = Variable<String>(nom);
+    if (!nullToAbsent || adresse != null) {
+      map['adresse'] = Variable<String>(adresse);
+    }
+    if (!nullToAbsent || lat != null) {
+      map['lat'] = Variable<double>(lat);
+    }
+    if (!nullToAbsent || lng != null) {
+      map['lng'] = Variable<double>(lng);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  EntrepotsCompanion toCompanion(bool nullToAbsent) {
+    return EntrepotsCompanion(
+      cloudId: Value(cloudId),
+      entrepriseId: Value(entrepriseId),
+      nom: Value(nom),
+      adresse: adresse == null && nullToAbsent
+          ? const Value.absent()
+          : Value(adresse),
+      lat: lat == null && nullToAbsent ? const Value.absent() : Value(lat),
+      lng: lng == null && nullToAbsent ? const Value.absent() : Value(lng),
+      creeLe: Value(creeLe),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Entrepot.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Entrepot(
+      cloudId: serializer.fromJson<String>(json['cloudId']),
+      entrepriseId: serializer.fromJson<String>(json['entrepriseId']),
+      nom: serializer.fromJson<String>(json['nom']),
+      adresse: serializer.fromJson<String?>(json['adresse']),
+      lat: serializer.fromJson<double?>(json['lat']),
+      lng: serializer.fromJson<double?>(json['lng']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cloudId': serializer.toJson<String>(cloudId),
+      'entrepriseId': serializer.toJson<String>(entrepriseId),
+      'nom': serializer.toJson<String>(nom),
+      'adresse': serializer.toJson<String?>(adresse),
+      'lat': serializer.toJson<double?>(lat),
+      'lng': serializer.toJson<double?>(lng),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Entrepot copyWith({
+    String? cloudId,
+    String? entrepriseId,
+    String? nom,
+    Value<String?> adresse = const Value.absent(),
+    Value<double?> lat = const Value.absent(),
+    Value<double?> lng = const Value.absent(),
+    DateTime? creeLe,
+    DateTime? updatedAt,
+  }) => Entrepot(
+    cloudId: cloudId ?? this.cloudId,
+    entrepriseId: entrepriseId ?? this.entrepriseId,
+    nom: nom ?? this.nom,
+    adresse: adresse.present ? adresse.value : this.adresse,
+    lat: lat.present ? lat.value : this.lat,
+    lng: lng.present ? lng.value : this.lng,
+    creeLe: creeLe ?? this.creeLe,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Entrepot copyWithCompanion(EntrepotsCompanion data) {
+    return Entrepot(
+      cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      entrepriseId: data.entrepriseId.present
+          ? data.entrepriseId.value
+          : this.entrepriseId,
+      nom: data.nom.present ? data.nom.value : this.nom,
+      adresse: data.adresse.present ? data.adresse.value : this.adresse,
+      lat: data.lat.present ? data.lat.value : this.lat,
+      lng: data.lng.present ? data.lng.value : this.lng,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Entrepot(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('nom: $nom, ')
+          ..write('adresse: $adresse, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cloudId,
+    entrepriseId,
+    nom,
+    adresse,
+    lat,
+    lng,
+    creeLe,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Entrepot &&
+          other.cloudId == this.cloudId &&
+          other.entrepriseId == this.entrepriseId &&
+          other.nom == this.nom &&
+          other.adresse == this.adresse &&
+          other.lat == this.lat &&
+          other.lng == this.lng &&
+          other.creeLe == this.creeLe &&
+          other.updatedAt == this.updatedAt);
+}
+
+class EntrepotsCompanion extends UpdateCompanion<Entrepot> {
+  final Value<String> cloudId;
+  final Value<String> entrepriseId;
+  final Value<String> nom;
+  final Value<String?> adresse;
+  final Value<double?> lat;
+  final Value<double?> lng;
+  final Value<DateTime> creeLe;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const EntrepotsCompanion({
+    this.cloudId = const Value.absent(),
+    this.entrepriseId = const Value.absent(),
+    this.nom = const Value.absent(),
+    this.adresse = const Value.absent(),
+    this.lat = const Value.absent(),
+    this.lng = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EntrepotsCompanion.insert({
+    required String cloudId,
+    required String entrepriseId,
+    required String nom,
+    this.adresse = const Value.absent(),
+    this.lat = const Value.absent(),
+    this.lng = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cloudId = Value(cloudId),
+       entrepriseId = Value(entrepriseId),
+       nom = Value(nom);
+  static Insertable<Entrepot> custom({
+    Expression<String>? cloudId,
+    Expression<String>? entrepriseId,
+    Expression<String>? nom,
+    Expression<String>? adresse,
+    Expression<double>? lat,
+    Expression<double>? lng,
+    Expression<DateTime>? creeLe,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (entrepriseId != null) 'entreprise_id': entrepriseId,
+      if (nom != null) 'nom': nom,
+      if (adresse != null) 'adresse': adresse,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EntrepotsCompanion copyWith({
+    Value<String>? cloudId,
+    Value<String>? entrepriseId,
+    Value<String>? nom,
+    Value<String?>? adresse,
+    Value<double?>? lat,
+    Value<double?>? lng,
+    Value<DateTime>? creeLe,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return EntrepotsCompanion(
+      cloudId: cloudId ?? this.cloudId,
+      entrepriseId: entrepriseId ?? this.entrepriseId,
+      nom: nom ?? this.nom,
+      adresse: adresse ?? this.adresse,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      creeLe: creeLe ?? this.creeLe,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cloudId.present) {
+      map['cloud_id'] = Variable<String>(cloudId.value);
+    }
+    if (entrepriseId.present) {
+      map['entreprise_id'] = Variable<String>(entrepriseId.value);
+    }
+    if (nom.present) {
+      map['nom'] = Variable<String>(nom.value);
+    }
+    if (adresse.present) {
+      map['adresse'] = Variable<String>(adresse.value);
+    }
+    if (lat.present) {
+      map['lat'] = Variable<double>(lat.value);
+    }
+    if (lng.present) {
+      map['lng'] = Variable<double>(lng.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntrepotsCompanion(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('nom: $nom, ')
+          ..write('adresse: $adresse, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EntrepriseUsersTable extends EntrepriseUsers
+    with TableInfo<$EntrepriseUsersTable, EntrepriseUser> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntrepriseUsersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cloudIdMeta = const VerificationMeta(
+    'cloudId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudId = GeneratedColumn<String>(
+    'cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entrepriseIdMeta = const VerificationMeta(
+    'entrepriseId',
+  );
+  @override
+  late final GeneratedColumn<String> entrepriseId = GeneratedColumn<String>(
+    'entreprise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES entreprises (cloud_id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<String> statut = GeneratedColumn<String>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('actif'),
+  );
+  static const VerificationMeta _revokedAtMeta = const VerificationMeta(
+    'revokedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> revokedAt = GeneratedColumn<DateTime>(
+    'revoked_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cloudId,
+    entrepriseId,
+    userId,
+    role,
+    statut,
+    revokedAt,
+    creeLe,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entreprise_users';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EntrepriseUser> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cloud_id')) {
+      context.handle(
+        _cloudIdMeta,
+        cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cloudIdMeta);
+    }
+    if (data.containsKey('entreprise_id')) {
+      context.handle(
+        _entrepriseIdMeta,
+        entrepriseId.isAcceptableOrUnknown(
+          data['entreprise_id']!,
+          _entrepriseIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_entrepriseIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    }
+    if (data.containsKey('revoked_at')) {
+      context.handle(
+        _revokedAtMeta,
+        revokedAt.isAcceptableOrUnknown(data['revoked_at']!, _revokedAtMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cloudId};
+  @override
+  EntrepriseUser map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EntrepriseUser(
+      cloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_id'],
+      )!,
+      entrepriseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entreprise_id'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      statut: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}statut'],
+      )!,
+      revokedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}revoked_at'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EntrepriseUsersTable createAlias(String alias) {
+    return $EntrepriseUsersTable(attachedDatabase, alias);
+  }
+}
+
+class EntrepriseUser extends DataClass implements Insertable<EntrepriseUser> {
+  final String cloudId;
+  final String entrepriseId;
+
+  /// UUID Supabase auth.users
+  final String userId;
+
+  /// 'admin_entreprise' | 'membre'
+  final String role;
+
+  /// 'actif' | 'revoque' | 'expire'
+  final String statut;
+
+  /// Quand revoked_at est set : compte à rebours J+30 avant `expire`.
+  /// Null si statut='actif' ou 'expire'.
+  final DateTime? revokedAt;
+  final DateTime creeLe;
+  final DateTime updatedAt;
+  const EntrepriseUser({
+    required this.cloudId,
+    required this.entrepriseId,
+    required this.userId,
+    required this.role,
+    required this.statut,
+    this.revokedAt,
+    required this.creeLe,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cloud_id'] = Variable<String>(cloudId);
+    map['entreprise_id'] = Variable<String>(entrepriseId);
+    map['user_id'] = Variable<String>(userId);
+    map['role'] = Variable<String>(role);
+    map['statut'] = Variable<String>(statut);
+    if (!nullToAbsent || revokedAt != null) {
+      map['revoked_at'] = Variable<DateTime>(revokedAt);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  EntrepriseUsersCompanion toCompanion(bool nullToAbsent) {
+    return EntrepriseUsersCompanion(
+      cloudId: Value(cloudId),
+      entrepriseId: Value(entrepriseId),
+      userId: Value(userId),
+      role: Value(role),
+      statut: Value(statut),
+      revokedAt: revokedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revokedAt),
+      creeLe: Value(creeLe),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory EntrepriseUser.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EntrepriseUser(
+      cloudId: serializer.fromJson<String>(json['cloudId']),
+      entrepriseId: serializer.fromJson<String>(json['entrepriseId']),
+      userId: serializer.fromJson<String>(json['userId']),
+      role: serializer.fromJson<String>(json['role']),
+      statut: serializer.fromJson<String>(json['statut']),
+      revokedAt: serializer.fromJson<DateTime?>(json['revokedAt']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cloudId': serializer.toJson<String>(cloudId),
+      'entrepriseId': serializer.toJson<String>(entrepriseId),
+      'userId': serializer.toJson<String>(userId),
+      'role': serializer.toJson<String>(role),
+      'statut': serializer.toJson<String>(statut),
+      'revokedAt': serializer.toJson<DateTime?>(revokedAt),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  EntrepriseUser copyWith({
+    String? cloudId,
+    String? entrepriseId,
+    String? userId,
+    String? role,
+    String? statut,
+    Value<DateTime?> revokedAt = const Value.absent(),
+    DateTime? creeLe,
+    DateTime? updatedAt,
+  }) => EntrepriseUser(
+    cloudId: cloudId ?? this.cloudId,
+    entrepriseId: entrepriseId ?? this.entrepriseId,
+    userId: userId ?? this.userId,
+    role: role ?? this.role,
+    statut: statut ?? this.statut,
+    revokedAt: revokedAt.present ? revokedAt.value : this.revokedAt,
+    creeLe: creeLe ?? this.creeLe,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  EntrepriseUser copyWithCompanion(EntrepriseUsersCompanion data) {
+    return EntrepriseUser(
+      cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      entrepriseId: data.entrepriseId.present
+          ? data.entrepriseId.value
+          : this.entrepriseId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      role: data.role.present ? data.role.value : this.role,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      revokedAt: data.revokedAt.present ? data.revokedAt.value : this.revokedAt,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntrepriseUser(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('statut: $statut, ')
+          ..write('revokedAt: $revokedAt, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cloudId,
+    entrepriseId,
+    userId,
+    role,
+    statut,
+    revokedAt,
+    creeLe,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EntrepriseUser &&
+          other.cloudId == this.cloudId &&
+          other.entrepriseId == this.entrepriseId &&
+          other.userId == this.userId &&
+          other.role == this.role &&
+          other.statut == this.statut &&
+          other.revokedAt == this.revokedAt &&
+          other.creeLe == this.creeLe &&
+          other.updatedAt == this.updatedAt);
+}
+
+class EntrepriseUsersCompanion extends UpdateCompanion<EntrepriseUser> {
+  final Value<String> cloudId;
+  final Value<String> entrepriseId;
+  final Value<String> userId;
+  final Value<String> role;
+  final Value<String> statut;
+  final Value<DateTime?> revokedAt;
+  final Value<DateTime> creeLe;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const EntrepriseUsersCompanion({
+    this.cloudId = const Value.absent(),
+    this.entrepriseId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.revokedAt = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EntrepriseUsersCompanion.insert({
+    required String cloudId,
+    required String entrepriseId,
+    required String userId,
+    required String role,
+    this.statut = const Value.absent(),
+    this.revokedAt = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cloudId = Value(cloudId),
+       entrepriseId = Value(entrepriseId),
+       userId = Value(userId),
+       role = Value(role);
+  static Insertable<EntrepriseUser> custom({
+    Expression<String>? cloudId,
+    Expression<String>? entrepriseId,
+    Expression<String>? userId,
+    Expression<String>? role,
+    Expression<String>? statut,
+    Expression<DateTime>? revokedAt,
+    Expression<DateTime>? creeLe,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (entrepriseId != null) 'entreprise_id': entrepriseId,
+      if (userId != null) 'user_id': userId,
+      if (role != null) 'role': role,
+      if (statut != null) 'statut': statut,
+      if (revokedAt != null) 'revoked_at': revokedAt,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EntrepriseUsersCompanion copyWith({
+    Value<String>? cloudId,
+    Value<String>? entrepriseId,
+    Value<String>? userId,
+    Value<String>? role,
+    Value<String>? statut,
+    Value<DateTime?>? revokedAt,
+    Value<DateTime>? creeLe,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return EntrepriseUsersCompanion(
+      cloudId: cloudId ?? this.cloudId,
+      entrepriseId: entrepriseId ?? this.entrepriseId,
+      userId: userId ?? this.userId,
+      role: role ?? this.role,
+      statut: statut ?? this.statut,
+      revokedAt: revokedAt ?? this.revokedAt,
+      creeLe: creeLe ?? this.creeLe,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cloudId.present) {
+      map['cloud_id'] = Variable<String>(cloudId.value);
+    }
+    if (entrepriseId.present) {
+      map['entreprise_id'] = Variable<String>(entrepriseId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<String>(statut.value);
+    }
+    if (revokedAt.present) {
+      map['revoked_at'] = Variable<DateTime>(revokedAt.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntrepriseUsersCompanion(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('statut: $statut, ')
+          ..write('revokedAt: $revokedAt, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EntrepotUsersTable extends EntrepotUsers
+    with TableInfo<$EntrepotUsersTable, EntrepotUser> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntrepotUsersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cloudIdMeta = const VerificationMeta(
+    'cloudId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudId = GeneratedColumn<String>(
+    'cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entrepotIdMeta = const VerificationMeta(
+    'entrepotId',
+  );
+  @override
+  late final GeneratedColumn<String> entrepotId = GeneratedColumn<String>(
+    'entrepot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES entrepots (cloud_id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<String> statut = GeneratedColumn<String>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('actif'),
+  );
+  static const VerificationMeta _revokedAtMeta = const VerificationMeta(
+    'revokedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> revokedAt = GeneratedColumn<DateTime>(
+    'revoked_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cloudId,
+    entrepotId,
+    userId,
+    role,
+    statut,
+    revokedAt,
+    creeLe,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entrepot_users';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EntrepotUser> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cloud_id')) {
+      context.handle(
+        _cloudIdMeta,
+        cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cloudIdMeta);
+    }
+    if (data.containsKey('entrepot_id')) {
+      context.handle(
+        _entrepotIdMeta,
+        entrepotId.isAcceptableOrUnknown(data['entrepot_id']!, _entrepotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entrepotIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    }
+    if (data.containsKey('revoked_at')) {
+      context.handle(
+        _revokedAtMeta,
+        revokedAt.isAcceptableOrUnknown(data['revoked_at']!, _revokedAtMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cloudId};
+  @override
+  EntrepotUser map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EntrepotUser(
+      cloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_id'],
+      )!,
+      entrepotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entrepot_id'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      statut: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}statut'],
+      )!,
+      revokedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}revoked_at'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EntrepotUsersTable createAlias(String alias) {
+    return $EntrepotUsersTable(attachedDatabase, alias);
+  }
+}
+
+class EntrepotUser extends DataClass implements Insertable<EntrepotUser> {
+  final String cloudId;
+  final String entrepotId;
+
+  /// UUID Supabase auth.users
+  final String userId;
+
+  /// 'chef_entrepot' | 'employe'
+  final String role;
+
+  /// 'actif' | 'revoque' | 'expire'
+  final String statut;
+  final DateTime? revokedAt;
+  final DateTime creeLe;
+  final DateTime updatedAt;
+  const EntrepotUser({
+    required this.cloudId,
+    required this.entrepotId,
+    required this.userId,
+    required this.role,
+    required this.statut,
+    this.revokedAt,
+    required this.creeLe,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cloud_id'] = Variable<String>(cloudId);
+    map['entrepot_id'] = Variable<String>(entrepotId);
+    map['user_id'] = Variable<String>(userId);
+    map['role'] = Variable<String>(role);
+    map['statut'] = Variable<String>(statut);
+    if (!nullToAbsent || revokedAt != null) {
+      map['revoked_at'] = Variable<DateTime>(revokedAt);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  EntrepotUsersCompanion toCompanion(bool nullToAbsent) {
+    return EntrepotUsersCompanion(
+      cloudId: Value(cloudId),
+      entrepotId: Value(entrepotId),
+      userId: Value(userId),
+      role: Value(role),
+      statut: Value(statut),
+      revokedAt: revokedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revokedAt),
+      creeLe: Value(creeLe),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory EntrepotUser.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EntrepotUser(
+      cloudId: serializer.fromJson<String>(json['cloudId']),
+      entrepotId: serializer.fromJson<String>(json['entrepotId']),
+      userId: serializer.fromJson<String>(json['userId']),
+      role: serializer.fromJson<String>(json['role']),
+      statut: serializer.fromJson<String>(json['statut']),
+      revokedAt: serializer.fromJson<DateTime?>(json['revokedAt']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cloudId': serializer.toJson<String>(cloudId),
+      'entrepotId': serializer.toJson<String>(entrepotId),
+      'userId': serializer.toJson<String>(userId),
+      'role': serializer.toJson<String>(role),
+      'statut': serializer.toJson<String>(statut),
+      'revokedAt': serializer.toJson<DateTime?>(revokedAt),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  EntrepotUser copyWith({
+    String? cloudId,
+    String? entrepotId,
+    String? userId,
+    String? role,
+    String? statut,
+    Value<DateTime?> revokedAt = const Value.absent(),
+    DateTime? creeLe,
+    DateTime? updatedAt,
+  }) => EntrepotUser(
+    cloudId: cloudId ?? this.cloudId,
+    entrepotId: entrepotId ?? this.entrepotId,
+    userId: userId ?? this.userId,
+    role: role ?? this.role,
+    statut: statut ?? this.statut,
+    revokedAt: revokedAt.present ? revokedAt.value : this.revokedAt,
+    creeLe: creeLe ?? this.creeLe,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  EntrepotUser copyWithCompanion(EntrepotUsersCompanion data) {
+    return EntrepotUser(
+      cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      entrepotId: data.entrepotId.present
+          ? data.entrepotId.value
+          : this.entrepotId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      role: data.role.present ? data.role.value : this.role,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      revokedAt: data.revokedAt.present ? data.revokedAt.value : this.revokedAt,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntrepotUser(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepotId: $entrepotId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('statut: $statut, ')
+          ..write('revokedAt: $revokedAt, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cloudId,
+    entrepotId,
+    userId,
+    role,
+    statut,
+    revokedAt,
+    creeLe,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EntrepotUser &&
+          other.cloudId == this.cloudId &&
+          other.entrepotId == this.entrepotId &&
+          other.userId == this.userId &&
+          other.role == this.role &&
+          other.statut == this.statut &&
+          other.revokedAt == this.revokedAt &&
+          other.creeLe == this.creeLe &&
+          other.updatedAt == this.updatedAt);
+}
+
+class EntrepotUsersCompanion extends UpdateCompanion<EntrepotUser> {
+  final Value<String> cloudId;
+  final Value<String> entrepotId;
+  final Value<String> userId;
+  final Value<String> role;
+  final Value<String> statut;
+  final Value<DateTime?> revokedAt;
+  final Value<DateTime> creeLe;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const EntrepotUsersCompanion({
+    this.cloudId = const Value.absent(),
+    this.entrepotId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.revokedAt = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EntrepotUsersCompanion.insert({
+    required String cloudId,
+    required String entrepotId,
+    required String userId,
+    required String role,
+    this.statut = const Value.absent(),
+    this.revokedAt = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cloudId = Value(cloudId),
+       entrepotId = Value(entrepotId),
+       userId = Value(userId),
+       role = Value(role);
+  static Insertable<EntrepotUser> custom({
+    Expression<String>? cloudId,
+    Expression<String>? entrepotId,
+    Expression<String>? userId,
+    Expression<String>? role,
+    Expression<String>? statut,
+    Expression<DateTime>? revokedAt,
+    Expression<DateTime>? creeLe,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (entrepotId != null) 'entrepot_id': entrepotId,
+      if (userId != null) 'user_id': userId,
+      if (role != null) 'role': role,
+      if (statut != null) 'statut': statut,
+      if (revokedAt != null) 'revoked_at': revokedAt,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EntrepotUsersCompanion copyWith({
+    Value<String>? cloudId,
+    Value<String>? entrepotId,
+    Value<String>? userId,
+    Value<String>? role,
+    Value<String>? statut,
+    Value<DateTime?>? revokedAt,
+    Value<DateTime>? creeLe,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return EntrepotUsersCompanion(
+      cloudId: cloudId ?? this.cloudId,
+      entrepotId: entrepotId ?? this.entrepotId,
+      userId: userId ?? this.userId,
+      role: role ?? this.role,
+      statut: statut ?? this.statut,
+      revokedAt: revokedAt ?? this.revokedAt,
+      creeLe: creeLe ?? this.creeLe,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cloudId.present) {
+      map['cloud_id'] = Variable<String>(cloudId.value);
+    }
+    if (entrepotId.present) {
+      map['entrepot_id'] = Variable<String>(entrepotId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<String>(statut.value);
+    }
+    if (revokedAt.present) {
+      map['revoked_at'] = Variable<DateTime>(revokedAt.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntrepotUsersCompanion(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepotId: $entrepotId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('statut: $statut, ')
+          ..write('revokedAt: $revokedAt, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EntrepriseInvitationsTable extends EntrepriseInvitations
+    with TableInfo<$EntrepriseInvitationsTable, EntrepriseInvitation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntrepriseInvitationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cloudIdMeta = const VerificationMeta(
+    'cloudId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudId = GeneratedColumn<String>(
+    'cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entrepriseIdMeta = const VerificationMeta(
+    'entrepriseId',
+  );
+  @override
+  late final GeneratedColumn<String> entrepriseId = GeneratedColumn<String>(
+    'entreprise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES entreprises (cloud_id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _entrepotIdMeta = const VerificationMeta(
+    'entrepotId',
+  );
+  @override
+  late final GeneratedColumn<String> entrepotId = GeneratedColumn<String>(
+    'entrepot_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES entrepots (cloud_id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+    'email',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleTargetMeta = const VerificationMeta(
+    'roleTarget',
+  );
+  @override
+  late final GeneratedColumn<String> roleTarget = GeneratedColumn<String>(
+    'role_target',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _invitedByMeta = const VerificationMeta(
+    'invitedBy',
+  );
+  @override
+  late final GeneratedColumn<String> invitedBy = GeneratedColumn<String>(
+    'invited_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<String> statut = GeneratedColumn<String>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _expiresAtMeta = const VerificationMeta(
+    'expiresAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
+    'expires_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cloudId,
+    entrepriseId,
+    entrepotId,
+    email,
+    roleTarget,
+    invitedBy,
+    statut,
+    expiresAt,
+    creeLe,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entreprise_invitations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EntrepriseInvitation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cloud_id')) {
+      context.handle(
+        _cloudIdMeta,
+        cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cloudIdMeta);
+    }
+    if (data.containsKey('entreprise_id')) {
+      context.handle(
+        _entrepriseIdMeta,
+        entrepriseId.isAcceptableOrUnknown(
+          data['entreprise_id']!,
+          _entrepriseIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_entrepriseIdMeta);
+    }
+    if (data.containsKey('entrepot_id')) {
+      context.handle(
+        _entrepotIdMeta,
+        entrepotId.isAcceptableOrUnknown(data['entrepot_id']!, _entrepotIdMeta),
+      );
+    }
+    if (data.containsKey('email')) {
+      context.handle(
+        _emailMeta,
+        email.isAcceptableOrUnknown(data['email']!, _emailMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_emailMeta);
+    }
+    if (data.containsKey('role_target')) {
+      context.handle(
+        _roleTargetMeta,
+        roleTarget.isAcceptableOrUnknown(data['role_target']!, _roleTargetMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleTargetMeta);
+    }
+    if (data.containsKey('invited_by')) {
+      context.handle(
+        _invitedByMeta,
+        invitedBy.isAcceptableOrUnknown(data['invited_by']!, _invitedByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_invitedByMeta);
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(
+        _expiresAtMeta,
+        expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_expiresAtMeta);
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cloudId};
+  @override
+  EntrepriseInvitation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EntrepriseInvitation(
+      cloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_id'],
+      )!,
+      entrepriseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entreprise_id'],
+      )!,
+      entrepotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entrepot_id'],
+      ),
+      email: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}email'],
+      )!,
+      roleTarget: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role_target'],
+      )!,
+      invitedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}invited_by'],
+      )!,
+      statut: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}statut'],
+      )!,
+      expiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expires_at'],
+      )!,
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+    );
+  }
+
+  @override
+  $EntrepriseInvitationsTable createAlias(String alias) {
+    return $EntrepriseInvitationsTable(attachedDatabase, alias);
+  }
+}
+
+class EntrepriseInvitation extends DataClass
+    implements Insertable<EntrepriseInvitation> {
+  final String cloudId;
+  final String entrepriseId;
+
+  /// Optionnel : si l'invitation cible un entrepôt précis. NULL =
+  /// invitation au niveau entreprise (l'admin pourra rattacher
+  /// l'employé à des entrepôts après acceptation).
+  final String? entrepotId;
+  final String email;
+
+  /// 'admin_entreprise' | 'chef_entrepot' | 'employe'
+  final String roleTarget;
+
+  /// UUID Supabase auth.users de l'inviteur
+  final String invitedBy;
+
+  /// 'pending' | 'accepted' | 'expired' | 'revoked'
+  final String statut;
+
+  /// TTL 7 jours par défaut (cf #363 Edge Function `invite_employee`).
+  final DateTime expiresAt;
+  final DateTime creeLe;
+  const EntrepriseInvitation({
+    required this.cloudId,
+    required this.entrepriseId,
+    this.entrepotId,
+    required this.email,
+    required this.roleTarget,
+    required this.invitedBy,
+    required this.statut,
+    required this.expiresAt,
+    required this.creeLe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cloud_id'] = Variable<String>(cloudId);
+    map['entreprise_id'] = Variable<String>(entrepriseId);
+    if (!nullToAbsent || entrepotId != null) {
+      map['entrepot_id'] = Variable<String>(entrepotId);
+    }
+    map['email'] = Variable<String>(email);
+    map['role_target'] = Variable<String>(roleTarget);
+    map['invited_by'] = Variable<String>(invitedBy);
+    map['statut'] = Variable<String>(statut);
+    map['expires_at'] = Variable<DateTime>(expiresAt);
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    return map;
+  }
+
+  EntrepriseInvitationsCompanion toCompanion(bool nullToAbsent) {
+    return EntrepriseInvitationsCompanion(
+      cloudId: Value(cloudId),
+      entrepriseId: Value(entrepriseId),
+      entrepotId: entrepotId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entrepotId),
+      email: Value(email),
+      roleTarget: Value(roleTarget),
+      invitedBy: Value(invitedBy),
+      statut: Value(statut),
+      expiresAt: Value(expiresAt),
+      creeLe: Value(creeLe),
+    );
+  }
+
+  factory EntrepriseInvitation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EntrepriseInvitation(
+      cloudId: serializer.fromJson<String>(json['cloudId']),
+      entrepriseId: serializer.fromJson<String>(json['entrepriseId']),
+      entrepotId: serializer.fromJson<String?>(json['entrepotId']),
+      email: serializer.fromJson<String>(json['email']),
+      roleTarget: serializer.fromJson<String>(json['roleTarget']),
+      invitedBy: serializer.fromJson<String>(json['invitedBy']),
+      statut: serializer.fromJson<String>(json['statut']),
+      expiresAt: serializer.fromJson<DateTime>(json['expiresAt']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cloudId': serializer.toJson<String>(cloudId),
+      'entrepriseId': serializer.toJson<String>(entrepriseId),
+      'entrepotId': serializer.toJson<String?>(entrepotId),
+      'email': serializer.toJson<String>(email),
+      'roleTarget': serializer.toJson<String>(roleTarget),
+      'invitedBy': serializer.toJson<String>(invitedBy),
+      'statut': serializer.toJson<String>(statut),
+      'expiresAt': serializer.toJson<DateTime>(expiresAt),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+    };
+  }
+
+  EntrepriseInvitation copyWith({
+    String? cloudId,
+    String? entrepriseId,
+    Value<String?> entrepotId = const Value.absent(),
+    String? email,
+    String? roleTarget,
+    String? invitedBy,
+    String? statut,
+    DateTime? expiresAt,
+    DateTime? creeLe,
+  }) => EntrepriseInvitation(
+    cloudId: cloudId ?? this.cloudId,
+    entrepriseId: entrepriseId ?? this.entrepriseId,
+    entrepotId: entrepotId.present ? entrepotId.value : this.entrepotId,
+    email: email ?? this.email,
+    roleTarget: roleTarget ?? this.roleTarget,
+    invitedBy: invitedBy ?? this.invitedBy,
+    statut: statut ?? this.statut,
+    expiresAt: expiresAt ?? this.expiresAt,
+    creeLe: creeLe ?? this.creeLe,
+  );
+  EntrepriseInvitation copyWithCompanion(EntrepriseInvitationsCompanion data) {
+    return EntrepriseInvitation(
+      cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      entrepriseId: data.entrepriseId.present
+          ? data.entrepriseId.value
+          : this.entrepriseId,
+      entrepotId: data.entrepotId.present
+          ? data.entrepotId.value
+          : this.entrepotId,
+      email: data.email.present ? data.email.value : this.email,
+      roleTarget: data.roleTarget.present
+          ? data.roleTarget.value
+          : this.roleTarget,
+      invitedBy: data.invitedBy.present ? data.invitedBy.value : this.invitedBy,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntrepriseInvitation(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('entrepotId: $entrepotId, ')
+          ..write('email: $email, ')
+          ..write('roleTarget: $roleTarget, ')
+          ..write('invitedBy: $invitedBy, ')
+          ..write('statut: $statut, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('creeLe: $creeLe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cloudId,
+    entrepriseId,
+    entrepotId,
+    email,
+    roleTarget,
+    invitedBy,
+    statut,
+    expiresAt,
+    creeLe,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EntrepriseInvitation &&
+          other.cloudId == this.cloudId &&
+          other.entrepriseId == this.entrepriseId &&
+          other.entrepotId == this.entrepotId &&
+          other.email == this.email &&
+          other.roleTarget == this.roleTarget &&
+          other.invitedBy == this.invitedBy &&
+          other.statut == this.statut &&
+          other.expiresAt == this.expiresAt &&
+          other.creeLe == this.creeLe);
+}
+
+class EntrepriseInvitationsCompanion
+    extends UpdateCompanion<EntrepriseInvitation> {
+  final Value<String> cloudId;
+  final Value<String> entrepriseId;
+  final Value<String?> entrepotId;
+  final Value<String> email;
+  final Value<String> roleTarget;
+  final Value<String> invitedBy;
+  final Value<String> statut;
+  final Value<DateTime> expiresAt;
+  final Value<DateTime> creeLe;
+  final Value<int> rowid;
+  const EntrepriseInvitationsCompanion({
+    this.cloudId = const Value.absent(),
+    this.entrepriseId = const Value.absent(),
+    this.entrepotId = const Value.absent(),
+    this.email = const Value.absent(),
+    this.roleTarget = const Value.absent(),
+    this.invitedBy = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EntrepriseInvitationsCompanion.insert({
+    required String cloudId,
+    required String entrepriseId,
+    this.entrepotId = const Value.absent(),
+    required String email,
+    required String roleTarget,
+    required String invitedBy,
+    this.statut = const Value.absent(),
+    required DateTime expiresAt,
+    this.creeLe = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cloudId = Value(cloudId),
+       entrepriseId = Value(entrepriseId),
+       email = Value(email),
+       roleTarget = Value(roleTarget),
+       invitedBy = Value(invitedBy),
+       expiresAt = Value(expiresAt);
+  static Insertable<EntrepriseInvitation> custom({
+    Expression<String>? cloudId,
+    Expression<String>? entrepriseId,
+    Expression<String>? entrepotId,
+    Expression<String>? email,
+    Expression<String>? roleTarget,
+    Expression<String>? invitedBy,
+    Expression<String>? statut,
+    Expression<DateTime>? expiresAt,
+    Expression<DateTime>? creeLe,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (entrepriseId != null) 'entreprise_id': entrepriseId,
+      if (entrepotId != null) 'entrepot_id': entrepotId,
+      if (email != null) 'email': email,
+      if (roleTarget != null) 'role_target': roleTarget,
+      if (invitedBy != null) 'invited_by': invitedBy,
+      if (statut != null) 'statut': statut,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EntrepriseInvitationsCompanion copyWith({
+    Value<String>? cloudId,
+    Value<String>? entrepriseId,
+    Value<String?>? entrepotId,
+    Value<String>? email,
+    Value<String>? roleTarget,
+    Value<String>? invitedBy,
+    Value<String>? statut,
+    Value<DateTime>? expiresAt,
+    Value<DateTime>? creeLe,
+    Value<int>? rowid,
+  }) {
+    return EntrepriseInvitationsCompanion(
+      cloudId: cloudId ?? this.cloudId,
+      entrepriseId: entrepriseId ?? this.entrepriseId,
+      entrepotId: entrepotId ?? this.entrepotId,
+      email: email ?? this.email,
+      roleTarget: roleTarget ?? this.roleTarget,
+      invitedBy: invitedBy ?? this.invitedBy,
+      statut: statut ?? this.statut,
+      expiresAt: expiresAt ?? this.expiresAt,
+      creeLe: creeLe ?? this.creeLe,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cloudId.present) {
+      map['cloud_id'] = Variable<String>(cloudId.value);
+    }
+    if (entrepriseId.present) {
+      map['entreprise_id'] = Variable<String>(entrepriseId.value);
+    }
+    if (entrepotId.present) {
+      map['entrepot_id'] = Variable<String>(entrepotId.value);
+    }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (roleTarget.present) {
+      map['role_target'] = Variable<String>(roleTarget.value);
+    }
+    if (invitedBy.present) {
+      map['invited_by'] = Variable<String>(invitedBy.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<String>(statut.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<DateTime>(expiresAt.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntrepriseInvitationsCompanion(')
+          ..write('cloudId: $cloudId, ')
+          ..write('entrepriseId: $entrepriseId, ')
+          ..write('entrepotId: $entrepotId, ')
+          ..write('email: $email, ')
+          ..write('roleTarget: $roleTarget, ')
+          ..write('invitedBy: $invitedBy, ')
+          ..write('statut: $statut, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SavedDestinationNotesPersoTable extends SavedDestinationNotesPerso
+    with
+        TableInfo<
+          $SavedDestinationNotesPersoTable,
+          SavedDestinationNotesPersoData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SavedDestinationNotesPersoTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cloudIdMeta = const VerificationMeta(
+    'cloudId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudId = GeneratedColumn<String>(
+    'cloud_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _savedDestinationIdMeta =
+      const VerificationMeta('savedDestinationId');
+  @override
+  late final GeneratedColumn<String> savedDestinationId =
+      GeneratedColumn<String>(
+        'saved_destination_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cloudId,
+    savedDestinationId,
+    userId,
+    notes,
+    creeLe,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'saved_destination_notes_perso';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavedDestinationNotesPersoData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cloud_id')) {
+      context.handle(
+        _cloudIdMeta,
+        cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cloudIdMeta);
+    }
+    if (data.containsKey('saved_destination_id')) {
+      context.handle(
+        _savedDestinationIdMeta,
+        savedDestinationId.isAcceptableOrUnknown(
+          data['saved_destination_id']!,
+          _savedDestinationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_savedDestinationIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cloudId};
+  @override
+  SavedDestinationNotesPersoData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavedDestinationNotesPersoData(
+      cloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_id'],
+      )!,
+      savedDestinationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}saved_destination_id'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      creeLe: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cree_le'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SavedDestinationNotesPersoTable createAlias(String alias) {
+    return $SavedDestinationNotesPersoTable(attachedDatabase, alias);
+  }
+}
+
+class SavedDestinationNotesPersoData extends DataClass
+    implements Insertable<SavedDestinationNotesPersoData> {
+  final String cloudId;
+
+  /// Référence le cloud_id de la `saved_destinations` partagée.
+  /// On ne met PAS de FK Drift ici parce que cette table peut référer
+  /// un savedDestinations qui n'existe pas encore localement (pull
+  /// décalé). Le sync cloud rétablit l'intégrité.
+  final String savedDestinationId;
+
+  /// UUID Supabase auth.users du propriétaire de la note.
+  final String userId;
+  final String? notes;
+  final DateTime creeLe;
+  final DateTime updatedAt;
+  const SavedDestinationNotesPersoData({
+    required this.cloudId,
+    required this.savedDestinationId,
+    required this.userId,
+    this.notes,
+    required this.creeLe,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cloud_id'] = Variable<String>(cloudId);
+    map['saved_destination_id'] = Variable<String>(savedDestinationId);
+    map['user_id'] = Variable<String>(userId);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SavedDestinationNotesPersoCompanion toCompanion(bool nullToAbsent) {
+    return SavedDestinationNotesPersoCompanion(
+      cloudId: Value(cloudId),
+      savedDestinationId: Value(savedDestinationId),
+      userId: Value(userId),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      creeLe: Value(creeLe),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SavedDestinationNotesPersoData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavedDestinationNotesPersoData(
+      cloudId: serializer.fromJson<String>(json['cloudId']),
+      savedDestinationId: serializer.fromJson<String>(
+        json['savedDestinationId'],
+      ),
+      userId: serializer.fromJson<String>(json['userId']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cloudId': serializer.toJson<String>(cloudId),
+      'savedDestinationId': serializer.toJson<String>(savedDestinationId),
+      'userId': serializer.toJson<String>(userId),
+      'notes': serializer.toJson<String?>(notes),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  SavedDestinationNotesPersoData copyWith({
+    String? cloudId,
+    String? savedDestinationId,
+    String? userId,
+    Value<String?> notes = const Value.absent(),
+    DateTime? creeLe,
+    DateTime? updatedAt,
+  }) => SavedDestinationNotesPersoData(
+    cloudId: cloudId ?? this.cloudId,
+    savedDestinationId: savedDestinationId ?? this.savedDestinationId,
+    userId: userId ?? this.userId,
+    notes: notes.present ? notes.value : this.notes,
+    creeLe: creeLe ?? this.creeLe,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  SavedDestinationNotesPersoData copyWithCompanion(
+    SavedDestinationNotesPersoCompanion data,
+  ) {
+    return SavedDestinationNotesPersoData(
+      cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      savedDestinationId: data.savedDestinationId.present
+          ? data.savedDestinationId.value
+          : this.savedDestinationId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedDestinationNotesPersoData(')
+          ..write('cloudId: $cloudId, ')
+          ..write('savedDestinationId: $savedDestinationId, ')
+          ..write('userId: $userId, ')
+          ..write('notes: $notes, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cloudId,
+    savedDestinationId,
+    userId,
+    notes,
+    creeLe,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavedDestinationNotesPersoData &&
+          other.cloudId == this.cloudId &&
+          other.savedDestinationId == this.savedDestinationId &&
+          other.userId == this.userId &&
+          other.notes == this.notes &&
+          other.creeLe == this.creeLe &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SavedDestinationNotesPersoCompanion
+    extends UpdateCompanion<SavedDestinationNotesPersoData> {
+  final Value<String> cloudId;
+  final Value<String> savedDestinationId;
+  final Value<String> userId;
+  final Value<String?> notes;
+  final Value<DateTime> creeLe;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const SavedDestinationNotesPersoCompanion({
+    this.cloudId = const Value.absent(),
+    this.savedDestinationId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SavedDestinationNotesPersoCompanion.insert({
+    required String cloudId,
+    required String savedDestinationId,
+    required String userId,
+    this.notes = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cloudId = Value(cloudId),
+       savedDestinationId = Value(savedDestinationId),
+       userId = Value(userId);
+  static Insertable<SavedDestinationNotesPersoData> custom({
+    Expression<String>? cloudId,
+    Expression<String>? savedDestinationId,
+    Expression<String>? userId,
+    Expression<String>? notes,
+    Expression<DateTime>? creeLe,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (savedDestinationId != null)
+        'saved_destination_id': savedDestinationId,
+      if (userId != null) 'user_id': userId,
+      if (notes != null) 'notes': notes,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SavedDestinationNotesPersoCompanion copyWith({
+    Value<String>? cloudId,
+    Value<String>? savedDestinationId,
+    Value<String>? userId,
+    Value<String?>? notes,
+    Value<DateTime>? creeLe,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return SavedDestinationNotesPersoCompanion(
+      cloudId: cloudId ?? this.cloudId,
+      savedDestinationId: savedDestinationId ?? this.savedDestinationId,
+      userId: userId ?? this.userId,
+      notes: notes ?? this.notes,
+      creeLe: creeLe ?? this.creeLe,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cloudId.present) {
+      map['cloud_id'] = Variable<String>(cloudId.value);
+    }
+    if (savedDestinationId.present) {
+      map['saved_destination_id'] = Variable<String>(savedDestinationId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedDestinationNotesPersoCompanion(')
+          ..write('cloudId: $cloudId, ')
+          ..write('savedDestinationId: $savedDestinationId, ')
+          ..write('userId: $userId, ')
+          ..write('notes: $notes, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9119,6 +12224,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TourneeRecurrencesTable tourneeRecurrences =
       $TourneeRecurrencesTable(this);
   late final $WorkSessionsTable workSessions = $WorkSessionsTable(this);
+  late final $EntreprisesTable entreprises = $EntreprisesTable(this);
+  late final $EntrepotsTable entrepots = $EntrepotsTable(this);
+  late final $EntrepriseUsersTable entrepriseUsers = $EntrepriseUsersTable(
+    this,
+  );
+  late final $EntrepotUsersTable entrepotUsers = $EntrepotUsersTable(this);
+  late final $EntrepriseInvitationsTable entrepriseInvitations =
+      $EntrepriseInvitationsTable(this);
+  late final $SavedDestinationNotesPersoTable savedDestinationNotesPerso =
+      $SavedDestinationNotesPersoTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9137,6 +12252,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     trackingCodes,
     tourneeRecurrences,
     workSessions,
+    entreprises,
+    entrepots,
+    entrepriseUsers,
+    entrepotUsers,
+    entrepriseInvitations,
+    savedDestinationNotesPerso,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -9174,6 +12295,41 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('tournee_recurrences', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'entreprises',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('entrepots', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'entreprises',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('entreprise_users', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'entrepots',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('entrepot_users', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'entreprises',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('entreprise_invitations', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'entrepots',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('entreprise_invitations', kind: UpdateKind.update)],
     ),
   ]);
 }
@@ -11872,6 +15028,8 @@ typedef $$SavedDestinationsTableCreateCompanionBuilder =
       Value<bool> isProblematique,
       Value<bool> photoObligatoire,
       Value<String?> preferencePersonnalisee,
+      Value<String?> entrepriseId,
+      Value<String?> entrepotId,
     });
 typedef $$SavedDestinationsTableUpdateCompanionBuilder =
     SavedDestinationsCompanion Function({
@@ -11900,6 +15058,8 @@ typedef $$SavedDestinationsTableUpdateCompanionBuilder =
       Value<bool> isProblematique,
       Value<bool> photoObligatoire,
       Value<String?> preferencePersonnalisee,
+      Value<String?> entrepriseId,
+      Value<String?> entrepotId,
     });
 
 class $$SavedDestinationsTableFilterComposer
@@ -12033,6 +15193,16 @@ class $$SavedDestinationsTableFilterComposer
 
   ColumnFilters<String> get preferencePersonnalisee => $composableBuilder(
     column: $table.preferencePersonnalisee,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entrepriseId => $composableBuilder(
+    column: $table.entrepriseId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entrepotId => $composableBuilder(
+    column: $table.entrepotId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12170,6 +15340,16 @@ class $$SavedDestinationsTableOrderingComposer
     column: $table.preferencePersonnalisee,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get entrepriseId => $composableBuilder(
+    column: $table.entrepriseId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entrepotId => $composableBuilder(
+    column: $table.entrepotId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedDestinationsTableAnnotationComposer
@@ -12273,6 +15453,16 @@ class $$SavedDestinationsTableAnnotationComposer
     column: $table.preferencePersonnalisee,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get entrepriseId => $composableBuilder(
+    column: $table.entrepriseId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get entrepotId => $composableBuilder(
+    column: $table.entrepotId,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedDestinationsTableTableManager
@@ -12340,6 +15530,8 @@ class $$SavedDestinationsTableTableManager
                 Value<bool> isProblematique = const Value.absent(),
                 Value<bool> photoObligatoire = const Value.absent(),
                 Value<String?> preferencePersonnalisee = const Value.absent(),
+                Value<String?> entrepriseId = const Value.absent(),
+                Value<String?> entrepotId = const Value.absent(),
               }) => SavedDestinationsCompanion(
                 id: id,
                 nomClient: nomClient,
@@ -12366,6 +15558,8 @@ class $$SavedDestinationsTableTableManager
                 isProblematique: isProblematique,
                 photoObligatoire: photoObligatoire,
                 preferencePersonnalisee: preferencePersonnalisee,
+                entrepriseId: entrepriseId,
+                entrepotId: entrepotId,
               ),
           createCompanionCallback:
               ({
@@ -12394,6 +15588,8 @@ class $$SavedDestinationsTableTableManager
                 Value<bool> isProblematique = const Value.absent(),
                 Value<bool> photoObligatoire = const Value.absent(),
                 Value<String?> preferencePersonnalisee = const Value.absent(),
+                Value<String?> entrepriseId = const Value.absent(),
+                Value<String?> entrepotId = const Value.absent(),
               }) => SavedDestinationsCompanion.insert(
                 id: id,
                 nomClient: nomClient,
@@ -12420,6 +15616,8 @@ class $$SavedDestinationsTableTableManager
                 isProblematique: isProblematique,
                 photoObligatoire: photoObligatoire,
                 preferencePersonnalisee: preferencePersonnalisee,
+                entrepriseId: entrepriseId,
+                entrepotId: entrepotId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -14439,6 +17637,2664 @@ typedef $$WorkSessionsTableProcessedTableManager =
       WorkSession,
       PrefetchHooks Function()
     >;
+typedef $$EntreprisesTableCreateCompanionBuilder =
+    EntreprisesCompanion Function({
+      required String cloudId,
+      required String nom,
+      Value<String?> siret,
+      required String createdBy,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$EntreprisesTableUpdateCompanionBuilder =
+    EntreprisesCompanion Function({
+      Value<String> cloudId,
+      Value<String> nom,
+      Value<String?> siret,
+      Value<String> createdBy,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$EntreprisesTableReferences
+    extends BaseReferences<_$AppDatabase, $EntreprisesTable, Entreprise> {
+  $$EntreprisesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$EntrepotsTable, List<Entrepot>>
+  _entrepotsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.entrepots,
+    aliasName: $_aliasNameGenerator(
+      db.entreprises.cloudId,
+      db.entrepots.entrepriseId,
+    ),
+  );
+
+  $$EntrepotsTableProcessedTableManager get entrepotsRefs {
+    final manager = $$EntrepotsTableTableManager($_db, $_db.entrepots).filter(
+      (f) =>
+          f.entrepriseId.cloudId.sqlEquals($_itemColumn<String>('cloud_id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_entrepotsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$EntrepriseUsersTable, List<EntrepriseUser>>
+  _entrepriseUsersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.entrepriseUsers,
+    aliasName: $_aliasNameGenerator(
+      db.entreprises.cloudId,
+      db.entrepriseUsers.entrepriseId,
+    ),
+  );
+
+  $$EntrepriseUsersTableProcessedTableManager get entrepriseUsersRefs {
+    final manager =
+        $$EntrepriseUsersTableTableManager($_db, $_db.entrepriseUsers).filter(
+          (f) => f.entrepriseId.cloudId.sqlEquals(
+            $_itemColumn<String>('cloud_id')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _entrepriseUsersRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $EntrepriseInvitationsTable,
+    List<EntrepriseInvitation>
+  >
+  _entrepriseInvitationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.entrepriseInvitations,
+        aliasName: $_aliasNameGenerator(
+          db.entreprises.cloudId,
+          db.entrepriseInvitations.entrepriseId,
+        ),
+      );
+
+  $$EntrepriseInvitationsTableProcessedTableManager
+  get entrepriseInvitationsRefs {
+    final manager =
+        $$EntrepriseInvitationsTableTableManager(
+          $_db,
+          $_db.entrepriseInvitations,
+        ).filter(
+          (f) => f.entrepriseId.cloudId.sqlEquals(
+            $_itemColumn<String>('cloud_id')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _entrepriseInvitationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$EntreprisesTableFilterComposer
+    extends Composer<_$AppDatabase, $EntreprisesTable> {
+  $$EntreprisesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get siret => $composableBuilder(
+    column: $table.siret,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdBy => $composableBuilder(
+    column: $table.createdBy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> entrepotsRefs(
+    Expression<bool> Function($$EntrepotsTableFilterComposer f) f,
+  ) {
+    final $$EntrepotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cloudId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.entrepriseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableFilterComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> entrepriseUsersRefs(
+    Expression<bool> Function($$EntrepriseUsersTableFilterComposer f) f,
+  ) {
+    final $$EntrepriseUsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cloudId,
+      referencedTable: $db.entrepriseUsers,
+      getReferencedColumn: (t) => t.entrepriseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepriseUsersTableFilterComposer(
+            $db: $db,
+            $table: $db.entrepriseUsers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> entrepriseInvitationsRefs(
+    Expression<bool> Function($$EntrepriseInvitationsTableFilterComposer f) f,
+  ) {
+    final $$EntrepriseInvitationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.cloudId,
+          referencedTable: $db.entrepriseInvitations,
+          getReferencedColumn: (t) => t.entrepriseId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$EntrepriseInvitationsTableFilterComposer(
+                $db: $db,
+                $table: $db.entrepriseInvitations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$EntreprisesTableOrderingComposer
+    extends Composer<_$AppDatabase, $EntreprisesTable> {
+  $$EntreprisesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get siret => $composableBuilder(
+    column: $table.siret,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdBy => $composableBuilder(
+    column: $table.createdBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$EntreprisesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntreprisesTable> {
+  $$EntreprisesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cloudId =>
+      $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get nom =>
+      $composableBuilder(column: $table.nom, builder: (column) => column);
+
+  GeneratedColumn<String> get siret =>
+      $composableBuilder(column: $table.siret, builder: (column) => column);
+
+  GeneratedColumn<String> get createdBy =>
+      $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> entrepotsRefs<T extends Object>(
+    Expression<T> Function($$EntrepotsTableAnnotationComposer a) f,
+  ) {
+    final $$EntrepotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cloudId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.entrepriseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> entrepriseUsersRefs<T extends Object>(
+    Expression<T> Function($$EntrepriseUsersTableAnnotationComposer a) f,
+  ) {
+    final $$EntrepriseUsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cloudId,
+      referencedTable: $db.entrepriseUsers,
+      getReferencedColumn: (t) => t.entrepriseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepriseUsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entrepriseUsers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> entrepriseInvitationsRefs<T extends Object>(
+    Expression<T> Function($$EntrepriseInvitationsTableAnnotationComposer a) f,
+  ) {
+    final $$EntrepriseInvitationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.cloudId,
+          referencedTable: $db.entrepriseInvitations,
+          getReferencedColumn: (t) => t.entrepriseId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$EntrepriseInvitationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.entrepriseInvitations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$EntreprisesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EntreprisesTable,
+          Entreprise,
+          $$EntreprisesTableFilterComposer,
+          $$EntreprisesTableOrderingComposer,
+          $$EntreprisesTableAnnotationComposer,
+          $$EntreprisesTableCreateCompanionBuilder,
+          $$EntreprisesTableUpdateCompanionBuilder,
+          (Entreprise, $$EntreprisesTableReferences),
+          Entreprise,
+          PrefetchHooks Function({
+            bool entrepotsRefs,
+            bool entrepriseUsersRefs,
+            bool entrepriseInvitationsRefs,
+          })
+        > {
+  $$EntreprisesTableTableManager(_$AppDatabase db, $EntreprisesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntreprisesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntreprisesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntreprisesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cloudId = const Value.absent(),
+                Value<String> nom = const Value.absent(),
+                Value<String?> siret = const Value.absent(),
+                Value<String> createdBy = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntreprisesCompanion(
+                cloudId: cloudId,
+                nom: nom,
+                siret: siret,
+                createdBy: createdBy,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cloudId,
+                required String nom,
+                Value<String?> siret = const Value.absent(),
+                required String createdBy,
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntreprisesCompanion.insert(
+                cloudId: cloudId,
+                nom: nom,
+                siret: siret,
+                createdBy: createdBy,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EntreprisesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                entrepotsRefs = false,
+                entrepriseUsersRefs = false,
+                entrepriseInvitationsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (entrepotsRefs) db.entrepots,
+                    if (entrepriseUsersRefs) db.entrepriseUsers,
+                    if (entrepriseInvitationsRefs) db.entrepriseInvitations,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (entrepotsRefs)
+                        await $_getPrefetchedData<
+                          Entreprise,
+                          $EntreprisesTable,
+                          Entrepot
+                        >(
+                          currentTable: table,
+                          referencedTable: $$EntreprisesTableReferences
+                              ._entrepotsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$EntreprisesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).entrepotsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.entrepriseId == item.cloudId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (entrepriseUsersRefs)
+                        await $_getPrefetchedData<
+                          Entreprise,
+                          $EntreprisesTable,
+                          EntrepriseUser
+                        >(
+                          currentTable: table,
+                          referencedTable: $$EntreprisesTableReferences
+                              ._entrepriseUsersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$EntreprisesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).entrepriseUsersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.entrepriseId == item.cloudId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (entrepriseInvitationsRefs)
+                        await $_getPrefetchedData<
+                          Entreprise,
+                          $EntreprisesTable,
+                          EntrepriseInvitation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$EntreprisesTableReferences
+                              ._entrepriseInvitationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$EntreprisesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).entrepriseInvitationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.entrepriseId == item.cloudId,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$EntreprisesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EntreprisesTable,
+      Entreprise,
+      $$EntreprisesTableFilterComposer,
+      $$EntreprisesTableOrderingComposer,
+      $$EntreprisesTableAnnotationComposer,
+      $$EntreprisesTableCreateCompanionBuilder,
+      $$EntreprisesTableUpdateCompanionBuilder,
+      (Entreprise, $$EntreprisesTableReferences),
+      Entreprise,
+      PrefetchHooks Function({
+        bool entrepotsRefs,
+        bool entrepriseUsersRefs,
+        bool entrepriseInvitationsRefs,
+      })
+    >;
+typedef $$EntrepotsTableCreateCompanionBuilder =
+    EntrepotsCompanion Function({
+      required String cloudId,
+      required String entrepriseId,
+      required String nom,
+      Value<String?> adresse,
+      Value<double?> lat,
+      Value<double?> lng,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$EntrepotsTableUpdateCompanionBuilder =
+    EntrepotsCompanion Function({
+      Value<String> cloudId,
+      Value<String> entrepriseId,
+      Value<String> nom,
+      Value<String?> adresse,
+      Value<double?> lat,
+      Value<double?> lng,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$EntrepotsTableReferences
+    extends BaseReferences<_$AppDatabase, $EntrepotsTable, Entrepot> {
+  $$EntrepotsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $EntreprisesTable _entrepriseIdTable(_$AppDatabase db) =>
+      db.entreprises.createAlias(
+        $_aliasNameGenerator(db.entrepots.entrepriseId, db.entreprises.cloudId),
+      );
+
+  $$EntreprisesTableProcessedTableManager get entrepriseId {
+    final $_column = $_itemColumn<String>('entreprise_id')!;
+
+    final manager = $$EntreprisesTableTableManager(
+      $_db,
+      $_db.entreprises,
+    ).filter((f) => f.cloudId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_entrepriseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$EntrepotUsersTable, List<EntrepotUser>>
+  _entrepotUsersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.entrepotUsers,
+    aliasName: $_aliasNameGenerator(
+      db.entrepots.cloudId,
+      db.entrepotUsers.entrepotId,
+    ),
+  );
+
+  $$EntrepotUsersTableProcessedTableManager get entrepotUsersRefs {
+    final manager = $$EntrepotUsersTableTableManager($_db, $_db.entrepotUsers)
+        .filter(
+          (f) =>
+              f.entrepotId.cloudId.sqlEquals($_itemColumn<String>('cloud_id')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(_entrepotUsersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $EntrepriseInvitationsTable,
+    List<EntrepriseInvitation>
+  >
+  _entrepriseInvitationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.entrepriseInvitations,
+        aliasName: $_aliasNameGenerator(
+          db.entrepots.cloudId,
+          db.entrepriseInvitations.entrepotId,
+        ),
+      );
+
+  $$EntrepriseInvitationsTableProcessedTableManager
+  get entrepriseInvitationsRefs {
+    final manager =
+        $$EntrepriseInvitationsTableTableManager(
+          $_db,
+          $_db.entrepriseInvitations,
+        ).filter(
+          (f) =>
+              f.entrepotId.cloudId.sqlEquals($_itemColumn<String>('cloud_id')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _entrepriseInvitationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$EntrepotsTableFilterComposer
+    extends Composer<_$AppDatabase, $EntrepotsTable> {
+  $$EntrepotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get adresse => $composableBuilder(
+    column: $table.adresse,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$EntreprisesTableFilterComposer get entrepriseId {
+    final $$EntreprisesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableFilterComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> entrepotUsersRefs(
+    Expression<bool> Function($$EntrepotUsersTableFilterComposer f) f,
+  ) {
+    final $$EntrepotUsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cloudId,
+      referencedTable: $db.entrepotUsers,
+      getReferencedColumn: (t) => t.entrepotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotUsersTableFilterComposer(
+            $db: $db,
+            $table: $db.entrepotUsers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> entrepriseInvitationsRefs(
+    Expression<bool> Function($$EntrepriseInvitationsTableFilterComposer f) f,
+  ) {
+    final $$EntrepriseInvitationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.cloudId,
+          referencedTable: $db.entrepriseInvitations,
+          getReferencedColumn: (t) => t.entrepotId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$EntrepriseInvitationsTableFilterComposer(
+                $db: $db,
+                $table: $db.entrepriseInvitations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$EntrepotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $EntrepotsTable> {
+  $$EntrepotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get adresse => $composableBuilder(
+    column: $table.adresse,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$EntreprisesTableOrderingComposer get entrepriseId {
+    final $$EntreprisesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableOrderingComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntrepotsTable> {
+  $$EntrepotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cloudId =>
+      $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get nom =>
+      $composableBuilder(column: $table.nom, builder: (column) => column);
+
+  GeneratedColumn<String> get adresse =>
+      $composableBuilder(column: $table.adresse, builder: (column) => column);
+
+  GeneratedColumn<double> get lat =>
+      $composableBuilder(column: $table.lat, builder: (column) => column);
+
+  GeneratedColumn<double> get lng =>
+      $composableBuilder(column: $table.lng, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$EntreprisesTableAnnotationComposer get entrepriseId {
+    final $$EntreprisesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> entrepotUsersRefs<T extends Object>(
+    Expression<T> Function($$EntrepotUsersTableAnnotationComposer a) f,
+  ) {
+    final $$EntrepotUsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cloudId,
+      referencedTable: $db.entrepotUsers,
+      getReferencedColumn: (t) => t.entrepotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotUsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entrepotUsers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> entrepriseInvitationsRefs<T extends Object>(
+    Expression<T> Function($$EntrepriseInvitationsTableAnnotationComposer a) f,
+  ) {
+    final $$EntrepriseInvitationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.cloudId,
+          referencedTable: $db.entrepriseInvitations,
+          getReferencedColumn: (t) => t.entrepotId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$EntrepriseInvitationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.entrepriseInvitations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$EntrepotsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EntrepotsTable,
+          Entrepot,
+          $$EntrepotsTableFilterComposer,
+          $$EntrepotsTableOrderingComposer,
+          $$EntrepotsTableAnnotationComposer,
+          $$EntrepotsTableCreateCompanionBuilder,
+          $$EntrepotsTableUpdateCompanionBuilder,
+          (Entrepot, $$EntrepotsTableReferences),
+          Entrepot,
+          PrefetchHooks Function({
+            bool entrepriseId,
+            bool entrepotUsersRefs,
+            bool entrepriseInvitationsRefs,
+          })
+        > {
+  $$EntrepotsTableTableManager(_$AppDatabase db, $EntrepotsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntrepotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntrepotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntrepotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cloudId = const Value.absent(),
+                Value<String> entrepriseId = const Value.absent(),
+                Value<String> nom = const Value.absent(),
+                Value<String?> adresse = const Value.absent(),
+                Value<double?> lat = const Value.absent(),
+                Value<double?> lng = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepotsCompanion(
+                cloudId: cloudId,
+                entrepriseId: entrepriseId,
+                nom: nom,
+                adresse: adresse,
+                lat: lat,
+                lng: lng,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cloudId,
+                required String entrepriseId,
+                required String nom,
+                Value<String?> adresse = const Value.absent(),
+                Value<double?> lat = const Value.absent(),
+                Value<double?> lng = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepotsCompanion.insert(
+                cloudId: cloudId,
+                entrepriseId: entrepriseId,
+                nom: nom,
+                adresse: adresse,
+                lat: lat,
+                lng: lng,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EntrepotsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                entrepriseId = false,
+                entrepotUsersRefs = false,
+                entrepriseInvitationsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (entrepotUsersRefs) db.entrepotUsers,
+                    if (entrepriseInvitationsRefs) db.entrepriseInvitations,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (entrepriseId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.entrepriseId,
+                                    referencedTable: $$EntrepotsTableReferences
+                                        ._entrepriseIdTable(db),
+                                    referencedColumn: $$EntrepotsTableReferences
+                                        ._entrepriseIdTable(db)
+                                        .cloudId,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (entrepotUsersRefs)
+                        await $_getPrefetchedData<
+                          Entrepot,
+                          $EntrepotsTable,
+                          EntrepotUser
+                        >(
+                          currentTable: table,
+                          referencedTable: $$EntrepotsTableReferences
+                              ._entrepotUsersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$EntrepotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).entrepotUsersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.entrepotId == item.cloudId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (entrepriseInvitationsRefs)
+                        await $_getPrefetchedData<
+                          Entrepot,
+                          $EntrepotsTable,
+                          EntrepriseInvitation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$EntrepotsTableReferences
+                              ._entrepriseInvitationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$EntrepotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).entrepriseInvitationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.entrepotId == item.cloudId,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$EntrepotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EntrepotsTable,
+      Entrepot,
+      $$EntrepotsTableFilterComposer,
+      $$EntrepotsTableOrderingComposer,
+      $$EntrepotsTableAnnotationComposer,
+      $$EntrepotsTableCreateCompanionBuilder,
+      $$EntrepotsTableUpdateCompanionBuilder,
+      (Entrepot, $$EntrepotsTableReferences),
+      Entrepot,
+      PrefetchHooks Function({
+        bool entrepriseId,
+        bool entrepotUsersRefs,
+        bool entrepriseInvitationsRefs,
+      })
+    >;
+typedef $$EntrepriseUsersTableCreateCompanionBuilder =
+    EntrepriseUsersCompanion Function({
+      required String cloudId,
+      required String entrepriseId,
+      required String userId,
+      required String role,
+      Value<String> statut,
+      Value<DateTime?> revokedAt,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$EntrepriseUsersTableUpdateCompanionBuilder =
+    EntrepriseUsersCompanion Function({
+      Value<String> cloudId,
+      Value<String> entrepriseId,
+      Value<String> userId,
+      Value<String> role,
+      Value<String> statut,
+      Value<DateTime?> revokedAt,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$EntrepriseUsersTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $EntrepriseUsersTable, EntrepriseUser> {
+  $$EntrepriseUsersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $EntreprisesTable _entrepriseIdTable(_$AppDatabase db) =>
+      db.entreprises.createAlias(
+        $_aliasNameGenerator(
+          db.entrepriseUsers.entrepriseId,
+          db.entreprises.cloudId,
+        ),
+      );
+
+  $$EntreprisesTableProcessedTableManager get entrepriseId {
+    final $_column = $_itemColumn<String>('entreprise_id')!;
+
+    final manager = $$EntreprisesTableTableManager(
+      $_db,
+      $_db.entreprises,
+    ).filter((f) => f.cloudId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_entrepriseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EntrepriseUsersTableFilterComposer
+    extends Composer<_$AppDatabase, $EntrepriseUsersTable> {
+  $$EntrepriseUsersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get revokedAt => $composableBuilder(
+    column: $table.revokedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$EntreprisesTableFilterComposer get entrepriseId {
+    final $$EntreprisesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableFilterComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepriseUsersTableOrderingComposer
+    extends Composer<_$AppDatabase, $EntrepriseUsersTable> {
+  $$EntrepriseUsersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get revokedAt => $composableBuilder(
+    column: $table.revokedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$EntreprisesTableOrderingComposer get entrepriseId {
+    final $$EntreprisesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableOrderingComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepriseUsersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntrepriseUsersTable> {
+  $$EntrepriseUsersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cloudId =>
+      $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get revokedAt =>
+      $composableBuilder(column: $table.revokedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$EntreprisesTableAnnotationComposer get entrepriseId {
+    final $$EntreprisesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepriseUsersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EntrepriseUsersTable,
+          EntrepriseUser,
+          $$EntrepriseUsersTableFilterComposer,
+          $$EntrepriseUsersTableOrderingComposer,
+          $$EntrepriseUsersTableAnnotationComposer,
+          $$EntrepriseUsersTableCreateCompanionBuilder,
+          $$EntrepriseUsersTableUpdateCompanionBuilder,
+          (EntrepriseUser, $$EntrepriseUsersTableReferences),
+          EntrepriseUser,
+          PrefetchHooks Function({bool entrepriseId})
+        > {
+  $$EntrepriseUsersTableTableManager(
+    _$AppDatabase db,
+    $EntrepriseUsersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntrepriseUsersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntrepriseUsersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntrepriseUsersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cloudId = const Value.absent(),
+                Value<String> entrepriseId = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<DateTime?> revokedAt = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepriseUsersCompanion(
+                cloudId: cloudId,
+                entrepriseId: entrepriseId,
+                userId: userId,
+                role: role,
+                statut: statut,
+                revokedAt: revokedAt,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cloudId,
+                required String entrepriseId,
+                required String userId,
+                required String role,
+                Value<String> statut = const Value.absent(),
+                Value<DateTime?> revokedAt = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepriseUsersCompanion.insert(
+                cloudId: cloudId,
+                entrepriseId: entrepriseId,
+                userId: userId,
+                role: role,
+                statut: statut,
+                revokedAt: revokedAt,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EntrepriseUsersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({entrepriseId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (entrepriseId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.entrepriseId,
+                                referencedTable:
+                                    $$EntrepriseUsersTableReferences
+                                        ._entrepriseIdTable(db),
+                                referencedColumn:
+                                    $$EntrepriseUsersTableReferences
+                                        ._entrepriseIdTable(db)
+                                        .cloudId,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$EntrepriseUsersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EntrepriseUsersTable,
+      EntrepriseUser,
+      $$EntrepriseUsersTableFilterComposer,
+      $$EntrepriseUsersTableOrderingComposer,
+      $$EntrepriseUsersTableAnnotationComposer,
+      $$EntrepriseUsersTableCreateCompanionBuilder,
+      $$EntrepriseUsersTableUpdateCompanionBuilder,
+      (EntrepriseUser, $$EntrepriseUsersTableReferences),
+      EntrepriseUser,
+      PrefetchHooks Function({bool entrepriseId})
+    >;
+typedef $$EntrepotUsersTableCreateCompanionBuilder =
+    EntrepotUsersCompanion Function({
+      required String cloudId,
+      required String entrepotId,
+      required String userId,
+      required String role,
+      Value<String> statut,
+      Value<DateTime?> revokedAt,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$EntrepotUsersTableUpdateCompanionBuilder =
+    EntrepotUsersCompanion Function({
+      Value<String> cloudId,
+      Value<String> entrepotId,
+      Value<String> userId,
+      Value<String> role,
+      Value<String> statut,
+      Value<DateTime?> revokedAt,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$EntrepotUsersTableReferences
+    extends BaseReferences<_$AppDatabase, $EntrepotUsersTable, EntrepotUser> {
+  $$EntrepotUsersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $EntrepotsTable _entrepotIdTable(_$AppDatabase db) =>
+      db.entrepots.createAlias(
+        $_aliasNameGenerator(db.entrepotUsers.entrepotId, db.entrepots.cloudId),
+      );
+
+  $$EntrepotsTableProcessedTableManager get entrepotId {
+    final $_column = $_itemColumn<String>('entrepot_id')!;
+
+    final manager = $$EntrepotsTableTableManager(
+      $_db,
+      $_db.entrepots,
+    ).filter((f) => f.cloudId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_entrepotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EntrepotUsersTableFilterComposer
+    extends Composer<_$AppDatabase, $EntrepotUsersTable> {
+  $$EntrepotUsersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get revokedAt => $composableBuilder(
+    column: $table.revokedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$EntrepotsTableFilterComposer get entrepotId {
+    final $$EntrepotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepotId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableFilterComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepotUsersTableOrderingComposer
+    extends Composer<_$AppDatabase, $EntrepotUsersTable> {
+  $$EntrepotUsersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get revokedAt => $composableBuilder(
+    column: $table.revokedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$EntrepotsTableOrderingComposer get entrepotId {
+    final $$EntrepotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepotId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepotUsersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntrepotUsersTable> {
+  $$EntrepotUsersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cloudId =>
+      $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get revokedAt =>
+      $composableBuilder(column: $table.revokedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$EntrepotsTableAnnotationComposer get entrepotId {
+    final $$EntrepotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepotId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepotUsersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EntrepotUsersTable,
+          EntrepotUser,
+          $$EntrepotUsersTableFilterComposer,
+          $$EntrepotUsersTableOrderingComposer,
+          $$EntrepotUsersTableAnnotationComposer,
+          $$EntrepotUsersTableCreateCompanionBuilder,
+          $$EntrepotUsersTableUpdateCompanionBuilder,
+          (EntrepotUser, $$EntrepotUsersTableReferences),
+          EntrepotUser,
+          PrefetchHooks Function({bool entrepotId})
+        > {
+  $$EntrepotUsersTableTableManager(_$AppDatabase db, $EntrepotUsersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntrepotUsersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntrepotUsersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntrepotUsersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cloudId = const Value.absent(),
+                Value<String> entrepotId = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<DateTime?> revokedAt = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepotUsersCompanion(
+                cloudId: cloudId,
+                entrepotId: entrepotId,
+                userId: userId,
+                role: role,
+                statut: statut,
+                revokedAt: revokedAt,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cloudId,
+                required String entrepotId,
+                required String userId,
+                required String role,
+                Value<String> statut = const Value.absent(),
+                Value<DateTime?> revokedAt = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepotUsersCompanion.insert(
+                cloudId: cloudId,
+                entrepotId: entrepotId,
+                userId: userId,
+                role: role,
+                statut: statut,
+                revokedAt: revokedAt,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EntrepotUsersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({entrepotId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (entrepotId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.entrepotId,
+                                referencedTable: $$EntrepotUsersTableReferences
+                                    ._entrepotIdTable(db),
+                                referencedColumn: $$EntrepotUsersTableReferences
+                                    ._entrepotIdTable(db)
+                                    .cloudId,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$EntrepotUsersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EntrepotUsersTable,
+      EntrepotUser,
+      $$EntrepotUsersTableFilterComposer,
+      $$EntrepotUsersTableOrderingComposer,
+      $$EntrepotUsersTableAnnotationComposer,
+      $$EntrepotUsersTableCreateCompanionBuilder,
+      $$EntrepotUsersTableUpdateCompanionBuilder,
+      (EntrepotUser, $$EntrepotUsersTableReferences),
+      EntrepotUser,
+      PrefetchHooks Function({bool entrepotId})
+    >;
+typedef $$EntrepriseInvitationsTableCreateCompanionBuilder =
+    EntrepriseInvitationsCompanion Function({
+      required String cloudId,
+      required String entrepriseId,
+      Value<String?> entrepotId,
+      required String email,
+      required String roleTarget,
+      required String invitedBy,
+      Value<String> statut,
+      required DateTime expiresAt,
+      Value<DateTime> creeLe,
+      Value<int> rowid,
+    });
+typedef $$EntrepriseInvitationsTableUpdateCompanionBuilder =
+    EntrepriseInvitationsCompanion Function({
+      Value<String> cloudId,
+      Value<String> entrepriseId,
+      Value<String?> entrepotId,
+      Value<String> email,
+      Value<String> roleTarget,
+      Value<String> invitedBy,
+      Value<String> statut,
+      Value<DateTime> expiresAt,
+      Value<DateTime> creeLe,
+      Value<int> rowid,
+    });
+
+final class $$EntrepriseInvitationsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $EntrepriseInvitationsTable,
+          EntrepriseInvitation
+        > {
+  $$EntrepriseInvitationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $EntreprisesTable _entrepriseIdTable(_$AppDatabase db) =>
+      db.entreprises.createAlias(
+        $_aliasNameGenerator(
+          db.entrepriseInvitations.entrepriseId,
+          db.entreprises.cloudId,
+        ),
+      );
+
+  $$EntreprisesTableProcessedTableManager get entrepriseId {
+    final $_column = $_itemColumn<String>('entreprise_id')!;
+
+    final manager = $$EntreprisesTableTableManager(
+      $_db,
+      $_db.entreprises,
+    ).filter((f) => f.cloudId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_entrepriseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $EntrepotsTable _entrepotIdTable(_$AppDatabase db) =>
+      db.entrepots.createAlias(
+        $_aliasNameGenerator(
+          db.entrepriseInvitations.entrepotId,
+          db.entrepots.cloudId,
+        ),
+      );
+
+  $$EntrepotsTableProcessedTableManager? get entrepotId {
+    final $_column = $_itemColumn<String>('entrepot_id');
+    if ($_column == null) return null;
+    final manager = $$EntrepotsTableTableManager(
+      $_db,
+      $_db.entrepots,
+    ).filter((f) => f.cloudId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_entrepotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EntrepriseInvitationsTableFilterComposer
+    extends Composer<_$AppDatabase, $EntrepriseInvitationsTable> {
+  $$EntrepriseInvitationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get roleTarget => $composableBuilder(
+    column: $table.roleTarget,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get invitedBy => $composableBuilder(
+    column: $table.invitedBy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$EntreprisesTableFilterComposer get entrepriseId {
+    final $$EntreprisesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableFilterComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$EntrepotsTableFilterComposer get entrepotId {
+    final $$EntrepotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepotId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableFilterComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepriseInvitationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $EntrepriseInvitationsTable> {
+  $$EntrepriseInvitationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get roleTarget => $composableBuilder(
+    column: $table.roleTarget,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get invitedBy => $composableBuilder(
+    column: $table.invitedBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$EntreprisesTableOrderingComposer get entrepriseId {
+    final $$EntreprisesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableOrderingComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$EntrepotsTableOrderingComposer get entrepotId {
+    final $$EntrepotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepotId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepriseInvitationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntrepriseInvitationsTable> {
+  $$EntrepriseInvitationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cloudId =>
+      $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<String> get roleTarget => $composableBuilder(
+    column: $table.roleTarget,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get invitedBy =>
+      $composableBuilder(column: $table.invitedBy, builder: (column) => column);
+
+  GeneratedColumn<String> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  $$EntreprisesTableAnnotationComposer get entrepriseId {
+    final $$EntreprisesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepriseId,
+      referencedTable: $db.entreprises,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntreprisesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entreprises,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$EntrepotsTableAnnotationComposer get entrepotId {
+    final $$EntrepotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entrepotId,
+      referencedTable: $db.entrepots,
+      getReferencedColumn: (t) => t.cloudId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntrepotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entrepots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntrepriseInvitationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EntrepriseInvitationsTable,
+          EntrepriseInvitation,
+          $$EntrepriseInvitationsTableFilterComposer,
+          $$EntrepriseInvitationsTableOrderingComposer,
+          $$EntrepriseInvitationsTableAnnotationComposer,
+          $$EntrepriseInvitationsTableCreateCompanionBuilder,
+          $$EntrepriseInvitationsTableUpdateCompanionBuilder,
+          (EntrepriseInvitation, $$EntrepriseInvitationsTableReferences),
+          EntrepriseInvitation,
+          PrefetchHooks Function({bool entrepriseId, bool entrepotId})
+        > {
+  $$EntrepriseInvitationsTableTableManager(
+    _$AppDatabase db,
+    $EntrepriseInvitationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntrepriseInvitationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$EntrepriseInvitationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$EntrepriseInvitationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> cloudId = const Value.absent(),
+                Value<String> entrepriseId = const Value.absent(),
+                Value<String?> entrepotId = const Value.absent(),
+                Value<String> email = const Value.absent(),
+                Value<String> roleTarget = const Value.absent(),
+                Value<String> invitedBy = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<DateTime> expiresAt = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepriseInvitationsCompanion(
+                cloudId: cloudId,
+                entrepriseId: entrepriseId,
+                entrepotId: entrepotId,
+                email: email,
+                roleTarget: roleTarget,
+                invitedBy: invitedBy,
+                statut: statut,
+                expiresAt: expiresAt,
+                creeLe: creeLe,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cloudId,
+                required String entrepriseId,
+                Value<String?> entrepotId = const Value.absent(),
+                required String email,
+                required String roleTarget,
+                required String invitedBy,
+                Value<String> statut = const Value.absent(),
+                required DateTime expiresAt,
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EntrepriseInvitationsCompanion.insert(
+                cloudId: cloudId,
+                entrepriseId: entrepriseId,
+                entrepotId: entrepotId,
+                email: email,
+                roleTarget: roleTarget,
+                invitedBy: invitedBy,
+                statut: statut,
+                expiresAt: expiresAt,
+                creeLe: creeLe,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EntrepriseInvitationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({entrepriseId = false, entrepotId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (entrepriseId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.entrepriseId,
+                                referencedTable:
+                                    $$EntrepriseInvitationsTableReferences
+                                        ._entrepriseIdTable(db),
+                                referencedColumn:
+                                    $$EntrepriseInvitationsTableReferences
+                                        ._entrepriseIdTable(db)
+                                        .cloudId,
+                              )
+                              as T;
+                    }
+                    if (entrepotId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.entrepotId,
+                                referencedTable:
+                                    $$EntrepriseInvitationsTableReferences
+                                        ._entrepotIdTable(db),
+                                referencedColumn:
+                                    $$EntrepriseInvitationsTableReferences
+                                        ._entrepotIdTable(db)
+                                        .cloudId,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$EntrepriseInvitationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EntrepriseInvitationsTable,
+      EntrepriseInvitation,
+      $$EntrepriseInvitationsTableFilterComposer,
+      $$EntrepriseInvitationsTableOrderingComposer,
+      $$EntrepriseInvitationsTableAnnotationComposer,
+      $$EntrepriseInvitationsTableCreateCompanionBuilder,
+      $$EntrepriseInvitationsTableUpdateCompanionBuilder,
+      (EntrepriseInvitation, $$EntrepriseInvitationsTableReferences),
+      EntrepriseInvitation,
+      PrefetchHooks Function({bool entrepriseId, bool entrepotId})
+    >;
+typedef $$SavedDestinationNotesPersoTableCreateCompanionBuilder =
+    SavedDestinationNotesPersoCompanion Function({
+      required String cloudId,
+      required String savedDestinationId,
+      required String userId,
+      Value<String?> notes,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$SavedDestinationNotesPersoTableUpdateCompanionBuilder =
+    SavedDestinationNotesPersoCompanion Function({
+      Value<String> cloudId,
+      Value<String> savedDestinationId,
+      Value<String> userId,
+      Value<String?> notes,
+      Value<DateTime> creeLe,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$SavedDestinationNotesPersoTableFilterComposer
+    extends Composer<_$AppDatabase, $SavedDestinationNotesPersoTable> {
+  $$SavedDestinationNotesPersoTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get savedDestinationId => $composableBuilder(
+    column: $table.savedDestinationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SavedDestinationNotesPersoTableOrderingComposer
+    extends Composer<_$AppDatabase, $SavedDestinationNotesPersoTable> {
+  $$SavedDestinationNotesPersoTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get savedDestinationId => $composableBuilder(
+    column: $table.savedDestinationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SavedDestinationNotesPersoTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SavedDestinationNotesPersoTable> {
+  $$SavedDestinationNotesPersoTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cloudId =>
+      $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get savedDestinationId => $composableBuilder(
+    column: $table.savedDestinationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$SavedDestinationNotesPersoTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SavedDestinationNotesPersoTable,
+          SavedDestinationNotesPersoData,
+          $$SavedDestinationNotesPersoTableFilterComposer,
+          $$SavedDestinationNotesPersoTableOrderingComposer,
+          $$SavedDestinationNotesPersoTableAnnotationComposer,
+          $$SavedDestinationNotesPersoTableCreateCompanionBuilder,
+          $$SavedDestinationNotesPersoTableUpdateCompanionBuilder,
+          (
+            SavedDestinationNotesPersoData,
+            BaseReferences<
+              _$AppDatabase,
+              $SavedDestinationNotesPersoTable,
+              SavedDestinationNotesPersoData
+            >,
+          ),
+          SavedDestinationNotesPersoData,
+          PrefetchHooks Function()
+        > {
+  $$SavedDestinationNotesPersoTableTableManager(
+    _$AppDatabase db,
+    $SavedDestinationNotesPersoTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SavedDestinationNotesPersoTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SavedDestinationNotesPersoTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SavedDestinationNotesPersoTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> cloudId = const Value.absent(),
+                Value<String> savedDestinationId = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavedDestinationNotesPersoCompanion(
+                cloudId: cloudId,
+                savedDestinationId: savedDestinationId,
+                userId: userId,
+                notes: notes,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cloudId,
+                required String savedDestinationId,
+                required String userId,
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavedDestinationNotesPersoCompanion.insert(
+                cloudId: cloudId,
+                savedDestinationId: savedDestinationId,
+                userId: userId,
+                notes: notes,
+                creeLe: creeLe,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SavedDestinationNotesPersoTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SavedDestinationNotesPersoTable,
+      SavedDestinationNotesPersoData,
+      $$SavedDestinationNotesPersoTableFilterComposer,
+      $$SavedDestinationNotesPersoTableOrderingComposer,
+      $$SavedDestinationNotesPersoTableAnnotationComposer,
+      $$SavedDestinationNotesPersoTableCreateCompanionBuilder,
+      $$SavedDestinationNotesPersoTableUpdateCompanionBuilder,
+      (
+        SavedDestinationNotesPersoData,
+        BaseReferences<
+          _$AppDatabase,
+          $SavedDestinationNotesPersoTable,
+          SavedDestinationNotesPersoData
+        >,
+      ),
+      SavedDestinationNotesPersoData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -14469,4 +20325,20 @@ class $AppDatabaseManager {
       $$TourneeRecurrencesTableTableManager(_db, _db.tourneeRecurrences);
   $$WorkSessionsTableTableManager get workSessions =>
       $$WorkSessionsTableTableManager(_db, _db.workSessions);
+  $$EntreprisesTableTableManager get entreprises =>
+      $$EntreprisesTableTableManager(_db, _db.entreprises);
+  $$EntrepotsTableTableManager get entrepots =>
+      $$EntrepotsTableTableManager(_db, _db.entrepots);
+  $$EntrepriseUsersTableTableManager get entrepriseUsers =>
+      $$EntrepriseUsersTableTableManager(_db, _db.entrepriseUsers);
+  $$EntrepotUsersTableTableManager get entrepotUsers =>
+      $$EntrepotUsersTableTableManager(_db, _db.entrepotUsers);
+  $$EntrepriseInvitationsTableTableManager get entrepriseInvitations =>
+      $$EntrepriseInvitationsTableTableManager(_db, _db.entrepriseInvitations);
+  $$SavedDestinationNotesPersoTableTableManager
+  get savedDestinationNotesPerso =>
+      $$SavedDestinationNotesPersoTableTableManager(
+        _db,
+        _db.savedDestinationNotesPerso,
+      );
 }

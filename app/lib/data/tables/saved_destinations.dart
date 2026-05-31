@@ -115,4 +115,16 @@ class SavedDestinations extends Table {
   /// (libre) : `preferencePersonnalisee` est une consigne forte qu'on
   /// doit voir avant chaque livraison.
   TextColumn get preferencePersonnalisee => text().nullable()();
+
+  /// Carnet partage entreprise (epopee #361, carte #362). UUID de
+  /// `entreprises.cloud_id`. Si NULL : adresse perso au user.
+  /// Si set + entrepotId NULL : adresse partagee au niveau entreprise
+  /// entier (mutualisee tous les entrepots).
+  /// Si set + entrepotId set : adresse rattachee a un entrepot
+  /// specifique (carnet entrepot local).
+  TextColumn get entrepriseId => text().nullable()();
+
+  /// FK locale optionnelle vers `entrepots.cloud_id`. Voir
+  /// `entrepriseId` ci-dessus pour la semantique.
+  TextColumn get entrepotId => text().nullable()();
 }

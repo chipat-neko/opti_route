@@ -3,9 +3,15 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'tables/coequipiers.dart';
+import 'tables/entreprise_invitations.dart';
+import 'tables/entreprise_users.dart';
+import 'tables/entreprises.dart';
+import 'tables/entrepot_users.dart';
+import 'tables/entrepots.dart';
 import 'tables/frais.dart';
 import 'tables/geocode_cache.dart';
 import 'tables/parametres.dart';
+import 'tables/saved_destination_notes_perso.dart';
 import 'tables/saved_destinations.dart';
 import 'tables/sheets.dart';
 import 'tables/stop_history.dart';
@@ -20,9 +26,15 @@ import 'tables/work_sessions.dart';
 // `import 'database.dart'` puissent continuer a utiliser
 // `TourneesCompanion`, `Stop`, etc. sans changer leurs imports.
 export 'tables/coequipiers.dart';
+export 'tables/entreprise_invitations.dart';
+export 'tables/entreprise_users.dart';
+export 'tables/entreprises.dart';
+export 'tables/entrepot_users.dart';
+export 'tables/entrepots.dart';
 export 'tables/frais.dart';
 export 'tables/geocode_cache.dart';
 export 'tables/parametres.dart';
+export 'tables/saved_destination_notes_perso.dart';
 export 'tables/saved_destinations.dart';
 export 'tables/sheets.dart';
 export 'tables/stop_history.dart';
@@ -50,6 +62,13 @@ part 'database.g.dart';
     TrackingCodes,
     TourneeRecurrences,
     WorkSessions,
+    // Epopee multi-tenant (carte #361/#362, 2026-05-31)
+    Entreprises,
+    Entrepots,
+    EntrepriseUsers,
+    EntrepotUsers,
+    EntrepriseInvitations,
+    SavedDestinationNotesPerso,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -79,7 +98,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 47;
+  int get schemaVersion => 48;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -382,8 +401,28 @@ class AppDatabase extends _$AppDatabase {
           if (from < 47) {
             // Carte #335 : preference persistante client (affichee en
             // gros a l'arrivee, distinct des notes libres).
-            await _safeAddColumn(m, 
+            await _safeAddColumn(m,
                 savedDestinations, savedDestinations.preferencePersonnalisee);
+          }
+          if (from < 48) {
+            // Epopee multi-tenant #361/#362 : ajout 6 nouvelles tables
+            // miroir cloud (entreprises, entrepots, entreprise_users,
+            // entrepot_users, entreprise_invitations,
+            // saved_destination_notes_perso) + 2 colonnes sur
+            // saved_destinations pour le carnet partage entreprise/entrepot.
+            //
+            // Toutes idempotentes via _safeCreateTable / _safeAddColumn
+            // (cf PR #471 fix Drift migrations).
+            await _safeCreateTable(m, entreprises);
+            await _safeCreateTable(m, entrepots);
+            await _safeCreateTable(m, entrepriseUsers);
+            await _safeCreateTable(m, entrepotUsers);
+            await _safeCreateTable(m, entrepriseInvitations);
+            await _safeCreateTable(m, savedDestinationNotesPerso);
+            await _safeAddColumn(
+                m, savedDestinations, savedDestinations.entrepriseId);
+            await _safeAddColumn(
+                m, savedDestinations, savedDestinations.entrepotId);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
