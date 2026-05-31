@@ -400,4 +400,67 @@ class SavedDestinationsRepository {
         .getSingle();
     return row.read(col) ?? 0;
   }
+
+  // ─── Migration carnet local -> cloud (epopee #361, carte #365) ──────
+  // Une adresse est "privee" tant que entrepriseId est null. Le wizard
+  // de migration permet de lui attribuer une portee (entreprise seule,
+  // ou entreprise + entrepot). Le bump de `updatedAt` declenche
+  // l'auto-push cloud (CarnetAutoPushService) qui propage la portee.
+
+  /// Adresses encore privees (ni entreprise ni entrepot). Triees comme
+  /// [watchAll] (favoris > useCount > recence). Sert a la liste du wizard.
+  Stream<List<SavedDestination>> watchPrivees() {
+    final select = _db.select(_db.savedDestinations)
+      ..where((d) => d.entrepriseId.isNull())
+      ..orderBy([
+        (d) => OrderingTerm.desc(d.isFavori),
+        (d) => OrderingTerm.desc(d.useCount),
+        (d) => OrderingTerm.desc(d.lastUsedAt),
+      ]);
+    return select.watch();
+  }
+
+  /// Nombre d'adresses encore privees (COUNT SQLite). Sert au badge du
+  /// banner persistant "Tu as N adresses locales".
+  Stream<int> watchCountPrivees() {
+    final col = _db.savedDestinations.id.count();
+    final query = _db.selectOnly(_db.savedDestinations)
+      ..addColumns([col])
+      ..where(_db.savedDestinations.entrepriseId.isNull());
+    return query.watchSingle().map((row) => row.read(col) ?? 0);
+  }
+
+  /// Attribue une portee a une adresse (carte #365). Combinaisons :
+  /// - prive : entrepriseId=null, entrepotId=null
+  /// - entreprise entiere : entrepriseId set, entrepotId=null
+  /// - entrepot precis : entrepriseId set, entrepotId set
+  /// Bump `updatedAt` -> l'auto-push propage la portee au cloud.
+  Future<int> setPortee(
+    int id, {
+    String? entrepriseId,
+    String? entrepotId,
+  }) {
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.equals(id)))
+        .write(SavedDestinationsCompanion(
+      entrepriseId: Value(entrepriseId),
+      entrepotId: Value(entrepotId),
+      updatedAt: Value(DateTime.now()),
+    ));
+  }
+
+  /// Variante en masse (boutons "Tout partager" / "Tout garder prive").
+  /// Une seule requete WHERE id IN (...). No-op si [ids] vide.
+  Future<int> setPorteeBulk(
+    List<int> ids, {
+    String? entrepriseId,
+    String? entrepotId,
+  }) {
+    if (ids.isEmpty) return Future.value(0);
+    return (_db.update(_db.savedDestinations)..where((d) => d.id.isIn(ids)))
+        .write(SavedDestinationsCompanion(
+      entrepriseId: Value(entrepriseId),
+      entrepotId: Value(entrepotId),
+      updatedAt: Value(DateTime.now()),
+    ));
+  }
 }

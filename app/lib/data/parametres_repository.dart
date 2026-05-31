@@ -56,6 +56,11 @@ class ParametresRepository {
   // Mode eco batterie (carte #258) : reduit la frequence/precision GPS en
   // consultation passive. Default OFF.
   static const _kModeEco = 'mode_eco_batterie';
+  // Wizard migration carnet local -> cloud (epopee #361, carte #365).
+  // Passe a '1' quand l'utilisateur a termine (ou explicitement passe)
+  // le wizard de choix de partage de ses adresses locales. Sert a ne
+  // plus reafficher le banner persistant une fois le tri fait.
+  static const _kCarnetMigrationDone = 'carnet_migration_done';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -369,6 +374,20 @@ class ParametresRepository {
 
   Future<void> setModeEco(bool v) =>
       _write(_kModeEco, v ? '1' : '0');
+
+  /// Wizard migration carnet local -> cloud (carte #365). True une fois
+  /// que l'utilisateur a trie ses adresses locales (partage entreprise/
+  /// entrepot ou garde prive). Tant que false ET qu'il reste des adresses
+  /// privees ET qu'une entreprise existe, le banner persistant s'affiche
+  /// sur l'accueil. Default false.
+  Future<bool> getCarnetMigrationDone() async =>
+      (await _readKey(_kCarnetMigrationDone)) == '1';
+
+  Stream<bool> watchCarnetMigrationDone() =>
+      _watchKey(_kCarnetMigrationDone).map((v) => v == '1');
+
+  Future<void> setCarnetMigrationDone(bool v) =>
+      _write(_kCarnetMigrationDone, v ? '1' : '0');
 
   /// Hash SHA-256 du PIN choisi par l'utilisateur (4 a 6 chiffres). Le
   /// PIN en clair n'est jamais stocke. Null si verrou desactiv ou PIN

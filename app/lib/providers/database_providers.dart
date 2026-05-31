@@ -160,6 +160,23 @@ final entrepotsParEntrepriseProvider =
       .watchEntrepotsForEntreprise(entrepriseId);
 });
 
+/// Flag "wizard migration carnet terminé" (carte #365). Sert au banner
+/// persistant : tant que false, on propose de partager les adresses.
+final carnetMigrationDoneProvider = StreamProvider<bool>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchCarnetMigrationDone();
+});
+
+/// Nombre d'adresses du carnet encore privées (sans entreprise). Carte
+/// #365. Alimente le badge du banner « Tu as N adresses locales ».
+final carnetPriveesCountProvider = StreamProvider<int>((ref) {
+  return ref.watch(savedDestinationsRepositoryProvider).watchCountPrivees();
+});
+
+/// Adresses privées du carnet (liste pour le wizard de migration #365).
+final carnetPriveesProvider = StreamProvider<List<SavedDestination>>((ref) {
+  return ref.watch(savedDestinationsRepositoryProvider).watchPrivees();
+});
+
 /// Lookup async du telephone client par nom (case-insensitive).
 /// Retourne null si pas de match dans le carnet. Sert au bouton
 /// "Appeler client" dans StopActionSheet (QW4 2026-05-31).
