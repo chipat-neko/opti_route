@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'data/backup_service.dart';
 import 'data/battery_monitor_service.dart';
 import 'data/notifications_service.dart';
+import 'data/persist_storage.dart';
 import 'data/share_intent_service.dart';
 import 'data/supabase_service.dart';
 import 'providers/database_providers.dart';
@@ -30,6 +31,11 @@ Future<void> main() async {
   // crasher les widget_smoke_test (HTTP mock par TestWidgetsBinding).
   GoogleFonts.config.allowRuntimeFetching = false;
   await initializeDateFormatting('fr_FR');
+  // QW10 (audit #340) : demande au navigateur de marquer le stockage
+  // IndexedDB comme persistant. Sans ca, Drift Web peut etre evictee
+  // sous pression de quota = perte totale des tournees du user PWA.
+  // No-op sur les autres plateformes.
+  unawaited(requestPersistentStorage());
   // **CRITIQUE** : applique un eventuel restore en attente AVANT
   // d'ouvrir Drift. Si un fichier `.pending_restore` est present
   // (cf BackupService.prepareRestore), il sera swap a la place de la

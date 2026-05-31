@@ -1,23 +1,31 @@
 {
-    "name": "opti_route",
-    "short_name": "opti_route",
+    "name": "Opti Route — Tournées de livraison",
+    "short_name": "Opti Route",
+    "id": "/opti_route/",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "display_override": ["window-controls-overlay", "standalone", "browser"],
+    "background_color": "#F5F3EE",
+    "theme_color": "#F5F3EE",
+    "description": "Optimisation de tournées de livraison pour chauffeurs et chefs d'équipe. 100 % local, gratuit, sans publicité.",
+    "lang": "fr-FR",
+    "dir": "ltr",
+    "orientation": "any",
+    "categories": ["productivity", "business", "utilities"],
     "prefer_related_applications": false,
     "icons": [
         {
             "src": "icons/Icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-maskable-192.png",
@@ -30,6 +38,29 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Tournée du jour",
+            "short_name": "Tournée",
+            "description": "Ouvre la tournée en cours",
+            "url": ".?action=today",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Scanner un bordereau",
+            "short_name": "Scanner",
+            "description": "Ouvre la caméra pour scanner un bordereau",
+            "url": ".?action=scan",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Carnet d'adresses",
+            "short_name": "Carnet",
+            "description": "Liste des clients enregistrés",
+            "url": ".?action=carnet",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
         }
     ]
 }
