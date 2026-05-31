@@ -74,8 +74,16 @@ class CloudEntrepriseSync {
   }
 
   /// Crée un entrepôt rattaché à [entrepriseId] côté cloud puis en
-  /// miroir local. Autorisé pour `admin_entreprise` ou `chef_entrepot`
-  /// (policy `ins_entrepots`). Retourne le `cloud_id` créé.
+  /// miroir local. Autorisé pour `admin_entreprise` ou chef d'un entrepôt
+  /// de l'entreprise. Retourne le `cloud_id` créé.
+  ///
+  /// **Via RPC `create_entrepot` (SECURITY DEFINER)** et NON un INSERT
+  /// direct : l'INSERT PostgREST évalue les policies RLS de `entrepots`
+  /// (ins + sel pour le RETURNING), qui appellent des helpers relisant
+  /// `entreprise_users` dont les policies se relisent → récursion RLS
+  /// (Postgres 42P17), même pour un admin. La RPC s'exécute hors RLS et
+  /// vérifie les droits elle-même → plus de récursion. Cf bug terrain
+  /// 2026-05-31. Même pattern que `accept_entreprise_invitation`.
   Future<String> createEntrepot(
     SupabaseClient client, {
     required String entrepriseId,
@@ -88,16 +96,15 @@ class CloudEntrepriseSync {
     final cleanNom = nom.trim();
     final cleanAdresse =
         (adresse == null || adresse.trim().isEmpty) ? null : adresse.trim();
-    final row = <String, dynamic>{
-      'cloud_id': id,
-      'entreprise_id': entrepriseId,
-      'nom': cleanNom,
-    };
-    if (cleanAdresse != null) row['adresse'] = cleanAdresse;
-    if (lat != null) row['lat'] = lat;
-    if (lng != null) row['lng'] = lng;
     try {
-      await client.from('entrepots').insert(row);
+      await client.rpc('create_entrepot', params: {
+        'p_cloud_id': id,
+        'p_entreprise_id': entrepriseId,
+        'p_nom': cleanNom,
+        'p_adresse': cleanAdresse,
+        'p_lat': lat,
+        'p_lng': lng,
+      });
     } on Object catch (e) {
       throw CloudSyncException(
           'Echec creation entrepot : ${humanizeCloudError(e)}');

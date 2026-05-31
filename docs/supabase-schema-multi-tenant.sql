@@ -532,10 +532,59 @@ begin
   return v_inv.entreprise_id;
 end $$;
 
+-- ─────────────────────────────────────────────────────────────────
+-- 9. RPC création entrepôt (carte #364 / fix RLS récursion 42P17)
+-- ─────────────────────────────────────────────────────────────────
+-- L'INSERT direct sur `entrepots` via PostgREST evalue les policies RLS
+-- (ins + sel pour le RETURNING). Celles-ci appellent is_admin_entreprise
+-- / current_user_entreprise_ids qui lisent entreprise_users, dont les
+-- propres policies relisent entreprise_users -> Postgres detecte une
+-- recursion (42P17) et bloque, MEME pour un admin.
+--
+-- Solution definitive : creer l'entrepot via une fonction SECURITY
+-- DEFINER. Elle s'execute hors RLS (aucune policy evaluee pendant
+-- l'insert) -> recursion impossible. Les droits sont verifies
+-- explicitement en debut de fonction (admin entreprise OU chef d'un
+-- entrepot de cette entreprise, cf decision Q4). Meme pattern que
+-- handle_new_entreprise / accept_entreprise_invitation qui fonctionnent.
+--
+-- Retourne le cloud_id genere. L'app passe son propre UUID (p_cloud_id)
+-- pour garder 1 seul ID partout (miroir local Drift), cf CloudEntrepriseSync.
+create or replace function public.create_entrepot(
+  p_cloud_id uuid,
+  p_entreprise_id uuid,
+  p_nom text,
+  p_adresse text default null,
+  p_lat double precision default null,
+  p_lng double precision default null
+)
+returns uuid language plpgsql security definer
+set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  -- Droits : admin de l'entreprise OU chef d'un entrepot de l'entreprise.
+  if not (
+    public.is_admin_entreprise(p_entreprise_id)
+    or public.is_chef_of_entreprise(p_entreprise_id)
+  ) then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  insert into public.entrepots (cloud_id, entreprise_id, nom, adresse, lat, lng)
+  values (p_cloud_id, p_entreprise_id, p_nom, p_adresse, p_lat, p_lng);
+
+  return p_cloud_id;
+end $$;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :
 --   1. Insert entreprise via app (auth user A)
 --   2. Vérifier que user B (auth différent) ne voit pas l'entreprise A
 --   3. Inviter user B → user B doit voir l'entreprise après acceptation
+--   4. Créer un entrepôt via l'app (RPC create_entrepot, plus de 42P17)
 -- ═════════════════════════════════════════════════════════════════
