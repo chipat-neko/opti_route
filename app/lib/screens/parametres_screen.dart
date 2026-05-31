@@ -15,6 +15,7 @@ import 'parametres/cache_section.dart';
 import 'parametres/cloud_section.dart';
 import 'parametres/donnees_section.dart';
 import 'parametres/entreprise_equipe_section.dart';
+import 'parametres/entreprise_multi_tenant_section.dart';
 import 'parametres/notifications_section.dart';
 import 'parametres/ocr_stats_tile.dart';
 import 'parametres/ors_section.dart';
@@ -87,6 +88,8 @@ class ParametresScreen extends ConsumerWidget {
           EntrepriseEquipeSection(),
           _Sep(),
           _CloudSectionBlock(),
+          _Sep(),
+          EntrepriseMultiTenantSection(),
           _Sep(),
           _SecuriteSectionBlock(),
           _Sep(),

@@ -372,6 +372,33 @@ create policy sd_select_extended_multi_tenant on public.saved_destinations
     (entrepot_id is not null and entrepot_id in (select public.current_user_entrepot_ids()))
   );
 
+-- ─────────────────────────────────────────────────────────────────
+-- 7. TRIGGER bootstrap : créateur entreprise → admin_entreprise
+-- ─────────────────────────────────────────────────────────────────
+-- Sans ce trigger, le créateur insère bien la ligne `entreprises`
+-- (policy ins_entreprises : created_by = auth.uid()) mais ne peut PAS
+-- s'auto-ajouter dans `entreprise_users` : la policy ins_eu exige
+-- is_admin_entreprise()... qu'il n'est pas encore (deadlock œuf/poule).
+-- SECURITY DEFINER : la fonction s'exécute avec les droits de son
+-- propriétaire (bypass RLS) et crée l'admin initial juste après l'INSERT.
+-- `set search_path = public` : durcissement standard des fonctions
+-- SECURITY DEFINER (évite le détournement via search_path).
+-- Idempotent (on conflict do nothing) : rejouable sans créer de doublon.
+create or replace function public.handle_new_entreprise()
+returns trigger language plpgsql security definer
+set search_path = public as $$
+begin
+  insert into public.entreprise_users (entreprise_id, user_id, role, statut)
+  values (new.cloud_id, new.created_by, 'admin_entreprise', 'actif')
+  on conflict (entreprise_id, user_id) do nothing;
+  return new;
+end $$;
+
+drop trigger if exists on_entreprise_created on public.entreprises;
+create trigger on_entreprise_created
+  after insert on public.entreprises
+  for each row execute function public.handle_new_entreprise();
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :

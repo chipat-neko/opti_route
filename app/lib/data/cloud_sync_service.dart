@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'cloud/cloud_carnet_sync.dart';
+import 'cloud/cloud_entreprise_sync.dart';
 import 'cloud/cloud_membres_sync.dart';
 import 'cloud/cloud_sync_helpers.dart';
 import 'cloud_error_humanizer.dart';
@@ -65,7 +66,8 @@ class CloudSyncService {
     SupabaseClient? client,
   })  : _explicitClient = client,
         _carnet = CloudCarnetSync(_db),
-        _membres = CloudMembresSync(_db);
+        _membres = CloudMembresSync(_db),
+        _entreprise = CloudEntrepriseSync(_db);
 
   final AppDatabase _db;
   final SupabaseService _supabase;
@@ -79,6 +81,10 @@ class CloudSyncService {
   /// Sous-service des tournees partagees : invitations + adhesions
   /// (jalon 3.A/B). Carte #167 etape 3.
   final CloudMembresSync _membres;
+
+  /// Sous-service multi-tenant : creation/pull entreprises + entrepots
+  /// (carte #364). Delegue avec le client + userId resolus par les guards.
+  final CloudEntrepriseSync _entreprise;
 
   static const _uuid = Uuid();
 
@@ -929,6 +935,41 @@ class CloudSyncService {
   // _pullSavedDestinations + helpers last-write-wins extraits dans
   // `cloud/cloud_carnet_sync.dart` + `cloud/cloud_sync_helpers.dart`
   // (carte #167 etapes 1-2).
+
+  // ── Multi-tenant entreprise / entrepot (carte #364) ──
+
+  /// Cree une entreprise cote cloud (+ admin auto via trigger SQL
+  /// `on_entreprise_created`) puis en miroir local. Retourne le cloud_id.
+  Future<String> createEntreprise({required String nom, String? siret}) {
+    return _entreprise.createEntreprise(_client(), _requireUserId(),
+        nom: nom, siret: siret);
+  }
+
+  /// Cree un entrepot rattache a [entrepriseId] (admin ou chef_entrepot)
+  /// cote cloud puis en miroir local. Retourne le cloud_id.
+  Future<String> createEntrepot({
+    required String entrepriseId,
+    required String nom,
+    String? adresse,
+    double? lat,
+    double? lng,
+  }) {
+    _requireUserId();
+    return _entreprise.createEntrepot(_client(),
+        entrepriseId: entrepriseId,
+        nom: nom,
+        adresse: adresse,
+        lat: lat,
+        lng: lng);
+  }
+
+  /// Pull les entreprises + entrepots visibles (RLS) en miroir local.
+  /// Sert au cross-device et a l'employe invite (#367).
+  Future<void> pullMesEntreprises() async {
+    final client = _client();
+    _requireUserId();
+    await _entreprise.pullMine(client);
+  }
 
   // ─── Guards ─────────────────────────────────────────────────────
 
