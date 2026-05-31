@@ -399,6 +399,123 @@ create trigger on_entreprise_created
   after insert on public.entreprises
   for each row execute function public.handle_new_entreprise();
 
+-- ─────────────────────────────────────────────────────────────────
+-- 8. GESTION EMPLOYÉS (carte #366) : code d'invitation + RPC
+-- ─────────────────────────────────────────────────────────────────
+
+-- Invitation par CODE (alternative au mail magic link, décision #372 :
+-- code OU mail au choix du chef). NULL = invitation par mail ;
+-- non-null = code à 6 chiffres que l'employé saisit au 1er démarrage.
+alter table public.entreprise_invitations
+  add column if not exists code text;
+
+-- Une invitation par code n'a pas d'email -> rendre email nullable.
+-- Le check `email like '%_@_%'` reste vrai pour NULL (un check ne
+-- bloque que s'il vaut FALSE, pas NULL).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='entreprise_invitations'
+      and column_name='email' and is_nullable='NO'
+  ) then
+    alter table public.entreprise_invitations alter column email drop not null;
+  end if;
+end $$;
+
+create index if not exists idx_invitations_code
+  on public.entreprise_invitations(code)
+  where statut = 'pending' and code is not null;
+
+-- Liste des membres d'une entreprise AVEC leur email (auth.users n'est
+-- pas lisible en RLS -> SECURITY DEFINER). Garde : le caller doit être
+-- membre actif de l'entreprise. Union membres entreprise + membres des
+-- entrepôts de cette entreprise.
+create or replace function public.list_entreprise_members(p_entreprise_id uuid)
+returns table (
+  user_id uuid,
+  email text,
+  role text,
+  statut text,
+  revoked_at timestamptz,
+  entrepot_id uuid,
+  entrepot_nom text
+) language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (
+    select 1 from public.entreprise_users
+    where entreprise_id = p_entreprise_id
+      and user_id = auth.uid()
+      and statut = 'actif'
+  ) then
+    raise exception 'NOT_A_MEMBER';
+  end if;
+
+  return query
+  select eu.user_id, u.email::text, eu.role, eu.statut, eu.revoked_at,
+         null::uuid as entrepot_id, null::text as entrepot_nom
+  from public.entreprise_users eu
+  join auth.users u on u.id = eu.user_id
+  where eu.entreprise_id = p_entreprise_id
+  union all
+  select epu.user_id, u.email::text, epu.role, epu.statut, epu.revoked_at,
+         e.cloud_id as entrepot_id, e.nom as entrepot_nom
+  from public.entrepot_users epu
+  join public.entrepots e on e.cloud_id = epu.entrepot_id
+  join auth.users u on u.id = epu.user_id
+  where e.entreprise_id = p_entreprise_id;
+end $$;
+
+-- Accepte une invitation par CODE (consommée par l'écran « Qui es-tu ? »
+-- #373). SECURITY DEFINER pour créer l'adhésion malgré la RLS. Retourne
+-- l'entreprise_id rejointe. Codes d'erreur compatibles invitationErrorToFr.
+create or replace function public.accept_entreprise_invitation(p_code text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_inv public.entreprise_invitations%rowtype;
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  select * into v_inv from public.entreprise_invitations
+  where code = p_code and statut = 'pending'
+  limit 1;
+  if not found then
+    raise exception 'CODE_INTROUVABLE';
+  end if;
+  if v_inv.expires_at < now() then
+    raise exception 'CODE_EXPIRE';
+  end if;
+
+  insert into public.entreprise_users (entreprise_id, user_id, role, statut)
+  values (
+    v_inv.entreprise_id, v_uid,
+    case when v_inv.role_target = 'admin_entreprise'
+         then 'admin_entreprise' else 'membre' end,
+    'actif'
+  )
+  on conflict (entreprise_id, user_id)
+    do update set statut = 'actif', revoked_at = null;
+
+  if v_inv.entrepot_id is not null then
+    insert into public.entrepot_users (entrepot_id, user_id, role, statut)
+    values (
+      v_inv.entrepot_id, v_uid,
+      case when v_inv.role_target = 'chef_entrepot'
+           then 'chef_entrepot' else 'employe' end,
+      'actif'
+    )
+    on conflict (entrepot_id, user_id)
+      do update set statut = 'actif', revoked_at = null;
+  end if;
+
+  update public.entreprise_invitations
+    set statut = 'accepted' where cloud_id = v_inv.cloud_id;
+
+  return v_inv.entreprise_id;
+end $$;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :

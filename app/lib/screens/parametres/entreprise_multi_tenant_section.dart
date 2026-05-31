@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud/cloud_membres_entreprise_sync.dart'
+    show EntrepriseMembreInfo;
 import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
@@ -196,6 +198,8 @@ class _EntrepriseMultiTenantSectionState
           ],
           const Divider(height: AppSpacing.x22),
           _listeEntrepots(e.cloudId, isAdmin),
+          const Divider(height: AppSpacing.x22),
+          _listeMembres(e, isAdmin),
         ],
       ),
     );
@@ -264,6 +268,230 @@ class _EntrepriseMultiTenantSectionState
       ),
     );
   }
+
+  // ─── Membres / employés (carte #366) ──────────────────────────────
+
+  Widget _listeMembres(Entreprise e, bool isAdmin) {
+    final p = context.palette;
+    final async = ref.watch(entrepriseMembresProvider(e.cloudId));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.groups_outlined, size: 18, color: p.ink),
+            const SizedBox(width: AppSpacing.x8),
+            Text('Employés',
+                style: TextStyle(fontWeight: FontWeight.w700, color: p.ink)),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        async.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.x8),
+            child: LinearProgressIndicator(),
+          ),
+          error: (err, _) => _InfoLigne(
+              icon: Icons.error_outline, texte: humanizeCloudError(err)),
+          data: (membres) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (membres.isEmpty)
+                  Text('Aucun employé pour l\'instant.',
+                      style: TextStyle(fontSize: 12.5, color: p.textMute))
+                else
+                  for (final m in membres) _ligneMembre(e, m, isAdmin),
+                if (isAdmin) ...[
+                  const SizedBox(height: AppSpacing.x8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : () => _inviterMembre(e),
+                      icon: const Icon(Icons.person_add_alt_1_outlined,
+                          size: 18),
+                      label: const Text('Inviter un employé'),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _ligneMembre(
+      Entreprise e, EntrepriseMembreInfo m, bool isAdmin) {
+    final p = context.palette;
+    final jours = m.joursAvantExpiration;
+    final (statutLabel, statutColor) = switch (m.statut) {
+      'actif' => ('actif', AppColors.emerald),
+      'revoque' => (
+          jours == null ? 'révoqué' : 'révoqué · J-$jours',
+          AppColors.amber
+        ),
+      _ => ('expiré', AppColors.red),
+    };
+    final roleLabel = switch (m.role) {
+      'admin_entreprise' => 'Admin',
+      'chef_entrepot' => 'Chef entrepôt',
+      'membre' => 'Membre',
+      _ => m.role,
+    };
+    final sousTitre = [
+      roleLabel,
+      if (m.entrepotNom != null) m.entrepotNom!,
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x6),
+      child: Row(
+        children: [
+          Icon(Icons.person_outline, size: 18, color: p.textMute),
+          const SizedBox(width: AppSpacing.x10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(m.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        TextStyle(color: p.ink, fontWeight: FontWeight.w600)),
+                Text(sousTitre,
+                    style: TextStyle(fontSize: 12, color: p.textMute)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x8, vertical: 2),
+            decoration: BoxDecoration(
+              color: statutColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(statutLabel,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: statutColor)),
+          ),
+          // Révoquer : admin uniquement, pas sur soi-même, pas sur un
+          // membre déjà révoqué/expiré.
+          if (isAdmin && m.statut == 'actif' && m.role != 'admin_entreprise')
+            IconButton(
+              tooltip: 'Révoquer',
+              icon: const Icon(Icons.person_remove_outlined, size: 20),
+              onPressed: _busy ? null : () => _revoquerMembre(e, m),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _inviterMembre(Entreprise e) async {
+    final entrepots =
+        ref.read(entrepotsParEntrepriseProvider(e.cloudId)).asData?.value ??
+            const [];
+    final res = await showDialog<_InviteResult>(
+      context: context,
+      builder: (_) => _InviteDialog(entrepots: entrepots),
+    );
+    if (res == null) return;
+    await _run(() async {
+      final sync = ref.read(cloudSyncServiceProvider);
+      if (res.parMail) {
+        await sync.inviteEmployeByMail(
+          entrepriseId: e.cloudId,
+          entrepotId: res.entrepotId,
+          email: res.email!,
+          roleTarget: res.roleTarget,
+        );
+        if (mounted) {
+          context.showSuccess('Invitation envoyée à ${res.email}');
+        }
+      } else {
+        final code = await sync.inviteEmployeByCode(
+          entrepriseId: e.cloudId,
+          entrepotId: res.entrepotId,
+          roleTarget: res.roleTarget,
+        );
+        if (mounted) await _afficherCode(code);
+      }
+      ref.invalidate(entrepriseMembresProvider(e.cloudId));
+    });
+  }
+
+  /// Affiche le code généré dans un dialog copiable (72h de validité).
+  Future<void> _afficherCode(String code) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Code d\'invitation'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Donne ce code à ton employé. Il le saisira au '
+                '1er démarrage de l\'app. Valable 72 h.'),
+            const SizedBox(height: AppSpacing.x16),
+            SelectableText(
+              code,
+              style: const TextStyle(
+                  fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: 4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: code));
+              ctx.showInfo('Code copié');
+            },
+            child: const Text('Copier'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _revoquerMembre(Entreprise e, EntrepriseMembreInfo m) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Révoquer cet employé ?'),
+        content: Text(
+          '${m.email} perdra l\'accès au carnet partagé. L\'accès est '
+          'coupé progressivement : définitif après 30 jours (tu peux '
+          'réactiver avant).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Révoquer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _run(() async {
+      await ref.read(cloudSyncServiceProvider).revokeEntrepriseMember(
+            entrepriseId: e.cloudId,
+            userId: m.userId,
+            entrepotId: m.entrepotId,
+          );
+      if (mounted) context.showSuccess('Employé révoqué');
+      ref.invalidate(entrepriseMembresProvider(e.cloudId));
+    });
+  }
 }
 
 /// Petit badge « Admin » affiché sur les entreprises dont l'utilisateur
@@ -320,6 +548,134 @@ class _InfoLigne extends StatelessWidget {
 // ════════════════════════════════════════════════════════════════
 // Dialogs de saisie
 // ════════════════════════════════════════════════════════════════
+
+/// Résultat du dialog d'invitation (#366).
+class _InviteResult {
+  const _InviteResult({
+    required this.parMail,
+    required this.roleTarget,
+    this.email,
+    this.entrepotId,
+  });
+  final bool parMail; // true = mail magic link, false = code 6 chiffres
+  final String roleTarget; // 'employe' | 'chef_entrepot'
+  final String? email;
+  final String? entrepotId;
+}
+
+/// Dialog « Inviter un employé » : méthode (code/mail), rôle, entrepôt
+/// optionnel. UI simple/fonctionnelle (focus fonctions, pas le visuel).
+class _InviteDialog extends StatefulWidget {
+  const _InviteDialog({required this.entrepots});
+
+  final List<Entrepot> entrepots;
+
+  @override
+  State<_InviteDialog> createState() => _InviteDialogState();
+}
+
+class _InviteDialogState extends State<_InviteDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  bool _parMail = false;
+  String _role = 'employe';
+  String? _entrepotId;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  void _valider() {
+    if (_parMail && !(_formKey.currentState?.validate() ?? false)) return;
+    Navigator.of(context).pop(
+      _InviteResult(
+        parMail: _parMail,
+        roleTarget: _role,
+        email: _parMail ? _emailCtrl.text.trim() : null,
+        entrepotId: _entrepotId,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Inviter un employé'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Méthode : code ou mail
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Code')),
+                ButtonSegment(value: true, label: Text('Mail')),
+              ],
+              selected: {_parMail},
+              onSelectionChanged: (s) => setState(() => _parMail = s.first),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            // Rôle
+            DropdownButtonFormField<String>(
+              initialValue: _role,
+              decoration: const InputDecoration(labelText: 'Rôle'),
+              items: const [
+                DropdownMenuItem(value: 'employe', child: Text('Employé')),
+                DropdownMenuItem(
+                    value: 'chef_entrepot', child: Text('Chef d\'entrepôt')),
+              ],
+              onChanged: (v) => setState(() => _role = v ?? 'employe'),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            // Entrepôt optionnel
+            DropdownButtonFormField<String?>(
+              initialValue: _entrepotId,
+              decoration:
+                  const InputDecoration(labelText: 'Entrepôt (optionnel)'),
+              items: [
+                const DropdownMenuItem(
+                    value: null, child: Text('Toute l\'entreprise')),
+                for (final e in widget.entrepots)
+                  DropdownMenuItem(value: e.cloudId, child: Text(e.nom)),
+              ],
+              onChanged: (v) => setState(() => _entrepotId = v),
+            ),
+            if (_parMail) ...[
+              const SizedBox(height: AppSpacing.x10),
+              TextFormField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email de l\'employé',
+                  hintText: 'marc@exemple.com',
+                ),
+                validator: (v) {
+                  final s = v?.trim() ?? '';
+                  if (s.isEmpty || !s.contains('@')) return 'Email invalide';
+                  return null;
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: _valider,
+          child: Text(_parMail ? 'Envoyer' : 'Générer le code'),
+        ),
+      ],
+    );
+  }
+}
 
 class _EntrepriseFormResult {
   const _EntrepriseFormResult(this.nom, this.siret);

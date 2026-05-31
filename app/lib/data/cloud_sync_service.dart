@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import 'cloud/cloud_carnet_sync.dart';
 import 'cloud/cloud_entreprise_sync.dart';
+import 'cloud/cloud_membres_entreprise_sync.dart';
 import 'cloud/cloud_membres_sync.dart';
 import 'cloud/cloud_sync_helpers.dart';
 import 'cloud_error_humanizer.dart';
@@ -20,6 +21,8 @@ import 'supabase_service.dart';
 // CloudPullResult, CloudPullStats, TourneeMembreInfo (cf split refactor
 // 2026-05-18). Le `_PhotoDownloadTask` reste private dans ce fichier.
 export 'cloud_sync_types.dart';
+// Re-export du modele membre pour les providers / UI (#366).
+export 'cloud/cloud_membres_entreprise_sync.dart' show EntrepriseMembreInfo;
 
 /// ════════════════════════════════════════════════════════════════
 /// Service de sync local → cloud (Phase 2 backend, sous-jalon 2.B).
@@ -85,6 +88,11 @@ class CloudSyncService {
   /// Sous-service multi-tenant : creation/pull entreprises + entrepots
   /// (carte #364). Delegue avec le client + userId resolus par les guards.
   final CloudEntrepriseSync _entreprise;
+
+  /// Sous-service gestion employes : invitation (code/mail), liste,
+  /// revocation (carte #366). Stateless (pas de _db).
+  final CloudMembresEntrepriseSync _membresEnt =
+      const CloudMembresEntrepriseSync();
 
   static const _uuid = Uuid();
 
@@ -969,6 +977,73 @@ class CloudSyncService {
     final client = _client();
     _requireUserId();
     await _entreprise.pullMine(client);
+  }
+
+  // ── Gestion employes (carte #366) ──
+
+  /// Invite un employe par MAIL (Edge Function invite_employee).
+  Future<void> inviteEmployeByMail({
+    required String entrepriseId,
+    String? entrepotId,
+    required String email,
+    required String roleTarget,
+  }) {
+    _requireUserId();
+    return _membresEnt.inviteByMail(_client(),
+        entrepriseId: entrepriseId,
+        entrepotId: entrepotId,
+        email: email,
+        roleTarget: roleTarget);
+  }
+
+  /// Invite un employe par CODE a 6 chiffres. Retourne le code.
+  Future<String> inviteEmployeByCode({
+    required String entrepriseId,
+    String? entrepotId,
+    required String roleTarget,
+    int validityHours = 72,
+  }) {
+    return _membresEnt.inviteByCode(_client(), _requireUserId(),
+        entrepriseId: entrepriseId,
+        entrepotId: entrepotId,
+        roleTarget: roleTarget,
+        validityHours: validityHours);
+  }
+
+  /// Liste les membres d'une entreprise (RPC SECURITY DEFINER).
+  Future<List<EntrepriseMembreInfo>> listEntrepriseMembers(
+      String entrepriseId) {
+    _requireUserId();
+    return _membresEnt.listMembers(_client(), entrepriseId);
+  }
+
+  /// Revoque un membre (statut revoque + J+30 cron).
+  Future<void> revokeEntrepriseMember({
+    required String entrepriseId,
+    required String userId,
+    String? entrepotId,
+  }) {
+    _requireUserId();
+    return _membresEnt.revokeMember(_client(),
+        entrepriseId: entrepriseId, userId: userId, entrepotId: entrepotId);
+  }
+
+  /// Reactive un membre revoque avant la fin du J+30.
+  Future<void> reactivateEntrepriseMember({
+    required String entrepriseId,
+    required String userId,
+    String? entrepotId,
+  }) {
+    _requireUserId();
+    return _membresEnt.reactivateMember(_client(),
+        entrepriseId: entrepriseId, userId: userId, entrepotId: entrepotId);
+  }
+
+  /// Cote employe : accepte une invitation par code (#373).
+  Future<String> acceptEntrepriseInvitationByCode(String code) {
+    final client = _client();
+    _requireUserId();
+    return _membresEnt.acceptByCode(client, code);
   }
 
   // ─── Guards ─────────────────────────────────────────────────────
