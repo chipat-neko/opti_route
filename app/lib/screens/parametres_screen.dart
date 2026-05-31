@@ -5,6 +5,7 @@ import '../theme/app_tokens.dart';
 import '../widgets/pointage_card.dart';
 import '../widgets/role_gated.dart';
 import '../widgets/update_check_card.dart';
+import '../widgets/version_tile.dart';
 import 'backups_list_screen.dart';
 import 'mentions_legales_screen.dart';
 import 'parametres/aide_section.dart';
@@ -220,6 +221,7 @@ class _AboutSectionBlock extends StatelessWidget {
       children: [
         const ParametresSectionTitle('A propos'),
         const SizedBox(height: AppSpacing.x10),
+        const VersionTile(),
         const AideSection(),
         ListTile(
           leading: const Icon(Icons.policy_outlined),
