@@ -98,7 +98,9 @@
   <h2 style="margin-bottom: var(--space-14);">2. Hebergement</h2>
   <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
     <li><strong>Site web</strong> : heberge par GitHub Pages (GitHub Inc., San Francisco, USA).</li>
-    <li><strong>Application Android</strong> : installee localement sur le téléphone de l'utilisateur. Aucun serveur opti_route n'heberge de données utilisateur.</li>
+    <li><strong>Application Android / Web / Windows</strong> : installee localement sur l'appareil de l'utilisateur. Le mode <strong>local-only par défaut</strong> n'envoie aucune donnée à un serveur opti_route.</li>
+    <li><strong>Cloud optionnel (Phase 2, opt-in explicite)</strong> : si l'utilisateur active la synchronisation et crée un compte, ses données (tournées, stops, carnet, photos preuves) sont stockées sur <strong>Supabase</strong> (hebergeur PostgreSQL + Storage, region UE selectionnée). L'opt-in se fait dans Paramètres &gt; Compte cloud. À tout moment l'utilisateur peut se déconnecter et supprimer son compte.</li>
+    <li><strong>Edge Functions Supabase</strong> : pour les fonctionnalités optionnelles "tracking colis" (lien public 20 chars) et "OCR augmenté" (Google Gemini), des fonctions serveur Deno tournent sur l'infrastructure Supabase EU.</li>
   </ul>
 
   <!-- Donnees -->
@@ -118,9 +120,20 @@
     <li>Position GPS au moment du "Marquer livré / échec" (preuve de passage)</li>
   </ul>
   <p style="margin-bottom: var(--space-22);">
-    <strong>Rien de tout cela n'est uploade sur un serveur tiers.</strong>
-    Les données sortent uniquement quand TU les exportes
-    explicitement (PDF, CSV, vCard, partage WhatsApp/SMS, etc.).
+    <strong>En mode local-only (défaut)</strong>, rien de tout cela
+    n'est uploadé sur un serveur tiers. Les données sortent uniquement
+    quand TU les exportes explicitement (PDF, CSV, vCard, partage
+    WhatsApp/SMS, etc.).
+  </p>
+  <p style="margin-bottom: var(--space-22);">
+    <strong>Si tu actives le cloud (opt-in dans Paramètres &gt; Compte cloud)</strong>,
+    les données ci-dessus sont synchronisées avec ton compte Supabase
+    (région UE), pour pouvoir les retrouver sur tes autres appareils
+    ou les partager avec tes coéquipiers/chef d'équipe. Les photos
+    preuves transitent en HTTPS et sont stockées dans un bucket
+    Supabase Storage privé (Row Level Security : seul ton compte peut
+    les lire). Tu peux désactiver le cloud et supprimer toutes les
+    données serveur à tout moment.
   </p>
 
   <h3 style="margin: var(--space-22) 0 var(--space-10);">3.2. APIs externes utilisees</h3>

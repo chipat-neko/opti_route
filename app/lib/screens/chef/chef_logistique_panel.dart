@@ -87,43 +87,12 @@ class _ChefLogistiquePanelState extends State<ChefLogistiquePanel> {
               ),
             const SizedBox(height: AppSpacing.x8),
             for (final item in _items) _SupplyRow(item: item),
-            const SizedBox(height: AppSpacing.x16),
-            Text(
-              'Préparation tournée',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: p.textMute,
-                  letterSpacing: 0.5),
-            ),
-            const SizedBox(height: AppSpacing.x6),
-            OutlinedButton.icon(
-              onPressed: () => _showLoadingPlanInfo(context),
-              icon: const Icon(Icons.view_in_ar_outlined, size: 18),
-              label: const Text('Plan chargement 3D'),
-              style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 44)),
-            ),
+            // Plan 3D chargement : feature complexe, deplacee en
+            // backlog "A planifier" (sprint immediat cleanup dead
+            // code 2026-05-31). LoadingPlan3D.compute existe mais le
+            // rendu CustomPainter n'a jamais ete implemente.
           ],
         ),
-      ),
-    );
-  }
-
-  void _showLoadingPlanInfo(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Plan chargement 3D'),
-        content: const Text(
-            'LoadingPlan3D.compute place chaque colis selon (fragile/lourd) '
-            '+ ordre livraison (avant/milieu/fond). Rendu CustomPainter à wire '
-            'dans une future PR à partir d\'une tournée sélectionnée.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK')),
-        ],
       ),
     );
   }
