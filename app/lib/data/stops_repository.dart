@@ -444,6 +444,44 @@ class StopsRepository {
         .write(StopsCompanion(positionLocked: Value(locked)));
   }
 
+  /// Memo vocal/texte libre attache au stop (carte #280). Saisi soit
+  /// au clavier soit via STT. Null = aucun memo. F1 sprint immediat
+  /// 2026-05-31 : avant, la colonne existait sans UI.
+  Future<int> setMemoVocal(int stopId, String? memo) {
+    final clean = memo?.trim();
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(
+            memoVocal: Value(clean == null || clean.isEmpty ? null : clean)));
+  }
+
+  /// Notation client emoji 1-clic (carte #324) : 'happy', 'neutral',
+  /// 'angry', ou null. Affichee dans le prompt post-livraison.
+  Future<int> setNotationEmoji(int stopId, String? emoji) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(notationEmoji: Value(emoji)));
+  }
+
+  /// Mode "depose sans contact" (#287) : colis depose devant la porte
+  /// sans signature/photo. Toggle dans la sheet "Marquer livre".
+  Future<int> setDeposeSansContact(int stopId, bool active) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(deposeSansContact: Value(active)));
+  }
+
+  /// Montant a encaisser en contre-remboursement (carte #296). Null
+  /// = pas de COD. Saisi a la creation du stop ou modifie au moment
+  /// de la livraison.
+  Future<int> setMontantCod(int stopId, double? montant) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(montantCod: Value(montant)));
+  }
+
+  /// COD encaisse au moment de la livraison (#296). Default false.
+  Future<int> setCodPaye(int stopId, bool paye) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(codPaye: Value(paye)));
+  }
+
   /// Pose `ordrePriorite = position dans [orderedStopIds]` (1-based)
   /// pour chaque stop. Sert au reorder manuel (drag&drop dans
   /// TourneeDuJourScreen) afin que la prochaine optimisation reprenne

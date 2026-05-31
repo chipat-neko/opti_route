@@ -152,6 +152,28 @@ final clientPhoneByNomProvider =
   return (tel == null || tel.isEmpty) ? null : tel;
 });
 
+/// Lookup async des consignes client (preferencePersonnalisee +
+/// photoObligatoire) par nom. Sert au bandeau d'alerte dans
+/// StopActionSheet (F5+F6 sprint immediat 2026-05-31).
+///
+/// Retourne null si client absent du carnet. Sinon retourne un
+/// record (preference, photoObligatoire) — chaque champ peut etre
+/// null/false.
+final clientConsignesByNomProvider = FutureProvider.family
+    .autoDispose<({String? preference, bool photoObligatoire})?, String>(
+        (ref, nomClient) async {
+  if (nomClient.trim().isEmpty) return null;
+  final repo = ref.watch(savedDestinationsRepositoryProvider);
+  final entry = await repo.findByNomClient(nomClient);
+  if (entry == null) return null;
+  return (
+    preference: entry.preferencePersonnalisee?.trim().isEmpty ?? true
+        ? null
+        : entry.preferencePersonnalisee?.trim(),
+    photoObligatoire: entry.photoObligatoire,
+  );
+});
+
 final trackingCodesRepositoryProvider =
     Provider<TrackingCodesRepository>((ref) {
   return TrackingCodesRepository(ref.watch(appDatabaseProvider));
