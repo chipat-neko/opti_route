@@ -580,6 +580,156 @@ begin
   return p_cloud_id;
 end $$;
 
+-- ═══════════════════════════════════════════════════════════════════
+-- SECTION 10 — Garde-fou création entreprise (#374) + super admin (#372)
+-- ═══════════════════════════════════════════════════════════════════
+--
+-- Probleme : depuis #364, n'importe quel compte connecte peut creer une
+-- entreprise (policy ins_entreprises ouverte) -> pollution base + quota
+-- Supabase gratuit grignote.
+--
+-- Solution (decisions Noah 2026-06-01) :
+--  - Creation entreprise = il faut un CODE MAITRE, verifie cote serveur
+--    (jamais expose a l'app). Le super admin (Noah) en est dispense.
+--  - Super admin = appartenance a la table app_admins (infalsifiable :
+--    decompiler l'APK ne revele aucun secret, tout est verifie serveur).
+--
+-- ⚠️ A FAIRE UNE FOIS PAR NOAH apres deploiement : s'ajouter super admin.
+--    Recupere ton UID dans Supabase > Authentication > Users (colonne UID)
+--    puis execute (en collant ton UID a la place du texte, garde les ' ') :
+--      insert into public.app_admins (user_id)
+--        values ('colle-ici-ton-uid') on conflict do nothing;
+
+-- ─── Table de configuration applicative (cle/valeur) ────────────────
+-- Stocke le code maitre sous la cle 'entreprise_master_code'. RLS active
+-- SANS aucune policy -> aucun acces direct client : lecture/ecriture
+-- uniquement via les RPC SECURITY DEFINER ci-dessous.
+create table if not exists public.app_config (
+  key        text primary key,
+  value      text not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.app_config enable row level security;
+
+-- ─── Table des super admins ─────────────────────────────────────────
+-- Un user_id present ici = super admin. RLS active sans policy : on ne
+-- lit/ecrit QUE via RPC SECURITY DEFINER (ou SQL manuel par Noah).
+create table if not exists public.app_admins (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.app_admins enable row level security;
+
+-- ─── is_super_admin() : le compte courant est-il super admin ? ───────
+create or replace function public.is_super_admin()
+returns boolean language sql security definer set search_path = public as $$
+  select exists (select 1 from public.app_admins where user_id = auth.uid());
+$$;
+grant execute on function public.is_super_admin() to authenticated;
+
+-- ─── _get_or_init_master_code() : interne, genere le code au 1er acces
+-- Code maitre = 6 chiffres. S'il n'existe pas encore, on en cree un
+-- aleatoire. Interne (pas de grant authenticated : appelable seulement
+-- depuis les autres fonctions definer).
+create or replace function public._get_or_init_master_code()
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_code text;
+begin
+  select value into v_code from public.app_config
+    where key = 'entreprise_master_code';
+  if v_code is null then
+    v_code := lpad((floor(random() * 1000000))::int::text, 6, '0');
+    insert into public.app_config (key, value)
+      values ('entreprise_master_code', v_code);
+  end if;
+  return v_code;
+end;
+$$;
+
+-- ─── create_entreprise() : creation bridee par code maitre (#374) ────
+-- Remplace l'INSERT direct (policy ins_entreprises fermee ci-dessous).
+-- Super admin dispense du code. Le trigger on_entreprise_created (section
+-- 7) inscrit ensuite le createur comme admin_entreprise.
+create or replace function public.create_entreprise(
+  p_cloud_id uuid,
+  p_nom text,
+  p_siret text default null,
+  p_code text default null
+) returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  -- Super admin dispense du code ; sinon le code fourni doit matcher.
+  if not public.is_super_admin() then
+    if p_code is null or p_code <> public._get_or_init_master_code() then
+      raise exception 'INVALID_MASTER_CODE';
+    end if;
+  end if;
+  insert into public.entreprises (cloud_id, nom, siret, created_by)
+  values (p_cloud_id, p_nom, p_siret, v_uid);
+  return p_cloud_id;
+end;
+$$;
+grant execute on function public.create_entreprise(uuid, text, text, text) to authenticated;
+
+-- Fermer l'INSERT direct sur entreprises : tout passe desormais par la
+-- RPC create_entreprise (qui bypasse RLS via SECURITY DEFINER).
+drop policy if exists ins_entreprises on public.entreprises;
+create policy ins_entreprises on public.entreprises
+  for insert with check (false);
+
+-- ─── RPC panel admin (toutes reservees au super admin) ──────────────
+-- admin_get_master_code : lit (et init si besoin) le code maitre.
+create or replace function public.admin_get_master_code()
+returns text language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_super_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+  return public._get_or_init_master_code();
+end;
+$$;
+grant execute on function public.admin_get_master_code() to authenticated;
+
+-- admin_regenerate_master_code : remplace le code par un nouveau aleatoire.
+create or replace function public.admin_regenerate_master_code()
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_code text;
+begin
+  if not public.is_super_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+  v_code := lpad((floor(random() * 1000000))::int::text, 6, '0');
+  insert into public.app_config (key, value, updated_at)
+    values ('entreprise_master_code', v_code, now())
+    on conflict (key) do update set value = excluded.value, updated_at = now();
+  return v_code;
+end;
+$$;
+grant execute on function public.admin_regenerate_master_code() to authenticated;
+
+-- admin_list_entreprises : liste toutes les entreprises (vue super admin).
+create or replace function public.admin_list_entreprises()
+returns table (
+  cloud_id uuid, nom text, siret text, created_by uuid, cree_le timestamptz
+) language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_super_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+  return query
+    select e.cloud_id, e.nom, e.siret, e.created_by, e.cree_le
+    from public.entreprises e
+    order by e.cree_le desc;
+end;
+$$;
+grant execute on function public.admin_list_entreprises() to authenticated;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :

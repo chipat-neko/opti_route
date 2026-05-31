@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'cloud/cloud_carnet_sync.dart';
+import 'cloud/cloud_admin_sync.dart';
 import 'cloud/cloud_entreprise_sync.dart';
 import 'cloud/cloud_membres_entreprise_sync.dart';
 import 'cloud/cloud_membres_sync.dart';
@@ -953,10 +954,31 @@ class CloudSyncService {
 
   /// Cree une entreprise cote cloud (+ admin auto via trigger SQL
   /// `on_entreprise_created`) puis en miroir local. Retourne le cloud_id.
-  Future<String> createEntreprise({required String nom, String? siret}) {
+  Future<String> createEntreprise(
+      {required String nom, String? siret, String? code}) {
     return _entreprise.createEntreprise(_client(), _requireUserId(),
-        nom: nom, siret: siret);
+        nom: nom, siret: siret, code: code);
   }
+
+  // ════════════════════════════════════════════════════════════════
+  // Super admin (#372) + garde-fou code maître (#374)
+  // ════════════════════════════════════════════════════════════════
+
+  CloudAdminSync get _admin => const CloudAdminSync();
+
+  /// Le compte connecté est-il super admin ? (révèle le panel admin).
+  Future<bool> isSuperAdmin() => _admin.isSuperAdmin(_client());
+
+  /// Code maître courant (réservé au super admin).
+  Future<String> getMasterCode() => _admin.getMasterCode(_client());
+
+  /// Régénère le code maître et retourne le nouveau (super admin).
+  Future<String> regenerateMasterCode() =>
+      _admin.regenerateMasterCode(_client());
+
+  /// Liste toutes les entreprises (vue globale super admin).
+  Future<List<AdminEntrepriseInfo>> adminListEntreprises() =>
+      _admin.listAllEntreprises(_client());
 
   /// Cree un entrepot rattache a [entrepriseId] (admin ou chef_entrepot)
   /// cote cloud puis en miroir local. Retourne le cloud_id.

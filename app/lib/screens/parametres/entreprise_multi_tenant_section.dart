@@ -73,15 +73,25 @@ class _EntrepriseMultiTenantSectionState
   }
 
   Future<void> _creerEntreprise() async {
+    // Le super admin (Noah) est dispensé du code maître (#374) : on lui
+    // évite le champ. En cas d'échec réseau, on demande le code par défaut
+    // (c'est le serveur qui tranche de toute façon).
+    bool isAdmin = false;
+    try {
+      isAdmin = await ref.read(cloudSyncServiceProvider).isSuperAdmin();
+    } on Object {
+      isAdmin = false;
+    }
+    if (!mounted) return;
     final res = await showDialog<_EntrepriseFormResult>(
       context: context,
-      builder: (_) => const _EntrepriseFormDialog(),
+      builder: (_) => _EntrepriseFormDialog(requiresCode: !isAdmin),
     );
     if (res == null) return;
     await _run(() async {
       await ref
           .read(cloudSyncServiceProvider)
-          .createEntreprise(nom: res.nom, siret: res.siret);
+          .createEntreprise(nom: res.nom, siret: res.siret, code: res.code);
       if (mounted) context.showSuccess('Entreprise « ${res.nom} » créée');
     });
   }
@@ -678,13 +688,17 @@ class _InviteDialogState extends State<_InviteDialog> {
 }
 
 class _EntrepriseFormResult {
-  const _EntrepriseFormResult(this.nom, this.siret);
+  const _EntrepriseFormResult(this.nom, this.siret, this.code);
   final String nom;
   final String? siret;
+  final String? code;
 }
 
 class _EntrepriseFormDialog extends StatefulWidget {
-  const _EntrepriseFormDialog();
+  const _EntrepriseFormDialog({required this.requiresCode});
+
+  /// Code maître (#374) exigé, sauf pour le super admin.
+  final bool requiresCode;
 
   @override
   State<_EntrepriseFormDialog> createState() => _EntrepriseFormDialogState();
@@ -694,21 +708,25 @@ class _EntrepriseFormDialogState extends State<_EntrepriseFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nomCtrl = TextEditingController();
   final _siretCtrl = TextEditingController();
+  final _codeCtrl = TextEditingController();
 
   @override
   void dispose() {
     _nomCtrl.dispose();
     _siretCtrl.dispose();
+    _codeCtrl.dispose();
     super.dispose();
   }
 
   void _valider() {
     if (_formKey.currentState?.validate() ?? false) {
       final siret = _siretCtrl.text.trim();
+      final code = _codeCtrl.text.trim();
       Navigator.of(context).pop(
         _EntrepriseFormResult(
           _nomCtrl.text.trim(),
           siret.isEmpty ? null : siret,
+          code.isEmpty ? null : code,
         ),
       );
     }
@@ -750,6 +768,22 @@ class _EntrepriseFormDialogState extends State<_EntrepriseFormDialog> {
                 return s.length == 14 ? null : '14 chiffres, ou laisse vide';
               },
             ),
+            if (widget.requiresCode) ...[
+              const SizedBox(height: AppSpacing.x8),
+              TextFormField(
+                controller: _codeCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'Code d\'activation',
+                  hintText: '6 chiffres fournis par le responsable',
+                ),
+                validator: (v) {
+                  if (!widget.requiresCode) return null;
+                  return (v == null || v.trim().isEmpty) ? 'Code requis' : null;
+                },
+              ),
+            ],
           ],
         ),
       ),

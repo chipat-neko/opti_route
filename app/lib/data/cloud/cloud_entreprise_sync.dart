@@ -40,25 +40,38 @@ class CloudEntrepriseSync {
 
   /// Crée une entreprise côté cloud (+ admin auto via trigger SQL) puis
   /// en miroir local. Retourne le `cloud_id` de l'entreprise créée.
+  ///
+  /// **Via RPC `create_entreprise` (SECURITY DEFINER)** et non un INSERT
+  /// direct : la création est bridée par un **code maître** vérifié côté
+  /// serveur (garde-fou #374). Le super admin en est dispensé (la RPC le
+  /// détecte via `is_super_admin()`), donc [code] peut être null pour lui.
+  /// La policy `ins_entreprises` est fermée → l'INSERT direct ne passe plus.
   Future<String> createEntreprise(
     SupabaseClient client,
     String userId, {
     required String nom,
     String? siret,
+    String? code,
   }) async {
     final id = _uuid.v4();
     final cleanNom = nom.trim();
     final cleanSiret =
         (siret == null || siret.trim().isEmpty) ? null : siret.trim();
-    final row = <String, dynamic>{
-      'cloud_id': id,
-      'nom': cleanNom,
-      'created_by': userId,
-    };
-    if (cleanSiret != null) row['siret'] = cleanSiret;
+    final cleanCode =
+        (code == null || code.trim().isEmpty) ? null : code.trim();
     try {
-      await client.from('entreprises').insert(row);
+      await client.rpc('create_entreprise', params: {
+        'p_cloud_id': id,
+        'p_nom': cleanNom,
+        'p_siret': cleanSiret,
+        'p_code': cleanCode,
+      });
     } on Object catch (e) {
+      // Code maître refusé par la RPC : message clair plutôt que brut SQL.
+      if (e.toString().contains('INVALID_MASTER_CODE')) {
+        throw CloudSyncException(
+            'Code d\'activation invalide. Demande le code au responsable.');
+      }
       throw CloudSyncException(
           'Echec creation entreprise : ${humanizeCloudError(e)}');
     }
