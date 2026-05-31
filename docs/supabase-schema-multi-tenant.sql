@@ -238,9 +238,11 @@ drop policy if exists ins_entrepots on public.entrepots;
 create policy ins_entrepots on public.entrepots
   for insert with check (
     public.is_admin_entreprise(entreprise_id)
-    -- ou chef entrepot peut créer un nouvel entrepot dans son entreprise (Q4)
+    -- ou chef entrepot peut créer un nouvel entrepot dans son entreprise (Q4).
+    -- Note : on join entrepots pour récupérer entreprise_id (entrepot_users
+    -- n'a que entrepot_id, donc l'alias est `e.entreprise_id` pas `eu.entreprise_id`).
     or entreprise_id in (
-      select eu.entreprise_id from public.entrepot_users eu
+      select e.entreprise_id from public.entrepot_users eu
       join public.entrepots e on e.cloud_id = eu.entrepot_id
       where eu.user_id = auth.uid() and eu.role = 'chef_entrepot' and eu.statut = 'actif'
     )
