@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bloque toute extraction de donnees opti_route via :
+    - cloud-backup : Google Auto Backup (Android 6+)
+    - device-transfer : Android Smart Switch / migration tel
+    Donnees client RGPD (adresses, telephones, codes interphone, photos
+    preuves) ne doivent JAMAIS quitter le device de Noah sans son accord
+    explicite (= via le bouton Backup -> Share du repertoire Donnees).
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

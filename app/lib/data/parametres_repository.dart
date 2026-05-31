@@ -339,14 +339,20 @@ class ParametresRepository {
 
   /// Masquer l'app dans le selecteur de taches Android (FLAG_SECURE,
   /// carte #111). Si ON : l'apercu multitache est masque et les captures
-  /// d'ecran sont bloquees. Default false (peut gener en debug et n'est
-  /// utile que pour qui manipule des donnees sensibles devant des tiers).
+  /// d'ecran sont bloquees.
+  ///
+  /// **Default `true`** (changement 2026-05-31, audit RGPD) : l'app
+  /// manipule des donnees clients (adresses, telephones, codes
+  /// interphone, photos preuves) qui ne doivent pas fuiter via
+  /// l'apercu multitache ou un screenshot accidentel. Si l'utilisateur
+  /// veut le desactiver pour debug ou screenshot intentionnel, il
+  /// peut le faire dans Parametres > Securite.
   /// Android uniquement -- no-op sur les autres plateformes.
   Future<bool> getSecureScreen() async =>
-      (await _readKey(_kSecureScreen)) == '1';
+      (await _readKey(_kSecureScreen)) != '0';
 
   Stream<bool> watchSecureScreen() =>
-      _watchKey(_kSecureScreen).map((v) => v == '1');
+      _watchKey(_kSecureScreen).map((v) => v != '0');
 
   Future<void> setSecureScreen(bool v) =>
       _write(_kSecureScreen, v ? '1' : '0');
