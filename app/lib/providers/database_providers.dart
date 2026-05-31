@@ -138,6 +138,20 @@ final savedDestinationsRepositoryProvider =
   return SavedDestinationsRepository(ref.watch(appDatabaseProvider));
 });
 
+/// Lookup async du telephone client par nom (case-insensitive).
+/// Retourne null si pas de match dans le carnet. Sert au bouton
+/// "Appeler client" dans StopActionSheet (QW4 2026-05-31).
+///
+/// `family<String?>` : la cle est le nomClient ; null si vide.
+final clientPhoneByNomProvider =
+    FutureProvider.family.autoDispose<String?, String>((ref, nomClient) async {
+  if (nomClient.trim().isEmpty) return null;
+  final repo = ref.watch(savedDestinationsRepositoryProvider);
+  final entry = await repo.findByNomClient(nomClient);
+  final tel = entry?.telephone?.trim();
+  return (tel == null || tel.isEmpty) ? null : tel;
+});
+
 final trackingCodesRepositoryProvider =
     Provider<TrackingCodesRepository>((ref) {
   return TrackingCodesRepository(ref.watch(appDatabaseProvider));

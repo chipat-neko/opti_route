@@ -78,6 +78,22 @@ class SavedDestinationsRepository {
   /// deux villes differentes), on prefere celui dont les coords sont
   /// les plus proches du stop courant. Avant le fix 2026-05-14, on
   /// utilisait `getSingleOrNull` qui throw en cas d'homonymes.
+  /// Lookup public d'un destinataire par nom client (case-insensitive,
+  /// trim). Retourne le 1er match exact ou null. Sert au bouton
+  /// "Appeler client" dans StopActionSheet (QW4 - PR sprint immediat
+  /// 2026-05-31) : le `Stops.nomClient` n'a pas de champ `telephone`
+  /// mais le carnet `saved_destinations.telephone` peut etre branche
+  /// par lookup.
+  Future<SavedDestination?> findByNomClient(String nomClient) async {
+    final trimmed = nomClient.trim();
+    if (trimmed.isEmpty) return null;
+    final rows = await (_db.select(_db.savedDestinations)
+          ..where((d) => d.nomClient.lower().equals(trimmed.toLowerCase()))
+          ..limit(1))
+        .get();
+    return rows.isEmpty ? null : rows.first;
+  }
+
   Future<SavedDestination?> _findExisting({
     String? nomClient,
     required double lat,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/database.dart';
 import '../data/navigation_service.dart';
@@ -287,17 +288,25 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                 ),
               ),
             ),
-            // Header : nom + adresse
+            // Header : nom + adresse + bouton "Appeler client" (lookup
+            // tel: dans le carnet par nomClient, QW4 audit #337).
             if (hasNom)
-              Text(
-                nom,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: p.ink,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      nom,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: p.ink,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  _CallClientButton(nomClient: nom),
+                ],
               ),
             const SizedBox(height: AppSpacing.x4),
             Text(
@@ -712,5 +721,52 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
         ),
       ),
     );
+  }
+}
+
+/// Petit bouton "Appeler" affiche dans le header de StopActionSheet
+/// quand le carnet a une entree avec telephone pour ce nomClient.
+///
+/// QW4 audit #337 (2026-05-31) : avant, Noah devait quitter la sheet,
+/// ouvrir le carnet, chercher le client, taper le numero. Maintenant
+/// 1 tap = appel direct via intent natif `tel:`.
+class _CallClientButton extends ConsumerWidget {
+  const _CallClientButton({required this.nomClient});
+
+  final String nomClient;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phoneAsync = ref.watch(clientPhoneByNomProvider(nomClient));
+    final phone = phoneAsync.asData?.value;
+    if (phone == null || phone.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return IconButton(
+      icon: const Icon(Icons.phone_outlined),
+      tooltip: 'Appeler $phone',
+      color: AppColors.emerald,
+      onPressed: () => _call(context, phone),
+    );
+  }
+
+  Future<void> _call(BuildContext context, String phone) async {
+    // Normalise : enleve espaces et caracteres non-tel, garde + et chiffres.
+    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    final uri = Uri.parse('tel:$cleaned');
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Impossible d\'ouvrir le dialer pour $phone')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur appel : $e')),
+        );
+      }
+    }
   }
 }
