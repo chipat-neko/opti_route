@@ -10,6 +10,7 @@ import 'cloud/cloud_carnet_sync.dart';
 import 'cloud/cloud_entreprise_sync.dart';
 import 'cloud/cloud_membres_entreprise_sync.dart';
 import 'cloud/cloud_membres_sync.dart';
+import 'cloud/cloud_notes_perso_sync.dart';
 import 'cloud/cloud_sync_helpers.dart';
 import 'cloud_error_humanizer.dart';
 import 'cloud_sync_types.dart';
@@ -93,6 +94,10 @@ class CloudSyncService {
   /// revocation (carte #366). Stateless (pas de _db).
   final CloudMembresEntrepriseSync _membresEnt =
       const CloudMembresEntrepriseSync();
+
+  /// Sous-service notes perso employe sur un client partage (carte #367).
+  /// Stateless : RLS user_id = auth.uid() cote cloud.
+  final CloudNotesPersoSync _notesPerso = const CloudNotesPersoSync();
 
   static const _uuid = Uuid();
 
@@ -1044,6 +1049,24 @@ class CloudSyncService {
     final client = _client();
     _requireUserId();
     return _membresEnt.acceptByCode(client, code);
+  }
+
+  // ── Notes perso employe sur un client partage (carte #367) ──
+
+  /// Lit la note perso (privee) de l'utilisateur courant sur la fiche
+  /// carnet [savedDestinationCloudId]. Null si aucune note.
+  Future<String?> getNotePerso(String savedDestinationCloudId) {
+    _requireUserId();
+    return _notesPerso.getNote(_client(), savedDestinationCloudId);
+  }
+
+  /// Upsert la note perso (suppression si [notes] vide).
+  Future<void> saveNotePerso({
+    required String savedDestinationCloudId,
+    required String notes,
+  }) {
+    return _notesPerso.upsertNote(_client(), _requireUserId(),
+        savedDestinationCloudId: savedDestinationCloudId, notes: notes);
   }
 
   // ─── Guards ─────────────────────────────────────────────────────
