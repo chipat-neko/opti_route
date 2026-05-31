@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../data/database.dart';
+import '../../data/fec_export.dart';
 import '../../data/kilometric_log.dart';
 import '../../data/weekly_report.dart';
 import '../../providers/database_providers.dart';
@@ -70,7 +75,7 @@ class ChefComptaPanel extends ConsumerWidget {
           _ActionButton(
             icon: Icons.file_download_outlined,
             label: 'Export FEC (CSV)',
-            onPressed: () => _showFecPlaceholder(context),
+            onPressed: () => _exportFec(context, ref, tournees),
           ),
         ],
       ),
@@ -111,19 +116,84 @@ class ChefComptaPanel extends ConsumerWidget {
     );
   }
 
-  void _showFecPlaceholder(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Export FEC'),
-        content: const Text(
-            'Le FEC est généré depuis FecExport.toCsv. UI export fichier '
-            'à wire dans une future PR (share_plus + write file)'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK')),
-        ],
+  /// MVP export FEC : genere 1 entree par tournee terminee
+  /// (vente services 706 + contrepartie banque 512), ecrit dans un
+  /// fichier `.csv` avec BOM UTF-8 (Excel FR lit les accents), partage
+  /// via share_plus.
+  ///
+  /// Sortie audit chef PC (#338) : avant, ce bouton ouvrait un
+  /// AlertDialog "a wire dans une future PR". Maintenant produit un
+  /// vrai fichier importable Sage/Pennylane/expert-comptable.
+  Future<void> _exportFec(
+    BuildContext context,
+    WidgetRef ref,
+    List<Tournee> tournees,
+  ) async {
+    final stopsRepo = ref.read(stopsRepositoryProvider);
+    final entries = <FecEntry>[];
+    var num = 1;
+    for (final t in tournees.where((t) => t.statut == 'terminee')) {
+      final stops = await stopsRepo.getByTournee(t.id);
+      final codTotal = stops
+          .where((s) => s.codPaye && s.montantCod != null)
+          .fold<double>(0, (sum, s) => sum + s.montantCod!);
+      if (codTotal <= 0) continue;
+      final date = t.demareeLe ?? t.creeLe;
+      // Ecriture debit 512 (banque) / credit 706 (services) -- double
+      // ecriture equilibree. NB : compte 706 = prestations de services.
+      entries.add(FecEntry(
+        journalCode: 'VE',
+        journalLib: 'Ventes',
+        ecritureNum: 'T${t.id}',
+        ecritureDate: date,
+        compteNum: '512000',
+        compteLib: 'Banque',
+        pieceRef: 'TOURNEE-${t.id}',
+        pieceDate: date,
+        libelle: 'COD tournee ${t.nom}',
+        debit: codTotal,
+      ));
+      entries.add(FecEntry(
+        journalCode: 'VE',
+        journalLib: 'Ventes',
+        ecritureNum: 'T${t.id}',
+        ecritureDate: date,
+        compteNum: '706000',
+        compteLib: 'Prestations services',
+        pieceRef: 'TOURNEE-${t.id}',
+        pieceDate: date,
+        libelle: 'COD tournee ${t.nom}',
+        credit: codTotal,
+      ));
+      num++;
+    }
+
+    if (entries.isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Aucun COD encaisse a exporter dans le FEC.')),
+      );
+      return;
+    }
+
+    // BOM UTF-8 (﻿) pour qu'Excel FR lise correctement les accents
+    final csv = '﻿${FecExport.toCsv(entries)}';
+    final tempDir = await getTemporaryDirectory();
+    final now = DateTime.now();
+    final filename =
+        'fec_${now.year}${now.month.toString().padLeft(2, '0')}.csv';
+    final file = File('${tempDir.path}${Platform.pathSeparator}$filename');
+    await file.writeAsString(csv);
+
+    if (!context.mounted) return;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        subject: 'FEC opti_route',
+        text:
+            'Export FEC ($num ecritures, ${entries.length} lignes). '
+            'Importable Sage / Pennylane / expert-comptable.',
       ),
     );
   }
