@@ -48,15 +48,15 @@ void main() {
   });
 
   group('SecureScreen', () {
-    test('defaut : false', () async {
-      expect(await repo.getSecureScreen(), isFalse);
+    test('defaut : true (RGPD, depuis 2026-05-31)', () async {
+      expect(await repo.getSecureScreen(), isTrue);
     });
 
-    test('toggle true / false', () async {
-      await repo.setSecureScreen(true);
-      expect(await repo.getSecureScreen(), isTrue);
+    test('toggle false / true', () async {
       await repo.setSecureScreen(false);
       expect(await repo.getSecureScreen(), isFalse);
+      await repo.setSecureScreen(true);
+      expect(await repo.getSecureScreen(), isTrue);
     });
   });
 

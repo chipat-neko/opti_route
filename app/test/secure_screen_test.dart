@@ -25,23 +25,26 @@ void main() {
       await db.close();
     });
 
-    test('default = false', () async {
-      expect(await repo.getSecureScreen(), isFalse);
+    // Default = true depuis 2026-05-31 (audit RGPD) : protege les
+    // donnees clients dans l'apercu multitache par defaut, sans
+    // attendre que l'user toggle manuellement.
+    test('default = true (RGPD)', () async {
+      expect(await repo.getSecureScreen(), isTrue);
     });
 
-    test('set true -> get true, set false -> get false', () async {
-      await repo.setSecureScreen(true);
-      expect(await repo.getSecureScreen(), isTrue);
+    test('set false -> get false, set true -> get true', () async {
       await repo.setSecureScreen(false);
       expect(await repo.getSecureScreen(), isFalse);
+      await repo.setSecureScreen(true);
+      expect(await repo.getSecureScreen(), isTrue);
     });
 
     test('watch reflete l\'etat courant', () async {
-      // 1er emit = etat initial. On l'attend avant de muter pour eviter
+      // 1er emit = etat initial (true). On l'attend avant de muter pour eviter
       // toute course entre l'ecriture et le 1er read du stream Drift.
-      expect(await repo.watchSecureScreen().first, isFalse);
-      await repo.setSecureScreen(true);
       expect(await repo.watchSecureScreen().first, isTrue);
+      await repo.setSecureScreen(false);
+      expect(await repo.watchSecureScreen().first, isFalse);
     });
   });
 
