@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Installer l'APK sur Android — opti_route</title>
 <meta name="description" content="Guide pas a pas pour installer l'app opti_route sur ton telephone Android sans passer par le Play Store.">
@@ -218,7 +221,7 @@
   </p>
 
   <div class="note warn">
-    <strong>Securite Android.</strong> Android te previendra que l'app vient
+    <strong>Sécurité Android.</strong> Android te previendra que l'app vient
     d'une "source inconnue". C'est normal : ce n'est pas le Play Store. Le
     code source est public sur GitHub si tu veux verifier ce qui tourne sur
     ton phone.
@@ -226,7 +229,7 @@
 
   <!-- Variante a telecharger -->
   <div class="variant-picker">
-    <h3>Quelle variante telecharger ?</h3>
+    <h3>Quelle variante télécharger ?</h3>
     <div class="variant-options">
       <div class="variant-card">
         <div class="tag">Recommande</div>
@@ -256,15 +259,15 @@
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-body">
-      <h3>Telecharger le fichier APK</h3>
+      <h3>Télécharger le fichier APK</h3>
       <p>
         Va sur la page des
         <a href="https://github.com/chipat-neko/opti_route/releases">releases GitHub</a>
-        depuis ton telephone. Sous la derniere release, telecharge le fichier
+        depuis ton téléphone. Sous la dernière release, télécharge le fichier
         <code>app-arm64-v8a-release.apk</code> (ou la variante adaptee).
       </p>
       <p>
-        Si ton navigateur te demande "Telecharger ce type de fichier ?", confirme.
+        Si ton navigateur te demande "Télécharger ce type de fichier ?", confirme.
       </p>
     </div>
   </div>
@@ -275,14 +278,14 @@
       <h3>Autoriser les sources inconnues (1x suffisant)</h3>
       <p>
         Sur Android 8+, l'autorisation se donne <strong>par application</strong>
-        (Chrome, Drive, Files, etc.). Quand tu ouvres l'APK telecharge,
+        (Chrome, Drive, Files, etc.). Quand tu ouvres l'APK télécharge,
         Android propose un bouton <kbd>Parametres</kbd>. Clique dessus puis
         active <kbd>Autoriser depuis cette source</kbd> pour le navigateur
         ou l'app fichiers que tu utilises.
       </p>
       <p>
         Sur les Android plus anciens : <kbd>Parametres</kbd> &rarr;
-        <kbd>Securite</kbd> &rarr; coche <kbd>Sources inconnues</kbd>.
+        <kbd>Sécurité</kbd> &rarr; coche <kbd>Sources inconnues</kbd>.
       </p>
     </div>
   </div>
@@ -292,7 +295,7 @@
     <div class="step-body">
       <h3>Ouvrir l'APK et confirmer l'installation</h3>
       <p>
-        Reviens sur la notification de telechargement ou ouvre l'app
+        Reviens sur la notification de téléchargement ou ouvre l'app
         <strong>Fichiers</strong> &rarr; <strong>Telechargements</strong>.
         Tape sur <code>app-arm64-v8a-release.apk</code>.
       </p>
@@ -312,16 +315,16 @@
         L'app demarre sur l'onboarding qui explique comment recuperer ta
         cle gratuite OpenRouteService (500 optimisations/jour).
         <a href="https://openrouteservice.org/dev">openrouteservice.org/dev</a>
-        &rarr; cree un compte gratuit &rarr; copie la cle &rarr; colle-la dans Parametres.
+        &rarr; créé un compte gratuit &rarr; copie la cle &rarr; colle-la dans Parametres.
       </p>
       <p>
-        Sans cle, tu peux quand meme utiliser le mode manuel : ajouter des
-        arrets sans optimisation et naviguer via Maps/Waze a cote.
+        Sans cle, tu peux quand même utiliser le mode manuel : ajouter des
+        arrêts sans optimisation et naviguer via Maps/Waze a cote.
       </p>
     </div>
   </div>
 
-  <h2 style="margin: var(--space-32) 0 var(--space-18);">Telephone Xiaomi / Redmi (MIUI) ?</h2>
+  <h2 style="margin: var(--space-32) 0 var(--space-18);">Téléphone Xiaomi / Redmi (MIUI) ?</h2>
 
   <div class="note warn">
     <strong>MIUI est plus strict.</strong> Si l'install est bloquee :
@@ -333,13 +336,13 @@
         navigateur ou l'app Fichiers.
       </li>
       <li style="margin-top: var(--space-8);">
-        Si une fenetre <em>"Verification de securite"</em> tourne en
-        boucle, coupe une seconde le Wi-Fi / les donnees mobiles puis
+        Si une fenetre <em>"Verification de sécurité"</em> tourne en
+        boucle, coupe une seconde le Wi-Fi / les données mobiles puis
         relance l'installation.
       </li>
       <li style="margin-top: var(--space-8);">
-        Desactive temporairement <em>"Optimisation MIUI"</em> (dans les
-        options developpeur) si un blocage persistant apparait.
+        Désactivé temporairement <em>"Optimisation MIUI"</em> (dans les
+        options développeur) si un blocage persistant apparait.
       </li>
     </ul>
   </div>
@@ -349,7 +352,7 @@
   <div class="note info">
     <strong>Pas de mise a jour auto en Phase 1.</strong> Quand une nouvelle
     version sort, tu telecharges le nouvel APK et tu re-installes par-dessus.
-    Tes donnees (tournees, carnet, photos) sont conservees. Android remplace
+    Tes données (tournées, carnet, photos) sont conservees. Android remplace
     juste le code de l'app.
   </div>
 
@@ -364,14 +367,14 @@
 
   <h3 style="font-size: 1rem; margin: var(--space-18) 0 var(--space-8);">"Le package n'est pas compatible"</h3>
   <p style="font-size: 0.95rem; color: var(--text-mute); margin-bottom: var(--space-14);">
-    Ton phone n'a pas la bonne architecture CPU. Telecharge la variante
+    Ton phone n'a pas la bonne architecture CPU. Télécharge la variante
     <strong>universal</strong> (un peu plus lourde mais marche partout).
   </p>
 
-  <h3 style="font-size: 1rem; margin: var(--space-18) 0 var(--space-8);">"App non installee" sans autre detail</h3>
+  <h3 style="font-size: 1rem; margin: var(--space-18) 0 var(--space-8);">"App non installee" sans autre détail</h3>
   <p style="font-size: 0.95rem; color: var(--text-mute); margin-bottom: var(--space-14);">
     Probablement un APK corrompu pendant le download. Relance le
-    telechargement (clic droit ou re-clic, "Telecharger a nouveau") et
+    téléchargement (clic droit ou re-clic, "Télécharger a nouveau") et
     re-tente.
   </p>
 

@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Galerie — opti_route</title>
 <meta name="description" content="Apercu des principaux ecrans de l'app opti_route : tournees, mode terrain, carte, carnet, stats, facturation, scan bordereaux.">
@@ -165,7 +168,7 @@
   <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-22); max-width: 700px;">
     Captures reelles depuis un Xiaomi Redmi 10S (mode jour + mode sombre,
     palette Lime). Les apercus stylises sont conserves pour les ecrans
-    plus rares (chef d'equipe, biometrie, OCR stats, facturation).
+    plus rares (chef d'équipe, biometrie, OCR stats, facturation).
   </p>
 
   <div class="gallery-grid">
@@ -183,8 +186,8 @@
       </div>
       <div class="shot-cap">
         <span class="tag">Accueil</span>
-        <h3>Liste des tournees</h3>
-        <p>Toutes les tournees (planifiees, en cours, terminees) en un coup d'oeil. Section "Templates recurrents" si tu en as marque.</p>
+        <h3>Liste des tournées</h3>
+        <p>Toutes les tournées (planifiees, en cours, terminees) en un coup d'oeil. Section "Templates recurrents" si tu en as marque.</p>
       </div>
     </article>
 
@@ -201,8 +204,8 @@
       </div>
       <div class="shot-cap">
         <span class="tag">Mode terrain</span>
-        <h3>Tournee du jour</h3>
-        <p>Avancement par arret + chips de filtre (Tout / A livrer / Livres / Echec) + swipe gauche pour marquer livre.</p>
+        <h3>Tournée du jour</h3>
+        <p>Avancement par arrêt + chips de filtre (Tout / A livrer / Livrés / Échec) + swipe gauche pour marquer livré.</p>
       </div>
     </article>
 
@@ -220,7 +223,7 @@
       <div class="shot-cap">
         <span class="tag">Carte</span>
         <h3>Vue cartographique</h3>
-        <p>OpenStreetMap centre sur ta tournee + filtres A livrer / Livre / Echec. Pre-telechargement des tuiles pour rouler hors ligne.</p>
+        <p>OpenStreetMap centre sur ta tournée + filtres A livrer / Livré / Échec. Pre-téléchargement des tuiles pour rouler hors ligne.</p>
       </div>
     </article>
 
@@ -238,7 +241,7 @@
       <div class="shot-cap">
         <span class="tag">Carnet</span>
         <h3>Repertoire clients</h3>
-        <p>Recherche vocale + chips filtre couleur. Chaque entree montre l'historique (livre N fois - derniere date).</p>
+        <p>Recherche vocale + chips filtre couleur. Chaque entree montre l'historique (livré N fois - dernière date).</p>
       </div>
     </article>
 
@@ -256,7 +259,7 @@
       <div class="shot-cap">
         <span class="tag">Statistiques</span>
         <h3>Pilotage chiffres</h3>
-        <p>Compteurs annee / 7 jours / 30 jours : colis livres, tournees, arrets, reussite, distance. Export CSV pour le dashboard web.</p>
+        <p>Compteurs annee / 7 jours / 30 jours : colis livrés, tournées, arrêts, reussite, distance. Export CSV pour le dashboard web.</p>
       </div>
     </article>
 
@@ -299,7 +302,7 @@
       <div class="shot-cap">
         <span class="tag">Facturation</span>
         <h3>Recap mensuel</h3>
-        <p>Tarif par arret / colis / km, cout carburant, marge brute estimee.</p>
+        <p>Tarif par arrêt / colis / km, cout carburant, marge brute estimee.</p>
       </div>
     </article>
 
@@ -340,7 +343,7 @@
       <div class="shot-cap">
         <span class="tag">OCR</span>
         <h3>Scan bordereau</h3>
-        <p>OCR MESEXP / Colissimo / Chronopost, geocodage et import auto.</p>
+        <p>OCR MESEXP / Colissimo / Chronopost, géocodage et import auto.</p>
       </div>
     </article>
 
@@ -396,13 +399,13 @@
 
           <!-- Button partager -->
           <rect x="12" y="330" width="176" height="44" rx="10" fill="#0E1410"/>
-          <text x="100" y="357" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#B8F24A" font-weight="800">PARTAGER LES TOURNEES</text>
+          <text x="100" y="357" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#B8F24A" font-weight="800">PARTAGER LES TOURNÉES</text>
         </svg>
       </div>
       <div class="shot-cap">
-        <span class="tag">Equipe</span>
-        <h3>Mode chef d'equipe</h3>
-        <p>Affectation des arrets aux coequipiers + PDF / WhatsApp cible.</p>
+        <span class="tag">Équipe</span>
+        <h3>Mode chef d'équipe</h3>
+        <p>Affectation des arrêts aux coéquipiers + PDF / WhatsApp cible.</p>
       </div>
     </article>
 
@@ -444,7 +447,7 @@
         </svg>
       </div>
       <div class="shot-cap">
-        <span class="tag">Securite</span>
+        <span class="tag">Sécurité</span>
         <h3>Verrouillage PIN + biometrie</h3>
         <p>Cadenas optionnel au cold start. Empreinte ou face avec fallback PIN 4-6 chiffres.</p>
       </div>
@@ -504,7 +507,7 @@
       <div class="shot-cap">
         <span class="tag">Sauvegarde</span>
         <h3>Mes backups</h3>
-        <p>.zip portables avec rotation des 5 derniers. Restaurer, partager via Drive, ou en creer un a la demande.</p>
+        <p>.zip portables avec rotation des 5 derniers. Restaurer, partager via Drive, ou en créer un a la demande.</p>
       </div>
     </article>
 
@@ -557,7 +560,7 @@
       <div class="shot-cap">
         <span class="tag">OCR Stats</span>
         <h3>Stats OCR baseline</h3>
-        <p>Mesure du taux de carte verte sur les scans reels. Export CSV pour analyser les categories d'echec et prioriser la Phase B.</p>
+        <p>Mesure du taux de carte verte sur les scans reels. Export CSV pour analyser les categories d'échec et prioriser la Phase B.</p>
       </div>
     </article>
 
@@ -586,14 +589,14 @@
              <source srcset="assets/screenshots/07-securite-backups.webp" type="image/webp">
              <img class="shot-real"
                   src="assets/screenshots/07-securite-backups.png"
-                  alt="Parametres > Securite et Donnees : verrouiller l'app, sauvegarde .zip portable, restore, auto-backups"
+                  alt="Parametres > Sécurité et Données : verrouiller l'app, sauvegarde .zip portable, restore, auto-backups"
                   loading="lazy">
              </picture>
       </div>
       <div class="shot-cap">
-        <span class="tag">Securite</span>
+        <span class="tag">Sécurité</span>
         <h3>Verrou app + sauvegardes ZIP</h3>
-        <p>Verrouille l'app avec un code 4 chiffres + biometrie si supporte. Sauvegarde complete (DB SQLite + photos preuves) dans un .zip portable, conservable sur Drive ou cle USB.</p>
+        <p>Verrouille l'app avec un code 4 chiffres + biometrie si supporte. Sauvegarde complète (DB SQLite + photos preuves) dans un .zip portable, conservable sur Drive ou cle USB.</p>
       </div>
     </article>
 
@@ -611,7 +614,7 @@
       <div class="shot-cap">
         <span class="tag">Pilotage</span>
         <h3>Stats annuelles en un coup d'oeil</h3>
-        <p>Compteurs cette annee + 7 derniers jours + 30 derniers jours. Tournees en cours / brouillon, arrets livres / ramasses / echecs, taux de reussite, distance parcourue.</p>
+        <p>Compteurs cette annee + 7 derniers jours + 30 derniers jours. Tournées en cours / brouillon, arrêts livrés / ramasses / échecs, taux de reussite, distance parcourue.</p>
       </div>
     </article>
 
@@ -646,17 +649,17 @@
       </div>
       <div class="shot-cap">
         <span class="tag">Creation</span>
-        <h3>Nouvelle tournee</h3>
-        <p>Nom, date, adresse de depart, capacite du vehicule, profil voiture / camion &gt;3.5t, evitement peages, rappel programme. Tout est optionnel sauf le nom.</p>
+        <h3>Nouvelle tournée</h3>
+        <p>Nom, date, adresse de départ, capacite du véhicule, profil voiture / camion &gt;3.5t, evitement peages, rappel programme. Tout est optionnel sauf le nom.</p>
       </div>
     </article>
 
   </div>
 
   <div class="gallery-note">
-    Les apercus ci-dessus sont des reproductions stylisees. Telecharge l'APK
+    Les apercus ci-dessus sont des reproductions stylisees. Télécharge l'APK
     pour voir l'app en vrai sur ton phone, ou consulte la <a href="features.html">page features</a>
-    pour le detail de chaque ecran.
+    pour le détail de chaque ecran.
   </div>
 
   <div class="cta">

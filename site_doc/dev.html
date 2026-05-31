@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Documentation technique — opti_route</title>
 <meta name="description" content="Architecture interne d'opti_route : Flutter, Drift, Riverpod, ML Kit, pipeline OCR bordereaux, services et conventions.">
@@ -187,7 +190,7 @@
   </table>
 
   <h2 style="margin-top: var(--space-44);">Pattern : Data / Provider / UI</h2>
-  <p>Regle d'or : un screen ne fait pas de SQL direct. Il passe par un
+  <p>Règle d'or : un screen ne fait pas de SQL direct. Il passe par un
   repository via un provider Riverpod. Cela rend les screens testables
   sans DB.</p>
   <pre class="ascii">
@@ -220,7 +223,7 @@
   <div class="module-grid">
     <div class="module-card">
       <h3>bordereau_patterns.dart</h3>
-      <p>Regex centralisees pour CP, ville, telephone, rues, tracking, etc.
+      <p>Regex centralisees pour CP, ville, téléphone, rues, tracking, etc.
       Source unique de verite partagee par les 3 parseurs.</p>
       <span class="lines">110 L</span>
       <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/bordereau_patterns.dart">Voir le code →</a>
@@ -257,8 +260,8 @@
     <div class="module-card">
       <h3>client_memory_service.dart</h3>
       <p>Fuzzy match Levenshtein contre le carnet d'adresses local.
-      Sur les clients deja livres, remplace nom + adresse OCR par les
-      donnees validees du carnet (Sprint 2.A).</p>
+      Sur les clients déjà livrés, remplace nom + adresse OCR par les
+      données validees du carnet (Sprint 2.A).</p>
       <span class="lines">152 L</span>
       <a href="https://github.com/chipat-neko/opti_route/blob/main/app/lib/data/client_memory_service.dart">Voir le code →</a>
     </div>
@@ -281,9 +284,9 @@
     </thead>
     <tbody>
       <tr><td><span class="badge green">DETECTION AUTOMATIQUE</span></td><td>parser local</td><td>Defaut, 100% offline</td></tr>
-      <tr><td><span class="badge green">MEMOIRE CLIENT</span></td><td>carnet adresses</td><td>Match fuzzy sur client deja livre</td></tr>
+      <tr><td><span class="badge green">MEMOIRE CLIENT</span></td><td>carnet adresses</td><td>Match fuzzy sur client déjà livré</td></tr>
       <tr><td><span class="badge green">DETECTION IA</span></td><td>Gemini cloud</td><td>Online, si Edge Function deployee</td></tr>
-      <tr><td><span class="badge amber">DETECTION INCERTAINE</span></td><td>parser local low conf</td><td>Donnees partielles ou fragments OCR</td></tr>
+      <tr><td><span class="badge amber">DETECTION INCERTAINE</span></td><td>parser local low conf</td><td>Données partielles ou fragments OCR</td></tr>
     </tbody>
   </table>
 
@@ -294,7 +297,7 @@
     </thead>
     <tbody>
       <tr><td>Unit (data)</td><td><span class="badge green">73%</span></td><td>48/66 fichiers</td></tr>
-      <tr><td>Integration (flow)</td><td><span class="badge amber">2%</span></td><td>tournee + bordereau_scan</td></tr>
+      <tr><td>Integration (flow)</td><td><span class="badge amber">2%</span></td><td>tournée + bordereau_scan</td></tr>
       <tr><td>Integration_test (camera reelle)</td><td>1</td><td>bordereau_batch_eval (38 images)</td></tr>
       <tr><td>Widget</td><td><span class="badge red">3%</span></td><td>3/81 ecrans (axe priorite)</td></tr>
     </tbody>
@@ -307,7 +310,7 @@
 
   <h2 style="margin-top: var(--space-44);">Pour aller plus loin</h2>
   <ul style="line-height: 1.8;">
-    <li>📖 <a href="https://github.com/chipat-neko/opti_route/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> sur GitHub (version complete avec migrations Drift, conventions, etc)</li>
+    <li>📖 <a href="https://github.com/chipat-neko/opti_route/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> sur GitHub (version complète avec migrations Drift, conventions, etc)</li>
     <li>📋 <a href="roadmap.html">Roadmap</a> des features a venir</li>
     <li>🔧 <a href="features.html">Liste des features</a> deployees</li>
     <li>💾 <a href="https://github.com/chipat-neko/opti_route/blob/main/docs/supabase-schema.sql">Schema cloud Supabase</a></li>
@@ -315,7 +318,7 @@
   </ul>
 
   <p style="margin-top: var(--space-44); font-size: 0.85rem; color: var(--text-mute); border-top: 1px solid var(--divider); padding-top: var(--space-22);">
-    Page generee dans le cadre du Sprint 3.D du refactor d'audit du 2026-05-22.
+    Page générée dans le cadre du Sprint 3.D du refactor d'audit du 2026-05-22.
     Le projet evolue vite — verifie la date des PRs sur GitHub pour le contenu a jour.
   </p>
 

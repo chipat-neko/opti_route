@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0E1410">
 <title>Guide : exporter ton CSV pour le tableau de bord — opti_route</title>
@@ -92,8 +95,8 @@
   <span class="eyebrow">Guide pas a pas</span>
   <h1>Exporter ton CSV pour le tableau de bord.</h1>
   <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-40);">
-    Le tableau de bord web lit un fichier CSV genere par l'app. En 3
-    etapes tu auras tes tournees visualisees sur grand ecran.
+    Le tableau de bord web lit un fichier CSV généré par l'app. En 3
+    etapes tu auras tes tournées visualisees sur grand ecran.
   </p>
 
   <!-- Step 1 -->
@@ -105,7 +108,7 @@
     <p>
       Drawer (menu en haut a gauche) <strong>&rarr; Statistiques</strong>.
       Tu y vois le recap 7j / 30j / 365j, la carte de motivation lime
-      et le breakdown par coequipier.
+      et le breakdown par coéquipier.
     </p>
   </div>
 
@@ -121,7 +124,7 @@
       Le selecteur natif Android propose ou envoyer le fichier :
     </p>
     <ul style="margin: var(--space-12) 0 0 var(--space-22);">
-      <li>Gmail / Outlook (te l'envoyer a toi-meme)</li>
+      <li>Gmail / Outlook (te l'envoyer a toi-même)</li>
       <li>Google Drive (sync automatique avec ton PC)</li>
       <li>Telegram / WhatsApp (te l'envoyer)</li>
       <li>Bluetooth direct vers ton PC</li>
@@ -136,13 +139,13 @@
     </div>
     <p>
       Ouvre le <a href="dashboard.html">tableau de bord</a> sur ton
-      ordinateur. Glisse-depose ton fichier <code>.csv</code> sur la
+      ordinateur. Glisse-dépose ton fichier <code>.csv</code> sur la
       zone de drop, ou clique pour parcourir. Le viewer affiche
       immediatement :
     </p>
     <ul style="margin: var(--space-12) 0 0 var(--space-22);">
-      <li>5 stat cards (Tournees / Arrets / Colis / Km / Duree)</li>
-      <li>3 graphes (colis livres, statuts, distance)</li>
+      <li>5 stat cards (Tournées / Arrêts / Colis / Km / Durée)</li>
+      <li>3 graphes (colis livrés, statuts, distance)</li>
       <li>Tableau brut trie</li>
       <li>Boutons re-export propre + impression PDF</li>
     </ul>
@@ -159,7 +162,7 @@
 2026-05-13,Tournee mardi,terminee,15,22,52.1,210,20</pre>
     <p style="margin-top: var(--space-12); font-size: 0.9rem;">
       Le statut peut etre <code>brouillon</code>, <code>optimisee</code>,
-      <code>en_cours</code> ou <code>terminee</code>. La duree exclut
+      <code>en_cours</code> ou <code>terminee</code>. La durée exclut
       les pauses (cumul du chrono effectif).
     </p>
   </div>
@@ -192,7 +195,7 @@
 <footer class="site-footer">
   <div class="container">
     <p class="footer-copy">
-      <a href="index.html">opti_route</a> · Phase 1 gratuit · 100% prive · <span class="mono">© CALOTE Noah, 2026</span> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
+      <a href="index.html">opti_route</a> · Phase 1 gratuit · 100% privé · <span class="mono">© CALOTE Noah, 2026</span> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
     </p>
   </div>
 </footer>

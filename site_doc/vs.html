@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- QW8 audit #339 : CSP minimale (XSS / CDN compromis). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>opti_route vs. concurrents — comparatif</title>
 <meta name="description" content="Comparatif opti_route vs Circuit Route Planner, Routific, Onfleet. Prix, fonctionnalites, mode hors-ligne, RGPD.">
@@ -119,9 +122,9 @@
 
 <main id="main-content" class="container">
   <span class="eyebrow">Comparatif</span>
-  <h1>opti_route vs. les autres optimiseurs de tournees.</h1>
+  <h1>opti_route vs. les autres optimiseurs de tournées.</h1>
   <p class="sub">
-    Tu utilises deja Circuit, Routific ou Onfleet et tu te demandes pourquoi passer a opti_route&nbsp;? Voici la grille honnete des differences&nbsp;: certaines te font gagner du temps, d'autres pas — a toi de juger ce qui compte pour ton metier.
+    Tu utilises déjà Circuit, Routific ou Onfleet et tu te demandes pourquoi passer a opti_route&nbsp;? Voici la grille honnete des differences&nbsp;: certaines te font gagner du temps, d'autres pas — a toi de juger ce qui compte pour ton metier.
   </p>
 
   <p class="vs-disclaimer">
@@ -147,14 +150,14 @@
         <td>~100 USD / mois (min)</td>
       </tr>
       <tr>
-        <td class="feat">Tarif equipe de 5</td>
+        <td class="feat">Tarif équipe de 5</td>
         <td class="partial">Gratuit (Phase 1) — payant a partir de Phase 2 sync cloud</td>
         <td>~100 EUR / mois</td>
         <td>~250 USD / mois</td>
         <td>~500 USD / mois</td>
       </tr>
       <tr>
-        <td class="feat">Donnees clients hors-ligne</td>
+        <td class="feat">Données clients hors-ligne</td>
         <td class="yes">100 % local (SQLite sur l'appareil)</td>
         <td class="no">Cloud obligatoire</td>
         <td class="no">Cloud obligatoire</td>
@@ -189,7 +192,7 @@
         <td class="yes">CSV + API</td>
       </tr>
       <tr>
-        <td class="feat">Multi-coequipiers / chef d'equipe</td>
+        <td class="feat">Multi-coéquipiers / chef d'équipe</td>
         <td class="partial">Local (Phase 1) — sync temps reel Phase 2</td>
         <td class="yes">Cloud temps reel</td>
         <td class="yes">Cloud temps reel</td>
@@ -218,7 +221,7 @@
       </tr>
       <tr>
         <td class="feat">Code source ouvert</td>
-        <td class="partial">Prive aujourd'hui — possiblement ouvert plus tard</td>
+        <td class="partial">Privé aujourd'hui — possiblement ouvert plus tard</td>
         <td class="no">Ferme</td>
         <td class="no">Ferme</td>
         <td class="no">Ferme</td>
@@ -233,21 +236,21 @@
     </tbody>
   </table>
 
-  <h2 style="margin-top: var(--space-40)">Quand choisir un concurrent plutot qu'opti_route&nbsp;?</h2>
+  <h2 style="margin-top: var(--space-40)">Quand choisir un concurrent plutôt qu'opti_route&nbsp;?</h2>
   <p>
-    On ne va pas mentir : si tu as <strong>besoin de notifications SMS automatiques aux clients aujourd'hui</strong>, opti_route Phase 1 ne le fait pas encore. Circuit ou Onfleet sont mieux equipes pour ce cas. De meme si tu pilotes <strong>plus de 10 livreurs en temps reel</strong> et que le chef doit voir leur position GPS instantanee, l'aspect cloud des concurrents est aujourd'hui plus mature — opti_route arrive avec la Phase 2 sync, mais elle n'est pas encore deployee.
+    On ne va pas mentir : si tu as <strong>besoin de notifications SMS automatiques aux clients aujourd'hui</strong>, opti_route Phase 1 ne le fait pas encore. Circuit ou Onfleet sont mieux équipes pour ce cas. De même si tu pilotes <strong>plus de 10 livreurs en temps reel</strong> et que le chef doit voir leur position GPS instantanee, l'aspect cloud des concurrents est aujourd'hui plus mature — opti_route arrive avec la Phase 2 sync, mais elle n'est pas encore deployee.
   </p>
   <h2>Quand opti_route est le meilleur choix&nbsp;?</h2>
   <ul>
     <li><strong>Livreur solo independant</strong> qui veut zero abonnement mensuel</li>
-    <li><strong>Petites equipes (1-5 livreurs)</strong> ou la sync temps reel n'est pas critique</li>
+    <li><strong>Petites équipes (1-5 livreurs)</strong> ou la sync temps reel n'est pas critique</li>
     <li><strong>Travail en zone faible 4G</strong> (campagne, parking sous-terrain) qui ratent les apps cloud</li>
-    <li><strong>Donnees clients sensibles</strong> qui doivent rester locales (RGPD strict, B2B medical)</li>
+    <li><strong>Données clients sensibles</strong> qui doivent rester locales (RGPD strict, B2B medical)</li>
     <li><strong>Workflow scan papier</strong> (bordereaux MESEXP / Colissimo / Chronopost)</li>
   </ul>
 
   <div style="display: flex; gap: var(--space-12); flex-wrap: wrap; margin: var(--space-40) 0;">
-    <a class="btn btn-primary" href="install-apk.html">Telecharger l'APK</a>
+    <a class="btn btn-primary" href="install-apk.html">Télécharger l'APK</a>
     <a class="btn btn-ghost" href="features.html">Voir toutes les features</a>
     <a class="btn btn-ghost" href="faq.html">FAQ</a>
   </div>
@@ -256,7 +259,7 @@
 <footer class="site-footer">
   <div class="container">
     <p class="footer-copy">
-      Comparatif honnete · Donnees au 14 mai 2026 · <a href="index.html">Retour accueil</a> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
+      Comparatif honnete · Données au 14 mai 2026 · <a href="index.html">Retour accueil</a> <a href="https://ko-fi.com/chipat" target="_blank" rel="noopener noreferrer" class="kofi-link" title="Soutiens le projet avec une pause cafe">&#9749; Pause cafe</a>
     </p>
   </div>
 </footer>
