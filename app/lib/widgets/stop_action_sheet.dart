@@ -13,6 +13,7 @@ import '../screens/navigation_screen.dart';
 import '../theme/app_tokens.dart';
 import 'stop_action_sheet_pickers.dart';
 import 'stop_action_sheet_widgets.dart';
+import 'stop_extras_panel.dart';
 
 /// Action choisie par le livreur dans la bottom sheet de validation
 /// d'un arret.
@@ -319,6 +320,9 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+            // Bandeau consignes client (preferencePersonnalisee +
+            // photoObligatoire depuis le carnet, F5+F6 sprint immediat).
+            if (hasNom) _ClientConsignesBanner(nomClient: nom),
             const SizedBox(height: AppSpacing.x14),
 
             // Edition rapide du nb de colis (+/-) : utile a la livraison
@@ -392,6 +396,11 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   isDense: true,
                 ),
               ),
+            if (!_pickingRaison) const SizedBox(height: AppSpacing.x10),
+
+            // Panel "Options livraison" : memoVocal, deposeSansContact,
+            // COD montant+encaisse, notationEmoji (F1-F4 sprint immediat).
+            if (!_pickingRaison) StopExtrasPanel(stop: stop),
             if (!_pickingRaison) const SizedBox(height: AppSpacing.x10),
 
             // Edition rapide de la fenetre horaire : utile quand un
@@ -719,6 +728,98 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Bandeau d'alerte affichant les consignes client persistantes
+/// (preferencePersonnalisee et photoObligatoire depuis saved_destinations).
+///
+/// F5+F6 sprint immediat 2026-05-31 : les 2 colonnes existaient sans UI.
+/// Aujourd'hui, Noah voit en gros dans le header de la sheet :
+/// - Une consigne forte ("client sourd, sonner 3 fois") si stockee dans
+///   le carnet (`preferencePersonnalisee`)
+/// - Un warning amber "Photo preuve obligatoire" si le client l'exige
+///   (`photoObligatoire`)
+///
+/// Tout ou rien : si aucune des 2 n'est dans le carnet, retourne
+/// SizedBox.shrink (zero pollution UI).
+class _ClientConsignesBanner extends ConsumerWidget {
+  const _ClientConsignesBanner({required this.nomClient});
+
+  final String nomClient;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(clientConsignesByNomProvider(nomClient));
+    final consignes = async.asData?.value;
+    if (consignes == null) return const SizedBox.shrink();
+    final hasPref = consignes.preference != null;
+    final hasPhoto = consignes.photoObligatoire;
+    if (!hasPref && !hasPhoto) return const SizedBox.shrink();
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.x10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (hasPref)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.x10),
+              decoration: BoxDecoration(
+                color: AppColors.lime.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(AppRadius.r10),
+                border: Border.all(color: AppColors.lime, width: 1.5),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.priority_high, size: 18, color: p.ink),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: Text(
+                      consignes.preference!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: p.ink,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (hasPref && hasPhoto) const SizedBox(height: AppSpacing.x6),
+          if (hasPhoto)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x10, vertical: AppSpacing.x8),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(AppRadius.r10),
+                border: Border.all(color: AppColors.amber, width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.photo_camera_outlined,
+                      size: 16, color: AppColors.amber),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: Text(
+                      'Photo preuve OBLIGATOIRE pour ce client',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: p.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
