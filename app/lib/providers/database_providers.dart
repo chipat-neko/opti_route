@@ -472,6 +472,13 @@ final onboardingDoneStreamProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchOnboardingDone();
 });
 
+/// Profil choisi a l'ecran "Qui es-tu ?" (carte #373). Null = pas encore
+/// choisi -> HomeScreen affiche ProfilChoiceScreen une fois (apres le
+/// walkthrough onboarding, avant le contenu normal).
+final profilTypeProvider = StreamProvider<String?>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchProfilType();
+});
+
 /// Mode de theme (system / light / dark) choisi dans Parametres.
 /// Watche dans MyApp pour basculer entre `theme` et `darkTheme` du
 /// MaterialApp via `themeMode`.

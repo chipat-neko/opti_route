@@ -61,6 +61,11 @@ class ParametresRepository {
   // le wizard de choix de partage de ses adresses locales. Sert a ne
   // plus reafficher le banner persistant une fois le tri fait.
   static const _kCarnetMigrationDone = 'carnet_migration_done';
+  // Profil choisi a l'ecran "Qui es-tu ?" (carte #373/#372) :
+  // 'solo' | 'chef_entreprise' | 'employe'. Null = ecran pas encore
+  // passe -> on l'affiche une fois (y compris pour les users existants,
+  // dont la cle est absente en base au 1er update embarquant #373).
+  static const _kProfilType = 'profil_type';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -388,6 +393,22 @@ class ParametresRepository {
 
   Future<void> setCarnetMigrationDone(bool v) =>
       _write(_kCarnetMigrationDone, v ? '1' : '0');
+
+  /// Profil choisi a l'ecran "Qui es-tu ?" (carte #373). Null tant que
+  /// l'utilisateur n'a pas repondu -> l'ecran s'affiche. Valeurs :
+  /// 'solo' | 'chef_entreprise' | 'employe'.
+  Future<String?> getProfilType() => _readKey(_kProfilType);
+
+  Stream<String?> watchProfilType() => _watchKey(_kProfilType);
+
+  Future<void> setProfilType(String v) {
+    assert(v == 'solo' || v == 'chef_entreprise' || v == 'employe');
+    return _write(_kProfilType, v);
+  }
+
+  /// Reset (debug / "changer de profil" depuis Parametres) -> reaffiche
+  /// l'ecran "Qui es-tu ?" au prochain passage par HomeScreen.
+  Future<int> clearProfilType() => _delete(_kProfilType);
 
   /// Hash SHA-256 du PIN choisi par l'utilisateur (4 a 6 chiffres). Le
   /// PIN en clair n'est jamais stocke. Null si verrou desactiv ou PIN
