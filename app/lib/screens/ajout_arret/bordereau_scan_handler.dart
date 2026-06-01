@@ -89,6 +89,7 @@ Future<BordereauScanResult?> handleBordereauScan(
         if (r.postcode == extractedCp) return true;
         if (extractedVille != null &&
             r.city != null &&
+            extractedCp.length >= 2 &&
             r.postcode!.startsWith(extractedCp.substring(0, 2)) &&
             r.city!.toLowerCase().contains(extractedVille)) {
           return true;

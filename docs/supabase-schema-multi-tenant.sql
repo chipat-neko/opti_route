@@ -354,8 +354,14 @@ create policy ins_inv on public.entreprise_invitations
   for insert with check (
     invited_by = auth.uid()
     and (
+      -- L'admin entreprise peut inviter n'importe quel rôle.
       public.is_admin_entreprise(entreprise_id)
-      or (entrepot_id is not null and public.is_chef_entrepot(entrepot_id))
+      -- Le chef d'entrepôt NE peut inviter QUE chef_entrepot/employe
+      -- (jamais admin_entreprise) -> évite l'escalade de privilège.
+      -- Cf audit sécu 2026-06-01 (faille #3 : role_target non contrôlé).
+      or (entrepot_id is not null
+          and public.is_chef_entrepot(entrepot_id)
+          and role_target in ('chef_entrepot', 'employe'))
     )
   );
 drop policy if exists del_inv on public.entreprise_invitations;
@@ -879,10 +885,19 @@ begin
           or public.is_super_admin()) then
     raise exception 'FORBIDDEN';
   end if;
+  -- Refus EXPLICITE de révoquer un admin_entreprise : sinon l'UPDATE
+  -- filtrée échouait en silence (0 ligne) et l'app croyait avoir révoqué.
+  -- Cf audit sécu 2026-06-01 (faille #2 : échec silencieux).
+  if exists (
+    select 1 from public.entreprise_users
+    where entreprise_id = p_entreprise_id and user_id = p_user_id
+      and role = 'admin_entreprise'
+  ) then
+    raise exception 'CANNOT_REVOKE_ADMIN';
+  end if;
   update public.entreprise_users
     set statut = 'revoque', revoked_at = now()
-    where entreprise_id = p_entreprise_id and user_id = p_user_id
-      and role <> 'admin_entreprise';  -- ne pas se révoquer soi (admin)
+    where entreprise_id = p_entreprise_id and user_id = p_user_id;
   update public.entrepot_users eu
     set statut = 'revoque', revoked_at = now()
     from public.entrepots e
