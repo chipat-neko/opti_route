@@ -79,7 +79,9 @@ class PhotonService implements GeocodingService {
       throw GeocodingException('Reponse Photon ${response.statusCode}');
     }
 
-    final raw = jsonDecode(response.body);
+    // UTF-8 explicite (cf ban_geocoding_service) : évite le mojibake des
+    // accents si le header charset manque.
+    final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (raw is! Map<String, dynamic>) {
       throw const GeocodingException('Reponse JSON inattendue (Photon)');
     }

@@ -61,7 +61,10 @@ class BanGeocodingService implements GeocodingService {
       throw GeocodingException('Reponse BAN ${response.statusCode}');
     }
 
-    final raw = jsonDecode(response.body);
+    // UTF-8 explicite : `response.body` décode en Latin-1 si le header
+    // charset est absent (cas des APIs gov.fr) -> accents cassés
+    // (« Société » -> « SociÃ©tÃ© »). On décode les octets bruts en UTF-8.
+    final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (raw is! Map<String, dynamic>) {
       throw const GeocodingException('Reponse JSON inattendue (BAN)');
     }
@@ -108,7 +111,10 @@ class BanGeocodingService implements GeocodingService {
     if (response.statusCode != 200) {
       throw GeocodingException('Reponse BAN reverse ${response.statusCode}');
     }
-    final raw = jsonDecode(response.body);
+    // UTF-8 explicite : `response.body` décode en Latin-1 si le header
+    // charset est absent (cas des APIs gov.fr) -> accents cassés
+    // (« Société » -> « SociÃ©tÃ© »). On décode les octets bruts en UTF-8.
+    final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (raw is! Map<String, dynamic>) return null;
     final features = raw['features'];
     if (features is! List || features.isEmpty) return null;

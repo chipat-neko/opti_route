@@ -339,16 +339,12 @@ void main() {
       expect(r.first.displayName, evil);
     });
 
-    test('Photon: name non-ASCII (accent + emoji) -> MOJIBAKE '
-        '(bug d\'encodage documente)', () async {
-      // Le service lit `jsonDecode(response.body)`. Dans le package http,
-      // `response.body` decode les bytes selon le charset du Content-Type ;
-      // a defaut de "charset=utf-8" il tombe sur LATIN-1. Les APIs gov.fr
-      // / Komoot renvoient de l'UTF-8 ; si l'en-tete charset manque, les
-      // accents et emojis sont MOJIBAKE'es ("Cafe" accent -> "CafÃ©").
-      // Le fix cote source serait `utf8.decode(response.bodyBytes)`.
-      // Ici on envoie des bytes UTF-8 (comme le vrai reseau) et on
-      // documente que le resultat est CORROMPU, pas preserve.
+    test('Photon: name non-ASCII (accent + emoji) -> UTF-8 PRESERVE '
+        '(fix nuit 2026-06-01)', () async {
+      // Le service décode désormais `utf8.decode(response.bodyBytes)` au
+      // lieu de `response.body` (Latin-1 par défaut faute de charset). Les
+      // APIs gov.fr / Komoot renvoient de l'UTF-8 : accents + emoji doivent
+      // ressortir INTACTS (plus de mojibake « CafÃ© »).
       const tricky = 'Caf\u{00E9} \u{1F600} Pharmacie';
       final r = await photon(photonFeature({
         'geometry': {
@@ -357,14 +353,9 @@ void main() {
         'properties': {'osm_key': 'amenity', 'name': tricky},
       })).search('rue test');
       expect(r, hasLength(1));
-      // Le POI est bien detecte (osm_key=amenity) mais son nom est abime.
       expect(r.first.isPoi, isTrue);
-      expect(r.first.poiName, isNot(equals(tricky)),
-          reason: 'mojibake attendu tant que le decode UTF-8 n\'est pas '
-              'force cote service');
-      // Forme exacte de la corruption Latin-1 (le "é" UTF-8 = 2 bytes
-      // C3 A9 -> deux chars Latin-1).
-      expect(r.first.poiName, contains('Caf\u{00C3}\u{00A9}'));
+      expect(r.first.poiName, equals(tricky),
+          reason: 'accents + emoji UTF-8 préservés après le fix');
     });
 
     test('Photon: name 100% ASCII (injection HTML) -> preserve intact '

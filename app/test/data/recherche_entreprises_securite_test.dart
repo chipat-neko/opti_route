@@ -307,12 +307,12 @@ void main() {
   });
 
   group('Encodage UTF-8 / mojibake (bug commun aux 3 geocodeurs)', () {
-    test('nom_complet avec accent -> MOJIBAKE via response.body Latin-1 '
-        '(bug documente)', () async {
-      // jsonDecode(response.body) decode en Latin-1 par defaut faute de
-      // charset=utf-8 dans le Content-Type. Le fix serait
-      // utf8.decode(response.bodyBytes). On envoie de l'UTF-8 (reseau
-      // reel) et on verifie que le nom ressort corrompu.
+    test('nom_complet avec accent -> UTF-8 PRESERVE (fix nuit 2026-06-01)',
+        () async {
+      // Le service décode désormais utf8.decode(response.bodyBytes) au lieu
+      // de response.body (Latin-1 par défaut faute de charset). On envoie de
+      // l'UTF-8 (réseau réel via http.Response.bytes) et on vérifie que les
+      // accents ressortent INTACTS (plus de mojibake « SociÃ©tÃ© »).
       const nom = 'Soci\u{00E9}t\u{00E9} G\u{00E9}n\u{00E9}rale';
       final body = oneResult({
         'nom_complet': nom,
@@ -327,8 +327,8 @@ void main() {
       });
       final r = await svc(body).search('societe');
       expect(r, hasLength(1));
-      expect(r.first.poiName, isNot(equals(nom)),
-          reason: 'mojibake attendu tant que le service decode en Latin-1');
+      expect(r.first.poiName, equals(nom),
+          reason: 'les accents UTF-8 doivent être préservés après le fix');
     });
 
     test('nom 100% ASCII -> intact (non affecte par le bug d\'encodage)',
