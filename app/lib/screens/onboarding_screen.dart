@@ -54,8 +54,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// pour eviter les magic numbers dispersés (la moitie des bugs UI
   /// d'onboarding viennent d'un endroit qui passe a 6 pages et un
   /// autre qui reste a 5).
-  static const int _lastPageIndex = 5;
-  static const int _totalPages = 6;
+  static const int _lastPageIndex = 6;
+  static const int _totalPages = 7;
 
   /// True pendant la persistance finale (le user a tape "Commencer").
   /// Bloque les boutons pour eviter un double-tap qui declencherait
@@ -86,6 +86,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const PageConcept(),
                   const PageScan(),
                   const PageChefEquipe(),
+                  const PageEntreprise(),
                   const PageNouveautes(),
                   PageOrsKey(controller: _orsKeyCtrl),
                 ],

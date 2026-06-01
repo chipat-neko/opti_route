@@ -493,6 +493,150 @@ class PageChefEquipe extends StatelessWidget {
 /// - PIN / biometrie pour proteger les donnees clients
 /// - 4 palettes de couleurs (Apparence)
 /// ────────────────────────────────────────────────────────────────
+class PageEntreprise extends StatelessWidget {
+  const PageEntreprise({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x22,
+        vertical: AppSpacing.x28,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.emerald,
+              borderRadius: BorderRadius.circular(AppRadius.r22),
+            ),
+            child: const Icon(
+              Icons.business_outlined,
+              size: 38,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x22),
+          Text(
+            'Travailler à plusieurs',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          Text(
+            'Tu diriges une entreprise de livraison ? Crée ton entreprise, '
+            'tes entrepôts, et invite tes chauffeurs pour partager le carnet '
+            'd\'adresses en équipe.',
+            style: TextStyle(
+              fontSize: 14,
+              color: p.textMute,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x18),
+          ..._features.map(
+            (f) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: AppColors.emeraldSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(f.$1, size: 16, color: AppColors.emerald),
+                  ),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          f.$2,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: p.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          f.$3,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: p.textMute,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Text(
+            'Un employé ? Choisis « Je rejoins une équipe » et saisis le code '
+            'donné par ton chef. Tout se configure dans Paramètres → Mon '
+            'entreprise.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: p.textMute,
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const _features = <(IconData, String, String)>[
+    (
+      Icons.warehouse_outlined,
+      'Entreprise + entrepôts',
+      'Crée ton entreprise et autant d\'entrepôts que tu veux (Chartres, '
+          'Le Mans...).',
+    ),
+    (
+      Icons.person_add_alt_1_outlined,
+      'Invite tes employés',
+      'Par code à 6 chiffres ou par mail. Ils rejoignent comme chef '
+          'd\'entrepôt ou chauffeur.',
+    ),
+    (
+      Icons.bookmark_added_outlined,
+      'Carnet partagé',
+      'Les adresses clients de l\'entreprise/entrepôt sont visibles par '
+          'toute l\'équipe.',
+    ),
+    (
+      Icons.lock_person_outlined,
+      'Notes privées',
+      'Chacun garde ses notes perso sur un client : invisibles aux autres.',
+    ),
+    (
+      Icons.badge_outlined,
+      'Gère ton équipe',
+      'Promeus un chauffeur chef d\'entrepôt, déplace-le, ou révoque un '
+          'accès — depuis « Mon entreprise ».',
+    ),
+  ];
+}
+
 class PageNouveautes extends StatelessWidget {
   const PageNouveautes({super.key});
 
