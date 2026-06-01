@@ -56,6 +56,16 @@ class ParametresRepository {
   // Mode eco batterie (carte #258) : reduit la frequence/precision GPS en
   // consultation passive. Default OFF.
   static const _kModeEco = 'mode_eco_batterie';
+  // Wizard migration carnet local -> cloud (epopee #361, carte #365).
+  // Passe a '1' quand l'utilisateur a termine (ou explicitement passe)
+  // le wizard de choix de partage de ses adresses locales. Sert a ne
+  // plus reafficher le banner persistant une fois le tri fait.
+  static const _kCarnetMigrationDone = 'carnet_migration_done';
+  // Profil choisi a l'ecran "Qui es-tu ?" (carte #373/#372) :
+  // 'solo' | 'chef_entreprise' | 'employe'. Null = ecran pas encore
+  // passe -> on l'affiche une fois (y compris pour les users existants,
+  // dont la cle est absente en base au 1er update embarquant #373).
+  static const _kProfilType = 'profil_type';
 
   /// Cle API OpenRouteService (optimisation de tournees).
   Future<String?> getOrsApiKey() => _readKey(_kOrsApiKey);
@@ -369,6 +379,36 @@ class ParametresRepository {
 
   Future<void> setModeEco(bool v) =>
       _write(_kModeEco, v ? '1' : '0');
+
+  /// Wizard migration carnet local -> cloud (carte #365). True une fois
+  /// que l'utilisateur a trie ses adresses locales (partage entreprise/
+  /// entrepot ou garde prive). Tant que false ET qu'il reste des adresses
+  /// privees ET qu'une entreprise existe, le banner persistant s'affiche
+  /// sur l'accueil. Default false.
+  Future<bool> getCarnetMigrationDone() async =>
+      (await _readKey(_kCarnetMigrationDone)) == '1';
+
+  Stream<bool> watchCarnetMigrationDone() =>
+      _watchKey(_kCarnetMigrationDone).map((v) => v == '1');
+
+  Future<void> setCarnetMigrationDone(bool v) =>
+      _write(_kCarnetMigrationDone, v ? '1' : '0');
+
+  /// Profil choisi a l'ecran "Qui es-tu ?" (carte #373). Null tant que
+  /// l'utilisateur n'a pas repondu -> l'ecran s'affiche. Valeurs :
+  /// 'solo' | 'chef_entreprise' | 'employe'.
+  Future<String?> getProfilType() => _readKey(_kProfilType);
+
+  Stream<String?> watchProfilType() => _watchKey(_kProfilType);
+
+  Future<void> setProfilType(String v) {
+    assert(v == 'solo' || v == 'chef_entreprise' || v == 'employe');
+    return _write(_kProfilType, v);
+  }
+
+  /// Reset (debug / "changer de profil" depuis Parametres) -> reaffiche
+  /// l'ecran "Qui es-tu ?" au prochain passage par HomeScreen.
+  Future<int> clearProfilType() => _delete(_kProfilType);
 
   /// Hash SHA-256 du PIN choisi par l'utilisateur (4 a 6 chiffres). Le
   /// PIN en clair n'est jamais stocke. Null si verrou desactiv ou PIN

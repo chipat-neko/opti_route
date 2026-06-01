@@ -7,7 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'cloud/cloud_carnet_sync.dart';
+import 'cloud/cloud_admin_sync.dart';
+import 'cloud/cloud_entreprise_sync.dart';
+import 'cloud/cloud_membres_entreprise_sync.dart';
 import 'cloud/cloud_membres_sync.dart';
+import 'cloud/cloud_notes_perso_sync.dart';
 import 'cloud/cloud_sync_helpers.dart';
 import 'cloud_error_humanizer.dart';
 import 'cloud_sync_types.dart';
@@ -19,6 +23,8 @@ import 'supabase_service.dart';
 // CloudPullResult, CloudPullStats, TourneeMembreInfo (cf split refactor
 // 2026-05-18). Le `_PhotoDownloadTask` reste private dans ce fichier.
 export 'cloud_sync_types.dart';
+// Re-export du modele membre pour les providers / UI (#366).
+export 'cloud/cloud_membres_entreprise_sync.dart' show EntrepriseMembreInfo;
 
 /// ════════════════════════════════════════════════════════════════
 /// Service de sync local → cloud (Phase 2 backend, sous-jalon 2.B).
@@ -65,7 +71,8 @@ class CloudSyncService {
     SupabaseClient? client,
   })  : _explicitClient = client,
         _carnet = CloudCarnetSync(_db),
-        _membres = CloudMembresSync(_db);
+        _membres = CloudMembresSync(_db),
+        _entreprise = CloudEntrepriseSync(_db);
 
   final AppDatabase _db;
   final SupabaseService _supabase;
@@ -79,6 +86,19 @@ class CloudSyncService {
   /// Sous-service des tournees partagees : invitations + adhesions
   /// (jalon 3.A/B). Carte #167 etape 3.
   final CloudMembresSync _membres;
+
+  /// Sous-service multi-tenant : creation/pull entreprises + entrepots
+  /// (carte #364). Delegue avec le client + userId resolus par les guards.
+  final CloudEntrepriseSync _entreprise;
+
+  /// Sous-service gestion employes : invitation (code/mail), liste,
+  /// revocation (carte #366). Stateless (pas de _db).
+  final CloudMembresEntrepriseSync _membresEnt =
+      const CloudMembresEntrepriseSync();
+
+  /// Sous-service notes perso employe sur un client partage (carte #367).
+  /// Stateless : RLS user_id = auth.uid() cote cloud.
+  final CloudNotesPersoSync _notesPerso = const CloudNotesPersoSync();
 
   static const _uuid = Uuid();
 
@@ -929,6 +949,147 @@ class CloudSyncService {
   // _pullSavedDestinations + helpers last-write-wins extraits dans
   // `cloud/cloud_carnet_sync.dart` + `cloud/cloud_sync_helpers.dart`
   // (carte #167 etapes 1-2).
+
+  // ── Multi-tenant entreprise / entrepot (carte #364) ──
+
+  /// Cree une entreprise cote cloud (+ admin auto via trigger SQL
+  /// `on_entreprise_created`) puis en miroir local. Retourne le cloud_id.
+  Future<String> createEntreprise(
+      {required String nom, String? siret, String? code}) {
+    return _entreprise.createEntreprise(_client(), _requireUserId(),
+        nom: nom, siret: siret, code: code);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // Super admin (#372) + garde-fou code maître (#374)
+  // ════════════════════════════════════════════════════════════════
+
+  CloudAdminSync get _admin => const CloudAdminSync();
+
+  /// Le compte connecté est-il super admin ? (révèle le panel admin).
+  Future<bool> isSuperAdmin() => _admin.isSuperAdmin(_client());
+
+  /// Code maître courant (réservé au super admin).
+  Future<String> getMasterCode() => _admin.getMasterCode(_client());
+
+  /// Régénère le code maître et retourne le nouveau (super admin).
+  Future<String> regenerateMasterCode() =>
+      _admin.regenerateMasterCode(_client());
+
+  /// Liste toutes les entreprises (vue globale super admin).
+  Future<List<AdminEntrepriseInfo>> adminListEntreprises() =>
+      _admin.listAllEntreprises(_client());
+
+  /// Cree un entrepot rattache a [entrepriseId] (admin ou chef_entrepot)
+  /// cote cloud puis en miroir local. Retourne le cloud_id.
+  Future<String> createEntrepot({
+    required String entrepriseId,
+    required String nom,
+    String? adresse,
+    double? lat,
+    double? lng,
+  }) {
+    _requireUserId();
+    return _entreprise.createEntrepot(_client(),
+        entrepriseId: entrepriseId,
+        nom: nom,
+        adresse: adresse,
+        lat: lat,
+        lng: lng);
+  }
+
+  /// Pull les entreprises + entrepots visibles (RLS) en miroir local.
+  /// Sert au cross-device et a l'employe invite (#367).
+  Future<void> pullMesEntreprises() async {
+    final client = _client();
+    _requireUserId();
+    await _entreprise.pullMine(client);
+  }
+
+  // ── Gestion employes (carte #366) ──
+
+  /// Invite un employe par MAIL (Edge Function invite_employee).
+  Future<void> inviteEmployeByMail({
+    required String entrepriseId,
+    String? entrepotId,
+    required String email,
+    required String roleTarget,
+  }) {
+    _requireUserId();
+    return _membresEnt.inviteByMail(_client(),
+        entrepriseId: entrepriseId,
+        entrepotId: entrepotId,
+        email: email,
+        roleTarget: roleTarget);
+  }
+
+  /// Invite un employe par CODE a 6 chiffres. Retourne le code.
+  Future<String> inviteEmployeByCode({
+    required String entrepriseId,
+    String? entrepotId,
+    required String roleTarget,
+    int validityHours = 72,
+  }) {
+    return _membresEnt.inviteByCode(_client(), _requireUserId(),
+        entrepriseId: entrepriseId,
+        entrepotId: entrepotId,
+        roleTarget: roleTarget,
+        validityHours: validityHours);
+  }
+
+  /// Liste les membres d'une entreprise (RPC SECURITY DEFINER).
+  Future<List<EntrepriseMembreInfo>> listEntrepriseMembers(
+      String entrepriseId) {
+    _requireUserId();
+    return _membresEnt.listMembers(_client(), entrepriseId);
+  }
+
+  /// Revoque un membre (statut revoque + J+30 cron).
+  Future<void> revokeEntrepriseMember({
+    required String entrepriseId,
+    required String userId,
+    String? entrepotId,
+  }) {
+    _requireUserId();
+    return _membresEnt.revokeMember(_client(),
+        entrepriseId: entrepriseId, userId: userId, entrepotId: entrepotId);
+  }
+
+  /// Reactive un membre revoque avant la fin du J+30.
+  Future<void> reactivateEntrepriseMember({
+    required String entrepriseId,
+    required String userId,
+    String? entrepotId,
+  }) {
+    _requireUserId();
+    return _membresEnt.reactivateMember(_client(),
+        entrepriseId: entrepriseId, userId: userId, entrepotId: entrepotId);
+  }
+
+  /// Cote employe : accepte une invitation par code (#373).
+  Future<String> acceptEntrepriseInvitationByCode(String code) {
+    final client = _client();
+    _requireUserId();
+    return _membresEnt.acceptByCode(client, code);
+  }
+
+  // ── Notes perso employe sur un client partage (carte #367) ──
+
+  /// Lit la note perso (privee) de l'utilisateur courant sur la fiche
+  /// carnet [savedDestinationCloudId]. Null si aucune note.
+  Future<String?> getNotePerso(String savedDestinationCloudId) {
+    _requireUserId();
+    return _notesPerso.getNote(_client(), savedDestinationCloudId);
+  }
+
+  /// Upsert la note perso (suppression si [notes] vide).
+  Future<void> saveNotePerso({
+    required String savedDestinationCloudId,
+    required String notes,
+  }) {
+    return _notesPerso.upsertNote(_client(), _requireUserId(),
+        savedDestinationCloudId: savedDestinationCloudId, notes: notes);
+  }
 
   // ─── Guards ─────────────────────────────────────────────────────
 

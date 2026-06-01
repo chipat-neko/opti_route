@@ -8,6 +8,7 @@ import '../widgets/app_drawer.dart';
 import '../widgets/aujourdhui_summary_card.dart';
 import '../widgets/drawer_badge_icon.dart';
 import 'onboarding_screen.dart';
+import 'profil_choice_screen.dart';
 import 'tournee_du_jour_screen.dart';
 import 'tournee_form_screen.dart';
 import 'unified_search_screen.dart';
@@ -23,6 +24,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final onboardingDone = ref.watch(onboardingDoneStreamProvider);
+    final profilType = ref.watch(profilTypeProvider);
     final current = ref.watch(currentTourneeProvider);
 
     // Tant qu'on n'a pas charge l'etat de l'onboarding, on patiente.
@@ -30,6 +32,14 @@ class HomeScreen extends ConsumerWidget {
     // Si le flag n'est pas pose -> walkthrough.
     if (onboardingDone.value != true) {
       return const OnboardingScreen();
+    }
+    // Carte #373 : apres le walkthrough, ecran « Qui es-tu ? » une fois
+    // tant que le profil n'est pas choisi. profil_type null = jamais
+    // repondu (couvre aussi les users existants : cle absente en base au
+    // 1er update embarquant cet ecran).
+    if (profilType.isLoading) return const _LoadingScaffold();
+    if (profilType.value == null) {
+      return const ProfilChoiceScreen();
     }
 
     return current.when(

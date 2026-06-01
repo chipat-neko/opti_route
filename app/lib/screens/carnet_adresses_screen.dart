@@ -15,6 +15,7 @@ import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/voice_input_button.dart';
+import 'carnet_adresses/carnet_migration_banner.dart';
 import 'carnet_adresses/carnet_tile.dart';
 import 'carnet_adresses/filter_chips.dart';
 import 'carnet_adresses/providers.dart';
@@ -364,6 +365,9 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
           // Banniere doublons (carte #103) : visible seulement si des
           // paires sont detectees. Tap -> ecran de revue / fusion.
           const _DoublonsBanner(),
+          // Banner migration carnet -> cloud (carte #365). S'auto-masque
+          // si pas d'entreprise / plus d'adresses privees / deja fait.
+          const CarnetMigrationBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.x18,

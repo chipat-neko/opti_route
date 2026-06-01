@@ -67,6 +67,16 @@ final cloudAutoPullServiceProvider = Provider<CloudAutoPullService>((ref) {
   return CloudAutoPullService(ref.watch(cloudSyncServiceProvider));
 });
 
+/// Membres d'une entreprise via RPC cloud (carte #366). autoDispose +
+/// family keyée par entrepriseId : rechargé à chaque ouverture de la
+/// section. Invalider après une invitation/révocation pour rafraîchir.
+final entrepriseMembresProvider = FutureProvider.autoDispose
+    .family<List<EntrepriseMembreInfo>, String>((ref, entrepriseId) async {
+  return ref
+      .watch(cloudSyncServiceProvider)
+      .listEntrepriseMembers(entrepriseId);
+});
+
 /// Etat de l'auto-pull pour affichage UI :
 /// - `AsyncData(null)` : idle (aucun pull en cours, pas encore fait)
 /// - `AsyncLoading()` : pull en cours

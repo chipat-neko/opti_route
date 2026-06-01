@@ -33,6 +33,13 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
   AddressSuggestion? _address;
   bool _saving = false;
 
+  /// Notes perso employe (carte #367) : visible seulement sur un client
+  /// PARTAGE (entreprise/entrepot) deja synchronise (cloudId non null).
+  /// Privees a l'utilisateur courant (RLS stricte cote cloud).
+  late final TextEditingController _notesPersoCtrl;
+  late final bool _isSharedClient;
+  String _notePersoInitial = '';
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +59,31 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
       postcode: e.codePostal,
       city: e.ville,
     );
+    // Notes perso (#367) : uniquement pour un client partage deja sync.
+    _notesPersoCtrl = TextEditingController();
+    _isSharedClient =
+        (e.entrepriseId != null || e.entrepotId != null) && e.cloudId != null;
+    if (_isSharedClient) {
+      _loadNotePerso();
+    }
+  }
+
+  /// Charge la note perso cloud de l'utilisateur courant (best-effort).
+  /// Section affichee meme hors-ligne, mais vide si le fetch echoue.
+  Future<void> _loadNotePerso() async {
+    if (ref.read(cloudUserProvider).asData?.value == null) return;
+    try {
+      final note = await ref
+          .read(cloudSyncServiceProvider)
+          .getNotePerso(widget.entry.cloudId!);
+      if (!mounted || note == null) return;
+      setState(() {
+        _notesPersoCtrl.text = note;
+        _notePersoInitial = note;
+      });
+    } on Object {
+      // Best-effort : pas connecte / reseau -> champ vide.
+    }
   }
 
   @override
@@ -62,6 +94,7 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
     _etageCtrl.dispose();
     _telephoneCtrl.dispose();
     _tagsCtrl.dispose();
+    _notesPersoCtrl.dispose();
     super.dispose();
   }
 
@@ -159,6 +192,25 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
             ),
             maxLines: 3,
           ),
+          // Notes perso (#367) : section privee, visible seulement sur un
+          // client partage avec l'entreprise/entrepot. Invisible aux
+          // autres employes (RLS stricte cote cloud).
+          if (_isSharedClient) ...[
+            const SizedBox(height: AppSpacing.x18),
+            TextField(
+              controller: _notesPersoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Mes notes (privees)',
+                hintText: 'Visible seulement par toi',
+                helperText:
+                    'Notes personnelles sur ce client partage. Les autres '
+                    'employes de l\'entreprise ne les voient pas.',
+                helperMaxLines: 3,
+                prefixIcon: Icon(Icons.lock_person_outlined),
+              ),
+              maxLines: 3,
+            ),
+          ],
           const SizedBox(height: AppSpacing.x18),
           // Picker de couleur pour reperer visuellement le client
           // dans la liste du carnet.
@@ -267,6 +319,18 @@ class _CarnetEditScreenState extends ConsumerState<CarnetEditScreen> {
             .pushSavedDestination(widget.entry.id);
       } on Object {
         // No-op : pas connecte au cloud OU rejet RLS.
+      }
+
+      // Notes perso (#367) : on ne sauve QUE si la valeur a change (evite
+      // un appel cloud inutile + un blocage hors-ligne quand l'employe n'a
+      // pas touche au champ). Surface l'erreur (dans le try principal) car
+      // cette feature est cloud-only : un echec doit etre visible.
+      if (_isSharedClient &&
+          _notesPersoCtrl.text.trim() != _notePersoInitial.trim()) {
+        await ref.read(cloudSyncServiceProvider).saveNotePerso(
+              savedDestinationCloudId: widget.entry.cloudId!,
+              notes: _notesPersoCtrl.text,
+            );
       }
 
       if (!mounted) return;

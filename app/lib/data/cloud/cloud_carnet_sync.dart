@@ -100,6 +100,11 @@ class CloudCarnetSync {
       // photo_path : volontairement non push (chemin local du device).
       'code_acces': s.codeAcces,
       'etage_batiment': s.etageBatiment,
+      // Portee carnet partage (carte #365) : null/null = adresse perso ;
+      // entreprise_id seul = mutualise entreprise ; +entrepot_id = carnet
+      // entrepot. La RLS cote cloud filtre la visibilite au pull.
+      'entreprise_id': s.entrepriseId,
+      'entrepot_id': s.entrepotId,
       'updated_at': s.updatedAt.toUtc().toIso8601String(),
     };
     if (isFirstPush) {
@@ -153,6 +158,9 @@ class CloudCarnetSync {
         photoPath: Value(row['photo_path'] as String?),
         codeAcces: Value(row['code_acces'] as String?),
         etageBatiment: Value(row['etage_batiment'] as String?),
+        // Portee carnet partage (carte #365). Cloud = source de verite.
+        entrepriseId: Value(row['entreprise_id'] as String?),
+        entrepotId: Value(row['entrepot_id'] as String?),
         cloudId: Value(cloudId),
         updatedAt: Value(cloudUpdatedAt),
       );

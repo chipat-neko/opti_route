@@ -199,6 +199,23 @@ returns boolean language sql security definer stable as $$
   )
 $$;
 
+-- True si user est chef_entrepot d'AU MOINS UN entrepot de l'entreprise
+-- donnée. SECURITY DEFINER + search_path : indispensable car appelée
+-- depuis la policy `ins_entrepots` — un sous-SELECT sur `entrepots` dans
+-- une policy de `entrepots` provoquerait une recursion RLS (42P17).
+create or replace function public.is_chef_of_entreprise(p_entreprise_id uuid)
+returns boolean language sql security definer stable
+set search_path = public as $$
+  select exists (
+    select 1 from public.entrepot_users eu
+    join public.entrepots e on e.cloud_id = eu.entrepot_id
+    where eu.user_id = auth.uid()
+      and eu.role = 'chef_entrepot'
+      and eu.statut = 'actif'
+      and e.entreprise_id = p_entreprise_id
+  )
+$$;
+
 -- ─────────────────────────────────────────────────────────────────
 -- 6. RLS (Row Level Security) — strict multi-tenant
 -- ─────────────────────────────────────────────────────────────────
@@ -239,13 +256,12 @@ create policy ins_entrepots on public.entrepots
   for insert with check (
     public.is_admin_entreprise(entreprise_id)
     -- ou chef entrepot peut créer un nouvel entrepot dans son entreprise (Q4).
-    -- Note : on join entrepots pour récupérer entreprise_id (entrepot_users
-    -- n'a que entrepot_id, donc l'alias est `e.entreprise_id` pas `eu.entreprise_id`).
-    or entreprise_id in (
-      select e.entreprise_id from public.entrepot_users eu
-      join public.entrepots e on e.cloud_id = eu.entrepot_id
-      where eu.user_id = auth.uid() and eu.role = 'chef_entrepot' and eu.statut = 'actif'
-    )
+    -- ⚠️ On passe par une fonction SECURITY DEFINER : un sous-SELECT direct
+    -- sur `entrepots` DANS une policy de `entrepots` declenche une recursion
+    -- RLS (Postgres 42P17 "infinite recursion detected in policy"). La
+    -- fonction (definer + search_path) bypasse la RLS et casse la boucle.
+    -- Cf bug terrain 2026-05-31 (creation entrepot KO).
+    or public.is_chef_of_entreprise(entreprise_id)
   );
 drop policy if exists upd_entrepots on public.entrepots;
 create policy upd_entrepots on public.entrepots
@@ -372,10 +388,353 @@ create policy sd_select_extended_multi_tenant on public.saved_destinations
     (entrepot_id is not null and entrepot_id in (select public.current_user_entrepot_ids()))
   );
 
+-- ─────────────────────────────────────────────────────────────────
+-- 7. TRIGGER bootstrap : créateur entreprise → admin_entreprise
+-- ─────────────────────────────────────────────────────────────────
+-- Sans ce trigger, le créateur insère bien la ligne `entreprises`
+-- (policy ins_entreprises : created_by = auth.uid()) mais ne peut PAS
+-- s'auto-ajouter dans `entreprise_users` : la policy ins_eu exige
+-- is_admin_entreprise()... qu'il n'est pas encore (deadlock œuf/poule).
+-- SECURITY DEFINER : la fonction s'exécute avec les droits de son
+-- propriétaire (bypass RLS) et crée l'admin initial juste après l'INSERT.
+-- `set search_path = public` : durcissement standard des fonctions
+-- SECURITY DEFINER (évite le détournement via search_path).
+-- Idempotent (on conflict do nothing) : rejouable sans créer de doublon.
+create or replace function public.handle_new_entreprise()
+returns trigger language plpgsql security definer
+set search_path = public as $$
+begin
+  insert into public.entreprise_users (entreprise_id, user_id, role, statut)
+  values (new.cloud_id, new.created_by, 'admin_entreprise', 'actif')
+  on conflict (entreprise_id, user_id) do nothing;
+  return new;
+end $$;
+
+drop trigger if exists on_entreprise_created on public.entreprises;
+create trigger on_entreprise_created
+  after insert on public.entreprises
+  for each row execute function public.handle_new_entreprise();
+
+-- ─────────────────────────────────────────────────────────────────
+-- 8. GESTION EMPLOYÉS (carte #366) : code d'invitation + RPC
+-- ─────────────────────────────────────────────────────────────────
+
+-- Invitation par CODE (alternative au mail magic link, décision #372 :
+-- code OU mail au choix du chef). NULL = invitation par mail ;
+-- non-null = code à 6 chiffres que l'employé saisit au 1er démarrage.
+alter table public.entreprise_invitations
+  add column if not exists code text;
+
+-- Une invitation par code n'a pas d'email -> rendre email nullable.
+-- Le check `email like '%_@_%'` reste vrai pour NULL (un check ne
+-- bloque que s'il vaut FALSE, pas NULL).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='entreprise_invitations'
+      and column_name='email' and is_nullable='NO'
+  ) then
+    alter table public.entreprise_invitations alter column email drop not null;
+  end if;
+end $$;
+
+create index if not exists idx_invitations_code
+  on public.entreprise_invitations(code)
+  where statut = 'pending' and code is not null;
+
+-- Liste des membres d'une entreprise AVEC leur email (auth.users n'est
+-- pas lisible en RLS -> SECURITY DEFINER). Garde : le caller doit être
+-- membre actif de l'entreprise. Union membres entreprise + membres des
+-- entrepôts de cette entreprise.
+create or replace function public.list_entreprise_members(p_entreprise_id uuid)
+returns table (
+  user_id uuid,
+  email text,
+  role text,
+  statut text,
+  revoked_at timestamptz,
+  entrepot_id uuid,
+  entrepot_nom text
+) language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (
+    select 1 from public.entreprise_users eu0
+    where eu0.entreprise_id = p_entreprise_id
+      and eu0.user_id = auth.uid()
+      and eu0.statut = 'actif'
+  ) then
+    raise exception 'NOT_A_MEMBER';
+  end if;
+
+  return query
+  select eu.user_id, u.email::text, eu.role, eu.statut, eu.revoked_at,
+         null::uuid as entrepot_id, null::text as entrepot_nom
+  from public.entreprise_users eu
+  join auth.users u on u.id = eu.user_id
+  where eu.entreprise_id = p_entreprise_id
+  union all
+  select epu.user_id, u.email::text, epu.role, epu.statut, epu.revoked_at,
+         e.cloud_id as entrepot_id, e.nom as entrepot_nom
+  from public.entrepot_users epu
+  join public.entrepots e on e.cloud_id = epu.entrepot_id
+  join auth.users u on u.id = epu.user_id
+  where e.entreprise_id = p_entreprise_id;
+end $$;
+
+-- Accepte une invitation par CODE (consommée par l'écran « Qui es-tu ? »
+-- #373). SECURITY DEFINER pour créer l'adhésion malgré la RLS. Retourne
+-- l'entreprise_id rejointe. Codes d'erreur compatibles invitationErrorToFr.
+create or replace function public.accept_entreprise_invitation(p_code text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_inv public.entreprise_invitations%rowtype;
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  select * into v_inv from public.entreprise_invitations
+  where code = p_code and statut = 'pending'
+  limit 1;
+  if not found then
+    raise exception 'CODE_INTROUVABLE';
+  end if;
+  if v_inv.expires_at < now() then
+    raise exception 'CODE_EXPIRE';
+  end if;
+
+  insert into public.entreprise_users (entreprise_id, user_id, role, statut)
+  values (
+    v_inv.entreprise_id, v_uid,
+    case when v_inv.role_target = 'admin_entreprise'
+         then 'admin_entreprise' else 'membre' end,
+    'actif'
+  )
+  on conflict (entreprise_id, user_id)
+    do update set statut = 'actif', revoked_at = null;
+
+  if v_inv.entrepot_id is not null then
+    insert into public.entrepot_users (entrepot_id, user_id, role, statut)
+    values (
+      v_inv.entrepot_id, v_uid,
+      case when v_inv.role_target = 'chef_entrepot'
+           then 'chef_entrepot' else 'employe' end,
+      'actif'
+    )
+    on conflict (entrepot_id, user_id)
+      do update set statut = 'actif', revoked_at = null;
+  end if;
+
+  update public.entreprise_invitations
+    set statut = 'accepted' where cloud_id = v_inv.cloud_id;
+
+  return v_inv.entreprise_id;
+end $$;
+
+-- ─────────────────────────────────────────────────────────────────
+-- 9. RPC création entrepôt (carte #364 / fix RLS récursion 42P17)
+-- ─────────────────────────────────────────────────────────────────
+-- L'INSERT direct sur `entrepots` via PostgREST evalue les policies RLS
+-- (ins + sel pour le RETURNING). Celles-ci appellent is_admin_entreprise
+-- / current_user_entreprise_ids qui lisent entreprise_users, dont les
+-- propres policies relisent entreprise_users -> Postgres detecte une
+-- recursion (42P17) et bloque, MEME pour un admin.
+--
+-- Solution definitive : creer l'entrepot via une fonction SECURITY
+-- DEFINER. Elle s'execute hors RLS (aucune policy evaluee pendant
+-- l'insert) -> recursion impossible. Les droits sont verifies
+-- explicitement en debut de fonction (admin entreprise OU chef d'un
+-- entrepot de cette entreprise, cf decision Q4). Meme pattern que
+-- handle_new_entreprise / accept_entreprise_invitation qui fonctionnent.
+--
+-- Retourne le cloud_id genere. L'app passe son propre UUID (p_cloud_id)
+-- pour garder 1 seul ID partout (miroir local Drift), cf CloudEntrepriseSync.
+create or replace function public.create_entrepot(
+  p_cloud_id uuid,
+  p_entreprise_id uuid,
+  p_nom text,
+  p_adresse text default null,
+  p_lat double precision default null,
+  p_lng double precision default null
+)
+returns uuid language plpgsql security definer
+set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  -- Droits : admin de l'entreprise OU chef d'un entrepot de l'entreprise.
+  if not (
+    public.is_admin_entreprise(p_entreprise_id)
+    or public.is_chef_of_entreprise(p_entreprise_id)
+  ) then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  insert into public.entrepots (cloud_id, entreprise_id, nom, adresse, lat, lng)
+  values (p_cloud_id, p_entreprise_id, p_nom, p_adresse, p_lat, p_lng);
+
+  return p_cloud_id;
+end $$;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- SECTION 10 — Garde-fou création entreprise (#374) + super admin (#372)
+-- ═══════════════════════════════════════════════════════════════════
+--
+-- Probleme : depuis #364, n'importe quel compte connecte peut creer une
+-- entreprise (policy ins_entreprises ouverte) -> pollution base + quota
+-- Supabase gratuit grignote.
+--
+-- Solution (decisions Noah 2026-06-01) :
+--  - Creation entreprise = il faut un CODE MAITRE, verifie cote serveur
+--    (jamais expose a l'app). Le super admin (Noah) en est dispense.
+--  - Super admin = appartenance a la table app_admins (infalsifiable :
+--    decompiler l'APK ne revele aucun secret, tout est verifie serveur).
+--
+-- ⚠️ A FAIRE UNE FOIS PAR NOAH apres deploiement : s'ajouter super admin.
+--    Recupere ton UID dans Supabase > Authentication > Users (colonne UID)
+--    puis execute (en collant ton UID a la place du texte, garde les ' ') :
+--      insert into public.app_admins (user_id)
+--        values ('colle-ici-ton-uid') on conflict do nothing;
+
+-- ─── Table de configuration applicative (cle/valeur) ────────────────
+-- Stocke le code maitre sous la cle 'entreprise_master_code'. RLS active
+-- SANS aucune policy -> aucun acces direct client : lecture/ecriture
+-- uniquement via les RPC SECURITY DEFINER ci-dessous.
+create table if not exists public.app_config (
+  key        text primary key,
+  value      text not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.app_config enable row level security;
+
+-- ─── Table des super admins ─────────────────────────────────────────
+-- Un user_id present ici = super admin. RLS active sans policy : on ne
+-- lit/ecrit QUE via RPC SECURITY DEFINER (ou SQL manuel par Noah).
+create table if not exists public.app_admins (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.app_admins enable row level security;
+
+-- ─── is_super_admin() : le compte courant est-il super admin ? ───────
+create or replace function public.is_super_admin()
+returns boolean language sql security definer set search_path = public as $$
+  select exists (select 1 from public.app_admins where user_id = auth.uid());
+$$;
+grant execute on function public.is_super_admin() to authenticated;
+
+-- ─── _get_or_init_master_code() : interne, genere le code au 1er acces
+-- Code maitre = 6 chiffres. S'il n'existe pas encore, on en cree un
+-- aleatoire. Interne (pas de grant authenticated : appelable seulement
+-- depuis les autres fonctions definer).
+create or replace function public._get_or_init_master_code()
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_code text;
+begin
+  select value into v_code from public.app_config
+    where key = 'entreprise_master_code';
+  if v_code is null then
+    v_code := lpad((floor(random() * 1000000))::int::text, 6, '0');
+    insert into public.app_config (key, value)
+      values ('entreprise_master_code', v_code);
+  end if;
+  return v_code;
+end;
+$$;
+
+-- ─── create_entreprise() : creation bridee par code maitre (#374) ────
+-- Remplace l'INSERT direct (policy ins_entreprises fermee ci-dessous).
+-- Super admin dispense du code. Le trigger on_entreprise_created (section
+-- 7) inscrit ensuite le createur comme admin_entreprise.
+create or replace function public.create_entreprise(
+  p_cloud_id uuid,
+  p_nom text,
+  p_siret text default null,
+  p_code text default null
+) returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  -- Super admin dispense du code ; sinon le code fourni doit matcher.
+  if not public.is_super_admin() then
+    if p_code is null or p_code <> public._get_or_init_master_code() then
+      raise exception 'INVALID_MASTER_CODE';
+    end if;
+  end if;
+  insert into public.entreprises (cloud_id, nom, siret, created_by)
+  values (p_cloud_id, p_nom, p_siret, v_uid);
+  return p_cloud_id;
+end;
+$$;
+grant execute on function public.create_entreprise(uuid, text, text, text) to authenticated;
+
+-- Fermer l'INSERT direct sur entreprises : tout passe desormais par la
+-- RPC create_entreprise (qui bypasse RLS via SECURITY DEFINER).
+drop policy if exists ins_entreprises on public.entreprises;
+create policy ins_entreprises on public.entreprises
+  for insert with check (false);
+
+-- ─── RPC panel admin (toutes reservees au super admin) ──────────────
+-- admin_get_master_code : lit (et init si besoin) le code maitre.
+create or replace function public.admin_get_master_code()
+returns text language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_super_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+  return public._get_or_init_master_code();
+end;
+$$;
+grant execute on function public.admin_get_master_code() to authenticated;
+
+-- admin_regenerate_master_code : remplace le code par un nouveau aleatoire.
+create or replace function public.admin_regenerate_master_code()
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_code text;
+begin
+  if not public.is_super_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+  v_code := lpad((floor(random() * 1000000))::int::text, 6, '0');
+  insert into public.app_config (key, value, updated_at)
+    values ('entreprise_master_code', v_code, now())
+    on conflict (key) do update set value = excluded.value, updated_at = now();
+  return v_code;
+end;
+$$;
+grant execute on function public.admin_regenerate_master_code() to authenticated;
+
+-- admin_list_entreprises : liste toutes les entreprises (vue super admin).
+create or replace function public.admin_list_entreprises()
+returns table (
+  cloud_id uuid, nom text, siret text, created_by uuid, cree_le timestamptz
+) language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_super_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+  return query
+    select e.cloud_id, e.nom, e.siret, e.created_by, e.cree_le
+    from public.entreprises e
+    order by e.cree_le desc;
+end;
+$$;
+grant execute on function public.admin_list_entreprises() to authenticated;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :
 --   1. Insert entreprise via app (auth user A)
 --   2. Vérifier que user B (auth différent) ne voit pas l'entreprise A
 --   3. Inviter user B → user B doit voir l'entreprise après acceptation
+--   4. Créer un entrepôt via l'app (RPC create_entrepot, plus de 42P17)
 -- ═════════════════════════════════════════════════════════════════

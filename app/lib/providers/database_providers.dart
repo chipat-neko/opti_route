@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/coequipiers_repository.dart';
 import '../data/database.dart';
+import '../data/entreprise_repository.dart';
 import '../data/frais_repository.dart';
 import '../data/ambient_light_service.dart';
 import '../data/fuel_price_service.dart';
@@ -136,6 +137,44 @@ final localReorderServiceProvider = Provider<LocalReorderService>((ref) {
 final savedDestinationsRepositoryProvider =
     Provider<SavedDestinationsRepository>((ref) {
   return SavedDestinationsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Repository multi-tenant (entreprises / entrepôts / memberships).
+/// Carte #364 (épopée #361). Source de vérité = Supabase ; ce repo
+/// lit/écrit le miroir local Drift.
+final entrepriseRepositoryProvider = Provider<EntrepriseRepository>((ref) {
+  return EntrepriseRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Entreprises connues localement (miroir RLS-filtré du pull cloud) =
+/// en pratique les entreprises du user courant. Carte #364.
+final mesEntreprisesProvider = StreamProvider<List<Entreprise>>((ref) {
+  return ref.watch(entrepriseRepositoryProvider).watchAllEntreprises();
+});
+
+/// Entrepôts d'une entreprise donnée (stream local réactif). Carte #364.
+final entrepotsParEntrepriseProvider =
+    StreamProvider.family<List<Entrepot>, String>((ref, entrepriseId) {
+  return ref
+      .watch(entrepriseRepositoryProvider)
+      .watchEntrepotsForEntreprise(entrepriseId);
+});
+
+/// Flag "wizard migration carnet terminé" (carte #365). Sert au banner
+/// persistant : tant que false, on propose de partager les adresses.
+final carnetMigrationDoneProvider = StreamProvider<bool>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchCarnetMigrationDone();
+});
+
+/// Nombre d'adresses du carnet encore privées (sans entreprise). Carte
+/// #365. Alimente le badge du banner « Tu as N adresses locales ».
+final carnetPriveesCountProvider = StreamProvider<int>((ref) {
+  return ref.watch(savedDestinationsRepositoryProvider).watchCountPrivees();
+});
+
+/// Adresses privées du carnet (liste pour le wizard de migration #365).
+final carnetPriveesProvider = StreamProvider<List<SavedDestination>>((ref) {
+  return ref.watch(savedDestinationsRepositoryProvider).watchPrivees();
 });
 
 /// Lookup async du telephone client par nom (case-insensitive).
@@ -431,6 +470,13 @@ final clientStatsProvider = FutureProvider.family<ClientStats, int>(
 /// decider d'afficher le walkthrough ou le contenu normal.
 final onboardingDoneStreamProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchOnboardingDone();
+});
+
+/// Profil choisi a l'ecran "Qui es-tu ?" (carte #373). Null = pas encore
+/// choisi -> HomeScreen affiche ProfilChoiceScreen une fois (apres le
+/// walkthrough onboarding, avant le contenu normal).
+final profilTypeProvider = StreamProvider<String?>((ref) {
+  return ref.watch(parametresRepositoryProvider).watchProfilType();
 });
 
 /// Mode de theme (system / light / dark) choisi dans Parametres.
