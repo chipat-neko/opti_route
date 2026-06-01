@@ -71,7 +71,10 @@ class RouteService {
           )
           .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return null;
-      final raw = jsonDecode(response.body);
+      // UTF-8 explicite (cf geocodeurs) : les instructions turn-by-turn
+      // ORS contiennent des noms de rues accentues ("Tournez sur Avenue
+      // de l'Eglise") -> mojibake si le header charset manque.
+      final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
       if (raw is! Map<String, dynamic>) return null;
       final features = raw['features'];
       if (features is! List || features.isEmpty) return null;
@@ -87,8 +90,11 @@ class RouteService {
       final polyline = <LatLng>[];
       for (final c in coords) {
         if (c is! List || c.length < 2) continue;
-        final lng = (c[0] as num?)?.toDouble();
-        final lat = (c[1] as num?)?.toDouble();
+        // `as num?` CRASHE sur une String ("1.0") -> le commentaire
+        // ci-dessus promettait de "skip" ces cas, on le rend vrai via une
+        // conversion tolerante (num OU String parsable). Cf audit nuit.
+        final lng = _numToDouble(c[0]);
+        final lat = _numToDouble(c[1]);
         if (lng == null || lat == null) continue;
         polyline.add(LatLng(lat, lng));
       }
@@ -111,19 +117,20 @@ class RouteService {
             if (s is! Map) continue;
             final wp = s['way_points'];
             if (wp is! List || wp.length < 2) continue;
-            final endIdxRaw = (wp[1] as num?)?.toInt();
-            if (endIdxRaw == null) continue;
-            final endIdx = endIdxRaw;
+            final endIdx = _numToDouble(wp[1])?.toInt();
+            if (endIdx == null) continue;
             // Coord du POINT DE FIN du step = c'est la le pivot ou
             // l'utilisateur doit manoeuvrer. ORS exprime un step comme
             // "de point A a point B", l'instruction concerne ce qui
             // se passe a la fin (le tournant).
             if (endIdx < 0 || endIdx >= polyline.length) continue;
             steps.add(RouteStep(
-              instruction: (s['instruction'] as String?) ?? '',
-              distance: (s['distance'] as num?)?.toDouble() ?? 0,
-              duration: (s['duration'] as num?)?.toDouble() ?? 0,
-              type: (s['type'] as num?)?.toInt() ?? 0,
+              instruction: s['instruction'] is String
+                  ? s['instruction'] as String
+                  : '',
+              distance: _numToDouble(s['distance']) ?? 0,
+              duration: _numToDouble(s['duration']) ?? 0,
+              type: _numToDouble(s['type'])?.toInt() ?? 0,
               pivot: polyline[endIdx],
             ));
           }
@@ -134,6 +141,16 @@ class RouteService {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Conversion tolerante num/String -> double (sinon null). Evite qu'une
+  /// coord ou un champ de step au type inattendu (String, null) fasse
+  /// throw un `as num` et perde TOUTE la route (le catch retournait null).
+  /// Cf audit robustesse nuit 2026-06-01.
+  static double? _numToDouble(Object? v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
   }
 }
 

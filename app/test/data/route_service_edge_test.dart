@@ -231,4 +231,95 @@ void main() {
       expect(r!.steps.first.instruction, '');
     });
   });
+
+  // Robustesse parsing externe (durcissement nuit 2026-06-01) : une coord
+  // au type inattendu ne doit PAS faire perdre toute la route, et les
+  // instructions accentuees doivent survivre (mojibake).
+  group('RouteService — robustesse', () {
+    test('coord avec String non parsable : skip sans perdre la route',
+        () async {
+      // Avant : ("abc" as num?) throw -> catch -> route entiere null.
+      // Apres : _numToDouble("abc")=null -> coord skip, les 3 autres restent.
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'coordinates': [
+                [1.0, 48.0],
+                ['abc', 48.05], // type casse : skip
+                [1.05, 48.05],
+                [1.1, 48.1],
+              ],
+            },
+            'properties': {'segments': []},
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final r = await RouteService(apiKey: 'k', client: mock)
+          .fetchRoute(from: from, to: to);
+      expect(r, isNotNull);
+      expect(r!.polyline, hasLength(3));
+    });
+
+    test('coord en String numerique ("1.0") : toleree (parsee)', () async {
+      final body = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'coordinates': [
+                ['1.0', '48.0'],
+                ['1.1', '48.1'],
+              ],
+            },
+            'properties': {'segments': []},
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final r = await RouteService(apiKey: 'k', client: mock)
+          .fetchRoute(from: from, to: to);
+      expect(r!.polyline, hasLength(2));
+      expect(r.polyline.first.latitude, 48.0);
+    });
+
+    test('UTF-8 : instruction accentuee preservee (pas de mojibake)',
+        () async {
+      final jsonStr = jsonEncode({
+        'features': [
+          {
+            'geometry': {
+              'coordinates': [
+                [1.0, 48.0],
+                [1.05, 48.05],
+                [1.1, 48.1],
+              ],
+            },
+            'properties': {
+              'segments': [
+                {
+                  'steps': [
+                    {
+                      'instruction': 'Tournez sur l\'Avenue de l\'Égliseé',
+                      'distance': 100,
+                      'duration': 30,
+                      'type': 1,
+                      'way_points': [0, 1],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      });
+      final mock = MockClient(
+        (req) async => http.Response.bytes(utf8.encode(jsonStr), 200),
+      );
+      final r = await RouteService(apiKey: 'k', client: mock)
+          .fetchRoute(from: from, to: to);
+      expect(r!.steps, hasLength(1));
+      expect(r.steps.first.instruction, 'Tournez sur l\'Avenue de l\'Égliseé');
+    });
+  });
 }
