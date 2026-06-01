@@ -3,6 +3,13 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
+import 'pii_mask.dart';
+
+// scrubSecrets vit désormais dans pii_mask.dart (fonction pure, réutilisée
+// aussi par les helpers de sync qui doivent rester sans dép Supabase). On
+// le ré-exporte ici pour ne pas casser les imports existants.
+export 'pii_mask.dart' show scrubSecrets;
+
 /// ════════════════════════════════════════════════════════════════
 /// Transforme une exception cloud brute en message FR user-friendly.
 /// ════════════════════════════════════════════════════════════════
@@ -74,38 +81,6 @@ String humanizeCloudError(Object e) {
   final raw = scrubSecrets(e.toString());
   if (raw.length <= 120) return raw;
   return '${raw.substring(0, 117)}...';
-}
-
-/// Masque les secrets susceptibles d'apparaitre dans une exception brute
-/// (message d'une ClientException http, log Supabase...) avant affichage
-/// utilisateur :
-/// - JWT (`eyJ...` en 3 segments base64url) -> token de session, le plus
-///   dangereux (vol de session via capture d'ecran).
-/// - en-tete `Bearer <token>` / `apikey=<...>` / `access_token=<...>`.
-///
-/// Defensif : si rien ne matche, la chaine est renvoyee inchangee. Cf
-/// audit securite nuit 2026-06-01 (information disclosure).
-String scrubSecrets(String input) {
-  var out = input;
-  // JWT : 3 segments base64url separes par des points. On masque tout.
-  out = out.replaceAll(
-    RegExp(r'eyJ[A-Za-z0-9_=-]+\.[A-Za-z0-9_=-]+\.[A-Za-z0-9_=.-]*'),
-    '***',
-  );
-  // Bearer <token>
-  out = out.replaceAll(
-    RegExp(r'[Bb]earer\s+[A-Za-z0-9._~+/=-]+'),
-    'Bearer ***',
-  );
-  // apikey=... / access_token=... / refresh_token=... dans une URL/query
-  out = out.replaceAll(
-    RegExp(
-      r'(apikey|access_token|refresh_token|token)=[A-Za-z0-9._~+/=-]+',
-      caseSensitive: false,
-    ),
-    r'$1=***',
-  );
-  return out;
 }
 
 /// Variante etendue de [humanizeCloudError] qui gere AUSSI les

@@ -80,5 +80,13 @@ void main() {
       final r = invitationErrorToFr('weird error 42');
       expect(r, isNotEmpty);
     });
+    test('fallback inconnu : un secret eventuel est scrub (pas de fuite)', () {
+      // Defense en profondeur : si un message d'erreur inconnu contenait un
+      // JWT, il ne doit pas apparaitre dans le texte montre a l'utilisateur.
+      const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abcDEF123_-x';
+      final r = invitationErrorToFr('boom $jwt');
+      expect(r.contains('eyJ'), isFalse);
+      expect(r.contains('abcDEF123'), isFalse);
+    });
   });
 }

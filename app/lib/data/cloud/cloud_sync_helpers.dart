@@ -1,5 +1,7 @@
 import 'dart:math' show Random;
 
+import '../pii_mask.dart' show scrubSecrets;
+
 /// ════════════════════════════════════════════════════════════════
 /// Helpers purs partages par les services de sync cloud.
 /// ════════════════════════════════════════════════════════════════
@@ -44,7 +46,9 @@ String invitationErrorToFr(String raw) {
     return 'Cette invitation a ete envoyee a une autre adresse email. '
         'Connecte-toi avec l\'adresse qui a recu l\'invitation.';
   }
-  return 'Echec acceptation invitation : $raw';
+  // Scrub par prudence : un message d'erreur inconnu pourrait contenir un
+  // token/secret (cf scrubSecrets). On ne l'expose jamais brut.
+  return 'Echec acceptation invitation : ${scrubSecrets(raw)}';
 }
 
 /// Parse le champ `updated_at` envoye par Postgres dans le format

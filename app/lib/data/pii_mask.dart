@@ -20,3 +20,36 @@ String maskEmailForDisplay(String? email) {
   if (at <= 1) return '***${at >= 0 ? email.substring(at) : ''}';
   return '${email[0]}***${email.substring(at)}';
 }
+
+/// Masque les secrets susceptibles d'apparaître dans une exception/log
+/// brut(e) avant affichage utilisateur :
+/// - JWT (`eyJ...` en 3 segments base64url) -> token de session, le plus
+///   dangereux (vol de session via capture d'écran).
+/// - en-tête `Bearer <token>` / `apikey=<...>` / `access_token=<...>`.
+///
+/// Défensif : si rien ne matche, la chaîne est renvoyée inchangée. Cf
+/// audit sécurité nuit 2026-06-01 (information disclosure). Fonction PURE,
+/// partagée par le humanizer cloud ET les helpers de sync (qui doivent
+/// rester sans dépendance Supabase).
+String scrubSecrets(String input) {
+  var out = input;
+  // JWT : 3 segments base64url separes par des points. On masque tout.
+  out = out.replaceAll(
+    RegExp(r'eyJ[A-Za-z0-9_=-]+\.[A-Za-z0-9_=-]+\.[A-Za-z0-9_=.-]*'),
+    '***',
+  );
+  // Bearer <token>
+  out = out.replaceAll(
+    RegExp(r'[Bb]earer\s+[A-Za-z0-9._~+/=-]+'),
+    'Bearer ***',
+  );
+  // apikey=... / access_token=... / refresh_token=... dans une URL/query
+  out = out.replaceAll(
+    RegExp(
+      r'(apikey|access_token|refresh_token|token)=[A-Za-z0-9._~+/=-]+',
+      caseSensitive: false,
+    ),
+    r'$1=***',
+  );
+  return out;
+}
