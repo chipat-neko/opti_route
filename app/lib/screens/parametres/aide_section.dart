@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/database_providers.dart';
 import '../diagnostic_screen.dart';
+import '../faq_screen.dart';
 import '../onboarding_screen.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -29,6 +30,24 @@ class AideSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.help_outline),
+          title: const Text('Questions fréquentes'),
+          subtitle: const Text(
+            'Réponses aux questions courantes (arrêts, optimisation, scan, '
+            'cloud, équipe, sécurité)',
+            style: TextStyle(fontSize: 12),
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => const FaqScreen(),
+              ),
+            );
+          },
+        ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.menu_book_outlined),
