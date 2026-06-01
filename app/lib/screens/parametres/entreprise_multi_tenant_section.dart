@@ -43,6 +43,11 @@ class _EntrepriseMultiTenantSectionState
     extends ConsumerState<EntrepriseMultiTenantSection> {
   bool _busy = false;
 
+  /// Vrai tant que le 1er pull cloud n'est pas terminé. Évite d'afficher
+  /// l'état « Créer / Rejoindre » (trompeur) à un employé invité pendant
+  /// que ses entreprises/entrepôts arrivent du cloud (latence serveur).
+  bool _pullEnCours = true;
+
   @override
   void initState() {
     super.initState();
@@ -52,11 +57,16 @@ class _EntrepriseMultiTenantSectionState
   }
 
   Future<void> _pullSilencieux() async {
-    if (ref.read(cloudUserProvider).asData?.value == null) return;
+    if (ref.read(cloudUserProvider).asData?.value == null) {
+      if (mounted) setState(() => _pullEnCours = false);
+      return;
+    }
     try {
       await ref.read(cloudSyncServiceProvider).pullMesEntreprises();
     } catch (_) {
       // Best-effort : le miroir local reste affiché tel quel.
+    } finally {
+      if (mounted) setState(() => _pullEnCours = false);
     }
   }
 
@@ -210,6 +220,15 @@ class _EntrepriseMultiTenantSectionState
       error: (e, _) =>
           _InfoLigne(icon: Icons.error_outline, texte: humanizeCloudError(e)),
       data: (entreprises) {
+        // Pendant le 1er pull cloud, ne pas montrer « Créer / Rejoindre »
+        // si la liste locale est encore vide : un employé invité verrait
+        // un faux message l'invitant à créer une entreprise (latence).
+        if (entreprises.isEmpty && _pullEnCours) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.x12),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         if (entreprises.isEmpty) return _etatVide();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.9.2+8061
+version: 2.9.2+8062
 
 environment:
   sdk: ^3.11.5
@@ -269,7 +269,7 @@ msix_config:
   display_name: opti_route (chef)
   publisher_display_name: CALOTE Noah
   identity_name: com.calote.optiroute
-  msix_version: 2.9.2.9
+  msix_version: 2.9.2.10
   capabilities: internetClient, location
   install_certificate: false
   # msix:create relance sinon `flutter build windows` SANS nos
