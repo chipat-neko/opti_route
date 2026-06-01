@@ -793,6 +793,88 @@ end;
 $$;
 grant execute on function public.delete_entreprise(uuid) to authenticated;
 
+-- ═══════════════════════════════════════════════════════════════════
+-- SECTION 12 — Muter un employé (écran "Liste des employés", #361)
+-- ═══════════════════════════════════════════════════════════════════
+-- Le chef d'entreprise (admin) peut : promouvoir/rétrograder (chef_entrepot
+-- <-> employe) ET déplacer un employé d'un entrepôt à un autre.
+-- Réservé à l'admin de l'entreprise. SECURITY DEFINER (évite récursion RLS).
+
+-- ─── set_employe_entrepot() : place [p_user_id] dans [p_entrepot_id]
+-- avec le rôle [p_role] ('chef_entrepot' | 'employe'). Retire d'abord ses
+-- autres adhésions entrepôt DANS la même entreprise (un employé = un seul
+-- entrepôt à la fois ici), puis upsert la nouvelle. Garantit aussi qu'il
+-- est membre actif de l'entreprise.
+create or replace function public.set_employe_entrepot(
+  p_entreprise_id uuid,
+  p_user_id uuid,
+  p_entrepot_id uuid,
+  p_role text
+) returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
+  if not (public.is_admin_entreprise(p_entreprise_id)
+          or public.is_super_admin()) then
+    raise exception 'FORBIDDEN';
+  end if;
+  if p_role not in ('chef_entrepot', 'employe') then
+    raise exception 'INVALID_ROLE';
+  end if;
+  -- L'entrepôt cible doit appartenir à l'entreprise.
+  if not exists (
+    select 1 from public.entrepots
+    where cloud_id = p_entrepot_id and entreprise_id = p_entreprise_id
+  ) then
+    raise exception 'ENTREPOT_HORS_ENTREPRISE';
+  end if;
+  -- S'assure que la personne est membre actif de l'entreprise.
+  insert into public.entreprise_users (entreprise_id, user_id, role, statut)
+  values (p_entreprise_id, p_user_id, 'membre', 'actif')
+  on conflict (entreprise_id, user_id)
+    do update set statut = 'actif', revoked_at = null;
+  -- Retire ses adhésions aux AUTRES entrepôts de cette entreprise.
+  delete from public.entrepot_users eu
+  using public.entrepots e
+  where eu.entrepot_id = e.cloud_id
+    and e.entreprise_id = p_entreprise_id
+    and eu.user_id = p_user_id
+    and eu.entrepot_id <> p_entrepot_id;
+  -- Upsert l'adhésion à l'entrepôt cible avec le rôle voulu.
+  insert into public.entrepot_users (entrepot_id, user_id, role, statut)
+  values (p_entrepot_id, p_user_id, p_role, 'actif')
+  on conflict (entrepot_id, user_id)
+    do update set role = excluded.role, statut = 'actif', revoked_at = null;
+end;
+$$;
+grant execute on function public.set_employe_entrepot(uuid, uuid, uuid, text) to authenticated;
+
+-- ─── revoke_employe() : révoque un employé de l'entreprise + de tous ses
+-- entrepôts (statut='revoque' + revoked_at). Admin only. Le cron J+30
+-- (#363) coupe définitivement ensuite.
+create or replace function public.revoke_employe(
+  p_entreprise_id uuid,
+  p_user_id uuid
+) returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
+  if not (public.is_admin_entreprise(p_entreprise_id)
+          or public.is_super_admin()) then
+    raise exception 'FORBIDDEN';
+  end if;
+  update public.entreprise_users
+    set statut = 'revoque', revoked_at = now()
+    where entreprise_id = p_entreprise_id and user_id = p_user_id
+      and role <> 'admin_entreprise';  -- ne pas se révoquer soi (admin)
+  update public.entrepot_users eu
+    set statut = 'revoque', revoked_at = now()
+    from public.entrepots e
+    where eu.entrepot_id = e.cloud_id
+      and e.entreprise_id = p_entreprise_id
+      and eu.user_id = p_user_id;
+end;
+$$;
+grant execute on function public.revoke_employe(uuid, uuid) to authenticated;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :

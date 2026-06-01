@@ -10,6 +10,7 @@ import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/snack.dart';
+import '../liste_employes_screen.dart';
 import 'parametres_widgets.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -318,6 +319,25 @@ class _EntrepriseMultiTenantSectionState
           _listeEntrepots(e.cloudId, isAdmin),
           const Divider(height: AppSpacing.x22),
           _listeMembres(e, isAdmin),
+          // Admin : accès à l'écran "Liste des employés" organisé par
+          // entrepôt (chefs / chauffeurs) avec mutation (#361).
+          if (isAdmin) ...[
+            const SizedBox(height: AppSpacing.x10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ListeEmployesScreen(entreprise: e),
+                          ),
+                        ),
+                icon: const Icon(Icons.badge_outlined, size: 18),
+                label: const Text('Liste des employés (par entrepôt)'),
+              ),
+            ),
+          ],
         ],
       ),
     );

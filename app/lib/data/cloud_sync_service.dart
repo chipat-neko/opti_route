@@ -1081,6 +1081,31 @@ class CloudSyncService {
         entrepriseId: entrepriseId, userId: userId, entrepotId: entrepotId);
   }
 
+  /// Mute un employe : role (chef_entrepot/employe) + entrepot cible.
+  Future<void> setEmployeEntrepot({
+    required String entrepriseId,
+    required String userId,
+    required String entrepotId,
+    required String role,
+  }) {
+    _requireUserId();
+    return _membresEnt.setEmployeEntrepot(_client(),
+        entrepriseId: entrepriseId,
+        userId: userId,
+        entrepotId: entrepotId,
+        role: role);
+  }
+
+  /// Revoque un employe de l'entreprise + tous ses entrepots.
+  Future<void> revokeEmploye({
+    required String entrepriseId,
+    required String userId,
+  }) {
+    _requireUserId();
+    return _membresEnt.revokeEmploye(_client(),
+        entrepriseId: entrepriseId, userId: userId);
+  }
+
   /// Cote employe : accepte une invitation par code (#373).
   Future<String> acceptEntrepriseInvitationByCode(String code) {
     final client = _client();

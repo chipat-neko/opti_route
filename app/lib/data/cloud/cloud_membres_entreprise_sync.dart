@@ -206,6 +206,45 @@ class CloudMembresEntrepriseSync {
     }
   }
 
+  /// Mute un employé : le place dans [entrepotId] avec le rôle [role]
+  /// ('chef_entrepot' | 'employe'). Couvre promouvoir/rétrograder ET
+  /// déplacer d'entrepôt (RPC `set_employe_entrepot`, admin only).
+  Future<void> setEmployeEntrepot(
+    SupabaseClient client, {
+    required String entrepriseId,
+    required String userId,
+    required String entrepotId,
+    required String role,
+  }) async {
+    try {
+      await client.rpc('set_employe_entrepot', params: {
+        'p_entreprise_id': entrepriseId,
+        'p_user_id': userId,
+        'p_entrepot_id': entrepotId,
+        'p_role': role,
+      });
+    } on Object catch (e) {
+      throw CloudSyncException('Echec mutation : ${humanizeCloudError(e)}');
+    }
+  }
+
+  /// Révoque un employé de l'entreprise + tous ses entrepôts (RPC
+  /// `revoke_employe`, admin only). Le cron J+30 coupe définitivement.
+  Future<void> revokeEmploye(
+    SupabaseClient client, {
+    required String entrepriseId,
+    required String userId,
+  }) async {
+    try {
+      await client.rpc('revoke_employe', params: {
+        'p_entreprise_id': entrepriseId,
+        'p_user_id': userId,
+      });
+    } on Object catch (e) {
+      throw CloudSyncException('Echec revocation : ${humanizeCloudError(e)}');
+    }
+  }
+
   /// Côté EMPLOYÉ : saisit un code d'invitation → RPC
   /// `accept_entreprise_invitation`. Retourne l'entreprise_id rejointe.
   /// Sera consommée par l'écran « Qui es-tu ? » (#373).
