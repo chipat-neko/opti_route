@@ -84,6 +84,35 @@ END:VCARD''';
       final cards = VcardParser.parse(vcard);
       expect(cards.first.lat, isNull);
     });
+
+    test('GEO hors bornes (999;999) -> coords rejetees (durcissement nuit)',
+        () {
+      // Un vCard malformé/hostile ne doit pas injecter une coord aberrante
+      // qui corromprait l'optimisation. Le contact reste valide (nom),
+      // mais sans coords (hasCoords=false).
+      const vcard = '''BEGIN:VCARD
+VERSION:3.0
+FN:Hacker
+GEO:999;-999
+END:VCARD''';
+      final cards = VcardParser.parse(vcard);
+      expect(cards, hasLength(1));
+      expect(cards.first.nom, 'Hacker');
+      expect(cards.first.lat, isNull);
+      expect(cards.first.lng, isNull);
+      expect(cards.first.hasCoords, isFalse);
+    });
+
+    test('GEO latitude hors plage seule (lat=91) -> rejetee', () {
+      const vcard = '''BEGIN:VCARD
+VERSION:4.0
+FN:X
+GEO:geo:91,2
+END:VCARD''';
+      final cards = VcardParser.parse(vcard);
+      expect(cards.first.lat, isNull);
+      expect(cards.first.lng, isNull);
+    });
   });
 
   group('VcardParser.parse — structure', () {

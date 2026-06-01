@@ -1,3 +1,5 @@
+import 'geo_utils.dart';
+
 /// Un contact extrait d'un fichier vCard (.vcf), par exemple un export
 /// Google Contacts (carte #102). Champs optionnels : tous peuvent etre
 /// absents selon ce que le contact contient.
@@ -192,6 +194,10 @@ class VcardParser {
     final lat = double.tryParse(parts[0].trim());
     final lng = double.tryParse(parts[1].trim());
     if (lat == null || lng == null) return null;
+    // Rejette les coords aberrantes (hors bornes / NaN / Infinity) d'un
+    // vCard malformé ou hostile : sinon un GEO:999;999 corromprait
+    // l'optimisation. Cohérent avec les géocodeurs. Cf audit sécu nuit.
+    if (!GeoUtils.isValidLatLon(lat, lng)) return null;
     return (lat, lng);
   }
 
