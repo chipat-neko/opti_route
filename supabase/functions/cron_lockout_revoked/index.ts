@@ -42,6 +42,22 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+// Comparaison à temps constant (durcissement sécu nuit 2026-06-01).
+// Une comparaison `a !== b` standard court-circuite au premier octet
+// différent : le temps de réponse révèle combien de caractères de tête
+// sont corrects, ce qui permet de reconstituer le CRON_SECRET octet par
+// octet (timing attack). On XOR tous les octets pour un temps constant.
+function timingSafeEqual(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  if (ea.length !== eb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ea.length; i++) {
+    diff |= ea[i] ^ eb[i];
+  }
+  return diff === 0;
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS });
@@ -53,7 +69,11 @@ serve(async (req: Request) => {
   // Auth via secret partagé (configuré dans Dashboard > Edge Functions > Secrets)
   const expectedSecret = Deno.env.get('CRON_SECRET');
   const providedSecret = req.headers.get('X-Cron-Secret');
-  if (!expectedSecret || providedSecret !== expectedSecret) {
+  if (
+    !expectedSecret ||
+    !providedSecret ||
+    !timingSafeEqual(providedSecret, expectedSecret)
+  ) {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 

@@ -115,9 +115,15 @@ async function callGemini(
   apiKey: string,
   prompt: string,
 ): Promise<string> {
-  const resp = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+  // Clé via en-tête `x-goog-api-key` plutôt qu'en query string `?key=`
+  // (durcissement nuit 2026-06-01) : une clé dans l'URL peut fuiter dans
+  // les logs de proxy / d'accès. L'en-tête évite ça.
+  const resp = await fetch(GEMINI_ENDPOINT, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
