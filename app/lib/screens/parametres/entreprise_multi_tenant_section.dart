@@ -72,6 +72,66 @@ class _EntrepriseMultiTenantSectionState
     }
   }
 
+  Future<void> _supprimerEntreprise(Entreprise e) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer cette entreprise ?'),
+        content: Text(
+          'L\'entreprise « ${e.nom} », ses entrepôts, ses employés et les '
+          'invitations en cours seront supprimés définitivement. Cette '
+          'action est irréversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _run(() async {
+      await ref.read(cloudSyncServiceProvider).deleteEntreprise(e.cloudId);
+      ref.invalidate(mesEntreprisesProvider);
+      if (mounted) context.showSuccess('Entreprise « ${e.nom} » supprimée');
+    });
+  }
+
+  Future<void> _quitterEntreprise(Entreprise e) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quitter cette entreprise ?'),
+        content: Text(
+          'Tu n\'auras plus accès au carnet partagé de « ${e.nom} ». Tu '
+          'pourras la rejoindre à nouveau avec un code d\'invitation.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Quitter'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _run(() async {
+      await ref.read(cloudSyncServiceProvider).leaveEntreprise(e.cloudId);
+      ref.invalidate(mesEntreprisesProvider);
+      if (mounted) context.showSuccess('Tu as quitté « ${e.nom} »');
+    });
+  }
+
   Future<void> _creerEntreprise() async {
     // Le super admin (Noah) est dispensé du code maître (#374) : on lui
     // évite le champ. En cas d'échec réseau, on demande le code par défaut
@@ -199,6 +259,28 @@ class _EntrepriseMultiTenantSectionState
                 ),
               ),
               if (isAdmin) const _BadgeAdmin(),
+              // Menu sortie : Supprimer (admin) ou Quitter (membre).
+              PopupMenuButton<String>(
+                tooltip: 'Options',
+                enabled: !_busy,
+                icon: Icon(Icons.more_vert, size: 20, color: p.textMute),
+                onSelected: (v) {
+                  if (v == 'delete') _supprimerEntreprise(e);
+                  if (v == 'leave') _quitterEntreprise(e);
+                },
+                itemBuilder: (_) => [
+                  if (isAdmin)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Supprimer l\'entreprise'),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'leave',
+                      child: Text('Quitter l\'entreprise'),
+                    ),
+                ],
+              ),
             ],
           ),
           if (e.siret != null) ...[

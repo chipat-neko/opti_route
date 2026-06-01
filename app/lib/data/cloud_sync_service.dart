@@ -1006,6 +1006,20 @@ class CloudSyncService {
     await _entreprise.pullMine(client);
   }
 
+  /// Quitte une entreprise (employe/membre). L'admin/createur ne peut pas
+  /// quitter -> doit [deleteEntreprise].
+  Future<void> leaveEntreprise(String entrepriseId) {
+    _requireUserId();
+    return _entreprise.leaveEntreprise(_client(), entrepriseId);
+  }
+
+  /// Supprime une entreprise (admin/createur) : cascade entrepots +
+  /// adhesions + invitations cote cloud, purge le miroir local.
+  Future<void> deleteEntreprise(String entrepriseId) {
+    _requireUserId();
+    return _entreprise.deleteEntreprise(_client(), entrepriseId);
+  }
+
   // ── Gestion employes (carte #366) ──
 
   /// Invite un employe par MAIL (Edge Function invite_employee).

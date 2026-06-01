@@ -730,6 +730,69 @@ end;
 $$;
 grant execute on function public.admin_list_entreprises() to authenticated;
 
+-- ═══════════════════════════════════════════════════════════════════
+-- SECTION 11 — Quitter (employé) / Supprimer (admin) une entreprise
+-- ═══════════════════════════════════════════════════════════════════
+-- Demande Noah 2026-06-01 : il manquait toute sortie d'une entreprise.
+-- SECURITY DEFINER pour eviter la recursion RLS (meme raison que
+-- create_entrepot). On verifie les droits explicitement dans la fonction.
+
+-- ─── leave_entreprise() : l'utilisateur courant quitte l'entreprise ──
+-- Retire son adhesion entreprise + ses adhesions a tous les entrepots de
+-- cette entreprise. L'admin/createur NE PEUT PAS quitter (il doit
+-- supprimer) -> evite une entreprise orpheline sans admin.
+create or replace function public.leave_entreprise(p_entreprise_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+  v_created_by uuid;
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  select created_by into v_created_by from public.entreprises
+  where cloud_id = p_entreprise_id;
+  if v_created_by is null then
+    raise exception 'ENTREPRISE_INTROUVABLE';
+  end if;
+  -- Le createur ne peut pas "quitter" : il supprime ou transfere.
+  if v_created_by = v_uid then
+    raise exception 'OWNER_CANNOT_LEAVE';
+  end if;
+  -- Retire les adhesions entrepots de cette entreprise.
+  delete from public.entrepot_users eu
+  using public.entrepots e
+  where eu.entrepot_id = e.cloud_id
+    and e.entreprise_id = p_entreprise_id
+    and eu.user_id = v_uid;
+  -- Retire l'adhesion entreprise.
+  delete from public.entreprise_users
+  where entreprise_id = p_entreprise_id and user_id = v_uid;
+end;
+$$;
+grant execute on function public.leave_entreprise(uuid) to authenticated;
+
+-- ─── delete_entreprise() : l'admin/createur supprime l'entreprise ────
+-- Reserve a l'admin_entreprise (ou super admin). Le ON DELETE CASCADE
+-- des FK entrepots/entreprise_users/entreprise_invitations nettoie le
+-- reste automatiquement. entrepot_users tombe via cascade entrepots.
+create or replace function public.delete_entreprise(p_entreprise_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+  if not (public.is_admin_entreprise(p_entreprise_id)
+          or public.is_super_admin()) then
+    raise exception 'FORBIDDEN';
+  end if;
+  delete from public.entreprises where cloud_id = p_entreprise_id;
+end;
+$$;
+grant execute on function public.delete_entreprise(uuid) to authenticated;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :

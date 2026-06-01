@@ -135,6 +135,57 @@ class CloudEntrepriseSync {
     return id;
   }
 
+  // ─── Quitter / Supprimer (carte sortie entreprise, #361) ─────────
+
+  /// L'utilisateur courant **quitte** [entrepriseId] (employé/membre).
+  /// RPC `leave_entreprise` (SECURITY DEFINER). L'admin/créateur ne peut
+  /// pas quitter (le serveur lève OWNER_CANNOT_LEAVE) → il doit
+  /// [deleteEntreprise]. Nettoie aussi le miroir local.
+  Future<void> leaveEntreprise(
+      SupabaseClient client, String entrepriseId) async {
+    try {
+      await client.rpc('leave_entreprise',
+          params: {'p_entreprise_id': entrepriseId});
+    } on Object catch (e) {
+      if (e.toString().contains('OWNER_CANNOT_LEAVE')) {
+        throw const CloudSyncException(
+            'Tu es l\'administrateur : tu ne peux pas quitter ton entreprise, '
+            'tu peux seulement la supprimer.');
+      }
+      throw CloudSyncException(
+          'Echec quitter entreprise : ${humanizeCloudError(e)}');
+    }
+    await _purgeEntrepriseLocale(entrepriseId);
+  }
+
+  /// L'admin/créateur **supprime** [entrepriseId] (cascade entrepôts +
+  /// adhésions + invitations côté cloud). RPC `delete_entreprise`.
+  /// Nettoie aussi le miroir local.
+  Future<void> deleteEntreprise(
+      SupabaseClient client, String entrepriseId) async {
+    try {
+      await client.rpc('delete_entreprise',
+          params: {'p_entreprise_id': entrepriseId});
+    } on Object catch (e) {
+      throw CloudSyncException(
+          'Echec suppression entreprise : ${humanizeCloudError(e)}');
+    }
+    await _purgeEntrepriseLocale(entrepriseId);
+  }
+
+  /// Retire du miroir local Drift l'entreprise + ses entrepôts (après une
+  /// sortie/suppression cloud). Les saved_destinations rattachées ont
+  /// `entreprise_id`/`entrepot_id` en `on delete set null` côté cloud ;
+  /// en local on remet juste les FK à null pour ne pas perdre l'adresse.
+  Future<void> _purgeEntrepriseLocale(String entrepriseId) async {
+    await (_db.delete(_db.entrepots)
+          ..where((e) => e.entrepriseId.equals(entrepriseId)))
+        .go();
+    await (_db.delete(_db.entreprises)
+          ..where((e) => e.cloudId.equals(entrepriseId)))
+        .go();
+  }
+
   // ─── Pull (miroir local des données visibles) ───────────────────
 
   /// Pull des entreprises + entrepôts visibles par l'utilisateur (la
