@@ -22,9 +22,26 @@ import '../widgets/snack.dart';
 /// Source de vérité = cloud (RPC `list_entreprise_members`), regroupée
 /// côté client par entrepôt.
 class ListeEmployesScreen extends ConsumerStatefulWidget {
-  const ListeEmployesScreen({super.key, required this.entreprise});
+  const ListeEmployesScreen({
+    super.key,
+    required this.entrepriseId,
+    required this.titre,
+    this.peutMuter = false,
+    this.filtreEntrepotId,
+  });
 
-  final Entreprise entreprise;
+  final String entrepriseId;
+
+  /// Titre de l'AppBar (« Mon entreprise » / « Mon entrepôt X »).
+  final String titre;
+
+  /// Vrai pour le chef d'entreprise (admin) : actions (promouvoir,
+  /// déplacer, révoquer) disponibles. Faux = lecture seule (chauffeur).
+  final bool peutMuter;
+
+  /// Si non-null, n'affiche QUE la carte de cet entrepôt (vue chef
+  /// entrepôt / chauffeur limitée à leur entrepôt).
+  final String? filtreEntrepotId;
 
   @override
   ConsumerState<ListeEmployesScreen> createState() =>
@@ -34,7 +51,7 @@ class ListeEmployesScreen extends ConsumerStatefulWidget {
 class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
   bool _busy = false;
 
-  String get _entrepriseId => widget.entreprise.cloudId;
+  String get _entrepriseId => widget.entrepriseId;
 
   Future<void> _run(Future<void> Function() action) async {
     if (_busy) return;
@@ -55,7 +72,7 @@ class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
     final entrepotsAsync =
         ref.watch(entrepotsParEntrepriseProvider(_entrepriseId));
     return Scaffold(
-      appBar: AppBar(title: Text('Employés — ${widget.entreprise.nom}')),
+      appBar: AppBar(title: Text(widget.titre)),
       body: RefreshIndicator(
         onRefresh: () async =>
             ref.invalidate(entrepriseMembresProvider(_entrepriseId)),
@@ -95,17 +112,22 @@ class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
       if (m.entrepotId == null) continue;
       (parEntrepot[m.entrepotId!] ??= []).add(m);
     }
+    // Chef entrepôt / chauffeur : on ne montre que leur entrepôt.
+    final entrepotsAffiches = widget.filtreEntrepotId == null
+        ? entrepots
+        : entrepots.where((e) => e.cloudId == widget.filtreEntrepotId).toList();
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x16),
       children: [
-        for (final ent in entrepots)
+        for (final ent in entrepotsAffiches)
           _carteEntrepot(ent, parEntrepot[ent.cloudId] ?? const [], entrepots),
         const SizedBox(height: AppSpacing.x16),
-        Text(
-          'Astuce : appuie sur ⋮ à côté d\'un employé pour le promouvoir, '
-          'le déplacer ou le révoquer.',
-          style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
-        ),
+        if (widget.peutMuter)
+          Text(
+            'Astuce : appuie sur ⋮ à côté d\'un employé pour le promouvoir, '
+            'le déplacer ou le révoquer.',
+            style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
+          ),
       ],
     );
   }
@@ -237,25 +259,28 @@ class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
                     fontWeight: FontWeight.w700,
                     color: statutColor)),
           ),
-          PopupMenuButton<String>(
-            tooltip: 'Actions',
-            enabled: !_busy,
-            icon: Icon(Icons.more_vert, size: 20, color: p.textMute),
-            onSelected: (v) => _onAction(v, m, ent, tousEntrepots),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'role',
-                child: Text(estChef
-                    ? 'Rétrograder en chauffeur'
-                    : 'Promouvoir chef d\'entrepôt'),
-              ),
-              if (tousEntrepots.length > 1)
+          // Actions réservées au chef d'entreprise (admin). Lecture seule
+          // pour les chefs d'entrepôt / chauffeurs.
+          if (widget.peutMuter)
+            PopupMenuButton<String>(
+              tooltip: 'Actions',
+              enabled: !_busy,
+              icon: Icon(Icons.more_vert, size: 20, color: p.textMute),
+              onSelected: (v) => _onAction(v, m, ent, tousEntrepots),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'role',
+                  child: Text(estChef
+                      ? 'Rétrograder en chauffeur'
+                      : 'Promouvoir chef d\'entrepôt'),
+                ),
+                if (tousEntrepots.length > 1)
+                  const PopupMenuItem(
+                      value: 'move', child: Text('Déplacer vers un entrepôt')),
                 const PopupMenuItem(
-                    value: 'move', child: Text('Déplacer vers un entrepôt')),
-              const PopupMenuItem(
-                  value: 'revoke', child: Text('Révoquer l\'employé')),
-            ],
-          ),
+                    value: 'revoke', child: Text('Révoquer l\'employé')),
+              ],
+            ),
         ],
       ),
     );

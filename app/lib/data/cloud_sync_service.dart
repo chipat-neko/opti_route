@@ -25,6 +25,8 @@ import 'supabase_service.dart';
 export 'cloud_sync_types.dart';
 // Re-export du modele membre pour les providers / UI (#366).
 export 'cloud/cloud_membres_entreprise_sync.dart' show EntrepriseMembreInfo;
+// Re-export du role courant pour le menu adapte (#361).
+export 'cloud/cloud_entreprise_sync.dart' show MonRole;
 
 /// ════════════════════════════════════════════════════════════════
 /// Service de sync local → cloud (Phase 2 backend, sous-jalon 2.B).
@@ -1004,6 +1006,13 @@ class CloudSyncService {
     final client = _client();
     _requireUserId();
     await _entreprise.pullMine(client);
+  }
+
+  /// Role de l'utilisateur courant (chef entreprise / chef entrepot /
+  /// chauffeur). Null s'il n'est dans aucune entreprise. Sert au menu.
+  Future<MonRole?> myRole() {
+    _requireUserId();
+    return _entreprise.myRole(_client());
   }
 
   /// Quitte une entreprise (employe/membre). L'admin/createur ne peut pas

@@ -875,6 +875,49 @@ end;
 $$;
 grant execute on function public.revoke_employe(uuid, uuid) to authenticated;
 
+-- ═══════════════════════════════════════════════════════════════════
+-- SECTION 13 — Rôle de l'utilisateur courant (entrée de menu adaptée)
+-- ═══════════════════════════════════════════════════════════════════
+-- Pour afficher dans le menu « Mon entreprise » (chef d'entreprise) ou
+-- « Mon entrepôt » (chef d'entrepôt / chauffeur) avec le bon titre.
+-- Renvoie 0 ou 1 ligne. role_global = 'admin_entreprise' si l'user est
+-- admin d'une entreprise. Sinon role_entrepot = 'chef_entrepot'|'employe'
+-- + nom de l'entrepôt principal.
+create or replace function public.my_entreprise_role()
+returns table (
+  entreprise_id   uuid,
+  entreprise_nom  text,
+  role_global     text,
+  entrepot_id     uuid,
+  entrepot_nom    text,
+  role_entrepot   text
+) language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then return; end if;
+  -- Priorité 1 : admin d'une entreprise (chef d'entreprise).
+  return query
+  select e.cloud_id, e.nom, eu.role, null::uuid, null::text, null::text
+  from public.entreprise_users eu
+  join public.entreprises e on e.cloud_id = eu.entreprise_id
+  where eu.user_id = v_uid and eu.statut = 'actif'
+    and eu.role = 'admin_entreprise'
+  limit 1;
+  if found then return; end if;
+  -- Priorité 2 : adhésion à un entrepôt (chef_entrepot ou employe).
+  return query
+  select e.entreprise_id, ent.nom, 'membre'::text,
+         e.cloud_id, e.nom, epu.role
+  from public.entrepot_users epu
+  join public.entrepots e on e.cloud_id = epu.entrepot_id
+  join public.entreprises ent on ent.cloud_id = e.entreprise_id
+  where epu.user_id = v_uid and epu.statut = 'actif'
+  limit 1;
+end;
+$$;
+grant execute on function public.my_entreprise_role() to authenticated;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :

@@ -330,7 +330,11 @@ class _EntrepriseMultiTenantSectionState
                     ? null
                     : () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => ListeEmployesScreen(entreprise: e),
+                            builder: (_) => ListeEmployesScreen(
+                              entrepriseId: e.cloudId,
+                              titre: 'Employés — ${e.nom}',
+                              peutMuter: true,
+                            ),
                           ),
                         ),
                 icon: const Icon(Icons.badge_outlined, size: 18),
