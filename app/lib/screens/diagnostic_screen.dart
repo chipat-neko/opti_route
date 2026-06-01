@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../data/pii_mask.dart';
 import '../data/supabase_service.dart';
 import '../providers/database_providers.dart';
 import '../providers/supabase_providers.dart';
@@ -23,14 +24,6 @@ import '../widgets/snack.dart';
 /// l'email est masqué partiellement (RGPD + capture d'écran).
 class DiagnosticScreen extends ConsumerWidget {
   const DiagnosticScreen({super.key});
-
-  /// Masque le milieu d'un email : lucas@gmail.com -> l***@gmail.com.
-  static String _maskEmail(String? email) {
-    if (email == null || email.isEmpty) return '—';
-    final at = email.indexOf('@');
-    if (at <= 1) return '***${at >= 0 ? email.substring(at) : ''}';
-    return '${email[0]}***${email.substring(at)}';
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,7 +46,7 @@ class DiagnosticScreen extends ConsumerWidget {
             ('Version', version),
             ('Cloud configuré', cloudConfigure ? 'oui' : 'non'),
             ('Connecté', user != null ? 'oui' : 'non'),
-            ('Compte', _maskEmail(user?.email)),
+            ('Compte', maskEmailForDisplay(user?.email)),
             (
               'Rôle',
               role == null
