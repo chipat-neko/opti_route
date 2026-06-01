@@ -1,40 +1,38 @@
 // Edge Function Supabase : invite un employé à rejoindre un entrepôt
-// ou une entreprise via mail magic link.
+// ou une entreprise.
 //
-// Carte Trello #363 (épopée multi-tenant #361).
+// Carte Trello #363 + #60 (épopée multi-tenant #361).
 //
-// AUTH REQUISE (verify_jwt = true) : le caller doit être un user
-// connecté + posséder le rôle adéquat dans l'entreprise/entrepôt cible.
+// ⚠️ 2026-06-01 — REFONTE (Option B) : on n'envoie plus de magic link
+// Supabase (qui exigeait toute la version web connectée au cloud). À la
+// place, on **génère un code à 6 chiffres** (comme l'invitation par code)
+// et on l'envoie par email via **Brevo** (transactional API). L'employé
+// ouvre l'app (mobile/PC), se connecte par OTP, et saisit le code dans
+// « Rejoindre une équipe » → RPC `accept_entreprise_invitation(code)`.
+// Marche sur toutes les plateformes sans dépendre du web.
+//
+// AUTH REQUISE (verify_jwt = true) : le caller doit être connecté + avoir
+// le rôle adéquat dans l'entreprise/entrepôt cible.
 //
 // Workflow :
 //   POST /invite_employee
 //   Headers: Authorization: Bearer <user JWT>
-//   Body:
-//     {
-//       "email": "marc@exemple.com",
-//       "entreprise_id": "uuid",
-//       "entrepot_id": "uuid|null",  // null = invité au niveau entreprise
-//       "role": "chef_entrepot" | "employe"
-//     }
-//
-//   1. Vérifie l'authentification du caller via le JWT
-//   2. Vérifie les permissions :
-//      - Si role demandé = "chef_entrepot" → caller doit être admin_entreprise
-//      - Si role demandé = "employe" → caller doit être chef_entrepot de
-//        l'entrepôt OU admin_entreprise de l'entreprise parente
-//   3. Insère une row dans entreprise_invitations (statut pending,
+//   Body: { email, entreprise_id, entrepot_id|null, role }
+//   1. Vérifie l'auth + les permissions du caller
+//   2. Génère un code à 6 chiffres + insère l'invitation (statut pending,
 //      expires_at = now+7d)
-//   4. Appelle supabase.auth.admin.inviteUserByEmail(email) avec
-//      redirectTo qui inclut le token d'invitation pour que l'app
-//      détecte au boot
+//   3. Envoie un email Brevo contenant le code + la marche à suivre
+//   4. Retourne { invitation_id, email, code, expires_at, email_sent }
 //
 // Déploiement :
 //   `npx supabase functions deploy invite_employee`
 //
-// Variables d'environnement requises (Dashboard > Edge Functions > Secrets) :
+// Secrets requis (Dashboard > Edge Functions > Secrets) :
 //   SUPABASE_URL              (auto)
 //   SUPABASE_SERVICE_ROLE_KEY (auto)
-//   APP_INVITE_REDIRECT_URL   (ex: https://chipat-neko.github.io/opti_route/#/invite)
+//   BREVO_API_KEY             (clé API v3 Brevo : Settings > SMTP & API > API Keys)
+//   BREVO_SENDER_EMAIL        (expéditeur VÉRIFIÉ dans Brevo, ex: ton gmail)
+//   BREVO_SENDER_NAME         (optionnel, défaut "opti_route")
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -50,12 +48,6 @@ interface InviteBody {
   entreprise_id: string;
   entrepot_id: string | null;
   role: 'chef_entrepot' | 'employe';
-}
-
-interface InviteResponse {
-  invitation_id: string;
-  email: string;
-  expires_at: string;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -88,6 +80,89 @@ function validateBody(raw: unknown): InviteBody | string {
   };
 }
 
+// Code à 6 chiffres, zéro-paddé — identique à generateInvitationCode()
+// côté Dart (cloud_sync_helpers.dart) pour une UX cohérente.
+function genCode(): string {
+  return Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+}
+
+function roleLabel(role: string): string {
+  return role === 'chef_entrepot' ? "chef d'entrepôt" : 'employé';
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+function buildEmailHtml(params: {
+  entrepriseNom: string;
+  entrepotNom: string | null;
+  role: string;
+  code: string;
+}): string {
+  const { entrepriseNom, entrepotNom, role, code } = params;
+  const lieu = entrepotNom
+    ? `${escapeHtml(entrepriseNom)} — entrepôt ${escapeHtml(entrepotNom)}`
+    : escapeHtml(entrepriseNom);
+  return `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;color:#0E1410;">
+    <h2 style="color:#0E7C5A;">Invitation à rejoindre une équipe</h2>
+    <p>Tu as été invité(e) à rejoindre <strong>${lieu}</strong> en tant que
+       <strong>${escapeHtml(roleLabel(role))}</strong> sur l'application
+       <strong>opti_route</strong>.</p>
+    <p>Pour rejoindre l'équipe :</p>
+    <ol style="line-height:1.6;">
+      <li>Ouvre l'application <strong>opti_route</strong> (mobile ou PC).</li>
+      <li>Connecte-toi avec <strong>cette adresse email</strong> (un code de
+          connexion te sera envoyé).</li>
+      <li>Va dans <strong>« Rejoindre une équipe »</strong> et saisis ce code :</li>
+    </ol>
+    <p style="text-align:center;margin:24px 0;">
+      <span style="display:inline-block;font-size:34px;font-weight:bold;
+        letter-spacing:8px;color:#0E7C5A;background:#D5EBE0;padding:14px 24px;
+        border-radius:12px;">${code}</span>
+    </p>
+    <p style="color:#5C6660;font-size:13px;">Ce code est valable 7 jours.
+       Si tu n'attendais pas cette invitation, ignore ce message.</p>
+  </div>`;
+}
+
+async function sendBrevoEmail(params: {
+  apiKey: string;
+  senderEmail: string;
+  senderName: string;
+  toEmail: string;
+  subject: string;
+  html: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': params.apiKey,
+        'content-type': 'application/json',
+        'accept': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: params.senderName, email: params.senderEmail },
+        to: [{ email: params.toEmail }],
+        subject: params.subject,
+        htmlContent: params.html,
+      }),
+    });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      return { ok: false, error: `Brevo ${resp.status}: ${txt}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: `Brevo fetch failed: ${e}` };
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS });
@@ -103,16 +178,12 @@ serve(async (req: Request) => {
   }
   const jwt = authHeader.replace('Bearer ', '');
 
-  // Client avec service role pour bypass RLS lors des checks permissions
-  // et inviteUserByEmail. Le JWT du caller est utilisé séparément pour
-  // identifier qui appelle.
   const adminClient = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
 
-  // Récupère le user_id du caller via le JWT
   const { data: userResult, error: userErr } = await adminClient.auth.getUser(jwt);
   if (userErr || !userResult.user) {
     return jsonResponse({ error: 'invalid token' }, 401);
@@ -133,9 +204,6 @@ serve(async (req: Request) => {
   const { email, entreprise_id, entrepot_id, role } = parsed;
 
   // 3. Check permissions du caller
-  // Pour inviter en tant que chef_entrepot → admin_entreprise requis
-  // Pour inviter en tant qu'employe → chef_entrepot (de l'entrepot cible)
-  //   OU admin_entreprise (de l'entreprise parente)
   const { data: callerEntUser } = await adminClient
     .from('entreprise_users')
     .select('role, statut')
@@ -171,7 +239,8 @@ serve(async (req: Request) => {
     );
   }
 
-  // 4. Insert invitation
+  // 4. Génère le code + insère l'invitation
+  const code = genCode();
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: inv, error: invErr } = await adminClient
     .from('entreprise_invitations')
@@ -182,6 +251,7 @@ serve(async (req: Request) => {
       role_target: role,
       invited_by: callerId,
       statut: 'pending',
+      code,
       expires_at: expiresAt,
     })
     .select('cloud_id, expires_at')
@@ -193,28 +263,56 @@ serve(async (req: Request) => {
     );
   }
 
-  // 5. Envoie magic link via Supabase Auth admin
-  // L'URL de redirect contient l'invitation_id en query pour que l'app
-  // détecte au boot et appelle accept_invitation.
-  const redirectBase = Deno.env.get('APP_INVITE_REDIRECT_URL') ??
-    'https://chipat-neko.github.io/opti_route/';
-  const redirectTo = `${redirectBase}?invitation_id=${inv.cloud_id}`;
+  // 5. Récupère le nom entreprise (+ entrepôt) pour personnaliser le mail
+  const { data: entRow } = await adminClient
+    .from('entreprises')
+    .select('nom')
+    .eq('cloud_id', entreprise_id)
+    .maybeSingle();
+  const entrepriseNom = entRow?.nom ?? 'une entreprise';
 
-  const { error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(
-    email,
-    { redirectTo },
-  );
-  if (inviteErr) {
-    // Si user existe déjà : Supabase renvoie une erreur mais c'est OK.
-    // On garde l'invitation en pending, l'app détectera le redirect au
-    // prochain login. Log juste l'info.
-    console.warn(`[invite_employee] inviteUserByEmail warning: ${inviteErr.message}`);
+  let entrepotNom: string | null = null;
+  if (entrepot_id) {
+    const { data: epotRow } = await adminClient
+      .from('entrepots')
+      .select('nom')
+      .eq('cloud_id', entrepot_id)
+      .maybeSingle();
+    entrepotNom = epotRow?.nom ?? null;
   }
 
-  const response: InviteResponse = {
-    invitation_id: inv.cloud_id,
-    email,
-    expires_at: inv.expires_at,
-  };
-  return jsonResponse(response, 201);
+  // 6. Envoie le mail via Brevo (transactional API)
+  const apiKey = Deno.env.get('BREVO_API_KEY');
+  const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL');
+  const senderName = Deno.env.get('BREVO_SENDER_NAME') ?? 'opti_route';
+
+  let emailSent = false;
+  let emailError: string | undefined;
+  if (!apiKey || !senderEmail) {
+    emailError = 'BREVO_API_KEY ou BREVO_SENDER_EMAIL non configuré';
+    console.error(`[invite_employee] ${emailError}`);
+  } else {
+    const html = buildEmailHtml({ entrepriseNom, entrepotNom, role, code });
+    const subject = `Invitation à rejoindre ${entrepriseNom} sur opti_route`;
+    const sent = await sendBrevoEmail({
+      apiKey, senderEmail, senderName, toEmail: email, subject, html,
+    });
+    emailSent = sent.ok;
+    emailError = sent.error;
+    if (!sent.ok) console.error(`[invite_employee] email KO: ${sent.error}`);
+  }
+
+  // On retourne TOUJOURS le code : même si le mail échoue (clé Brevo
+  // manquante, spam, etc.), le chef peut le communiquer manuellement.
+  return jsonResponse(
+    {
+      invitation_id: inv.cloud_id,
+      email,
+      code,
+      expires_at: inv.expires_at,
+      email_sent: emailSent,
+      email_error: emailError,
+    },
+    201,
+  );
 });

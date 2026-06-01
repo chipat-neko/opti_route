@@ -412,14 +412,22 @@ class _EntrepriseMultiTenantSectionState
     await _run(() async {
       final sync = ref.read(cloudSyncServiceProvider);
       if (res.parMail) {
-        await sync.inviteEmployeByMail(
+        final r = await sync.inviteEmployeByMail(
           entrepriseId: e.cloudId,
           entrepotId: res.entrepotId,
           email: res.email!,
           roleTarget: res.roleTarget,
         );
         if (mounted) {
-          context.showSuccess('Invitation envoyée à ${res.email}');
+          if (r.emailSent) {
+            context.showSuccess('Invitation envoyée à ${res.email}');
+          } else {
+            context.showError('Mail non parti (config Brevo ?) — '
+                'communique le code ci-dessous à la main');
+          }
+          // Filet de sécurité : on montre le code même quand le mail est
+          // parti (il peut tomber en spam / tarder).
+          await _afficherCode(r.code, validite: '7 jours');
         }
       } else {
         final code = await sync.inviteEmployeByCode(
@@ -434,7 +442,7 @@ class _EntrepriseMultiTenantSectionState
   }
 
   /// Affiche le code généré dans un dialog copiable (72h de validité).
-  Future<void> _afficherCode(String code) async {
+  Future<void> _afficherCode(String code, {String validite = '72 h'}) async {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -442,8 +450,8 @@ class _EntrepriseMultiTenantSectionState
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Donne ce code à ton employé. Il le saisira au '
-                '1er démarrage de l\'app. Valable 72 h.'),
+            Text('Donne ce code à ton employé. Il le saisira dans '
+                '« Rejoindre une équipe ». Valable $validite.'),
             const SizedBox(height: AppSpacing.x16),
             SelectableText(
               code,

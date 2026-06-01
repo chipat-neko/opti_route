@@ -1009,7 +1009,8 @@ class CloudSyncService {
   // ── Gestion employes (carte #366) ──
 
   /// Invite un employe par MAIL (Edge Function invite_employee).
-  Future<void> inviteEmployeByMail({
+  Future<({String code, bool emailSent, String? emailError})>
+      inviteEmployeByMail({
     required String entrepriseId,
     String? entrepotId,
     required String email,
