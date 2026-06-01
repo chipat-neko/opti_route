@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_map/flutter_map.dart';
@@ -12,6 +13,7 @@ import '../data/database.dart';
 import '../data/location_service.dart';
 import '../data/route_service.dart';
 import '../providers/database_providers.dart';
+import '../widgets/web_unsupported.dart';
 import '../providers/optimization_providers.dart';
 import '../providers/tile_provider.dart';
 import '../theme/app_theme.dart';
@@ -296,6 +298,17 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+
+    // GPS turn-by-turn + voix : dépend de geolocator/TTS natifs et n'a
+    // pas de sens dans un navigateur (on ne conduit pas au PC).
+    if (kIsWeb) {
+      return const WebUnsupportedScreen(
+        titre: 'Navigation GPS',
+        message: 'La navigation GPS guidée fonctionne sur l\'application '
+            'mobile. Sur ordinateur, utilise la vue carte et les liens '
+            'Maps / Waze.',
+      );
+    }
 
     return Scaffold(
       backgroundColor: p.cream,

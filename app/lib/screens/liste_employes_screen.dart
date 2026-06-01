@@ -116,9 +116,27 @@ class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
     final entrepotsAffiches = widget.filtreEntrepotId == null
         ? entrepots
         : entrepots.where((e) => e.cloudId == widget.filtreEntrepotId).toList();
+    // Membres « sans entrepôt » : présents au niveau entreprise mais
+    // rattachés à aucun entrepôt (invités niveau entreprise), hors admin.
+    // Affiché seulement pour le chef d'entreprise (vue globale).
+    final usersAvecEntrepot =
+        membres.where((m) => m.entrepotId != null).map((m) => m.userId).toSet();
+    final sansEntrepot = <EntrepriseMembreInfo>[];
+    final vus = <String>{};
+    if (widget.peutMuter && widget.filtreEntrepotId == null) {
+      for (final m in membres) {
+        if (m.entrepotId != null) continue; // ligne entrepôt
+        if (m.role == 'admin_entreprise') continue; // l'admin lui-même
+        if (usersAvecEntrepot.contains(m.userId)) continue; // déjà affecté
+        if (!vus.add(m.userId)) continue; // dédoublonne
+        sansEntrepot.add(m);
+      }
+    }
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x16),
       children: [
+        if (sansEntrepot.isNotEmpty)
+          _carteSansEntrepot(sansEntrepot, entrepots),
         for (final ent in entrepotsAffiches)
           _carteEntrepot(ent, parEntrepot[ent.cloudId] ?? const [], entrepots),
         const SizedBox(height: AppSpacing.x16),
@@ -130,6 +148,100 @@ class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
           ),
       ],
     );
+  }
+
+  /// Carte spéciale en haut : membres rattachés à aucun entrepôt. Le chef
+  /// peut les affecter à un entrepôt (en tant que chauffeur) ou révoquer.
+  Widget _carteSansEntrepot(
+      List<EntrepriseMembreInfo> membres, List<Entrepot> entrepots) {
+    final p = context.palette;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.x14),
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        border: Border.all(color: AppColors.amber.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.help_outline, size: 20, color: AppColors.amber),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: Text('Sans entrepôt',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: p.ink)),
+              ),
+              Text('${membres.length}',
+                  style: TextStyle(color: p.textMute, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x4),
+          Text(
+            'Ces membres ont rejoint l\'entreprise sans entrepôt. Affecte-les '
+            'à un entrepôt.',
+            style: TextStyle(fontSize: 12, color: p.textMute, height: 1.4),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          for (final m in membres) _ligneSansEntrepot(m, entrepots),
+        ],
+      ),
+    );
+  }
+
+  Widget _ligneSansEntrepot(EntrepriseMembreInfo m, List<Entrepot> entrepots) {
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x6),
+      child: Row(
+        children: [
+          Icon(Icons.person_outline, size: 18, color: p.textMute),
+          const SizedBox(width: AppSpacing.x10),
+          Expanded(
+            child: Text(m.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: p.ink, fontWeight: FontWeight.w600)),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Affecter',
+            enabled: !_busy,
+            icon: Icon(Icons.more_vert, size: 20, color: p.textMute),
+            onSelected: (v) {
+              if (v == 'revoke') {
+                _revoquer(m);
+              } else {
+                final ent = entrepots.firstWhere((e) => e.cloudId == v);
+                _affecter(m, ent);
+              }
+            },
+            itemBuilder: (_) => [
+              for (final e in entrepots)
+                PopupMenuItem(value: e.cloudId, child: Text('Affecter à ${e.nom}')),
+              const PopupMenuItem(
+                  value: 'revoke', child: Text('Révoquer l\'employé')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _affecter(EntrepriseMembreInfo m, Entrepot ent) async {
+    await _run(() async {
+      await ref.read(cloudSyncServiceProvider).setEmployeEntrepot(
+            entrepriseId: _entrepriseId,
+            userId: m.userId,
+            entrepotId: ent.cloudId,
+            role: 'employe',
+          );
+      if (mounted) context.showSuccess('${m.email} affecté à ${ent.nom}');
+    });
   }
 
   Widget _carteEntrepot(

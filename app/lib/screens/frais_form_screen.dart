@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show FilteringTextInputFormatter, HapticFeedback;
@@ -83,6 +84,16 @@ class _FraisFormScreenState extends ConsumerState<FraisFormScreen> {
   /// et pre-remplit libelle + montant calcule.
   Future<void> _openNearbyStations() async {
     final messenger = ScaffoldMessenger.of(context);
+    // GPS indisponible sur navigateur : message clair au lieu de crash.
+    if (kIsWeb) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Les stations proches utilisent le GPS, disponible '
+              'sur l\'application mobile.'),
+        ),
+      );
+      return;
+    }
     HapticFeedback.selectionClick();
     try {
       final ok = await LocationService.ensurePermission();

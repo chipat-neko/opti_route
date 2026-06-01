@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,7 @@ import '../data/backups_list_service.dart';
 import '../providers/database_providers.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/web_unsupported.dart';
 
 /// Future provider qui rafraichit la liste des backups disponibles.
 /// Pour forcer un refresh apres une action (delete, restore prepared),
@@ -34,6 +36,16 @@ class BackupsListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Les backups zip s'appuient sur le système de fichiers local,
+    // indisponible sur navigateur : on évite le crash au chargement.
+    if (kIsWeb) {
+      return const WebUnsupportedScreen(
+        titre: 'Mes backups',
+        message: 'Les sauvegardes en fichier zip fonctionnent sur '
+            'l\'application mobile et le logiciel PC. Sur navigateur, tes '
+            'données restent synchronisées via le cloud.',
+      );
+    }
     final p = context.palette;
     final async = ref.watch(_backupsListProvider);
 

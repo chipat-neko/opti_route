@@ -68,8 +68,19 @@ jobs:
       # un user envoie un screen d'erreur (sans ca on a juste
       # main.dart.js:156366 = inutile). Cout : ~3-5 MB de .map upload.
       # Acceptable pour un MVP en debug actif.
-      - name: Build web (release + source maps)
-        run: flutter build web --release --source-maps --base-href "/opti_route/"
+      #
+      # --dart-define SUPABASE_* : injecte les credentials cloud pour que
+      # la version web se connecte au cloud (identique a l'APK/MSIX).
+      # La cle ANON est PUBLIQUE par design (deja distribuee dans l'APK),
+      # donc la stocker en secret GitHub n'expose rien de sensible. On
+      # NE met PAS la cle Gemini sur le web (cote serveur uniquement).
+      # Si les secrets sont absents, le build reste valide en mode
+      # local-only (defaultValue '' dans SupabaseService).
+      - name: Build web (release + source maps + cloud)
+        run: |
+          flutter build web --release --source-maps --base-href "/opti_route/" \
+            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
 
       # Copie le site vitrine statique (site_doc/) dans un sous-dossier
       # `site/` du build Flutter Web, pour qu'il soit accessible a
