@@ -8,6 +8,7 @@ import '../screens/carnet_adresses_screen.dart';
 import '../screens/chef/chef_dashboard_shell.dart';
 import '../screens/frais_screen.dart';
 import '../screens/liste_employes_screen.dart';
+import '../screens/offres_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/resume_hebdo_screen.dart';
 import '../screens/stats_screen.dart';
@@ -309,6 +310,23 @@ class AppDrawer extends ConsumerWidget {
               },
             ),
             const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.workspace_premium_outlined,
+                  color: AppColors.emerald),
+              title: const Text('Nos offres'),
+              subtitle: const Text(
+                'Formules & passer premium',
+                style: TextStyle(fontSize: 11),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const OffresScreen(),
+                  ),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.tune_outlined),
               title: const Text('Parametres'),
