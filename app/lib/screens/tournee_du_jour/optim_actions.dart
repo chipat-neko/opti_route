@@ -161,10 +161,14 @@ class OptimTourneeActions {
         tournee: tournee,
         stops: geocodedRefreshed,
       );
-      // Incremente le compteur du quota ORS (best-effort).
+      // Incremente le compteur du quota ORS (best-effort). On logge en
+      // debug si ca echoue : sinon le decompte quotidien peut deriver
+      // sans qu'on sache pourquoi (cf audit nuit 2026-06-01).
       try {
         await ref.read(parametresRepositoryProvider).incrementOrsUsed();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[optim] incrementOrsUsed a echoue : $e');
+      }
 
       // Sprint 1E : preview avant d'appliquer. Le user voit la
       // distance avant (ordre actuel) vs apres (propose par VROOM)
