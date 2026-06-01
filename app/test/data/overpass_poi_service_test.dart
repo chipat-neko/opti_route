@@ -162,4 +162,67 @@ void main() {
       expect(r, isEmpty);
     });
   });
+
+  // Robustesse parsing externe (durcissement nuit 2026-06-01) : un schema
+  // OSM inattendu ne doit pas faire planter toute la recherche, et les
+  // noms accentues doivent survivre (mojibake).
+  group('OverpassPoiService — robustesse', () {
+    test('tags=List et name numerique -> elements ignores, pas de crash',
+        () async {
+      final svc = OverpassPoiService(
+        client: MockClient((_) async => _resp200({
+              'elements': [
+                {'type': 'node', 'lat': 48.0, 'lon': 1.0, 'tags': <Object?>[]},
+                {
+                  'type': 'node',
+                  'lat': 48.001,
+                  'lon': 1.001,
+                  'tags': {'name': 12345}, // name numerique -> ignore
+                },
+                {
+                  'type': 'node',
+                  'lat': 48.002,
+                  'lon': 1.002,
+                  'tags': {'name': 'Valide'},
+                },
+              ],
+            })),
+      );
+      final r = await svc.searchNearby(
+        categoryKey: 'pharmacie',
+        centerLat: 48.0,
+        centerLng: 1.0,
+      );
+      // Seul l'element valide survit ; les 2 malformes sont ignores.
+      expect(r, hasLength(1));
+      expect(r.first.poiName, 'Valide');
+    });
+
+    test('UTF-8 : nom de POI accentue preserve (pas de mojibake)', () async {
+      final jsonStr = jsonEncode({
+        'elements': [
+          {
+            'type': 'node',
+            'lat': 48.01,
+            'lon': 1.01,
+            'tags': {'name': 'Boulangerie Pâtisserie Léa'},
+          },
+        ],
+      });
+      final svc = OverpassPoiService(
+        // Vrais octets UTF-8 sans charset -> l'ancien code (latin1)
+        // produisait du mojibake ; utf8.decode(bodyBytes) preserve.
+        client: MockClient(
+          (_) async => http.Response.bytes(utf8.encode(jsonStr), 200),
+        ),
+      );
+      final r = await svc.searchNearby(
+        categoryKey: 'boulangerie',
+        centerLat: 48.0,
+        centerLng: 1.0,
+      );
+      expect(r, hasLength(1));
+      expect(r.first.poiName, 'Boulangerie Pâtisserie Léa');
+    });
+  });
 }
