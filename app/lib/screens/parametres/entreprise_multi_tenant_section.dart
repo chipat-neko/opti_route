@@ -221,14 +221,40 @@ class _EntrepriseMultiTenantSectionState
   }
 
   Widget _etatVide() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FilledButton.icon(
-        onPressed: _busy ? null : _creerEntreprise,
-        icon: const Icon(Icons.add_business_outlined),
-        label: const Text('Créer mon entreprise'),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          onPressed: _busy ? null : _creerEntreprise,
+          icon: const Icon(Icons.add_business_outlined),
+          label: const Text('Créer mon entreprise'),
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _rejoindreParCode,
+          icon: const Icon(Icons.groups_outlined, size: 18),
+          label: const Text('Rejoindre avec un code'),
+        ),
+      ],
     );
+  }
+
+  /// Rejoindre une entreprise/entrepôt avec un code d'invitation (donné
+  /// par le chef). Même flux que l'onboarding « Qui es-tu ? » mais
+  /// accessible à tout moment depuis les Paramètres.
+  Future<void> _rejoindreParCode() async {
+    final code = await showDialog<String>(
+      context: context,
+      builder: (_) => const _RejoindreCodeDialog(),
+    );
+    if (code == null) return;
+    await _run(() async {
+      final sync = ref.read(cloudSyncServiceProvider);
+      await sync.acceptEntrepriseInvitationByCode(code);
+      await sync.pullMesEntreprises();
+      ref.invalidate(mesEntreprisesProvider);
+      if (mounted) context.showSuccess('Bienvenue dans l\'équipe !');
+    });
   }
 
   Widget _carteEntreprise(Entreprise e, String userId) {
@@ -591,6 +617,71 @@ class _EntrepriseMultiTenantSectionState
       if (mounted) context.showSuccess('Employé révoqué');
       ref.invalidate(entrepriseMembresProvider(e.cloudId));
     });
+  }
+}
+
+/// Dialog de saisie d'un code d'invitation à 6 chiffres pour rejoindre
+/// une entreprise/entrepôt depuis les Paramètres (même flux que
+/// l'onboarding « Qui es-tu ? »).
+class _RejoindreCodeDialog extends StatefulWidget {
+  const _RejoindreCodeDialog();
+
+  @override
+  State<_RejoindreCodeDialog> createState() => _RejoindreCodeDialogState();
+}
+
+class _RejoindreCodeDialogState extends State<_RejoindreCodeDialog> {
+  final _ctrl = TextEditingController();
+  bool _vide = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rejoindre avec un code'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Saisis le code à 6 chiffres donné par ton chef '
+              '(entreprise ou entrepôt).'),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 6,
+            decoration: InputDecoration(
+              labelText: 'Code',
+              hintText: '123456',
+              errorText: _vide ? 'Code requis' : null,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final code = _ctrl.text.trim();
+            if (code.isEmpty) {
+              setState(() => _vide = true);
+              return;
+            }
+            Navigator.of(context).pop(code);
+          },
+          child: const Text('Rejoindre'),
+        ),
+      ],
+    );
   }
 }
 
