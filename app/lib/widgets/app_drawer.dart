@@ -72,6 +72,11 @@ class AppDrawer extends ConsumerWidget {
               ),
             ),
             const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+            const _DrawerSectionHeader('Au quotidien'),
             ListTile(
               leading: Stack(
                 clipBehavior: Clip.none,
@@ -121,6 +126,7 @@ class AppDrawer extends ConsumerWidget {
                 );
               },
             ),
+            const _DrawerSectionHeader('Gestion'),
             ListTile(
               leading: const Icon(Icons.bookmark_outline),
               title: const Text('Carnet d\'adresses'),
@@ -175,6 +181,17 @@ class AppDrawer extends ConsumerWidget {
                     builder: (_) => const FraisScreen(),
                   ),
                 );
+              },
+            ),
+            // Section "Mon équipe" : visible seulement si l'user est dans
+            // une entreprise (l'en-tête se masque avec son contenu).
+            Consumer(
+              builder: (context, ref, _) {
+                final role = ref.watch(monRoleProvider).asData?.value;
+                final modeChef =
+                    ref.watch(modeChefProvider).asData?.value ?? false;
+                if (role == null && !modeChef) return const SizedBox.shrink();
+                return const _DrawerSectionHeader('Mon équipe');
               },
             ),
             // Entree adaptee au role multi-tenant (#361) : "Mon entreprise"
@@ -268,7 +285,9 @@ class AppDrawer extends ConsumerWidget {
                 );
               },
             ),
-            const Spacer(),
+                ],
+              ),
+            ),
             const Divider(height: 1),
             // Lien externe vers le site vitrine (presentation, FAQ,
             // changelog, ROI). Ouvert dans le navigateur systeme via
@@ -303,6 +322,36 @@ class AppDrawer extends ConsumerWidget {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// En-tête de section du drawer : petit label gris majuscule pour
+/// regrouper visuellement les entrées (refonte nav nuit 2026-06-01).
+class _DrawerSectionHeader extends StatelessWidget {
+  const _DrawerSectionHeader(this.titre);
+
+  final String titre;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x22,
+        AppSpacing.x16,
+        AppSpacing.x22,
+        AppSpacing.x6,
+      ),
+      child: Text(
+        titre.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+          color: p.textMute,
         ),
       ),
     );
