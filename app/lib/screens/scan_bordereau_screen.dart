@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +18,7 @@ import '../data/ocr_llm_enhance_service.dart';
 import '../data/ocr_service.dart';
 import '../data/ocr_stats_log.dart';
 import '../providers/database_providers.dart';
+import '../widgets/web_unsupported.dart';
 import '../providers/ocr_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -80,6 +81,16 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Caméra + OCR + rendu PDF dépendent de plugins natifs indisponibles
+    // sur navigateur : on évite le crash en informant l'utilisateur.
+    if (kIsWeb) {
+      return const WebUnsupportedScreen(
+        titre: 'Scanner un bordereau',
+        message: 'Le scan de bordereaux (caméra + reconnaissance de texte) '
+            'fonctionne sur l\'application mobile. Sur ordinateur, ajoute '
+            'tes arrêts manuellement ou par collage d\'une liste d\'adresses.',
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scanner un bordereau'),
