@@ -135,6 +135,7 @@ class CloudMembresEntrepriseSync {
               : DateTime.parse(row['revoked_at'] as String).toLocal(),
           entrepotId: row['entrepot_id'] as String?,
           entrepotNom: row['entrepot_nom'] as String?,
+          displayName: row['display_name'] as String?,
         );
       }).toList();
     } on PostgrestException catch (e) {
@@ -284,6 +285,7 @@ class EntrepriseMembreInfo {
     this.revokedAt,
     this.entrepotId,
     this.entrepotNom,
+    this.displayName,
   });
 
   final String userId;
@@ -293,6 +295,15 @@ class EntrepriseMembreInfo {
   final DateTime? revokedAt;
   final String? entrepotId;
   final String? entrepotNom;
+
+  /// Nom d'affichage choisi par le membre (null si pas encore défini).
+  final String? displayName;
+
+  /// Libellé à afficher : le nom si défini, sinon l'email en repli.
+  String get nomAffiche =>
+      (displayName != null && displayName!.trim().isNotEmpty)
+          ? displayName!.trim()
+          : email;
 
   /// Jours restants avant le lockout J+30 (cron #363). Null si pas
   /// révoqué. 0 si déjà dépassé (le cron passera bientôt en 'expire').

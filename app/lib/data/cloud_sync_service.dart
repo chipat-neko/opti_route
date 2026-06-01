@@ -1015,6 +1015,18 @@ class CloudSyncService {
     return _entreprise.myRole(_client());
   }
 
+  /// Nom d'affichage du user courant (null si pas defini).
+  Future<String?> getMyDisplayName() {
+    _requireUserId();
+    return _entreprise.getMyDisplayName(_client());
+  }
+
+  /// Definit le nom d'affichage du user courant (vide = efface).
+  Future<void> setMyDisplayName(String name) {
+    _requireUserId();
+    return _entreprise.setMyDisplayName(_client(), name);
+  }
+
   /// Quitte une entreprise (employe/membre). L'admin/createur ne peut pas
   /// quitter -> doit [deleteEntreprise].
   Future<void> leaveEntreprise(String entrepriseId) {

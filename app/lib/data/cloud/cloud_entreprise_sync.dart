@@ -210,6 +210,28 @@ class CloudEntrepriseSync {
     }
   }
 
+  // ─── Nom d'affichage (profil utilisateur, #361) ─────────────────
+
+  /// Nom d'affichage du user courant (null si pas encore défini).
+  Future<String?> getMyDisplayName(SupabaseClient client) async {
+    try {
+      final res = await client.rpc('get_my_display_name');
+      return res as String?;
+    } on Object catch (e) {
+      throw CloudSyncException('Echec lecture nom : ${humanizeCloudError(e)}');
+    }
+  }
+
+  /// Définit le nom d'affichage du user courant (vide = efface).
+  Future<void> setMyDisplayName(SupabaseClient client, String name) async {
+    try {
+      await client.rpc('set_my_display_name', params: {'p_name': name});
+    } on Object catch (e) {
+      throw CloudSyncException(
+          'Echec enregistrement nom : ${humanizeCloudError(e)}');
+    }
+  }
+
   // ─── Pull (miroir local des données visibles) ───────────────────
 
   /// Pull des entreprises + entrepôts visibles par l'utilisateur (la

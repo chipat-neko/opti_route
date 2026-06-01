@@ -515,7 +515,7 @@ class _EntrepriseMultiTenantSectionState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(m.email,
+                Text(m.nomAffiche,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style:

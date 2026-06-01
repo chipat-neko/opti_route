@@ -87,6 +87,15 @@ create table if not exists public.saved_destination_notes_perso (
   unique (saved_destination_id, user_id)
 );
 
+-- Profil utilisateur : nom d'affichage choisi (section 14). Créée ici
+-- avec les autres tables car list_entreprise_members (section 8) y fait
+-- référence (left join). Policies + RPC associées en SECTION 14.
+create table if not exists public.user_profiles (
+  user_id      uuid primary key references auth.users(id) on delete cascade,
+  display_name text,
+  updated_at   timestamptz not null default now()
+);
+
 -- ─────────────────────────────────────────────────────────────────
 -- 2. EXTENSION saved_destinations (lien carnet partagé)
 -- ─────────────────────────────────────────────────────────────────
@@ -443,10 +452,14 @@ create index if not exists idx_invitations_code
   on public.entreprise_invitations(code)
   where statut = 'pending' and code is not null;
 
--- Liste des membres d'une entreprise AVEC leur email (auth.users n'est
--- pas lisible en RLS -> SECURITY DEFINER). Garde : le caller doit être
--- membre actif de l'entreprise. Union membres entreprise + membres des
--- entrepôts de cette entreprise.
+-- Liste des membres d'une entreprise AVEC leur email + nom d'affichage
+-- (auth.users n'est pas lisible en RLS -> SECURITY DEFINER). Garde : le
+-- caller doit être membre actif de l'entreprise. Union membres entreprise
+-- + membres des entrepôts. `display_name` (section 14) joint depuis
+-- user_profiles (null si non défini -> l'app retombe sur l'email).
+-- ⚠️ DROP avant create : la colonne display_name a été ajoutée après coup ;
+-- Postgres refuse `create or replace` quand le type de retour change (42P13).
+drop function if exists public.list_entreprise_members(uuid);
 create or replace function public.list_entreprise_members(p_entreprise_id uuid)
 returns table (
   user_id uuid,
@@ -455,7 +468,8 @@ returns table (
   statut text,
   revoked_at timestamptz,
   entrepot_id uuid,
-  entrepot_nom text
+  entrepot_nom text,
+  display_name text
 ) language plpgsql security definer set search_path = public as $$
 begin
   if not exists (
@@ -469,16 +483,20 @@ begin
 
   return query
   select eu.user_id, u.email::text, eu.role, eu.statut, eu.revoked_at,
-         null::uuid as entrepot_id, null::text as entrepot_nom
+         null::uuid as entrepot_id, null::text as entrepot_nom,
+         pr.display_name
   from public.entreprise_users eu
   join auth.users u on u.id = eu.user_id
+  left join public.user_profiles pr on pr.user_id = eu.user_id
   where eu.entreprise_id = p_entreprise_id
   union all
   select epu.user_id, u.email::text, epu.role, epu.statut, epu.revoked_at,
-         e.cloud_id as entrepot_id, e.nom as entrepot_nom
+         e.cloud_id as entrepot_id, e.nom as entrepot_nom,
+         pr.display_name
   from public.entrepot_users epu
   join public.entrepots e on e.cloud_id = epu.entrepot_id
   join auth.users u on u.id = epu.user_id
+  left join public.user_profiles pr on pr.user_id = epu.user_id
   where e.entreprise_id = p_entreprise_id;
 end $$;
 
@@ -917,6 +935,55 @@ begin
 end;
 $$;
 grant execute on function public.my_entreprise_role() to authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- SECTION 14 — Profil utilisateur (nom affiché) — demande Noah 2026-06-01
+-- ═══════════════════════════════════════════════════════════════════
+-- Pour afficher un NOM lisible (« Lucas M. ») au lieu de l'email dans la
+-- liste des employés. Chacun définit son propre nom.
+-- NB : la table public.user_profiles est créée en SECTION 1 (avec les
+-- autres tables) car list_entreprise_members la référence. Ici : RLS + RPC.
+
+alter table public.user_profiles enable row level security;
+
+-- RLS : chacun lit/écrit SON profil. La lecture des AUTRES profils passe
+-- par la RPC list_entreprise_members (SECURITY DEFINER) qui joint le nom,
+-- donc pas besoin d'ouvrir le SELECT à tous.
+drop policy if exists sel_own_profile on public.user_profiles;
+create policy sel_own_profile on public.user_profiles
+  for select using (user_id = auth.uid());
+drop policy if exists ins_own_profile on public.user_profiles;
+create policy ins_own_profile on public.user_profiles
+  for insert with check (user_id = auth.uid());
+drop policy if exists upd_own_profile on public.user_profiles;
+create policy upd_own_profile on public.user_profiles
+  for update using (user_id = auth.uid());
+
+-- set_my_display_name() : upsert le nom du user courant.
+create or replace function public.set_my_display_name(p_name text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_uid uuid := auth.uid();
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
+  insert into public.user_profiles (user_id, display_name, updated_at)
+  values (v_uid, nullif(trim(p_name), ''), now())
+  on conflict (user_id)
+    do update set display_name = nullif(trim(p_name), ''), updated_at = now();
+end;
+$$;
+grant execute on function public.set_my_display_name(text) to authenticated;
+
+-- get_my_display_name() : lit le nom du user courant (null si pas défini).
+create or replace function public.get_my_display_name()
+returns text language sql security definer set search_path = public as $$
+  select display_name from public.user_profiles where user_id = auth.uid();
+$$;
+grant execute on function public.get_my_display_name() to authenticated;
+
+-- NB : list_entreprise_members renvoie déjà `display_name` (left join
+-- user_profiles) — sa définition unique est en SECTION 8 (avec le DROP
+-- anti-42P13). On ne la redéfinit PAS ici pour éviter un doublon qui
+-- casserait le rejeu complet du fichier.
 
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
