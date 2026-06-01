@@ -69,6 +69,13 @@ void main() {
       expect(invitationErrorToFr('CODE_DEJA_UTILISE'),
           contains('deja ete utilise'));
     });
+    test('EMAIL_MISMATCH -> invite a se connecter avec la bonne adresse', () {
+      // Durcissement nuit : une invitation nominative refusee parce que
+      // l'email du compte connecte ne correspond pas a celui invite.
+      final r = invitationErrorToFr('PostgrestException: EMAIL_MISMATCH');
+      expect(r.toLowerCase(), contains('adresse'));
+      expect(r, isNot(contains('EMAIL_MISMATCH'))); // pas de sentinelle brute
+    });
     test('message inconnu : reste générique (pas de crash)', () {
       final r = invitationErrorToFr('weird error 42');
       expect(r, isNotEmpty);

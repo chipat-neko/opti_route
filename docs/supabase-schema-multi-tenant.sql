@@ -528,6 +528,21 @@ begin
     raise exception 'CODE_EXPIRE';
   end if;
 
+  -- Sécurité (durcissement 2026-06-01) : une invitation NOMINATIVE
+  -- (email non null, envoyée par Brevo à une personne précise via
+  -- invite_employee) ne peut être acceptée QUE par le compte portant cet
+  -- email. Sinon n'importe quel utilisateur ayant deviné ou brute-forcé
+  -- le code à 6 chiffres pourrait rejoindre l'équipe — voire devenir
+  -- admin_entreprise si role_target l'est — à la place du destinataire.
+  -- Les invitations PAR CODE (email null, code partageable type lien)
+  -- ne sont volontairement pas concernées (design assumé).
+  if v_inv.email is not null then
+    if lower(v_inv.email) is distinct from
+       lower((select u.email from auth.users u where u.id = v_uid)) then
+      raise exception 'EMAIL_MISMATCH';
+    end if;
+  end if;
+
   insert into public.entreprise_users (entreprise_id, user_id, role, statut)
   values (
     v_inv.entreprise_id, v_uid,

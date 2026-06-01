@@ -40,6 +40,10 @@ String invitationErrorToFr(String raw) {
   if (raw.contains('CODE_DEJA_UTILISE')) {
     return 'Ce code a deja ete utilise. Demande un nouveau code.';
   }
+  if (raw.contains('EMAIL_MISMATCH')) {
+    return 'Cette invitation a ete envoyee a une autre adresse email. '
+        'Connecte-toi avec l\'adresse qui a recu l\'invitation.';
+  }
   return 'Echec acceptation invitation : $raw';
 }
 
