@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/database_providers.dart';
+import '../diagnostic_screen.dart';
 import '../onboarding_screen.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -65,6 +66,24 @@ class AideSection extends ConsumerWidget {
               const SnackBar(
                 content: Text('Astuces reactivees. Reouvre les ecrans '
                     'pour les revoir.'),
+              ),
+            );
+          },
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.bug_report_outlined),
+          title: const Text('Diagnostic'),
+          subtitle: const Text(
+            'Recap technique (version, cloud, role) a copier si tu '
+            'contactes le support',
+            style: TextStyle(fontSize: 12),
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => const DiagnosticScreen(),
               ),
             );
           },
