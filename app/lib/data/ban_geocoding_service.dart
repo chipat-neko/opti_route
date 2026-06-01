@@ -131,12 +131,18 @@ class BanGeocodingService implements GeocodingService {
 
     // BAN renvoie parfois `[null, null]` ou des strings sur certains
     // POI mal indexes : on convertit defensivement plutot que crasher.
-    final lon = (coords[0] as num?)?.toDouble();
-    final lat = (coords[1] as num?)?.toDouble();
+    // ⚠️ `as num?` CRASHE sur une String ("1.0") -> on passe par un
+    // helper tolerant (num OU String parsable), sinon null. Cf audit nuit.
+    final lon = _coordToDouble(coords[0]);
+    final lat = _coordToDouble(coords[1]);
     if (lon == null || lat == null) return null;
 
-    final props =
-        (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
+    // `as Map?` CRASHE si properties est une List (schema inattendu) :
+    // on teste avec `is` avant de caster. Cf audit nuit 2026-06-01.
+    final rawProps = feature['properties'];
+    final props = rawProps is Map
+        ? rawProps.cast<String, dynamic>()
+        : <String, dynamic>{};
 
     final type = props['type'] as String?;
     final label = props['label'] as String?;
@@ -158,6 +164,16 @@ class BanGeocodingService implements GeocodingService {
       city: city,
       country: 'France',
     );
+  }
+
+  /// Convertit une coordonnée venue du JSON en double, de façon TOLÉRANTE :
+  /// accepte un num (1.0) OU une String parsable ("1.0"), renvoie null
+  /// sinon (au lieu de crasher comme `as num?` sur une String). Cf audit
+  /// sécu nuit 2026-06-01.
+  static double? _coordToDouble(Object? v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
   }
 
   @override

@@ -115,8 +115,11 @@ class RechercheEntreprisesService implements GeocodingService {
     // On preferait l'etablissement le plus pertinent : si le siege est
     // ferme mais qu'un etablissement est encore actif, utilise
     // l'etablissement actif. Sinon on prend le siege (s'il est actif).
-    Map<String, dynamic>? etab = (result['siege'] as Map?)
-        ?.cast<String, dynamic>();
+    // `as Map?` crashe si `siege` est une List (schema inattendu) : on
+    // teste avec `is`. Cf audit secu nuit 2026-06-01.
+    final rawSiege = result['siege'];
+    Map<String, dynamic>? etab =
+        rawSiege is Map ? rawSiege.cast<String, dynamic>() : null;
     final siegeFerme = etab?['etat_administratif'] == 'F';
     if (etab == null || siegeFerme) {
       final matching = result['matching_etablissements'];
@@ -140,23 +143,25 @@ class RechercheEntreprisesService implements GeocodingService {
     final lon = _parseDouble(etab['longitude']);
     if (lat == null || lon == null) return null;
 
-    final nomComplet = result['nom_complet'] as String? ??
-        result['nom_raison_sociale'] as String?;
+    // Lecture tolérante : `as String?` crashe si l'API renvoie un nombre
+    // pour un champ texte. _asString filtre par type. Cf audit nuit.
+    final nomComplet = _asString(result['nom_complet']) ??
+        _asString(result['nom_raison_sociale']);
 
-    final houseNumber = etab['numero_voie'] as String?;
-    final libelleVoie = etab['libelle_voie'] as String?;
-    final typeVoie = etab['type_voie'] as String?;
+    final houseNumber = _asString(etab['numero_voie']);
+    final libelleVoie = _asString(etab['libelle_voie']);
+    final typeVoie = _asString(etab['type_voie']);
     final road = libelleVoie != null && typeVoie != null
         ? '$typeVoie $libelleVoie'.trim()
-        : libelleVoie ?? etab['adresse'] as String?;
-    final postcode = etab['code_postal'] as String?;
+        : libelleVoie ?? _asString(etab['adresse']);
+    final postcode = _asString(etab['code_postal']);
 
     // ATTENTION : `commune` contient le **code INSEE** ("28158"), pas
     // le nom. Le nom est dans `libelle_commune`.
-    final city = etab['libelle_commune'] as String?;
-    final country = etab['pays'] as String? ?? 'France';
+    final city = _asString(etab['libelle_commune']);
+    final country = _asString(etab['pays']) ?? 'France';
 
-    final addressLine = etab['adresse'] as String? ?? '';
+    final addressLine = _asString(etab['adresse']) ?? '';
     final localityLine = [
       if (postcode != null && postcode.isNotEmpty) postcode,
       if (city != null && city.isNotEmpty) city,
@@ -190,6 +195,11 @@ class RechercheEntreprisesService implements GeocodingService {
     if (value is String) return double.tryParse(value);
     return null;
   }
+
+  /// Lecture tolérante d'un champ texte JSON : renvoie la String si c'en
+  /// est une, sinon null (au lieu de `as String?` qui crashe sur un
+  /// nombre ou une liste). Cf audit sécu nuit 2026-06-01.
+  String? _asString(Object? v) => v is String ? v : null;
 
   @override
   void close() => _client.close();

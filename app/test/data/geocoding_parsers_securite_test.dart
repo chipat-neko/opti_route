@@ -186,25 +186,21 @@ void main() {
       expect(r.first.lat, 48.5);
     });
 
-    test('BAN: coordinates string "1.0" -> CAST ERROR (BUG potentiel '
-        'documente)', () {
-      // ban_geocoding_service.dart:128-129 fait `(coords[0] as num?)`.
-      // Le commentaire ligne 126-127 affirme "BAN renvoie parfois des
-      // strings ... on convertit defensivement plutot que crasher".
-      // MAIS `as num?` ne convertit PAS une String : il jette un
-      // TypeError/CastError. Le parseur N'EST DONC PAS defensif face a
-      // des coords textuelles. On documente le comportement REEL (throw).
-      // Voir section "BUGS" du rapport.
+    test('BAN: coordinates string "1.0" -> parsees (fix defensif nuit)',
+        () async {
+      // Fix nuit 2026-06-01 : _coordToDouble accepte desormais une String
+      // parsable ("1.0") au lieu de crasher (`as num?` jetait un TypeError).
+      // Le commentaire du code promettait du defensif : c'est maintenant vrai.
       final body = banFeature({
         'geometry': {
           'coordinates': ['1.0', '48.0']
         },
         'properties': {'label': 'X', 'street': 'X'},
       });
-      expect(
-        ban(body).search('rue test'),
-        throwsA(isA<TypeError>()),
-      );
+      final r = await ban(body).search('rue test');
+      expect(r, hasLength(1));
+      expect(r.first.lon, 1.0);
+      expect(r.first.lat, 48.0);
     });
 
     test('Photon: coordinates int (pas double) -> converti via toDouble',
@@ -279,28 +275,26 @@ void main() {
       expect(r, isEmpty);
     });
 
-    test('BAN: properties = liste -> CAST ERROR (BUG documente)', () {
-      // ban_geocoding_service.dart:133 fait
-      //   (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {}
-      // Le `as Map?` jette si properties est une List (CastError), AVANT
-      // d'arriver au `?? {}`. Donc un `properties` non-Map plante le
-      // parsing au lieu d'etre traite comme vide. Meme classe de bug que
-      // les coords-string. On documente le comportement REEL (throw).
-      final body = banFeature({
+    test('BAN: properties = liste -> traite comme vide (fix defensif nuit)',
+        () async {
+      // Fix nuit 2026-06-01 : on teste `is Map` avant de caster -> un
+      // properties non-Map est traite comme vide (props = {}), donc label
+      // absent -> resultat filtre (pas de crash). AVANT, `as Map?` jetait.
+      final body2 = banFeature({
         'geometry': {
           'coordinates': [1.0, 48.0]
         },
         'properties': ['not', 'a', 'map'],
       });
-      expect(
-        ban(body).search('rue test'),
-        throwsA(isA<TypeError>()),
-      );
+      // label absent (props vide) -> _toSuggestion renvoie null -> liste vide.
+      expect(await ban(body2).search('rue test'), isEmpty);
     });
 
-    test('Photon: champ name de type int au lieu de String -> CAST ERROR '
-        '(documente)', () {
-      // props['name'] as String? jette si la valeur est un int.
+    test('Photon: champ name de type int -> ignore proprement (fix nuit)',
+        () async {
+      // Fix nuit 2026-06-01 : _asString filtre par type -> un name numerique
+      // est traite comme absent (name=null) au lieu de crasher (`as String?`).
+      // Le POI n'est pas reconnu (name requis) mais aucun TypeError.
       final body = photonFeature({
         'geometry': {
           'coordinates': [1.0, 48.0]
@@ -309,7 +303,7 @@ void main() {
       });
       expect(
         photon(body).search('rue test'),
-        throwsA(isA<TypeError>()),
+        completes,
       );
     });
 

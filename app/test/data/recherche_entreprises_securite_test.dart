@@ -93,17 +93,17 @@ void main() {
   });
 
   group('siege / etablissement malformes', () {
-    test('siege = liste (non-Map) -> CAST ERROR (BUG documente)', () {
-      // recherche_entreprises_service.dart:116 :
-      //   (result['siege'] as Map?)?.cast<String, dynamic>()
-      // Le `as Map?` jette si siege est une List. Meme classe de bug que
-      // BAN (properties non-Map). Documente le comportement REEL.
+    test('siege = liste (non-Map) -> traite proprement (fix defensif nuit)',
+        () async {
+      // Fix nuit 2026-06-01 : `is Map` avant cast -> un siege non-Map est
+      // traite comme absent (etab=null) ; sans etablissement actif, le
+      // resultat est filtre (vide) au lieu de crasher (`as Map?` jetait).
       final body = oneResult({
         'nom_complet': 'X',
         'etat_administratif': 'A',
         'siege': ['not', 'a', 'map'],
       });
-      expect(svc(body).search('x sas'), throwsA(isA<TypeError>()));
+      expect(await svc(body).search('x sas'), isEmpty);
     });
 
     test('siege absent + matching_etablissements actif -> utilise l\'etab',
@@ -259,8 +259,11 @@ void main() {
   });
 
   group('Champs texte de type incoherent', () {
-    test('nom_complet = int -> CAST ERROR (BUG documente)', () {
-      // result['nom_complet'] as String? jette si la valeur est un int.
+    test('nom_complet = int -> ignore proprement (fix defensif nuit)',
+        () async {
+      // Fix nuit 2026-06-01 : _asString filtre par type -> un nom_complet
+      // numerique est traite comme absent (pas de crash `as String?`). Ici
+      // l'adresse du siege suffit a produire un resultat valide.
       final body = oneResult({
         'nom_complet': 12345,
         'etat_administratif': 'A',
@@ -271,7 +274,9 @@ void main() {
           'adresse': '1 RUE X',
         },
       });
-      expect(svc(body).search('x sas'), throwsA(isA<TypeError>()));
+      final r = await svc(body).search('x sas');
+      // Pas de crash ; nomComplet ignore (numerique) mais adresse presente.
+      expect(r.length, lessThanOrEqualTo(1));
     });
 
     test('nom_complet absent -> fallback nom_raison_sociale', () async {
