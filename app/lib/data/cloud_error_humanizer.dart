@@ -46,8 +46,10 @@ String humanizeCloudError(Object e) {
     if (e.code == '42P17') {
       return 'Erreur RLS recursive (SQL Supabase a re-jouer ?).';
     }
-    // Default : juste le message texte sans le wrapper
-    return e.message;
+    // Default : juste le message texte sans le wrapper (scrub par
+    // prudence : un message serveur ne devrait pas contenir de token,
+    // mais on ne prend pas le risque).
+    return scrubSecrets(e.message);
   }
 
   // String-based matching pour les ClientException de http qui wrap
@@ -65,11 +67,45 @@ String humanizeCloudError(Object e) {
     return 'Serveur Supabase injoignable, ressaie plus tard.';
   }
 
-  // Fallback : message brut tronque si trop long (max 120 chars pour
-  // tenir dans un SnackBar lisible).
-  final raw = e.toString();
+  // Fallback : message brut NETTOYE (on retire tout secret eventuel)
+  // puis tronque si trop long (max 120 chars pour tenir dans un SnackBar
+  // lisible). Le scrub evite qu'un JWT de session / token Bearer fuite
+  // dans un SnackBar ou via l'ecran Diagnostic (copie/capture d'ecran).
+  final raw = scrubSecrets(e.toString());
   if (raw.length <= 120) return raw;
   return '${raw.substring(0, 117)}...';
+}
+
+/// Masque les secrets susceptibles d'apparaitre dans une exception brute
+/// (message d'une ClientException http, log Supabase...) avant affichage
+/// utilisateur :
+/// - JWT (`eyJ...` en 3 segments base64url) -> token de session, le plus
+///   dangereux (vol de session via capture d'ecran).
+/// - en-tete `Bearer <token>` / `apikey=<...>` / `access_token=<...>`.
+///
+/// Defensif : si rien ne matche, la chaine est renvoyee inchangee. Cf
+/// audit securite nuit 2026-06-01 (information disclosure).
+String scrubSecrets(String input) {
+  var out = input;
+  // JWT : 3 segments base64url separes par des points. On masque tout.
+  out = out.replaceAll(
+    RegExp(r'eyJ[A-Za-z0-9_=-]+\.[A-Za-z0-9_=-]+\.[A-Za-z0-9_=.-]*'),
+    '***',
+  );
+  // Bearer <token>
+  out = out.replaceAll(
+    RegExp(r'[Bb]earer\s+[A-Za-z0-9._~+/=-]+'),
+    'Bearer ***',
+  );
+  // apikey=... / access_token=... / refresh_token=... dans une URL/query
+  out = out.replaceAll(
+    RegExp(
+      r'(apikey|access_token|refresh_token|token)=[A-Za-z0-9._~+/=-]+',
+      caseSensitive: false,
+    ),
+    r'$1=***',
+  );
+  return out;
 }
 
 /// Variante etendue de [humanizeCloudError] qui gere AUSSI les
