@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/database.dart';
 import '../data/navigation_service.dart';
 import '../data/stop_types.dart';
@@ -865,7 +866,7 @@ class _CallClientButton extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur appel : $e')),
+          SnackBar(content: Text('Erreur appel : ${humanizeAnyError(e)}')),
         );
       }
     }

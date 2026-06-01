@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../data/cloud_error_humanizer.dart';
 import '../data/update_checker_service.dart';
 import '../theme/app_tokens.dart';
 
@@ -103,7 +104,7 @@ class _UpdateCheckCardState extends State<UpdateCheckCard> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lancement : $e')),
+        SnackBar(content: Text('Erreur lancement : ${humanizeAnyError(e)}')),
       );
     }
   }
