@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'address_suggestion.dart';
+import 'geo_utils.dart';
 import 'geocode_cache_repository.dart';
 import 'geocoding_service.dart';
 
@@ -136,6 +137,9 @@ class BanGeocodingService implements GeocodingService {
     final lon = _coordToDouble(coords[0]);
     final lat = _coordToDouble(coords[1]);
     if (lon == null || lat == null) return null;
+    // Rejette les coords aberrantes (hors bornes / NaN) : protège
+    // l'optimisation. Cf audit sécu nuit 2026-06-01.
+    if (!GeoUtils.isValidLatLon(lat, lon)) return null;
 
     // `as Map?` CRASHE si properties est une List (schema inattendu) :
     // on teste avec `is` avant de caster. Cf audit nuit 2026-06-01.

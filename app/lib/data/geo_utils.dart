@@ -47,5 +47,16 @@ class GeoUtils {
         thresholdMeters;
   }
 
+  /// Vrai si (lat, lon) sont dans les bornes géographiques valides
+  /// (lat ∈ [-90, 90], lon ∈ [-180, 180]) et non NaN/Infinity. Sert à
+  /// rejeter une coordonnée aberrante venue d'une API (ex : 999/-999) qui
+  /// corromprait l'optimisation de tournée. Cf audit sécu 2026-06-01.
+  static bool isValidLatLon(double lat, double lon) {
+    if (lat.isNaN || lon.isNaN || lat.isInfinite || lon.isInfinite) {
+      return false;
+    }
+    return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+  }
+
   static double _deg2rad(double d) => d * math.pi / 180.0;
 }

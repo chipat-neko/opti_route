@@ -241,20 +241,21 @@ void main() {
       expect(await svc(body).search('x sas'), isEmpty);
     });
 
-    test('coords aberrantes hors bornes -> ACCEPTEES (pas de validation) '
-        '- documente', () async {
+    test('coords aberrantes hors bornes -> REJETEES (durcissement nuit) ',
+        () async {
+      // Fix nuit 2026-06-01 : GeoUtils.isValidLatLon rejette lat/lon hors
+      // bornes -> une entreprise placee a (999, -999) corromprait
+      // l'optimisation, on la skip plutot que de l'afficher.
       final r = await svc(coordBody('999', '-999')).search('coord test');
-      expect(r, hasLength(1));
-      expect(r.first.lat, 999.0);
-      expect(r.first.lon, -999.0);
+      expect(r, isEmpty);
     });
 
-    test('coords "Infinity" / scientifique -> double.tryParse', () async {
-      // double.tryParse("1e3") = 1000.0 ; "Infinity" = Infinity.
+    test('coords "Infinity" -> REJETEES (isValidLatLon) ; "1e3" hors bornes '
+        'aussi rejete', () async {
+      // double.tryParse("Infinity") = Infinity -> isInfinite -> rejete.
+      // "1e3" = 1000.0 (hors [-180,180] / [-90,90]) -> rejete egalement.
       final r = await svc(coordBody('1e3', 'Infinity')).search('coord test');
-      expect(r, hasLength(1));
-      expect(r.first.lat, 1000.0);
-      expect(r.first.lon.isInfinite, isTrue);
+      expect(r, isEmpty);
     });
   });
 

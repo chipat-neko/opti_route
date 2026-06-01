@@ -219,21 +219,18 @@ void main() {
   });
 
   group('Valeurs numeriques extremes / aberrantes', () {
-    test('Photon: coords hors plage [lon=999, lat=-999] -> ACCEPTEES '
-        '(pas de validation de bornes) - documente', () async {
-      // Le parseur ne valide PAS que lat in [-90,90] / lon in [-180,180].
-      // Une coord aberrante est donc stockee telle quelle. Limitation
-      // connue (cf rapport) : un point a (-999, 999) pourrait corrompre
-      // l'optimisation de tournee. Test documente le comportement actuel.
+    test('Photon: coords hors plage [lon=999, lat=-999] -> REJETEES '
+        '(durcissement nuit 2026-06-01)', () async {
+      // Fix nuit : GeoUtils.isValidLatLon valide lat in [-90,90] /
+      // lon in [-180,180]. Une coord aberrante a (999, -999) corromprait
+      // l'optimisation -> on skip le resultat plutot que de l'afficher.
       final r = await photon(photonFeature({
         'geometry': {
           'coordinates': [999.0, -999.0]
         },
         'properties': {'name': 'X', 'street': 'rue X'},
       })).search('rue test');
-      expect(r, hasLength(1));
-      expect(r.first.lon, 999.0);
-      expect(r.first.lat, -999.0);
+      expect(r, isEmpty);
     });
 
     test('BAN: coords negatives plausibles (Atlantique) -> acceptees',
@@ -248,8 +245,10 @@ void main() {
       expect(r.first.lat, 48.39);
     });
 
-    test('Photon: coords entieres tres grandes -> toDouble sans overflow',
+    test('Photon: coords entieres tres grandes -> REJETEES (hors bornes)',
         () async {
+      // 2^53 est largement hors [-180,180] -> isValidLatLon le rejette
+      // (pas de crash overflow, juste un skip propre).
       final big = 9007199254740992; // 2^53
       final r = await photon(photonFeature({
         'geometry': {
@@ -257,8 +256,7 @@ void main() {
         },
         'properties': {'name': 'X', 'street': 'rue X'},
       })).search('rue test');
-      expect(r, hasLength(1));
-      expect(r.first.lon, big.toDouble());
+      expect(r, isEmpty);
     });
   });
 

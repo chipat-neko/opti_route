@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'address_suggestion.dart';
+import 'geo_utils.dart';
 import 'geocode_cache_repository.dart';
 import 'geocoding_service.dart';
 
@@ -142,6 +143,8 @@ class RechercheEntreprisesService implements GeocodingService {
     final lat = _parseDouble(etab['latitude']);
     final lon = _parseDouble(etab['longitude']);
     if (lat == null || lon == null) return null;
+    // Rejette les coords hors bornes / NaN : protège l'optimisation.
+    if (!GeoUtils.isValidLatLon(lat, lon)) return null;
 
     // Lecture tolérante : `as String?` crashe si l'API renvoie un nombre
     // pour un champ texte. _asString filtre par type. Cf audit nuit.

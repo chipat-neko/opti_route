@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'address_suggestion.dart';
+import 'geo_utils.dart';
 import 'geocode_cache_repository.dart';
 import 'geocoding_service.dart';
 
@@ -117,6 +118,8 @@ class PhotonService implements GeocodingService {
     final lon = _coordToDouble(coords[0]);
     final lat = _coordToDouble(coords[1]);
     if (lon == null || lat == null) return null;
+    // Rejette les coords hors bornes / NaN : protège l'optimisation.
+    if (!GeoUtils.isValidLatLon(lat, lon)) return null;
 
     // `as Map?` crashe si properties est une List : on teste avec `is`.
     final rawProps = feature['properties'];
