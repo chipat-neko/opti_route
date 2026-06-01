@@ -459,10 +459,10 @@ returns table (
 ) language plpgsql security definer set search_path = public as $$
 begin
   if not exists (
-    select 1 from public.entreprise_users
-    where entreprise_id = p_entreprise_id
-      and user_id = auth.uid()
-      and statut = 'actif'
+    select 1 from public.entreprise_users eu0
+    where eu0.entreprise_id = p_entreprise_id
+      and eu0.user_id = auth.uid()
+      and eu0.statut = 'actif'
   ) then
     raise exception 'NOT_A_MEMBER';
   end if;
