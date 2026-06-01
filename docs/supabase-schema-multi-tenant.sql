@@ -918,6 +918,97 @@ end;
 $$;
 grant execute on function public.my_entreprise_role() to authenticated;
 
+-- ═══════════════════════════════════════════════════════════════════
+-- SECTION 14 — Profil utilisateur (nom affiché) — demande Noah 2026-06-01
+-- ═══════════════════════════════════════════════════════════════════
+-- Pour afficher un NOM lisible (« Lucas M. ») au lieu de l'email dans la
+-- liste des employés. Chacun définit son propre nom.
+
+-- Table profils : 1 ligne par user, son nom d'affichage choisi.
+create table if not exists public.user_profiles (
+  user_id      uuid primary key references auth.users(id) on delete cascade,
+  display_name text,
+  updated_at   timestamptz not null default now()
+);
+alter table public.user_profiles enable row level security;
+
+-- RLS : chacun lit/écrit SON profil. La lecture des AUTRES profils passe
+-- par la RPC list_entreprise_members (SECURITY DEFINER) qui joint le nom,
+-- donc pas besoin d'ouvrir le SELECT à tous.
+drop policy if exists sel_own_profile on public.user_profiles;
+create policy sel_own_profile on public.user_profiles
+  for select using (user_id = auth.uid());
+drop policy if exists ins_own_profile on public.user_profiles;
+create policy ins_own_profile on public.user_profiles
+  for insert with check (user_id = auth.uid());
+drop policy if exists upd_own_profile on public.user_profiles;
+create policy upd_own_profile on public.user_profiles
+  for update using (user_id = auth.uid());
+
+-- set_my_display_name() : upsert le nom du user courant.
+create or replace function public.set_my_display_name(p_name text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_uid uuid := auth.uid();
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
+  insert into public.user_profiles (user_id, display_name, updated_at)
+  values (v_uid, nullif(trim(p_name), ''), now())
+  on conflict (user_id)
+    do update set display_name = nullif(trim(p_name), ''), updated_at = now();
+end;
+$$;
+grant execute on function public.set_my_display_name(text) to authenticated;
+
+-- get_my_display_name() : lit le nom du user courant (null si pas défini).
+create or replace function public.get_my_display_name()
+returns text language sql security definer set search_path = public as $$
+  select display_name from public.user_profiles where user_id = auth.uid();
+$$;
+grant execute on function public.get_my_display_name() to authenticated;
+
+-- list_entreprise_members : MISE À JOUR pour renvoyer aussi display_name
+-- (left join sur user_profiles). Colonne ajoutée en fin pour ne pas
+-- casser l'ordre existant côté Dart.
+create or replace function public.list_entreprise_members(p_entreprise_id uuid)
+returns table (
+  user_id uuid,
+  email text,
+  role text,
+  statut text,
+  revoked_at timestamptz,
+  entrepot_id uuid,
+  entrepot_nom text,
+  display_name text
+) language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (
+    select 1 from public.entreprise_users eu0
+    where eu0.entreprise_id = p_entreprise_id
+      and eu0.user_id = auth.uid()
+      and eu0.statut = 'actif'
+  ) then
+    raise exception 'NOT_A_MEMBER';
+  end if;
+
+  return query
+  select eu.user_id, u.email::text, eu.role, eu.statut, eu.revoked_at,
+         null::uuid as entrepot_id, null::text as entrepot_nom,
+         p.display_name
+  from public.entreprise_users eu
+  join auth.users u on u.id = eu.user_id
+  left join public.user_profiles p on p.user_id = eu.user_id
+  where eu.entreprise_id = p_entreprise_id
+  union all
+  select epu.user_id, u.email::text, epu.role, epu.statut, epu.revoked_at,
+         e.cloud_id as entrepot_id, e.nom as entrepot_nom,
+         p.display_name
+  from public.entrepot_users epu
+  join public.entrepots e on e.cloud_id = epu.entrepot_id
+  join auth.users u on u.id = epu.user_id
+  left join public.user_profiles p on p.user_id = epu.user_id
+  where e.entreprise_id = p_entreprise_id;
+end $$;
+
 -- ═════════════════════════════════════════════════════════════════
 -- FIN
 -- À déployer puis tester :

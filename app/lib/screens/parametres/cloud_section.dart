@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/cloud_sync_service.dart';
 import '../../data/supabase_service.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/snack.dart';
 import '../cloud/auth_screen.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -41,6 +43,7 @@ class CloudSection extends ConsumerWidget {
           : Column(
               children: [
                 _SignedInTile(user: user),
+                const _MonNomTile(),
                 const _InitialPullStatusTile(),
                 const _PullCloudTile(),
                 const _JoinTourneeTile(),
@@ -233,6 +236,81 @@ class _SignedInTileState extends ConsumerState<_SignedInTile> {
               onPressed: _confirmAndSignOut,
               child: const Text('Deconnecter'),
             ),
+    );
+  }
+}
+
+/// Tuile « Mon nom » : affiche le nom d'affichage choisi (ou « Non defini »)
+/// et permet de le modifier. Sert a montrer un nom lisible au lieu de
+/// l'email dans la liste des employes (#361, demande Noah).
+class _MonNomTile extends ConsumerWidget {
+  const _MonNomTile();
+
+  Future<void> _editer(
+      BuildContext context, WidgetRef ref, String? actuel) async {
+    final ctrl = TextEditingController(text: actuel ?? '');
+    final res = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mon nom'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Ce nom sera visible par ton equipe a la place de '
+                'ton email (ex : « Lucas M. »).'),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              maxLength: 40,
+              decoration: const InputDecoration(
+                labelText: 'Nom affiche',
+                hintText: 'Ex : Lucas M.',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+    if (res == null) return; // annule
+    try {
+      await ref.read(cloudSyncServiceProvider).setMyDisplayName(res);
+      ref.invalidate(monNomProvider);
+      if (context.mounted) {
+        context.showSuccess(res.isEmpty ? 'Nom efface' : 'Nom enregistre');
+      }
+    } catch (e) {
+      if (context.mounted) context.showError(humanizeCloudError(e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final nomAsync = ref.watch(monNomProvider);
+    final nom = nomAsync.asData?.value;
+    return ListTile(
+      leading: Icon(Icons.badge_outlined, color: p.textMute),
+      title: const Text('Mon nom'),
+      subtitle: Text(
+        (nom != null && nom.trim().isNotEmpty)
+            ? nom
+            : 'Non defini — ton email est affiche a l\'equipe',
+        style: TextStyle(fontSize: 12, color: p.textMute),
+      ),
+      trailing: const Icon(Icons.edit_outlined, size: 18),
+      onTap: () => _editer(context, ref, nom),
     );
   }
 }

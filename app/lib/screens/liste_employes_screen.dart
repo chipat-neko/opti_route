@@ -203,7 +203,7 @@ class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
           Icon(Icons.person_outline, size: 18, color: p.textMute),
           const SizedBox(width: AppSpacing.x10),
           Expanded(
-            child: Text(m.email,
+            child: Text(m.nomAffiche,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: p.ink, fontWeight: FontWeight.w600)),
@@ -348,11 +348,18 @@ class _ListeEmployesScreenState extends ConsumerState<ListeEmployesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(m.email,
+                Text(m.nomAffiche,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style:
                         TextStyle(color: p.ink, fontWeight: FontWeight.w600)),
+                // Si un nom est défini, on montre l'email en petit dessous
+                // (pratique pour distinguer deux homonymes). Sinon rien.
+                if (m.displayName != null && m.displayName!.trim().isNotEmpty)
+                  Text(m.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: p.textFaint)),
                 Text(estChef ? 'Chef d\'entrepôt' : 'Chauffeur',
                     style: TextStyle(fontSize: 12, color: p.textMute)),
               ],

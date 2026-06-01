@@ -77,6 +77,19 @@ final entrepriseMembresProvider = FutureProvider.autoDispose
       .listEntrepriseMembers(entrepriseId);
 });
 
+/// Nom d'affichage du user courant (null si pas connecté ou pas défini).
+/// Sert au champ « Mon nom » (Paramètres) et à l'onboarding. Se recharge
+/// au login/logout.
+final monNomProvider = FutureProvider.autoDispose<String?>((ref) async {
+  final user = ref.watch(cloudUserProvider).asData?.value;
+  if (user == null) return null;
+  try {
+    return await ref.watch(cloudSyncServiceProvider).getMyDisplayName();
+  } catch (_) {
+    return null;
+  }
+});
+
 /// Rôle de l'utilisateur courant (chef entreprise / chef entrepôt /
 /// chauffeur). Null s'il n'est dans aucune entreprise OU pas connecté au
 /// cloud. Sert à l'entrée de menu adaptée (#361). Se recharge quand le

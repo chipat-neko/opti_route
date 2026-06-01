@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/supabase_service.dart';
+import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -74,6 +75,62 @@ class _CloudAuthScreenState extends ConsumerState<CloudAuthScreen> {
     }
   }
 
+  /// Après une 1re connexion, demande le nom d'affichage s'il n'est pas
+  /// encore défini. Best-effort : si réseau KO ou user annule, on continue
+  /// (il pourra le définir dans Paramètres). Sera visible par l'équipe.
+  Future<void> _demanderNomSiVide() async {
+    final sync = ref.read(cloudSyncServiceProvider);
+    try {
+      final actuel = await sync.getMyDisplayName();
+      if (actuel != null && actuel.trim().isNotEmpty) return; // déjà défini
+    } catch (_) {
+      return; // réseau KO : on ne bloque pas la connexion
+    }
+    if (!mounted) return;
+    final ctrl = TextEditingController();
+    final nom = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Comment t\'appelles-tu ?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Ce nom sera visible par ton équipe à la place de '
+                'ton email. Tu pourras le changer plus tard.'),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              maxLength: 40,
+              decoration: const InputDecoration(
+                labelText: 'Nom affiché',
+                hintText: 'Ex : Lucas M.',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Plus tard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: const Text('Valider'),
+          ),
+        ],
+      ),
+    );
+    if (nom == null || nom.isEmpty) return; // « Plus tard »
+    try {
+      await sync.setMyDisplayName(nom);
+      ref.invalidate(monNomProvider);
+    } catch (_) {
+      // best-effort : modifiable dans Paramètres
+    }
+  }
+
   Future<void> _verifyCode() async {
     setState(() {
       _busy = true;
@@ -92,6 +149,11 @@ class _CloudAuthScreenState extends ConsumerState<CloudAuthScreen> {
         });
         return;
       }
+      // 1re connexion : si aucun nom d'affichage, on le demande tout de
+      // suite (sera visible par l'equipe a la place de l'email). Optionnel :
+      // l'user peut passer, et le modifier plus tard dans Parametres.
+      await _demanderNomSiVide();
+      if (!mounted) return;
       Navigator.of(context).pop(true);
     } on AuthException catch (e) {
       if (!mounted) return;
