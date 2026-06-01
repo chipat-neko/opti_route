@@ -25,6 +25,8 @@ import 'supabase_service.dart';
 export 'cloud_sync_types.dart';
 // Re-export du modele membre pour les providers / UI (#366).
 export 'cloud/cloud_membres_entreprise_sync.dart' show EntrepriseMembreInfo;
+// Re-export du role courant pour le menu adapte (#361).
+export 'cloud/cloud_entreprise_sync.dart' show MonRole;
 
 /// ════════════════════════════════════════════════════════════════
 /// Service de sync local → cloud (Phase 2 backend, sous-jalon 2.B).
@@ -1006,10 +1008,32 @@ class CloudSyncService {
     await _entreprise.pullMine(client);
   }
 
+  /// Role de l'utilisateur courant (chef entreprise / chef entrepot /
+  /// chauffeur). Null s'il n'est dans aucune entreprise. Sert au menu.
+  Future<MonRole?> myRole() {
+    _requireUserId();
+    return _entreprise.myRole(_client());
+  }
+
+  /// Quitte une entreprise (employe/membre). L'admin/createur ne peut pas
+  /// quitter -> doit [deleteEntreprise].
+  Future<void> leaveEntreprise(String entrepriseId) {
+    _requireUserId();
+    return _entreprise.leaveEntreprise(_client(), entrepriseId);
+  }
+
+  /// Supprime une entreprise (admin/createur) : cascade entrepots +
+  /// adhesions + invitations cote cloud, purge le miroir local.
+  Future<void> deleteEntreprise(String entrepriseId) {
+    _requireUserId();
+    return _entreprise.deleteEntreprise(_client(), entrepriseId);
+  }
+
   // ── Gestion employes (carte #366) ──
 
   /// Invite un employe par MAIL (Edge Function invite_employee).
-  Future<void> inviteEmployeByMail({
+  Future<({String code, bool emailSent, String? emailError})>
+      inviteEmployeByMail({
     required String entrepriseId,
     String? entrepotId,
     required String email,
@@ -1064,6 +1088,31 @@ class CloudSyncService {
     _requireUserId();
     return _membresEnt.reactivateMember(_client(),
         entrepriseId: entrepriseId, userId: userId, entrepotId: entrepotId);
+  }
+
+  /// Mute un employe : role (chef_entrepot/employe) + entrepot cible.
+  Future<void> setEmployeEntrepot({
+    required String entrepriseId,
+    required String userId,
+    required String entrepotId,
+    required String role,
+  }) {
+    _requireUserId();
+    return _membresEnt.setEmployeEntrepot(_client(),
+        entrepriseId: entrepriseId,
+        userId: userId,
+        entrepotId: entrepotId,
+        role: role);
+  }
+
+  /// Revoque un employe de l'entreprise + tous ses entrepots.
+  Future<void> revokeEmploye({
+    required String entrepriseId,
+    required String userId,
+  }) {
+    _requireUserId();
+    return _membresEnt.revokeEmploye(_client(),
+        entrepriseId: entrepriseId, userId: userId);
   }
 
   /// Cote employe : accepte une invitation par code (#373).

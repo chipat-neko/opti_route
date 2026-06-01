@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/database_providers.dart';
+import '../providers/supabase_providers.dart';
 import '../screens/carnet_adresses_screen.dart';
 import '../screens/chef/chef_dashboard_shell.dart';
 import '../screens/frais_screen.dart';
+import '../screens/liste_employes_screen.dart';
 import '../screens/parametres_screen.dart';
 import '../screens/resume_hebdo_screen.dart';
 import '../screens/stats_screen.dart';
@@ -172,6 +174,46 @@ class AppDrawer extends ConsumerWidget {
                   MaterialPageRoute<void>(
                     builder: (_) => const FraisScreen(),
                   ),
+                );
+              },
+            ),
+            // Entree adaptee au role multi-tenant (#361) : "Mon entreprise"
+            // (chef d'entreprise) ou "Mon entrepot X" (chef entrepot /
+            // chauffeur). Cachee si l'user n'est dans aucune entreprise.
+            Consumer(
+              builder: (context, ref, _) {
+                final role = ref.watch(monRoleProvider).asData?.value;
+                if (role == null) return const SizedBox.shrink();
+                return ListTile(
+                  leading: Icon(role.isAdminEntreprise
+                      ? Icons.business_outlined
+                      : Icons.warehouse_outlined),
+                  title: Text(role.titreMenu),
+                  subtitle: Text(
+                    role.isAdminEntreprise
+                        ? 'Employes, entrepots'
+                        : role.isChefEntrepot
+                            ? 'Mon equipe (chef d\'entrepot)'
+                            : 'Mon equipe',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ListeEmployesScreen(
+                          entrepriseId: role.entrepriseId,
+                          titre: role.titreMenu,
+                          // Seul le chef d'entreprise peut muter.
+                          peutMuter: role.isAdminEntreprise,
+                          // Chef entrepot / chauffeur : limite a leur entrepot.
+                          filtreEntrepotId: role.isAdminEntreprise
+                              ? null
+                              : role.entrepotId,
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),

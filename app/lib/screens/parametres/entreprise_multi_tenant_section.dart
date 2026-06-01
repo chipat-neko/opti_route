@@ -10,6 +10,7 @@ import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/snack.dart';
+import '../liste_employes_screen.dart';
 import 'parametres_widgets.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -70,6 +71,66 @@ class _EntrepriseMultiTenantSectionState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _supprimerEntreprise(Entreprise e) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer cette entreprise ?'),
+        content: Text(
+          'L\'entreprise « ${e.nom} », ses entrepôts, ses employés et les '
+          'invitations en cours seront supprimés définitivement. Cette '
+          'action est irréversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _run(() async {
+      await ref.read(cloudSyncServiceProvider).deleteEntreprise(e.cloudId);
+      ref.invalidate(mesEntreprisesProvider);
+      if (mounted) context.showSuccess('Entreprise « ${e.nom} » supprimée');
+    });
+  }
+
+  Future<void> _quitterEntreprise(Entreprise e) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quitter cette entreprise ?'),
+        content: Text(
+          'Tu n\'auras plus accès au carnet partagé de « ${e.nom} ». Tu '
+          'pourras la rejoindre à nouveau avec un code d\'invitation.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Quitter'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _run(() async {
+      await ref.read(cloudSyncServiceProvider).leaveEntreprise(e.cloudId);
+      ref.invalidate(mesEntreprisesProvider);
+      if (mounted) context.showSuccess('Tu as quitté « ${e.nom} »');
+    });
   }
 
   Future<void> _creerEntreprise() async {
@@ -161,14 +222,40 @@ class _EntrepriseMultiTenantSectionState
   }
 
   Widget _etatVide() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FilledButton.icon(
-        onPressed: _busy ? null : _creerEntreprise,
-        icon: const Icon(Icons.add_business_outlined),
-        label: const Text('Créer mon entreprise'),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          onPressed: _busy ? null : _creerEntreprise,
+          icon: const Icon(Icons.add_business_outlined),
+          label: const Text('Créer mon entreprise'),
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _rejoindreParCode,
+          icon: const Icon(Icons.groups_outlined, size: 18),
+          label: const Text('Rejoindre avec un code'),
+        ),
+      ],
     );
+  }
+
+  /// Rejoindre une entreprise/entrepôt avec un code d'invitation (donné
+  /// par le chef). Même flux que l'onboarding « Qui es-tu ? » mais
+  /// accessible à tout moment depuis les Paramètres.
+  Future<void> _rejoindreParCode() async {
+    final code = await showDialog<String>(
+      context: context,
+      builder: (_) => const _RejoindreCodeDialog(),
+    );
+    if (code == null) return;
+    await _run(() async {
+      final sync = ref.read(cloudSyncServiceProvider);
+      await sync.acceptEntrepriseInvitationByCode(code);
+      await sync.pullMesEntreprises();
+      ref.invalidate(mesEntreprisesProvider);
+      if (mounted) context.showSuccess('Bienvenue dans l\'équipe !');
+    });
   }
 
   Widget _carteEntreprise(Entreprise e, String userId) {
@@ -199,6 +286,28 @@ class _EntrepriseMultiTenantSectionState
                 ),
               ),
               if (isAdmin) const _BadgeAdmin(),
+              // Menu sortie : Supprimer (admin) ou Quitter (membre).
+              PopupMenuButton<String>(
+                tooltip: 'Options',
+                enabled: !_busy,
+                icon: Icon(Icons.more_vert, size: 20, color: p.textMute),
+                onSelected: (v) {
+                  if (v == 'delete') _supprimerEntreprise(e);
+                  if (v == 'leave') _quitterEntreprise(e);
+                },
+                itemBuilder: (_) => [
+                  if (isAdmin)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Supprimer l\'entreprise'),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'leave',
+                      child: Text('Quitter l\'entreprise'),
+                    ),
+                ],
+              ),
             ],
           ),
           if (e.siret != null) ...[
@@ -210,6 +319,29 @@ class _EntrepriseMultiTenantSectionState
           _listeEntrepots(e.cloudId, isAdmin),
           const Divider(height: AppSpacing.x22),
           _listeMembres(e, isAdmin),
+          // Admin : accès à l'écran "Liste des employés" organisé par
+          // entrepôt (chefs / chauffeurs) avec mutation (#361).
+          if (isAdmin) ...[
+            const SizedBox(height: AppSpacing.x10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ListeEmployesScreen(
+                              entrepriseId: e.cloudId,
+                              titre: 'Employés — ${e.nom}',
+                              peutMuter: true,
+                            ),
+                          ),
+                        ),
+                icon: const Icon(Icons.badge_outlined, size: 18),
+                label: const Text('Liste des employés (par entrepôt)'),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -412,14 +544,22 @@ class _EntrepriseMultiTenantSectionState
     await _run(() async {
       final sync = ref.read(cloudSyncServiceProvider);
       if (res.parMail) {
-        await sync.inviteEmployeByMail(
+        final r = await sync.inviteEmployeByMail(
           entrepriseId: e.cloudId,
           entrepotId: res.entrepotId,
           email: res.email!,
           roleTarget: res.roleTarget,
         );
         if (mounted) {
-          context.showSuccess('Invitation envoyée à ${res.email}');
+          if (r.emailSent) {
+            context.showSuccess('Invitation envoyée à ${res.email}');
+          } else {
+            context.showError('Mail non parti (config Brevo ?) — '
+                'communique le code ci-dessous à la main');
+          }
+          // Filet de sécurité : on montre le code même quand le mail est
+          // parti (il peut tomber en spam / tarder).
+          await _afficherCode(r.code, validite: '7 jours');
         }
       } else {
         final code = await sync.inviteEmployeByCode(
@@ -434,7 +574,7 @@ class _EntrepriseMultiTenantSectionState
   }
 
   /// Affiche le code généré dans un dialog copiable (72h de validité).
-  Future<void> _afficherCode(String code) async {
+  Future<void> _afficherCode(String code, {String validite = '72 h'}) async {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -442,8 +582,8 @@ class _EntrepriseMultiTenantSectionState
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Donne ce code à ton employé. Il le saisira au '
-                '1er démarrage de l\'app. Valable 72 h.'),
+            Text('Donne ce code à ton employé. Il le saisira dans '
+                '« Rejoindre une équipe ». Valable $validite.'),
             const SizedBox(height: AppSpacing.x16),
             SelectableText(
               code,
@@ -501,6 +641,71 @@ class _EntrepriseMultiTenantSectionState
       if (mounted) context.showSuccess('Employé révoqué');
       ref.invalidate(entrepriseMembresProvider(e.cloudId));
     });
+  }
+}
+
+/// Dialog de saisie d'un code d'invitation à 6 chiffres pour rejoindre
+/// une entreprise/entrepôt depuis les Paramètres (même flux que
+/// l'onboarding « Qui es-tu ? »).
+class _RejoindreCodeDialog extends StatefulWidget {
+  const _RejoindreCodeDialog();
+
+  @override
+  State<_RejoindreCodeDialog> createState() => _RejoindreCodeDialogState();
+}
+
+class _RejoindreCodeDialogState extends State<_RejoindreCodeDialog> {
+  final _ctrl = TextEditingController();
+  bool _vide = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rejoindre avec un code'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Saisis le code à 6 chiffres donné par ton chef '
+              '(entreprise ou entrepôt).'),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 6,
+            decoration: InputDecoration(
+              labelText: 'Code',
+              hintText: '123456',
+              errorText: _vide ? 'Code requis' : null,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final code = _ctrl.text.trim();
+            if (code.isEmpty) {
+              setState(() => _vide = true);
+              return;
+            }
+            Navigator.of(context).pop(code);
+          },
+          child: const Text('Rejoindre'),
+        ),
+      ],
+    );
   }
 }
 

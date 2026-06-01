@@ -77,6 +77,22 @@ final entrepriseMembresProvider = FutureProvider.autoDispose
       .listEntrepriseMembers(entrepriseId);
 });
 
+/// Rôle de l'utilisateur courant (chef entreprise / chef entrepôt /
+/// chauffeur). Null s'il n'est dans aucune entreprise OU pas connecté au
+/// cloud. Sert à l'entrée de menu adaptée (#361). Se recharge quand le
+/// user cloud change (login/logout) ou les entreprises locales évoluent.
+final monRoleProvider = FutureProvider.autoDispose<MonRole?>((ref) async {
+  final user = ref.watch(cloudUserProvider).asData?.value;
+  if (user == null) return null;
+  // Se réévalue si les entreprises locales changent (rejoint/quitté).
+  ref.watch(mesEntreprisesProvider);
+  try {
+    return await ref.watch(cloudSyncServiceProvider).myRole();
+  } catch (_) {
+    return null; // best-effort : pas d'entrée de menu si échec réseau
+  }
+});
+
 /// Etat de l'auto-pull pour affichage UI :
 /// - `AsyncData(null)` : idle (aucun pull en cours, pas encore fait)
 /// - `AsyncLoading()` : pull en cours
