@@ -285,7 +285,7 @@ msix_config:
   display_name: opti_route (chef)
   publisher_display_name: CALOTE Noah
   identity_name: com.calote.optiroute
-  msix_version: 2.9.2.11
+  msix_version: 2.9.2.12
   capabilities: internetClient, location
   install_certificate: false
   # msix:create relance sinon `flutter build windows` SANS nos
