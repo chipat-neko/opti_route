@@ -20,11 +20,20 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Aligne sur l'environnement de Noah (Flutter local en
-          # C:\src\flutter, channel stable). On pinne une version mineure
-          # pour eviter qu'un changement upstream casse la build.
+          # Aligne EXACTEMENT sur l'environnement de Noah (Flutter local
+          # 3.41.9). Sans version pinnee, `channel: stable` prenait le
+          # dernier stable (plus recent) -> faux positifs d'analyze sur des
+          # API depreciees apres 3.41 (ex: ReorderableListView.onReorder)
+          # alors que le build de Noah est OK. La CI doit tester ce qu'on
+          # livre, pas une version future.
+          flutter-version: 3.41.9
           channel: stable
           cache: true
+
+      # sqlite3 3.x charge sa lib native via les "native assets" (hooks).
+      # Sans ce flag, `flutter test` echoue a ouvrir la base sur le runner.
+      - name: Active native assets
+        run: flutter config --enable-native-assets
 
       - name: flutter pub get
         run: flutter pub get
