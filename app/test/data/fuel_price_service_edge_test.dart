@@ -225,4 +225,87 @@ void main() {
       expect(stations, isEmpty);
     });
   });
+
+  // Robustesse parsing (durcissement nuit 2026-06-01) : une station au
+  // champ malforme ne doit PAS annuler tout le resultat, et le prix peut
+  // arriver en String (l'API renvoie parfois "1.80").
+  group('FuelPriceService — robustesse parsing externe', () {
+    test('1 station au prix malforme (objet) n\'annule PAS le departement',
+        () async {
+      final body = jsonEncode({
+        'results': [
+          {'gazole_prix': 1.8},
+          {'gazole_prix': {'broken': true}}, // type inattendu -> skip
+          {'gazole_prix': 2.0},
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final r = await FuelPriceService(client: mock).getAverageDieselPrice();
+      // Avant le fix : (p as num) crashait -> tout le departement = null.
+      // Apres : la station cassee est ignoree, moyenne sur 1.8 et 2.0.
+      expect(r, isNotNull);
+      expect(r!.sampleSize, 2);
+      expect(r.averageEurPerLiter, closeTo(1.9, 0.001));
+    });
+
+    test('prix en String ("1.80") accepte (tolerance num/String)', () async {
+      final body = jsonEncode({
+        'results': [
+          {'gazole_prix': '1.80'},
+          {'gazole_prix': '2.00'},
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final r = await FuelPriceService(client: mock).getAverageDieselPrice();
+      expect(r, isNotNull);
+      expect(r!.sampleSize, 2);
+      expect(r.averageEurPerLiter, closeTo(1.9, 0.001));
+    });
+
+    test('station avec adresse/ville numerique : pas de crash, champ vide',
+        () async {
+      final body = jsonEncode({
+        'results': [
+          {
+            'id': 'S0',
+            'gazole_prix': 1.8,
+            'geom': {'lat': 48.5, 'lon': 1.5},
+            'cp': 28100, // numerique au lieu de String
+            'ville': 'Chateaudun', // ASCII : ce test porte sur le cp, pas UTF-8
+            'adresse': 'A',
+          },
+        ],
+      });
+      final mock = MockClient((req) async => http.Response(body, 200));
+      final stations = await FuelPriceService(client: mock)
+          .findNearbyDieselStations(lat: 48.5, lng: 1.5);
+      expect(stations, hasLength(1));
+      expect(stations.first.codePostal, ''); // numerique -> ignore proprement
+      expect(stations.first.ville, 'Chateaudun');
+    });
+
+    test('UTF-8 : ville accentuee preservee (pas de mojibake)', () async {
+      // On envoie de vrais octets UTF-8 sans charset -> l'ancien code
+      // (resp.body en latin1) produisait "ChÃ¢teaudun". Le fix utf8.decode
+      // sur bodyBytes preserve l'accent.
+      final jsonStr = jsonEncode({
+        'results': [
+          {
+            'id': 'S0',
+            'gazole_prix': 1.8,
+            'geom': {'lat': 48.5, 'lon': 1.5},
+            'cp': '28200', 'ville': 'Châteaudun', 'adresse': 'Rue de Bagnéux',
+          },
+        ],
+      });
+      final mock = MockClient(
+        (req) async => http.Response.bytes(utf8.encode(jsonStr), 200),
+      );
+      final stations = await FuelPriceService(client: mock)
+          .findNearbyDieselStations(lat: 48.5, lng: 1.5);
+      expect(stations, hasLength(1));
+      expect(stations.first.ville, 'Châteaudun');
+      expect(stations.first.address, 'Rue de Bagnéux');
+    });
+  });
 }

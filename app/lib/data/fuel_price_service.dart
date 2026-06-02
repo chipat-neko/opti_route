@@ -57,8 +57,13 @@ class FuelPriceService {
       });
       final resp = await _http.get(uri).timeout(timeout);
       if (resp.statusCode != 200) return null;
-      final body = json.decode(resp.body) as Map<String, dynamic>;
-      final results = (body['results'] as List?) ?? const [];
+      // UTF-8 explicite (cf geocodeurs) : evite le mojibake des noms de
+      // villes accentuees si le header charset manque.
+      final decoded =
+          json.decode(utf8.decode(resp.bodyBytes, allowMalformed: true));
+      if (decoded is! Map) return null;
+      final rawResults = decoded['results'];
+      final results = rawResults is List ? rawResults : const [];
       if (results.isEmpty) return null;
 
       // Moyenne des prix gazole non null. On ignore les stations qui
@@ -66,9 +71,12 @@ class FuelPriceService {
       final prices = <double>[];
       DateTime? lastUpdate;
       for (final r in results) {
-        final p = (r as Map<String, dynamic>)['gazole_prix'];
-        if (p == null) continue;
-        final price = (p as num).toDouble();
+        if (r is! Map) continue;
+        // Conversion tolerante : une station au prix malforme (String,
+        // null) est SKIP, elle ne fait plus planter toute la boucle (le
+        // catch externe annulait sinon TOUT le departement). Audit nuit.
+        final price = _numToDouble(r['gazole_prix']);
+        if (price == null) continue;
         // Filtre defensif : un prix < 0.5 ou > 5 EUR est probablement
         // une erreur de saisie, on l'exclut.
         if (price < 0.5 || price > 5.0) continue;
@@ -134,38 +142,45 @@ class FuelPriceService {
       });
       final resp = await _http.get(uri).timeout(timeout);
       if (resp.statusCode != 200) return const [];
-      final body = json.decode(resp.body) as Map<String, dynamic>;
-      final results = (body['results'] as List?) ?? const [];
+      // UTF-8 explicite (cf geocodeurs) : evite le mojibake des adresses
+      // / villes accentuees si le header charset manque.
+      final decoded =
+          json.decode(utf8.decode(resp.bodyBytes, allowMalformed: true));
+      if (decoded is! Map) return const [];
+      final rawResults = decoded['results'];
+      final results = rawResults is List ? rawResults : const [];
 
       final stations = <FuelStation>[];
       for (final r in results) {
-        final m = r as Map<String, dynamic>;
-        final p = m['gazole_prix'];
+        if (r is! Map) continue;
         // `geom` est un objet `{lon: ..., lat: ...}` (geo_point_2d).
-        final g = m['geom'];
-        if (p == null || g is! Map) continue;
-        final stLat = (g['lat'] as num?)?.toDouble();
-        final stLng = (g['lon'] as num?)?.toDouble();
+        final g = r['geom'];
+        if (g is! Map) continue;
+        // Conversions tolerantes : une station au prix/coord malforme est
+        // SKIP, elle ne fait plus planter toute la liste. Audit nuit.
+        final stLat = _numToDouble(g['lat']);
+        final stLng = _numToDouble(g['lon']);
         if (stLat == null || stLng == null) continue;
-        final price = (p as num).toDouble();
+        final price = _numToDouble(r['gazole_prix']);
+        if (price == null) continue;
         if (price < 0.5 || price > 5.0) continue;
         final dKm = _haversineKm(lat, lng, stLat, stLng);
         // Filtre defensif : l'API a deja filtre mais on re-coupe au cas
         // ou (precision within_distance vs haversine).
         if (dKm > maxKm) continue;
         stations.add(FuelStation(
-          id: (m['id'] as Object?)?.toString() ?? '',
+          id: r['id']?.toString() ?? '',
           // Pas de nom : data.gouv.fr ne le fournit pas. On laisse vide,
           // l'UI affichera l'adresse comme label principal.
           name: '',
-          address: (m['adresse'] as String?)?.trim() ?? '',
-          codePostal: (m['cp'] as String?)?.trim() ?? '',
-          ville: (m['ville'] as String?)?.trim() ?? '',
+          address: _str(r['adresse'])?.trim() ?? '',
+          codePostal: _str(r['cp'])?.trim() ?? '',
+          ville: _str(r['ville'])?.trim() ?? '',
           lat: stLat,
           lng: stLng,
           dieselPriceEur: price,
           distanceKm: dKm,
-          lastUpdate: _parseDate(m['gazole_maj']),
+          lastUpdate: _parseDate(r['gazole_maj']),
         ));
       }
       stations.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
@@ -200,6 +215,20 @@ class FuelPriceService {
     }
     return DateTime.now();
   }
+
+  /// Conversion tolerante num/String -> double (sinon null). Evite qu'une
+  /// seule station au champ malforme (String, null, type inattendu) fasse
+  /// planter toute la boucle via un cast `as num` -- le catch externe
+  /// annulait alors TOUT le resultat. Cf audit robustesse nuit 2026-06-01.
+  static double? _numToDouble(Object? v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
+  /// Lecture tolerante d'un champ texte : la String telle quelle, sinon
+  /// null (au lieu de `as String?` qui crashe sur un nombre).
+  static String? _str(Object? v) => v is String ? v : null;
 }
 
 /// Une station Diesel localisee, retournee par

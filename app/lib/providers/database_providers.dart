@@ -239,7 +239,8 @@ final carnetForMatchingProvider =
 /// client partagent le meme calcul. Le carnet vient du cache
 /// [carnetForMatchingProvider] -> aucun rechargement par stop (#213).
 final clientHistoryProvider =
-    FutureProvider.family<SavedDestination?, String>((ref, nomClient) async {
+    FutureProvider.autoDispose.family<SavedDestination?, String>(
+        (ref, nomClient) async {
   if (nomClient.trim().isEmpty) return null;
   final all = await ref.watch(carnetForMatchingProvider.future);
   if (all.isEmpty) return null;
@@ -457,7 +458,7 @@ final clientStatsServiceProvider = Provider<ClientStatsService>((ref) {
 /// Stats agregees pour un client donne du carnet (livraisons, echecs,
 /// derniere visite, raisons d'echec). Recalcule a chaque modif des
 /// stops via le watch implicite sur tourneesStreamProvider.
-final clientStatsProvider = FutureProvider.family<ClientStats, int>(
+final clientStatsProvider = FutureProvider.autoDispose.family<ClientStats, int>(
     (ref, savedDestinationId) async {
   ref.watch(tourneesStreamProvider);
   final repo = ref.read(savedDestinationsRepositoryProvider);

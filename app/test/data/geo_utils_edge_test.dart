@@ -107,4 +107,53 @@ void main() {
       );
     });
   });
+
+  // Validation des bornes : barrière contre une coord aberrante venue
+  // d'une API (mentalité hacker : et si le JSON injecte 999, NaN, -Inf ?).
+  // Une coord hors bornes corromprait l'optimisation de tournée.
+  group('GeoUtils.isValidLatLon', () {
+    test('Coords françaises typiques -> valides', () {
+      expect(GeoUtils.isValidLatLon(48.8566, 2.3522), isTrue); // Paris
+      expect(GeoUtils.isValidLatLon(43.2965, 5.3698), isTrue); // Marseille
+    });
+
+    test('(0, 0) Null Island -> valide (techniquement dans les bornes)', () {
+      expect(GeoUtils.isValidLatLon(0, 0), isTrue);
+    });
+
+    test('Bornes exactes incluses', () {
+      expect(GeoUtils.isValidLatLon(90, 180), isTrue);
+      expect(GeoUtils.isValidLatLon(-90, -180), isTrue);
+      expect(GeoUtils.isValidLatLon(90, -180), isTrue);
+      expect(GeoUtils.isValidLatLon(-90, 180), isTrue);
+    });
+
+    test('Latitude hors [-90, 90] -> invalide', () {
+      expect(GeoUtils.isValidLatLon(90.0001, 0), isFalse);
+      expect(GeoUtils.isValidLatLon(-90.0001, 0), isFalse);
+      expect(GeoUtils.isValidLatLon(999, 0), isFalse);
+      expect(GeoUtils.isValidLatLon(-1000, 0), isFalse);
+    });
+
+    test('Longitude hors [-180, 180] -> invalide', () {
+      expect(GeoUtils.isValidLatLon(0, 180.0001), isFalse);
+      expect(GeoUtils.isValidLatLon(0, -180.0001), isFalse);
+      expect(GeoUtils.isValidLatLon(0, 99999), isFalse);
+    });
+
+    test('NaN -> invalide (lat, lon, ou les deux)', () {
+      expect(GeoUtils.isValidLatLon(double.nan, 0), isFalse);
+      expect(GeoUtils.isValidLatLon(0, double.nan), isFalse);
+      expect(GeoUtils.isValidLatLon(double.nan, double.nan), isFalse);
+    });
+
+    test('Infinity -> invalide', () {
+      expect(GeoUtils.isValidLatLon(double.infinity, 0), isFalse);
+      expect(GeoUtils.isValidLatLon(0, double.negativeInfinity), isFalse);
+      expect(
+        GeoUtils.isValidLatLon(double.infinity, double.infinity),
+        isFalse,
+      );
+    });
+  });
 }

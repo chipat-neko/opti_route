@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'address_suggestion.dart';
+import 'geo_utils.dart';
 import 'geocode_cache_repository.dart';
 import 'geocoding_service.dart';
 
@@ -79,7 +80,9 @@ class PhotonService implements GeocodingService {
       throw GeocodingException('Reponse Photon ${response.statusCode}');
     }
 
-    final raw = jsonDecode(response.body);
+    // UTF-8 explicite (cf ban_geocoding_service) : évite le mojibake des
+    // accents si le header charset manque.
+    final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (raw is! Map<String, dynamic>) {
       throw const GeocodingException('Reponse JSON inattendue (Photon)');
     }
@@ -109,25 +112,32 @@ class PhotonService implements GeocodingService {
     final coords = geometry['coordinates'];
     if (coords is! List || coords.length < 2) return null;
 
-    // Photon retourne parfois des coords null pour des POIs mal indexes :
-    // on convertit defensivement plutot que crasher.
-    final lon = (coords[0] as num?)?.toDouble();
-    final lat = (coords[1] as num?)?.toDouble();
+    // Photon retourne parfois des coords null/strings pour des POIs mal
+    // indexes : conversion TOLERANTE (num ou String) plutot que `as num?`
+    // qui crashe sur une String. Cf audit secu nuit 2026-06-01.
+    final lon = _coordToDouble(coords[0]);
+    final lat = _coordToDouble(coords[1]);
     if (lon == null || lat == null) return null;
+    // Rejette les coords hors bornes / NaN : protège l'optimisation.
+    if (!GeoUtils.isValidLatLon(lat, lon)) return null;
 
-    final props = (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
+    // `as Map?` crashe si properties est une List : on teste avec `is`.
+    final rawProps = feature['properties'];
+    final props = rawProps is Map
+        ? rawProps.cast<String, dynamic>()
+        : <String, dynamic>{};
 
-    final houseNumber = props['housenumber'] as String?;
-    final street = props['street'] as String?;
-    final postcode = props['postcode'] as String?;
-    final city = props['city'] as String? ??
-        props['town'] as String? ??
-        props['village'] as String? ??
-        props['locality'] as String?;
-    final country = props['country'] as String?;
+    final houseNumber = _asString(props['housenumber']);
+    final street = _asString(props['street']);
+    final postcode = _asString(props['postcode']);
+    final city = _asString(props['city']) ??
+        _asString(props['town']) ??
+        _asString(props['village']) ??
+        _asString(props['locality']);
+    final country = _asString(props['country']);
 
-    final osmKey = props['osm_key'] as String?;
-    final name = props['name'] as String?;
+    final osmKey = _asString(props['osm_key']);
+    final name = _asString(props['name']);
     final isPoi =
         osmKey != null && _poiOsmKeys.contains(osmKey) && name != null;
 
@@ -178,6 +188,18 @@ class PhotonService implements GeocodingService {
     if (country != null && country.isNotEmpty) parts.add(country);
     return parts.join(', ');
   }
+
+  /// Conversion coordonnée tolérante (num ou String) -> double, sinon null.
+  /// Évite le crash `as num?` sur une String. Cf audit sécu nuit 2026-06-01.
+  static double? _coordToDouble(Object? v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
+  /// Lecture tolérante d'un champ texte : renvoie la String si c'en est
+  /// une, sinon null (au lieu de `as String?` qui crashe sur un nombre).
+  static String? _asString(Object? v) => v is String ? v : null;
 
   @override
   void close() => _client.close();

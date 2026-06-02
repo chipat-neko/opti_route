@@ -3,6 +3,13 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
+import 'pii_mask.dart';
+
+// scrubSecrets vit désormais dans pii_mask.dart (fonction pure, réutilisée
+// aussi par les helpers de sync qui doivent rester sans dép Supabase). On
+// le ré-exporte ici pour ne pas casser les imports existants.
+export 'pii_mask.dart' show scrubSecrets;
+
 /// ════════════════════════════════════════════════════════════════
 /// Transforme une exception cloud brute en message FR user-friendly.
 /// ════════════════════════════════════════════════════════════════
@@ -46,8 +53,10 @@ String humanizeCloudError(Object e) {
     if (e.code == '42P17') {
       return 'Erreur RLS recursive (SQL Supabase a re-jouer ?).';
     }
-    // Default : juste le message texte sans le wrapper
-    return e.message;
+    // Default : juste le message texte sans le wrapper (scrub par
+    // prudence : un message serveur ne devrait pas contenir de token,
+    // mais on ne prend pas le risque).
+    return scrubSecrets(e.message);
   }
 
   // String-based matching pour les ClientException de http qui wrap
@@ -65,9 +74,11 @@ String humanizeCloudError(Object e) {
     return 'Serveur Supabase injoignable, ressaie plus tard.';
   }
 
-  // Fallback : message brut tronque si trop long (max 120 chars pour
-  // tenir dans un SnackBar lisible).
-  final raw = e.toString();
+  // Fallback : message brut NETTOYE (on retire tout secret eventuel)
+  // puis tronque si trop long (max 120 chars pour tenir dans un SnackBar
+  // lisible). Le scrub evite qu'un JWT de session / token Bearer fuite
+  // dans un SnackBar ou via l'ecran Diagnostic (copie/capture d'ecran).
+  final raw = scrubSecrets(e.toString());
   if (raw.length <= 120) return raw;
   return '${raw.substring(0, 117)}...';
 }

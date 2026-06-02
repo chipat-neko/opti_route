@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'address_suggestion.dart';
+import 'geo_utils.dart';
 import 'geocode_cache_repository.dart';
 import 'geocoding_service.dart';
 
@@ -61,7 +62,10 @@ class BanGeocodingService implements GeocodingService {
       throw GeocodingException('Reponse BAN ${response.statusCode}');
     }
 
-    final raw = jsonDecode(response.body);
+    // UTF-8 explicite : `response.body` décode en Latin-1 si le header
+    // charset est absent (cas des APIs gov.fr) -> accents cassés
+    // (« Société » -> « SociÃ©tÃ© »). On décode les octets bruts en UTF-8.
+    final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (raw is! Map<String, dynamic>) {
       throw const GeocodingException('Reponse JSON inattendue (BAN)');
     }
@@ -108,7 +112,10 @@ class BanGeocodingService implements GeocodingService {
     if (response.statusCode != 200) {
       throw GeocodingException('Reponse BAN reverse ${response.statusCode}');
     }
-    final raw = jsonDecode(response.body);
+    // UTF-8 explicite : `response.body` décode en Latin-1 si le header
+    // charset est absent (cas des APIs gov.fr) -> accents cassés
+    // (« Société » -> « SociÃ©tÃ© »). On décode les octets bruts en UTF-8.
+    final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (raw is! Map<String, dynamic>) return null;
     final features = raw['features'];
     if (features is! List || features.isEmpty) return null;
@@ -125,12 +132,21 @@ class BanGeocodingService implements GeocodingService {
 
     // BAN renvoie parfois `[null, null]` ou des strings sur certains
     // POI mal indexes : on convertit defensivement plutot que crasher.
-    final lon = (coords[0] as num?)?.toDouble();
-    final lat = (coords[1] as num?)?.toDouble();
+    // ⚠️ `as num?` CRASHE sur une String ("1.0") -> on passe par un
+    // helper tolerant (num OU String parsable), sinon null. Cf audit nuit.
+    final lon = _coordToDouble(coords[0]);
+    final lat = _coordToDouble(coords[1]);
     if (lon == null || lat == null) return null;
+    // Rejette les coords aberrantes (hors bornes / NaN) : protège
+    // l'optimisation. Cf audit sécu nuit 2026-06-01.
+    if (!GeoUtils.isValidLatLon(lat, lon)) return null;
 
-    final props =
-        (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
+    // `as Map?` CRASHE si properties est une List (schema inattendu) :
+    // on teste avec `is` avant de caster. Cf audit nuit 2026-06-01.
+    final rawProps = feature['properties'];
+    final props = rawProps is Map
+        ? rawProps.cast<String, dynamic>()
+        : <String, dynamic>{};
 
     final type = props['type'] as String?;
     final label = props['label'] as String?;
@@ -152,6 +168,16 @@ class BanGeocodingService implements GeocodingService {
       city: city,
       country: 'France',
     );
+  }
+
+  /// Convertit une coordonnée venue du JSON en double, de façon TOLÉRANTE :
+  /// accepte un num (1.0) OU une String parsable ("1.0"), renvoie null
+  /// sinon (au lieu de crasher comme `as num?` sur une String). Cf audit
+  /// sécu nuit 2026-06-01.
+  static double? _coordToDouble(Object? v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
   }
 
   @override

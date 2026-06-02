@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
 import '../../data/dispatch_transfer.dart';
 import '../../providers/database_providers.dart';
@@ -50,7 +51,7 @@ class ChefEquipePanel extends ConsumerWidget {
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text('Erreur : $e',
+                child: Text('Erreur : ${humanizeAnyError(e)}',
                     style: TextStyle(color: p.textMute)),
               ),
               data: (tournees) {

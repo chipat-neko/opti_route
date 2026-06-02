@@ -139,7 +139,11 @@ out tags center $limit;
         );
       }
 
-      final raw = jsonDecode(response.body);
+      // UTF-8 explicite (cf geocodeurs) : evite le mojibake des noms de
+      // commerces accentues ("Boulangerie Patisserie...") si le header
+      // charset venait a manquer. utf8.decode(bodyBytes) est toujours >=
+      // response.body (latin1 par defaut).
+      final raw = jsonDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
       if (raw is! Map<String, dynamic>) {
         throw const OverpassException('Reponse Overpass invalide');
       }
@@ -154,13 +158,18 @@ out tags center $limit;
         final lat = _extractLat(el);
         final lng = _extractLng(el);
         if (lat == null || lng == null) continue;
-        final tags = (el['tags'] as Map?) ?? const {};
-        final name = tags['name'] as String?;
+        // Lecture tolerante : `as Map?` / `as String?` crashent si le
+        // schema OSM est inattendu (tags=List, name numerique). On filtre
+        // par type -> la valeur invalide est traitee comme absente.
+        final rawTags = el['tags'];
+        final tags = rawTags is Map ? rawTags : const {};
+        final name = tags['name'] is String ? tags['name'] as String : null;
         if (name == null || name.isEmpty) continue;
-        final houseNumber = tags['addr:housenumber'] as String?;
-        final street = tags['addr:street'] as String?;
-        final postcode = tags['addr:postcode'] as String?;
-        final city = tags['addr:city'] as String?;
+        String? tag(String k) => tags[k] is String ? tags[k] as String : null;
+        final houseNumber = tag('addr:housenumber');
+        final street = tag('addr:street');
+        final postcode = tag('addr:postcode');
+        final city = tag('addr:city');
         // Concatene l'adresse postale si dispo
         final addrParts = <String>[
           ?houseNumber,

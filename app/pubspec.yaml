@@ -132,6 +132,22 @@ dependencies:
   # reste OFF et l'utilisateur garde la bascule manuelle. MIT, ~80 KB.
   light: ^4.0.1
 
+# ─────────────────────────────────────────────────────────────────
+# Overrides
+# ─────────────────────────────────────────────────────────────────
+# sqlite3_flutter_libs : drift_flutter 0.3.0 tire la version 0.6.0+eol
+# qui est un STUB VIDE (le package a migre vers les "native assets"/hooks
+# de sqlite3 3.x). Or les native assets ne sont PAS embarquees dans un
+# build APK release en Flutter 3.41 stable -> `libsqlite3.so` absente ->
+# crash au boot (`Failed to load dynamic library libsqlite3.so`) -> ecran
+# de chargement infini. On force la derniere 0.5.x qui, elle, embarque
+# bien la lib native via son script Gradle. drift_flutter n'importe aucun
+# symbole de ce package (0.6.0 etant vide), donc aucun conflit de code.
+# Cf debug 2026-06-02. A retirer si/quand les native assets Android sont
+# stables (et que la .so est verifiee dans l'APK).
+dependency_overrides:
+  sqlite3_flutter_libs: 0.5.41
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

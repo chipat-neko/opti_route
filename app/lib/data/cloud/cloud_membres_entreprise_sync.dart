@@ -242,6 +242,10 @@ class CloudMembresEntrepriseSync {
         'p_user_id': userId,
       });
     } on Object catch (e) {
+      if (e.toString().contains('CANNOT_REVOKE_ADMIN')) {
+        throw const CloudSyncException(
+            'Impossible de révoquer un administrateur d\'entreprise.');
+      }
       throw CloudSyncException('Echec revocation : ${humanizeCloudError(e)}');
     }
   }

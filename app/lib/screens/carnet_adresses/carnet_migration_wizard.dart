@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -125,7 +126,7 @@ class _CarnetMigrationWizardState
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        context.showError('Échec : $e');
+        context.showError('Échec : ${humanizeAnyError(e)}');
       }
     }
   }
