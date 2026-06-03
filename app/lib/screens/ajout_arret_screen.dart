@@ -58,6 +58,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
   late TextEditingController _nbColisCtrl;
   late TextEditingController _dureeArretCtrl;
   late TextEditingController _nomClientCtrl;
+  late TextEditingController _telephoneCtrl;
   late TextEditingController _notesCtrl;
 
   AddressSuggestion? _address;
@@ -95,6 +96,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     _dureeArretCtrl =
         TextEditingController(text: (s?.dureeArretMin ?? 3).toString());
     _nomClientCtrl = TextEditingController(text: s?.nomClient ?? '');
+    _telephoneCtrl = TextEditingController(text: s?.telephone ?? '');
     _notesCtrl = TextEditingController(text: s?.notes ?? '');
     _priorite = s?.priorite ?? 'flexible';
     _type = s?.type ?? kStopTypeLivraison;
@@ -126,6 +128,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
       _nbColisCtrl.text = '1';
       _dureeArretCtrl.text = '3';
       _nomClientCtrl.clear();
+      _telephoneCtrl.clear();
       _notesCtrl.clear();
       _address = null;
       _priorite = 'flexible';
@@ -141,6 +144,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     _nbColisCtrl.dispose();
     _dureeArretCtrl.dispose();
     _nomClientCtrl.dispose();
+    _telephoneCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -260,6 +264,19 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
                     'colis dans le champ Adresse au-dessus.',
                 helperMaxLines: 3,
               ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            // Telephone du destinataire (#B Noah) : permet l'appel en 1 tap
+            // depuis la fiche de l'arret, sans passer par le carnet.
+            TextFormField(
+              controller: _telephoneCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Telephone (optionnel)',
+                hintText: '06 12 34 56 78',
+                prefixIcon: Icon(Icons.phone_outlined),
+              ),
+              keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -463,6 +480,10 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
     if (scan.nomClient != null && scan.nomClient!.isNotEmpty) {
       _nomClientCtrl.text = scan.nomClient!;
     }
+    // Pre-remplit le telephone si l'OCR l'a extrait (#B Noah).
+    if (scan.telephone != null && scan.telephone!.isNotEmpty) {
+      _telephoneCtrl.text = scan.telephone!;
+    }
     if (scan.nbColis != null && scan.nbColis! > 0) {
       _nbColisCtrl.text = scan.nbColis!.toString();
     }
@@ -535,6 +556,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
           notes: Value(_orNull(_notesCtrl.text)),
           nomClient: Value(_orNull(_nomClientCtrl.text)),
+          telephone: Value(_orNull(_telephoneCtrl.text)),
         );
         await repo.update(widget.initial!.id, companion);
         await ref
@@ -574,6 +596,7 @@ class _AjoutArretScreenState extends ConsumerState<AjoutArretScreen> {
           dureeArretMin: Value(int.tryParse(_dureeArretCtrl.text.trim()) ?? 3),
           notes: Value(_orNull(_notesCtrl.text)),
           nomClient: Value(_orNull(_nomClientCtrl.text)),
+          telephone: Value(_orNull(_telephoneCtrl.text)),
           coequipierId: Value(defautCoId),
           trackingNumbers: Value(trackingJson),
         );

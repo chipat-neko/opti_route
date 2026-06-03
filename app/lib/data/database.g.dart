@@ -1510,6 +1510,17 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _telephoneMeta = const VerificationMeta(
+    'telephone',
+  );
+  @override
+  late final GeneratedColumn<String> telephone = GeneratedColumn<String>(
+    'telephone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _statutLivraisonMeta = const VerificationMeta(
     'statutLivraison',
   );
@@ -1759,6 +1770,7 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
     dureeArretMin,
     notes,
     nomClient,
+    telephone,
     statutLivraison,
     raisonEchec,
     livreLat,
@@ -1887,6 +1899,12 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
       context.handle(
         _nomClientMeta,
         nomClient.isAcceptableOrUnknown(data['nom_client']!, _nomClientMeta),
+      );
+    }
+    if (data.containsKey('telephone')) {
+      context.handle(
+        _telephoneMeta,
+        telephone.isAcceptableOrUnknown(data['telephone']!, _telephoneMeta),
       );
     }
     if (data.containsKey('statut_livraison')) {
@@ -2107,6 +2125,10 @@ class $StopsTable extends Stops with TableInfo<$StopsTable, Stop> {
         DriftSqlType.string,
         data['${effectivePrefix}nom_client'],
       ),
+      telephone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}telephone'],
+      ),
       statutLivraison: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}statut_livraison'],
@@ -2222,6 +2244,12 @@ class Stop extends DataClass implements Insertable<Stop> {
   final int dureeArretMin;
   final String? notes;
   final String? nomClient;
+
+  /// Numero de telephone du destinataire, saisi directement sur l'arret
+  /// (ou pre-rempli par l'OCR du bordereau). Permet d'appeler en 1 tap
+  /// sans passer par le carnet. Null si non renseigne. Demande Noah
+  /// 2026-06-03.
+  final String? telephone;
   final String statutLivraison;
 
   /// Raison de l'echec quand `statutLivraison == 'echec'` :
@@ -2340,6 +2368,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     required this.dureeArretMin,
     this.notes,
     this.nomClient,
+    this.telephone,
     required this.statutLivraison,
     this.raisonEchec,
     this.livreLat,
@@ -2391,6 +2420,9 @@ class Stop extends DataClass implements Insertable<Stop> {
     }
     if (!nullToAbsent || nomClient != null) {
       map['nom_client'] = Variable<String>(nomClient);
+    }
+    if (!nullToAbsent || telephone != null) {
+      map['telephone'] = Variable<String>(telephone);
     }
     map['statut_livraison'] = Variable<String>(statutLivraison);
     if (!nullToAbsent || raisonEchec != null) {
@@ -2469,6 +2501,9 @@ class Stop extends DataClass implements Insertable<Stop> {
       nomClient: nomClient == null && nullToAbsent
           ? const Value.absent()
           : Value(nomClient),
+      telephone: telephone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(telephone),
       statutLivraison: Value(statutLivraison),
       raisonEchec: raisonEchec == null && nullToAbsent
           ? const Value.absent()
@@ -2542,6 +2577,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       dureeArretMin: serializer.fromJson<int>(json['dureeArretMin']),
       notes: serializer.fromJson<String?>(json['notes']),
       nomClient: serializer.fromJson<String?>(json['nomClient']),
+      telephone: serializer.fromJson<String?>(json['telephone']),
       statutLivraison: serializer.fromJson<String>(json['statutLivraison']),
       raisonEchec: serializer.fromJson<String?>(json['raisonEchec']),
       livreLat: serializer.fromJson<double?>(json['livreLat']),
@@ -2582,6 +2618,7 @@ class Stop extends DataClass implements Insertable<Stop> {
       'dureeArretMin': serializer.toJson<int>(dureeArretMin),
       'notes': serializer.toJson<String?>(notes),
       'nomClient': serializer.toJson<String?>(nomClient),
+      'telephone': serializer.toJson<String?>(telephone),
       'statutLivraison': serializer.toJson<String>(statutLivraison),
       'raisonEchec': serializer.toJson<String?>(raisonEchec),
       'livreLat': serializer.toJson<double?>(livreLat),
@@ -2620,6 +2657,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     int? dureeArretMin,
     Value<String?> notes = const Value.absent(),
     Value<String?> nomClient = const Value.absent(),
+    Value<String?> telephone = const Value.absent(),
     String? statutLivraison,
     Value<String?> raisonEchec = const Value.absent(),
     Value<double?> livreLat = const Value.absent(),
@@ -2657,6 +2695,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     dureeArretMin: dureeArretMin ?? this.dureeArretMin,
     notes: notes.present ? notes.value : this.notes,
     nomClient: nomClient.present ? nomClient.value : this.nomClient,
+    telephone: telephone.present ? telephone.value : this.telephone,
     statutLivraison: statutLivraison ?? this.statutLivraison,
     raisonEchec: raisonEchec.present ? raisonEchec.value : this.raisonEchec,
     livreLat: livreLat.present ? livreLat.value : this.livreLat,
@@ -2716,6 +2755,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           : this.dureeArretMin,
       notes: data.notes.present ? data.notes.value : this.notes,
       nomClient: data.nomClient.present ? data.nomClient.value : this.nomClient,
+      telephone: data.telephone.present ? data.telephone.value : this.telephone,
       statutLivraison: data.statutLivraison.present
           ? data.statutLivraison.value
           : this.statutLivraison,
@@ -2780,6 +2820,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           ..write('dureeArretMin: $dureeArretMin, ')
           ..write('notes: $notes, ')
           ..write('nomClient: $nomClient, ')
+          ..write('telephone: $telephone, ')
           ..write('statutLivraison: $statutLivraison, ')
           ..write('raisonEchec: $raisonEchec, ')
           ..write('livreLat: $livreLat, ')
@@ -2820,6 +2861,7 @@ class Stop extends DataClass implements Insertable<Stop> {
     dureeArretMin,
     notes,
     nomClient,
+    telephone,
     statutLivraison,
     raisonEchec,
     livreLat,
@@ -2859,6 +2901,7 @@ class Stop extends DataClass implements Insertable<Stop> {
           other.dureeArretMin == this.dureeArretMin &&
           other.notes == this.notes &&
           other.nomClient == this.nomClient &&
+          other.telephone == this.telephone &&
           other.statutLivraison == this.statutLivraison &&
           other.raisonEchec == this.raisonEchec &&
           other.livreLat == this.livreLat &&
@@ -2896,6 +2939,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
   final Value<int> dureeArretMin;
   final Value<String?> notes;
   final Value<String?> nomClient;
+  final Value<String?> telephone;
   final Value<String> statutLivraison;
   final Value<String?> raisonEchec;
   final Value<double?> livreLat;
@@ -2931,6 +2975,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.dureeArretMin = const Value.absent(),
     this.notes = const Value.absent(),
     this.nomClient = const Value.absent(),
+    this.telephone = const Value.absent(),
     this.statutLivraison = const Value.absent(),
     this.raisonEchec = const Value.absent(),
     this.livreLat = const Value.absent(),
@@ -2967,6 +3012,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     this.dureeArretMin = const Value.absent(),
     this.notes = const Value.absent(),
     this.nomClient = const Value.absent(),
+    this.telephone = const Value.absent(),
     this.statutLivraison = const Value.absent(),
     this.raisonEchec = const Value.absent(),
     this.livreLat = const Value.absent(),
@@ -3004,6 +3050,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Expression<int>? dureeArretMin,
     Expression<String>? notes,
     Expression<String>? nomClient,
+    Expression<String>? telephone,
     Expression<String>? statutLivraison,
     Expression<String>? raisonEchec,
     Expression<double>? livreLat,
@@ -3040,6 +3087,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       if (dureeArretMin != null) 'duree_arret_min': dureeArretMin,
       if (notes != null) 'notes': notes,
       if (nomClient != null) 'nom_client': nomClient,
+      if (telephone != null) 'telephone': telephone,
       if (statutLivraison != null) 'statut_livraison': statutLivraison,
       if (raisonEchec != null) 'raison_echec': raisonEchec,
       if (livreLat != null) 'livre_lat': livreLat,
@@ -3078,6 +3126,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     Value<int>? dureeArretMin,
     Value<String?>? notes,
     Value<String?>? nomClient,
+    Value<String?>? telephone,
     Value<String>? statutLivraison,
     Value<String?>? raisonEchec,
     Value<double?>? livreLat,
@@ -3114,6 +3163,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
       dureeArretMin: dureeArretMin ?? this.dureeArretMin,
       notes: notes ?? this.notes,
       nomClient: nomClient ?? this.nomClient,
+      telephone: telephone ?? this.telephone,
       statutLivraison: statutLivraison ?? this.statutLivraison,
       raisonEchec: raisonEchec ?? this.raisonEchec,
       livreLat: livreLat ?? this.livreLat,
@@ -3181,6 +3231,9 @@ class StopsCompanion extends UpdateCompanion<Stop> {
     }
     if (nomClient.present) {
       map['nom_client'] = Variable<String>(nomClient.value);
+    }
+    if (telephone.present) {
+      map['telephone'] = Variable<String>(telephone.value);
     }
     if (statutLivraison.present) {
       map['statut_livraison'] = Variable<String>(statutLivraison.value);
@@ -3262,6 +3315,7 @@ class StopsCompanion extends UpdateCompanion<Stop> {
           ..write('dureeArretMin: $dureeArretMin, ')
           ..write('notes: $notes, ')
           ..write('nomClient: $nomClient, ')
+          ..write('telephone: $telephone, ')
           ..write('statutLivraison: $statutLivraison, ')
           ..write('raisonEchec: $raisonEchec, ')
           ..write('livreLat: $livreLat, ')
@@ -13114,6 +13168,7 @@ typedef $$StopsTableCreateCompanionBuilder =
       Value<int> dureeArretMin,
       Value<String?> notes,
       Value<String?> nomClient,
+      Value<String?> telephone,
       Value<String> statutLivraison,
       Value<String?> raisonEchec,
       Value<double?> livreLat,
@@ -13151,6 +13206,7 @@ typedef $$StopsTableUpdateCompanionBuilder =
       Value<int> dureeArretMin,
       Value<String?> notes,
       Value<String?> nomClient,
+      Value<String?> telephone,
       Value<String> statutLivraison,
       Value<String?> raisonEchec,
       Value<double?> livreLat,
@@ -13320,6 +13376,11 @@ class $$StopsTableFilterComposer extends Composer<_$AppDatabase, $StopsTable> {
 
   ColumnFilters<String> get nomClient => $composableBuilder(
     column: $table.nomClient,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get telephone => $composableBuilder(
+    column: $table.telephone,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13596,6 +13657,11 @@ class $$StopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get telephone => $composableBuilder(
+    column: $table.telephone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get statutLivraison => $composableBuilder(
     column: $table.statutLivraison,
     builder: (column) => ColumnOrderings(column),
@@ -13777,6 +13843,9 @@ class $$StopsTableAnnotationComposer
 
   GeneratedColumn<String> get nomClient =>
       $composableBuilder(column: $table.nomClient, builder: (column) => column);
+
+  GeneratedColumn<String> get telephone =>
+      $composableBuilder(column: $table.telephone, builder: (column) => column);
 
   GeneratedColumn<String> get statutLivraison => $composableBuilder(
     column: $table.statutLivraison,
@@ -14008,6 +14077,7 @@ class $$StopsTableTableManager
                 Value<int> dureeArretMin = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> nomClient = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
                 Value<String?> raisonEchec = const Value.absent(),
                 Value<double?> livreLat = const Value.absent(),
@@ -14043,6 +14113,7 @@ class $$StopsTableTableManager
                 dureeArretMin: dureeArretMin,
                 notes: notes,
                 nomClient: nomClient,
+                telephone: telephone,
                 statutLivraison: statutLivraison,
                 raisonEchec: raisonEchec,
                 livreLat: livreLat,
@@ -14080,6 +14151,7 @@ class $$StopsTableTableManager
                 Value<int> dureeArretMin = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> nomClient = const Value.absent(),
+                Value<String?> telephone = const Value.absent(),
                 Value<String> statutLivraison = const Value.absent(),
                 Value<String?> raisonEchec = const Value.absent(),
                 Value<double?> livreLat = const Value.absent(),
@@ -14115,6 +14187,7 @@ class $$StopsTableTableManager
                 dureeArretMin: dureeArretMin,
                 notes: notes,
                 nomClient: nomClient,
+                telephone: telephone,
                 statutLivraison: statutLivraison,
                 raisonEchec: raisonEchec,
                 livreLat: livreLat,

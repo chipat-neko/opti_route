@@ -307,7 +307,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  _CallClientButton(nomClient: nom),
+                  _CallClientButton(nomClient: nom, directPhone: stop.telephone),
                 ],
               ),
             const SizedBox(height: AppSpacing.x4),
@@ -833,14 +833,22 @@ class _ClientConsignesBanner extends ConsumerWidget {
 /// ouvrir le carnet, chercher le client, taper le numero. Maintenant
 /// 1 tap = appel direct via intent natif `tel:`.
 class _CallClientButton extends ConsumerWidget {
-  const _CallClientButton({required this.nomClient});
+  const _CallClientButton({required this.nomClient, this.directPhone});
 
   final String nomClient;
 
+  /// Numero saisi directement sur l'arret (stop.telephone, #B Noah). S'il
+  /// est present, il a la PRIORITE sur le carnet (le numero de l'arret est
+  /// plus specifique que celui d'un client generique du carnet).
+  final String? directPhone;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final phoneAsync = ref.watch(clientPhoneByNomProvider(nomClient));
-    final phone = phoneAsync.asData?.value;
+    // 1) numero de l'arret s'il existe, 2) sinon lookup carnet par nom.
+    final direct = directPhone?.trim();
+    final phone = (direct != null && direct.isNotEmpty)
+        ? direct
+        : ref.watch(clientPhoneByNomProvider(nomClient)).asData?.value;
     if (phone == null || phone.isEmpty) {
       return const SizedBox.shrink();
     }

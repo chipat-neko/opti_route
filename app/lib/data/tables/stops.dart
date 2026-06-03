@@ -29,6 +29,12 @@ class Stops extends Table {
   IntColumn get dureeArretMin => integer().withDefault(const Constant(3))();
   TextColumn get notes => text().nullable()();
   TextColumn get nomClient => text().nullable()();
+
+  /// Numero de telephone du destinataire, saisi directement sur l'arret
+  /// (ou pre-rempli par l'OCR du bordereau). Permet d'appeler en 1 tap
+  /// sans passer par le carnet. Null si non renseigne. Demande Noah
+  /// 2026-06-03.
+  TextColumn get telephone => text().nullable()();
   TextColumn get statutLivraison =>
       text().withDefault(const Constant('a_livrer'))();
 

@@ -16,6 +16,7 @@ class BordereauScanResult {
     this.address,
     this.scannedAddressText,
     this.nomClient,
+    this.telephone,
     this.nbColis,
     this.isEnlevement = false,
   });
@@ -27,6 +28,7 @@ class BordereauScanResult {
   final String? scannedAddressText;
 
   final String? nomClient;
+  final String? telephone;
   final int? nbColis;
 
   /// True si le bordereau est de type ENLEVEMENT (Noah ramasse vs livre).
@@ -124,6 +126,7 @@ Future<BordereauScanResult?> handleBordereauScan(
     address: found,
     scannedAddressText: found == null ? (addrQuery ?? nomQuery) : null,
     nomClient: extraction.nomDestinataire,
+    telephone: extraction.telephone,
     nbColis: extraction.nbColis,
     isEnlevement: extraction.format == BordereauFormat.enlevement,
   );
@@ -158,6 +161,7 @@ Future<BatchCommitSummary?> handleBordereauScanBatch(
           e.nomDestinataire ??
           'Adresse a preciser',
       nomClient: e.nomDestinataire,
+      telephone: e.telephone,
       lat: found?.lat,
       lng: found?.lon,
       nbColis: e.nbColis ?? 1,

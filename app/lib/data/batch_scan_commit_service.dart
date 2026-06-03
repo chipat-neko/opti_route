@@ -13,6 +13,7 @@ class BatchScanItem {
   const BatchScanItem({
     required this.adresse,
     this.nomClient,
+    this.telephone,
     this.lat,
     this.lng,
     this.nbColis = 1,
@@ -21,6 +22,7 @@ class BatchScanItem {
 
   final String adresse;
   final String? nomClient;
+  final String? telephone;
   final double? lat;
   final double? lng;
   final int nbColis;
@@ -89,6 +91,7 @@ class BatchScanCommitService {
         tourneeId: tourneeId,
         adresseBrute: item.adresse,
         nomClient: Value(item.nomClient),
+        telephone: Value(item.telephone),
         nbColis: Value(item.nbColis),
         type: Value(item.isEnlevement ? kStopTypeRamasse : kStopTypeLivraison),
         lat: Value(item.lat),
