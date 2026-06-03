@@ -295,23 +295,32 @@ class ProchainArretCard extends ConsumerWidget {
     Stop stop,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    // Capture GPS best-effort en parallele du markLivre (4 s max).
-    ({double lat, double lng})? pos;
-    try {
-      final ok = await LocationService.ensurePermission();
-      if (ok) {
+    // Capture GPS lancee en ARRIERE-PLAN (best-effort, 4 s max) : elle
+    // tourne PENDANT que l'utilisateur signe. Avant, on attendait le fix
+    // GPS (LocationAccuracy.high, lent en interieur) AVANT d'ouvrir le
+    // canva -> grosse latence. Maintenant le pad s'affiche instantanement
+    // et le GPS a le temps de se capturer pendant la signature. Retour
+    // Noah dev2 2026-06-03.
+    final gpsFuture = () async {
+      try {
+        final ok = await LocationService.ensurePermission();
+        if (!ok) return null;
         final p = await LocationService.currentPosition()
             .timeout(const Duration(seconds: 4));
-        pos = (lat: p.latitude, lng: p.longitude);
+        return (lat: p.latitude, lng: p.longitude);
+      } catch (_) {
+        return null; // best-effort : on continue sans coords
       }
-    } catch (_) {/* best-effort : on continue sans coords */}
+    }();
 
-    await ref.read(stopsRepositoryProvider).markLivre(stop.id, position: pos);
-
-    // Signature du destinataire (facultative) juste apres le "livre".
+    // Signature du destinataire (facultative) — s'ouvre tout de suite.
     if (context.mounted) {
       await captureSignatureForStop(context, ref, stop.id);
     }
+
+    await ref
+        .read(stopsRepositoryProvider)
+        .markLivre(stop.id, position: await gpsFuture);
 
     // Bascule auto en 'terminee' si tous les arrets ont un statut.
     // Meme logique que _TourneeDuJourScreenState._maybeFinishTournee

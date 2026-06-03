@@ -79,14 +79,20 @@ class StopRowActions {
     var statutChange = false;
     switch (action) {
       case MarkLivreAction():
-        final pos = await _captureGpsPosition();
-        await repo.markLivre(stop.id, position: pos);
-        statutChange = true;
+        // Capture GPS lancee en ARRIERE-PLAN : elle tourne PENDANT que
+        // l'utilisateur signe. Avant, on attendait le fix GPS
+        // (LocationAccuracy.high, jusqu'a 4s, lent en interieur) AVANT
+        // d'ouvrir le canva -> grosse latence d'ouverture. Maintenant le
+        // pad s'affiche instantanement et le GPS a le temps de se capturer
+        // pendant la signature. Retour Noah dev2 2026-06-03.
+        final gpsFuture = _captureGpsPosition();
         // Signature du destinataire juste apres le "livre" (facultative :
         // l'utilisateur peut passer). Demande Noah 2026-06-03.
         if (context.mounted) {
           await captureSignatureForStop(context, ref, stop.id);
         }
+        await repo.markLivre(stop.id, position: await gpsFuture);
+        statutChange = true;
         // Vibration courte de confirmation : terrain gants l'hiver,
         // Noah ne regarde pas toujours l'ecran apres avoir tape.
         unawaited(HapticFeedback.mediumImpact());
