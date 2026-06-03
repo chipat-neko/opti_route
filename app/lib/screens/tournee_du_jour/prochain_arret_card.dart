@@ -10,6 +10,7 @@ import '../../providers/database_providers.dart';
 import '../../providers/location_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/signature_pad_dialog.dart';
 
 /// Selectionne le **premier** stop encore `a_livrer` qui a des coords
 /// GPS dans [list]. Centralise la regle pour que build() ET les
@@ -284,6 +285,11 @@ class ProchainArretCard extends ConsumerWidget {
     } catch (_) {/* best-effort : on continue sans coords */}
 
     await ref.read(stopsRepositoryProvider).markLivre(stop.id, position: pos);
+
+    // Signature du destinataire (facultative) juste apres le "livre".
+    if (context.mounted) {
+      await captureSignatureForStop(context, ref, stop.id);
+    }
 
     // Bascule auto en 'terminee' si tous les arrets ont un statut.
     // Meme logique que _TourneeDuJourScreenState._maybeFinishTournee

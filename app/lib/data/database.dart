@@ -98,7 +98,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 49;
+  int get schemaVersion => 50;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -429,6 +429,11 @@ class AppDatabase extends _$AppDatabase {
             // 2026-06-03) : appel en 1 tap sans passer par le carnet.
             // Nullable, pas de default -> ADD COLUMN sûr sur SQLite.
             await _safeAddColumn(m, stops, stops.telephone);
+          }
+          if (from < 50) {
+            // Signature du destinataire capturee a l'ecran au "Marquer
+            // livre" (optionnelle). Chemin PNG local. Noah 2026-06-03.
+            await _safeAddColumn(m, stops, stops.signaturePath);
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :

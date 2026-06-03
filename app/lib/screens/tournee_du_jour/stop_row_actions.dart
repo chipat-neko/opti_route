@@ -20,6 +20,7 @@ import '../../data/tracking_codes_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/signature_pad_dialog.dart';
 import '../../widgets/snack.dart';
 import '../../widgets/stop_action_sheet.dart';
 import '../ajout_arret_screen.dart';
@@ -81,6 +82,11 @@ class StopRowActions {
         final pos = await _captureGpsPosition();
         await repo.markLivre(stop.id, position: pos);
         statutChange = true;
+        // Signature du destinataire juste apres le "livre" (facultative :
+        // l'utilisateur peut passer). Demande Noah 2026-06-03.
+        if (context.mounted) {
+          await captureSignatureForStop(context, ref, stop.id);
+        }
         // Vibration courte de confirmation : terrain gants l'hiver,
         // Noah ne regarde pas toujours l'ecran apres avoir tape.
         unawaited(HapticFeedback.mediumImpact());
@@ -118,6 +124,14 @@ class StopRowActions {
         await _capturerPreuve(ref, stop);
       case ViewPreuvePhotoAction():
         final path = stop.preuvePhotoPath;
+        if (path == null) return;
+        await navigator.push<void>(
+          MaterialPageRoute(
+            builder: (_) => PreuvePhotoViewerScreen(photoPath: path),
+          ),
+        );
+      case ViewSignatureAction():
+        final path = stop.signaturePath;
         if (path == null) return;
         await navigator.push<void>(
           MaterialPageRoute(

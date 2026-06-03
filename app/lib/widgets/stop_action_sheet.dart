@@ -53,6 +53,12 @@ class ViewPreuvePhotoAction extends StopAction {
   const ViewPreuvePhotoAction();
 }
 
+/// Voir la signature du destinataire (le caller push
+/// [PreuvePhotoViewerScreen] avec [Stop.signaturePath] -- un PNG image).
+class ViewSignatureAction extends StopAction {
+  const ViewSignatureAction();
+}
+
 /// Deplace l'arret vers une autre tournee. Le caller appelle
 /// `StopsRepository.moveToTournee` + invalide les optims des 2
 /// tournees + relance l'auto-reorder local.
@@ -643,6 +649,17 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       .pop(const ViewPreuvePhotoAction()),
                   icon: const Icon(Icons.image_outlined, size: 18),
                   label: const Text('Voir la photo preuve'),
+                ),
+              // Signature capturee au "livre" (#signature Noah) : bouton
+              // pour la revoir (le viewer affiche n'importe quel fichier
+              // image, donc le PNG de signature fonctionne tel quel).
+              if (widget.stop.signaturePath != null)
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: p.ink),
+                  onPressed: () => Navigator.of(context)
+                      .pop(const ViewSignatureAction()),
+                  icon: const Icon(Icons.draw_outlined, size: 18),
+                  label: const Text('Voir la signature'),
                 ),
               TextButton.icon(
                 style: TextButton.styleFrom(
