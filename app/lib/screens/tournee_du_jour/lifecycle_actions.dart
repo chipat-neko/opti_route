@@ -10,6 +10,7 @@ import '../../data/location_service.dart';
 import '../../data/notifications_service.dart';
 import '../../providers/database_providers.dart';
 import '../../theme/app_tokens.dart';
+import 'optim_actions.dart';
 
 /// ════════════════════════════════════════════════════════════════
 /// Handlers lifecycle (demarrer/pause/arreter) extraits de
@@ -41,6 +42,16 @@ class LifecycleTourneeActions {
       return;
     }
     if (!context.mounted) return;
+    // Avant de démarrer : si la tournée a plusieurs arrêts « EN 1ER » ou
+    // « EN DERNIER », laisser choisir leur ordre (drag & drop). Remplace
+    // ce que faisait VROOM à l'optimisation. Annulation => on NE démarre
+    // PAS la tournée.
+    final ordreOk = await OptimTourneeActions.ensureOrdrePrioriteChoisi(
+      context: context,
+      ref: ref,
+      tournee: tournee,
+    );
+    if (!ordreOk || !context.mounted) return;
     await ref.read(tourneesRepositoryProvider).update(
           tournee.id,
           TourneesCompanion(

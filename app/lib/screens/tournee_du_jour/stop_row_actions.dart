@@ -61,7 +61,7 @@ class StopRowActions {
       action: SnackBarAction(
         label: 'Photo preuve',
         textColor: AppColors.ink,
-        onPressed: () => _capturerPreuve(ref, stop.id),
+        onPressed: () => _capturerPreuve(ref, stop),
       ),
     );
     await _maybeFinishTournee(repo, tourneesRepo, stop.tourneeId);
@@ -90,7 +90,7 @@ class StopRowActions {
           action: SnackBarAction(
             label: 'Photo preuve',
             textColor: AppColors.ink,
-            onPressed: () => _capturerPreuve(ref, stop.id),
+            onPressed: () => _capturerPreuve(ref, stop),
           ),
         );
       case MarkEchecAction(raison: final r):
@@ -107,7 +107,7 @@ class StopRowActions {
           action: SnackBarAction(
             label: 'Photo preuve',
             textColor: AppColors.paper,
-            onPressed: () => _capturerPreuve(ref, stop.id),
+            onPressed: () => _capturerPreuve(ref, stop),
           ),
         );
       case MarkAaLivrerAction():
@@ -115,7 +115,7 @@ class StopRowActions {
         statutChange = true;
         unawaited(HapticFeedback.lightImpact());
       case TakePreuvePhotoAction():
-        await _capturerPreuve(ref, stop.id);
+        await _capturerPreuve(ref, stop);
       case ViewPreuvePhotoAction():
         final path = stop.preuvePhotoPath;
         if (path == null) return;
@@ -377,10 +377,13 @@ class StopRowActions {
   /// Lance la camera pour capturer une photo preuve, puis attache le
   /// chemin au stop. Best-effort : si l'utilisateur annule ou que la
   /// permission camera est refusee, on ne fait rien.
-  Future<void> _capturerPreuve(WidgetRef ref, int stopId) async {
-    final path = await PreuvePhotoService().capturer(stopId: stopId);
+  Future<void> _capturerPreuve(WidgetRef ref, Stop stop) async {
+    final path = await PreuvePhotoService().capturer(
+      stopId: stop.id,
+      watermark: _composeWatermark(stop),
+    );
     if (path == null) return;
-    await ref.read(stopsRepositoryProvider).setPreuvePhoto(stopId, path);
+    await ref.read(stopsRepositoryProvider).setPreuvePhoto(stop.id, path);
     // Bypass du debounce 5s : si Noah ferme l'ecran tournee dans la
     // foulee (typique apres validation livraison via SnackBar), le
     // dispose appelle cloudAutoPushService.stop() qui cancel le timer
@@ -395,5 +398,20 @@ class StopRowActions {
       return s.nomClient!;
     }
     return s.adresseBrute.split(',').first.trim();
+  }
+
+  /// Compose le filigrane incrusté sur la photo preuve (carte #397) :
+  /// 1re ligne = nom client / adresse ; 2e ligne = date/heure locale +
+  /// coordonnées GPS de l'arrêt (si géocodé). Vérifiable en cas de litige.
+  String _composeWatermark(Stop s) {
+    final now = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final dt = '${two(now.day)}/${two(now.month)}/${now.year} '
+        '${two(now.hour)}:${two(now.minute)}';
+    final gps = (s.lat != null && s.lng != null)
+        ? '${s.lat!.toStringAsFixed(5)}, ${s.lng!.toStringAsFixed(5)}'
+        : '';
+    final ligne2 = gps.isEmpty ? dt : '$dt  -  $gps';
+    return '${_primaryLine(s)}\n$ligne2';
   }
 }
