@@ -16,3 +16,20 @@ verify_jwt = false
 # opti_route. Le lien de suivi est public par nature. Le code 4 chars
 # + expiration 24h tient lieu de secret (carte #81). La function lit
 # tracking_codes + stops via la service role key cote serveur.
+
+[functions.cron_lockout_revoked]
+verify_jwt = false
+# verify_jwt = false : appelee par le cron Supabase via net.http_post qui
+# n'envoie PAS de JWT user, juste l'en-tete X-Cron-Secret (verifie a
+# temps constant dans la function). Avec verify_jwt=true le cron prendrait
+# un 401. NE PAS deployer cette fonction sans ce reglage.
+
+[functions.invite_employee]
+verify_jwt = true
+# verify_jwt = true : le caller (chef/admin) doit etre connecte ; ses
+# droits sont re-verifies dans la function avant de creer l'invitation.
+
+[functions.accept_invitation]
+verify_jwt = true
+# verify_jwt = true : ancien flux magic-link par invitation_id (le flux
+# par code passe par la RPC SQL accept_entreprise_invitation).
