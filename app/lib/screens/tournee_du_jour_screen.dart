@@ -272,18 +272,6 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             ),
             const SizedBox(width: 8),
             const AutoPushBadge(),
-            // Pendant la tournée, le bouton « Pause » vit ici, à côté du
-            // nom (déplacé du coin bas-droite — demande UI Noah 2026-06-03).
-            if (tournee.statut == 'en_cours') ...[
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.pause_circle_filled),
-                color: AppColors.amber,
-                tooltip: 'Mettre la tournee en pause',
-                visualDensity: VisualDensity.compact,
-                onPressed: _onArreterPressed,
-              ),
-            ],
           ],
         ),
         actions: [
@@ -339,6 +327,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               ),
             ),
           ),
+          // Pendant la tournée, le bouton « Pause » vit ici, juste à côté
+          // du menu (les "trois barres"). Avant il etait dans le title Row,
+          // mais ce Row est retreci par les actions a droite -> le Pause
+          // etait chevauche et INCLICABLE (retour Noah dev2 2026-06-03).
+          // Dans les actions, il est toujours pleinement tappable.
+          if (tournee.statut == 'en_cours')
+            IconButton(
+              icon: const Icon(Icons.pause_circle_filled),
+              color: AppColors.amber,
+              tooltip: 'Mettre la tournee en pause',
+              onPressed: _onArreterPressed,
+            ),
           PlusMenu(
             tournee: tournee,
             onAction: _onPlusAction,
