@@ -18,6 +18,11 @@ import '../../theme/app_tokens.dart';
 /// switch des actions reste dans l'ecran parent qui a deja toute
 /// la logique (state + ref + navigator + setStat...).
 enum PlusAction {
+  // Actions déplacées du coin bas-droite vers ce menu PENDANT la tournée
+  // (demande UI Noah 2026-06-03) : visibles seulement si en_cours.
+  ajouterArret,
+  scannerColis,
+  scanRafale,
   pauseShort,
   recalcFromPosition,
   batchLivre,
@@ -54,6 +59,38 @@ class PlusMenu extends StatelessWidget {
       tooltip: 'Plus',
       onSelected: onAction,
       itemBuilder: (_) => [
+        // Pendant la tournee, les actions du coin bas-droite (ajout d'arret
+        // + scans) vivent ici pour epurer l'ecran (demande UI Noah). Hors
+        // tournee, elles restent des FABs, on ne les double pas dans le menu.
+        if (tournee.statut == 'en_cours') ...[
+          const PopupMenuItem(
+            value: PlusAction.ajouterArret,
+            child: ListTile(
+              leading: Icon(Icons.add_location_alt_outlined,
+                  color: AppColors.emerald),
+              title: Text('Ajouter un arret'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const PopupMenuItem(
+            value: PlusAction.scannerColis,
+            child: ListTile(
+              leading: Icon(Icons.qr_code_scanner_outlined,
+                  color: AppColors.emerald),
+              title: Text('Scanner un colis (code-barre)'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const PopupMenuItem(
+            value: PlusAction.scanRafale,
+            child: ListTile(
+              leading: Icon(Icons.burst_mode_outlined, color: AppColors.emerald),
+              title: Text('Scanner des bordereaux'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const PopupMenuDivider(),
+        ],
         // L'option pause n'est visible que si la tournee est demarree
         // (sinon on ne peut pas mettre en pause quelque chose qui n'a
         // pas commence).
