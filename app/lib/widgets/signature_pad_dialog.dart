@@ -178,7 +178,11 @@ class _SignaturePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SignaturePainter old) => old.points.length != points.length;
+  // On repeint toujours : `points` est la MEME liste mutable que celle du
+  // State (passee par reference), donc `old.points` == `points` et une
+  // comparaison de longueur renverrait toujours false -> le canva ne se
+  // redessinait jamais et la capture PNG sortait blanche. (retour Noah)
+  bool shouldRepaint(_SignaturePainter old) => true;
 }
 
 /// Affiche le pad de signature pour [stopId] et, si une signature est
