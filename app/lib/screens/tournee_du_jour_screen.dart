@@ -272,6 +272,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
             ),
             const SizedBox(width: 8),
             const AutoPushBadge(),
+            // Pendant la tournée, le bouton « Pause » vit ici, à côté du
+            // nom (déplacé du coin bas-droite — demande UI Noah 2026-06-03).
+            if (tournee.statut == 'en_cours') ...[
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.pause_circle_filled),
+                color: AppColors.amber,
+                tooltip: 'Mettre la tournee en pause',
+                visualDensity: VisualDensity.compact,
+                onPressed: _onArreterPressed,
+              ),
+            ],
           ],
         ),
         actions: [
@@ -353,7 +365,6 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           ),
         ),
         onDemarrer: _onDemarrerPressed,
-        onArreter: _onArreterPressed,
         onScannerColis: _onScannerColisPressed,
         onScanRafale: _onScanRafalePressed,
       ),
@@ -366,6 +377,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   /// reste ici.
   void _onPlusAction(PlusAction action) {
     switch (action) {
+      // Actions déplacées du coin bas-droite vers le menu pendant la
+      // tournée (demande UI Noah 2026-06-03).
+      case PlusAction.ajouterArret:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AjoutArretScreen(tourneeId: widget.tournee.id),
+          ),
+        );
+      case PlusAction.scannerColis:
+        _onScannerColisPressed();
+      case PlusAction.scanRafale:
+        _onScanRafalePressed();
       case PlusAction.pauseShort:
         _onPauseShortPressed();
       case PlusAction.recalcFromPosition:
