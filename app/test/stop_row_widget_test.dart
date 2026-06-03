@@ -76,6 +76,9 @@ void main() {
     WidgetTester tester,
     List<Stop> stops, {
     bool reorderable = true,
+    // Les arrets livres/echec sont masques par defaut (carte A Noah) :
+    // pour les tester, on deplie d'abord via le bouton « Afficher ».
+    bool expandDone = false,
     required void Function() assertions,
   }) async {
     await tester.runAsync(() async {
@@ -97,6 +100,10 @@ void main() {
           ),
         );
         await tester.pump(const Duration(milliseconds: 100));
+        if (expandDone) {
+          await tester.tap(find.text('Afficher'));
+          await tester.pumpAndSettle();
+        }
         assertions();
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -133,6 +140,7 @@ void main() {
       await pumpInList(
         tester,
         [mkStop(nomClient: 'M. Martin', statutLivraison: 'livre')],
+        expandDone: true,
         assertions: () {
           expect(find.text('M. Martin'), findsOneWidget);
           expect(find.textContaining('Echec'), findsNothing);
@@ -149,6 +157,7 @@ void main() {
           statutLivraison: 'echec',
           raisonEchec: 'absent',
         )],
+        expandDone: true,
         assertions: () {
           expect(find.textContaining('Echec : absent'), findsOneWidget);
         },
@@ -159,6 +168,7 @@ void main() {
       await pumpInList(
         tester,
         [mkStop(statutLivraison: 'echec', raisonEchec: null)],
+        expandDone: true,
         assertions: () {
           expect(find.textContaining('sans raison'), findsOneWidget);
         },
