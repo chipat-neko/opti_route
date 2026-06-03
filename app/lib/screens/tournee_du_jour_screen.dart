@@ -327,6 +327,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
               ),
             ),
           ),
+          // Pendant la tournée, le bouton « Pause » vit ici, juste à côté
+          // du menu (les "trois barres"). Avant il etait dans le title Row,
+          // mais ce Row est retreci par les actions a droite -> le Pause
+          // etait chevauche et INCLICABLE (retour Noah dev2 2026-06-03).
+          // Dans les actions, il est toujours pleinement tappable.
+          if (tournee.statut == 'en_cours')
+            IconButton(
+              icon: const Icon(Icons.pause_circle_filled),
+              color: AppColors.amber,
+              tooltip: 'Mettre la tournee en pause',
+              onPressed: _onArreterPressed,
+            ),
           PlusMenu(
             tournee: tournee,
             onAction: _onPlusAction,
@@ -353,7 +365,6 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
           ),
         ),
         onDemarrer: _onDemarrerPressed,
-        onArreter: _onArreterPressed,
         onScannerColis: _onScannerColisPressed,
         onScanRafale: _onScanRafalePressed,
       ),
@@ -366,6 +377,18 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
   /// reste ici.
   void _onPlusAction(PlusAction action) {
     switch (action) {
+      // Actions déplacées du coin bas-droite vers le menu pendant la
+      // tournée (demande UI Noah 2026-06-03).
+      case PlusAction.ajouterArret:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AjoutArretScreen(tourneeId: widget.tournee.id),
+          ),
+        );
+      case PlusAction.scannerColis:
+        _onScannerColisPressed();
+      case PlusAction.scanRafale:
+        _onScanRafalePressed();
       case PlusAction.pauseShort:
         _onPauseShortPressed();
       case PlusAction.recalcFromPosition:

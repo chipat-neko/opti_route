@@ -183,6 +183,13 @@ class StopsRepository {
         .write(StopsCompanion(preuvePhotoPath: Value(path)));
   }
 
+  /// Chemin du PNG de signature du destinataire (capturee au "Marquer
+  /// livre", facultative, #signature Noah 2026-06-03). Null pour effacer.
+  Future<int> setSignature(int stopId, String? path) {
+    return (_db.update(_db.stops)..where((s) => s.id.equals(stopId)))
+        .write(StopsCompanion(signaturePath: Value(path)));
+  }
+
   /// Met a jour uniquement les coords + l'adresse normalisee d'un arret.
   /// Utilise par le re-geocodage des arrets sauves en mode hors-ligne
   /// (sans coords) : on ne touche pas au reste (nbColis, notes, etc.).

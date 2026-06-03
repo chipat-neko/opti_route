@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS public.stops (
   duree_arret_min     INTEGER NOT NULL DEFAULT 3,
   notes               TEXT,
   nom_client          TEXT,
+  telephone           TEXT,
   statut_livraison    TEXT NOT NULL DEFAULT 'a_livrer',
   raison_echec        TEXT,
   livre_lat           DOUBLE PRECISION,
@@ -262,6 +263,11 @@ CREATE POLICY "owner_all_saved_destinations" ON public.saved_destinations
 -- uploadée. L'upload se fait au push du stop par CloudSyncService.
 ALTER TABLE public.stops
   ADD COLUMN IF NOT EXISTS cloud_photo_path TEXT;
+
+-- Téléphone du destinataire saisi sur l'arrêt (#B Noah 2026-06-03) :
+-- appel en 1 tap, synchronisé entre appareils.
+ALTER TABLE public.stops
+  ADD COLUMN IF NOT EXISTS telephone TEXT;
 
 -- Feature ramasses (2026-05-18) : colonne `type` qui distingue les
 -- arrêts livraison (default) des ramasses (Noah récupère un colis

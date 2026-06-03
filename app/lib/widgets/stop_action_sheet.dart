@@ -53,6 +53,12 @@ class ViewPreuvePhotoAction extends StopAction {
   const ViewPreuvePhotoAction();
 }
 
+/// Voir la signature du destinataire (le caller push
+/// [PreuvePhotoViewerScreen] avec [Stop.signaturePath] -- un PNG image).
+class ViewSignatureAction extends StopAction {
+  const ViewSignatureAction();
+}
+
 /// Deplace l'arret vers une autre tournee. Le caller appelle
 /// `StopsRepository.moveToTournee` + invalide les optims des 2
 /// tournees + relance l'auto-reorder local.
@@ -307,7 +313,7 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  _CallClientButton(nomClient: nom),
+                  _CallClientButton(nomClient: nom, directPhone: stop.telephone),
                 ],
               ),
             const SizedBox(height: AppSpacing.x4),
@@ -509,29 +515,57 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                   type: stop.type,
                 ),
               if (hasStatut) const SizedBox(height: AppSpacing.x14),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.emerald,
-                  foregroundColor: p.paper,
-                  minimumSize: const Size(0, 56),
-                ),
-                onPressed: isLivre
-                    ? null
-                    : () => Navigator.of(context).pop(const MarkLivreAction()),
-                icon: const Icon(Icons.check_circle_outline),
-                label: Text(
-                  isLivre
-                      ? (stop.type == kStopTypeRamasse
-                          ? 'Deja ramasse'
-                          : 'Deja livre')
-                      : (stop.type == kStopTypeRamasse
-                          ? 'Marquer ramasse'
-                          : 'Marquer livre'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.emerald,
+                        foregroundColor: p.paper,
+                        minimumSize: const Size(0, 56),
+                      ),
+                      onPressed: isLivre
+                          ? null
+                          : () => Navigator.of(context)
+                              .pop(const MarkLivreAction()),
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: Text(
+                        isLivre
+                            ? (stop.type == kStopTypeRamasse
+                                ? 'Deja ramasse'
+                                : 'Deja livre')
+                            : (stop.type == kStopTypeRamasse
+                                ? 'Marquer ramasse'
+                                : 'Marquer livre'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: AppSpacing.x10),
+                  // Bouton Photo a cote de "Marquer livre" (demande Noah) :
+                  // prendre la photo preuve direct depuis la sheet, sans
+                  // re-chercher l'arret dans la liste. Pop l'action -> le
+                  // caller lance la camera (TakePreuvePhotoAction).
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.lime,
+                      foregroundColor: AppColors.ink,
+                      minimumSize: const Size(0, 56),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+                    ),
+                    onPressed: () => Navigator.of(context)
+                        .pop(const TakePreuvePhotoAction()),
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    label: const Text(
+                      'Photo',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.x10),
               OutlinedButton.icon(
@@ -615,6 +649,17 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       .pop(const ViewPreuvePhotoAction()),
                   icon: const Icon(Icons.image_outlined, size: 18),
                   label: const Text('Voir la photo preuve'),
+                ),
+              // Signature capturee au "livre" (#signature Noah) : bouton
+              // pour la revoir (le viewer affiche n'importe quel fichier
+              // image, donc le PNG de signature fonctionne tel quel).
+              if (widget.stop.signaturePath != null)
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: p.ink),
+                  onPressed: () => Navigator.of(context)
+                      .pop(const ViewSignatureAction()),
+                  icon: const Icon(Icons.draw_outlined, size: 18),
+                  label: const Text('Voir la signature'),
                 ),
               TextButton.icon(
                 style: TextButton.styleFrom(
@@ -833,14 +878,22 @@ class _ClientConsignesBanner extends ConsumerWidget {
 /// ouvrir le carnet, chercher le client, taper le numero. Maintenant
 /// 1 tap = appel direct via intent natif `tel:`.
 class _CallClientButton extends ConsumerWidget {
-  const _CallClientButton({required this.nomClient});
+  const _CallClientButton({required this.nomClient, this.directPhone});
 
   final String nomClient;
 
+  /// Numero saisi directement sur l'arret (stop.telephone, #B Noah). S'il
+  /// est present, il a la PRIORITE sur le carnet (le numero de l'arret est
+  /// plus specifique que celui d'un client generique du carnet).
+  final String? directPhone;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final phoneAsync = ref.watch(clientPhoneByNomProvider(nomClient));
-    final phone = phoneAsync.asData?.value;
+    // 1) numero de l'arret s'il existe, 2) sinon lookup carnet par nom.
+    final direct = directPhone?.trim();
+    final phone = (direct != null && direct.isNotEmpty)
+        ? direct
+        : ref.watch(clientPhoneByNomProvider(nomClient)).asData?.value;
     if (phone == null || phone.isEmpty) {
       return const SizedBox.shrink();
     }

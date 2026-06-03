@@ -24,7 +24,6 @@ class Fabs extends StatelessWidget {
     required this.tournee,
     required this.onAjouter,
     required this.onDemarrer,
-    required this.onArreter,
     required this.onScannerColis,
     required this.onScanRafale,
     this.scannerColisKey,
@@ -34,7 +33,6 @@ class Fabs extends StatelessWidget {
   final Tournee tournee;
   final VoidCallback onAjouter;
   final VoidCallback onDemarrer;
-  final VoidCallback onArreter;
   final VoidCallback onScannerColis;
 
   /// Scan bordereaux en rafale (carte #119) : enchaine plusieurs
@@ -54,11 +52,19 @@ class Fabs extends StatelessWidget {
     // d'optim ORS pour pouvoir demarrer (cas pas de cle ORS, tournee
     // mini, ordre saisi deja correct). Carte Trello #136.
     final showDemarrer = isBrouillon || isOptimisee;
+    // Pendant la tournee (en_cours), on epure le coin bas-droite : seul le
+    // micro mains-libres reste. La Pause passe dans l'app bar (a cote du
+    // nom) et Scan colis / Scan bordereau / Ajouter un arret passent dans
+    // le menu ⋮ (demande UI Noah 2026-06-03). Hors tournee, on garde les
+    // FABs classiques (Demarrer + scans + ajout).
+    if (isEnCours) {
+      return VoiceCommandFab(tournee: tournee);
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (showDemarrer)
+        if (showDemarrer) ...[
           FloatingActionButton.extended(
             heroTag: 'fab-demarrer',
             backgroundColor: AppColors.lime,
@@ -70,30 +76,9 @@ class Fabs extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
-        if (isEnCours)
-          FloatingActionButton.extended(
-            heroTag: 'fab-arreter',
-            backgroundColor: AppColors.amber,
-            foregroundColor: p.ink,
-            onPressed: onArreter,
-            icon: const Icon(Icons.pause_rounded),
-            label: const Text(
-              'Pause',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-        if (showDemarrer || isEnCours) const SizedBox(height: AppSpacing.x10),
-        // FAB commande vocale mains-libres (carte #273). Visible uniquement
-        // quand la tournee est en cours : il annonce le prochain arret puis
-        // ecoute "livre / echec / passer / stop" pour valider sans toucher
-        // l'ecran.
-        if (isEnCours) ...[
-          VoiceCommandFab(tournee: tournee),
           const SizedBox(height: AppSpacing.x10),
         ],
-        // Mini FAB scanner code-barre colis. Place au-dessus du FAB
-        // principal "Ajouter un arret" pour acces rapide en plein
-        // workflow (Noah scanne plusieurs colis a la suite).
+        // Mini FAB scanner code-barre colis.
         FloatingActionButton.small(
           key: scannerColisKey,
           heroTag: 'fab-scanner-colis',

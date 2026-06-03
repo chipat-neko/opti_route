@@ -20,6 +20,7 @@ import '../../data/tracking_codes_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/signature_pad_dialog.dart';
 import '../../widgets/snack.dart';
 import '../../widgets/stop_action_sheet.dart';
 import '../ajout_arret_screen.dart';
@@ -78,8 +79,19 @@ class StopRowActions {
     var statutChange = false;
     switch (action) {
       case MarkLivreAction():
-        final pos = await _captureGpsPosition();
-        await repo.markLivre(stop.id, position: pos);
+        // Capture GPS lancee en ARRIERE-PLAN : elle tourne PENDANT que
+        // l'utilisateur signe. Avant, on attendait le fix GPS
+        // (LocationAccuracy.high, jusqu'a 4s, lent en interieur) AVANT
+        // d'ouvrir le canva -> grosse latence d'ouverture. Maintenant le
+        // pad s'affiche instantanement et le GPS a le temps de se capturer
+        // pendant la signature. Retour Noah dev2 2026-06-03.
+        final gpsFuture = _captureGpsPosition();
+        // Signature du destinataire juste apres le "livre" (facultative :
+        // l'utilisateur peut passer). Demande Noah 2026-06-03.
+        if (context.mounted) {
+          await captureSignatureForStop(context, ref, stop.id);
+        }
+        await repo.markLivre(stop.id, position: await gpsFuture);
         statutChange = true;
         // Vibration courte de confirmation : terrain gants l'hiver,
         // Noah ne regarde pas toujours l'ecran apres avoir tape.
@@ -118,6 +130,14 @@ class StopRowActions {
         await _capturerPreuve(ref, stop);
       case ViewPreuvePhotoAction():
         final path = stop.preuvePhotoPath;
+        if (path == null) return;
+        await navigator.push<void>(
+          MaterialPageRoute(
+            builder: (_) => PreuvePhotoViewerScreen(photoPath: path),
+          ),
+        );
+      case ViewSignatureAction():
+        final path = stop.signaturePath;
         if (path == null) return;
         await navigator.push<void>(
           MaterialPageRoute(

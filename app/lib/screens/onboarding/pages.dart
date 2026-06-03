@@ -225,7 +225,8 @@ class PageConcept extends StatelessWidget {
     ),
     (
       'Demarre la tournee',
-      'GPS live + Maps/Waze sur chaque arret. Marque livre / echec au fur et a mesure.',
+      'GPS live + Maps/Waze sur chaque arret. Appelle le client en 1 tap, '
+          'marque livre / echec, et fais signer le destinataire si besoin.',
     ),
   ];
 }

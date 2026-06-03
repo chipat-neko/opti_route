@@ -18,8 +18,8 @@ void main() {
   });
 
   group('Schema v48 (multi-tenant)', () {
-    test('schemaVersion = 48', () {
-      expect(db.schemaVersion, 48);
+    test('schemaVersion = 50', () {
+      expect(db.schemaVersion, 50);
     });
 
     test('Toutes les 6 nouvelles tables existent et acceptent les inserts',

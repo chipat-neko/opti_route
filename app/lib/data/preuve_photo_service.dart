@@ -115,6 +115,29 @@ class PreuvePhotoService {
     return Uint8List.fromList(img.encodeJpg(image, quality: 85));
   }
 
+  /// Enregistre les octets PNG d'une signature dans le repertoire prive
+  /// `app_documents/signatures/<stopId>_<ts>.png`. Retourne le chemin
+  /// absolu, ou null si l'I/O echoue (best-effort). Demande Noah
+  /// 2026-06-03 (signature au "Marquer livre").
+  Future<String?> saveSignature({
+    required int stopId,
+    required Uint8List png,
+  }) async {
+    try {
+      final base = await getApplicationDocumentsDirectory();
+      final dir = Directory('${base.path}/signatures');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final destPath = '${dir.path}/${stopId}_$ts.png';
+      await File(destPath).writeAsBytes(png);
+      return destPath;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Supprime un fichier preuve s'il existe. Safe : ne plante pas si
   /// le fichier a deja ete supprime ou si l'I/O echoue.
   Future<void> supprimer(String path) async {

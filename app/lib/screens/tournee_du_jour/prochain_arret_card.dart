@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
 import '../../data/location_service.dart';
@@ -10,6 +11,7 @@ import '../../providers/database_providers.dart';
 import '../../providers/location_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/signature_pad_dialog.dart';
 
 /// Selectionne le **premier** stop encore `a_livrer` qui a des coords
 /// GPS dans [list]. Centralise la regle pour que build() ET les
@@ -96,6 +98,7 @@ class ProchainArretCard extends ConsumerWidget {
 
     final nom = (prochain.nomClient ?? '').trim();
     final hasNom = nom.isNotEmpty;
+    final tel = (prochain.telephone ?? '').trim();
 
     // ─── 3. Construction de l'UI ────────────────────────────────
     return Container(
@@ -232,6 +235,26 @@ class ProchainArretCard extends ConsumerWidget {
               ),
             ],
           ),
+          // ─── Bouton "Appeler" ───────────────────────────────────
+          // Visible uniquement si l'arret porte un telephone
+          // (stop.telephone, #B Noah). 1 tap = appel direct via
+          // l'intent natif tel: sans quitter la carte.
+          if (tel.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.lime,
+                side: const BorderSide(color: AppColors.lime),
+                minimumSize: const Size(double.infinity, 44),
+              ),
+              onPressed: () => _callPhone(context, tel),
+              icon: const Icon(Icons.phone_outlined, size: 16),
+              label: Text(
+                'Appeler $tel',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
           // ─── Gros bouton "Marquer livre" ────────────────────────
           // Mode livraison rapide : pas besoin d'ouvrir la bottom
           // sheet pour valider. Capture la position GPS comme preuve
@@ -272,18 +295,32 @@ class ProchainArretCard extends ConsumerWidget {
     Stop stop,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    // Capture GPS best-effort en parallele du markLivre (4 s max).
-    ({double lat, double lng})? pos;
-    try {
-      final ok = await LocationService.ensurePermission();
-      if (ok) {
+    // Capture GPS lancee en ARRIERE-PLAN (best-effort, 4 s max) : elle
+    // tourne PENDANT que l'utilisateur signe. Avant, on attendait le fix
+    // GPS (LocationAccuracy.high, lent en interieur) AVANT d'ouvrir le
+    // canva -> grosse latence. Maintenant le pad s'affiche instantanement
+    // et le GPS a le temps de se capturer pendant la signature. Retour
+    // Noah dev2 2026-06-03.
+    final gpsFuture = () async {
+      try {
+        final ok = await LocationService.ensurePermission();
+        if (!ok) return null;
         final p = await LocationService.currentPosition()
             .timeout(const Duration(seconds: 4));
-        pos = (lat: p.latitude, lng: p.longitude);
+        return (lat: p.latitude, lng: p.longitude);
+      } catch (_) {
+        return null; // best-effort : on continue sans coords
       }
-    } catch (_) {/* best-effort : on continue sans coords */}
+    }();
 
-    await ref.read(stopsRepositoryProvider).markLivre(stop.id, position: pos);
+    // Signature du destinataire (facultative) — s'ouvre tout de suite.
+    if (context.mounted) {
+      await captureSignatureForStop(context, ref, stop.id);
+    }
+
+    await ref
+        .read(stopsRepositoryProvider)
+        .markLivre(stop.id, position: await gpsFuture);
 
     // Bascule auto en 'terminee' si tous les arrets ont un statut.
     // Meme logique que _TourneeDuJourScreenState._maybeFinishTournee
@@ -316,6 +353,29 @@ class ProchainArretCard extends ConsumerWidget {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  /// Lance un appel telephonique vers [phone] via l'intent natif
+  /// `tel:` (meme mecanique que _CallClientButton de la bottom sheet).
+  /// On ne montre jamais l'erreur brute (message generique).
+  static Future<void> _callPhone(BuildContext context, String phone) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    try {
+      final ok = await launchUrl(
+        Uri.parse('tel:$cleaned'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Impossible d\'ouvrir le téléphone')),
+        );
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Impossible de lancer l\'appel')),
+      );
+    }
   }
 
   /// Format compact de distance : "350 m" / "1.2 km".
