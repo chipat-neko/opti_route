@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/database.dart';
 import '../../data/location_service.dart';
@@ -97,6 +98,7 @@ class ProchainArretCard extends ConsumerWidget {
 
     final nom = (prochain.nomClient ?? '').trim();
     final hasNom = nom.isNotEmpty;
+    final tel = (prochain.telephone ?? '').trim();
 
     // ─── 3. Construction de l'UI ────────────────────────────────
     return Container(
@@ -233,6 +235,26 @@ class ProchainArretCard extends ConsumerWidget {
               ),
             ],
           ),
+          // ─── Bouton "Appeler" ───────────────────────────────────
+          // Visible uniquement si l'arret porte un telephone
+          // (stop.telephone, #B Noah). 1 tap = appel direct via
+          // l'intent natif tel: sans quitter la carte.
+          if (tel.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.lime,
+                side: const BorderSide(color: AppColors.lime),
+                minimumSize: const Size(double.infinity, 44),
+              ),
+              onPressed: () => _callPhone(context, tel),
+              icon: const Icon(Icons.phone_outlined, size: 16),
+              label: Text(
+                'Appeler $tel',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
           // ─── Gros bouton "Marquer livre" ────────────────────────
           // Mode livraison rapide : pas besoin d'ouvrir la bottom
           // sheet pour valider. Capture la position GPS comme preuve
@@ -322,6 +344,29 @@ class ProchainArretCard extends ConsumerWidget {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  /// Lance un appel telephonique vers [phone] via l'intent natif
+  /// `tel:` (meme mecanique que _CallClientButton de la bottom sheet).
+  /// On ne montre jamais l'erreur brute (message generique).
+  static Future<void> _callPhone(BuildContext context, String phone) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    try {
+      final ok = await launchUrl(
+        Uri.parse('tel:$cleaned'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Impossible d\'ouvrir le téléphone')),
+        );
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Impossible de lancer l\'appel')),
+      );
+    }
   }
 
   /// Format compact de distance : "350 m" / "1.2 km".

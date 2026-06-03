@@ -104,6 +104,10 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: GestureDetector(
+                  // opaque : sans ça le CustomPaint (sans child) n'est pas
+                  // hit-testable et AUCUN geste n'est capté -> impossible de
+                  // dessiner. C'est LE point qui bloquait le canva.
+                  behavior: HitTestBehavior.opaque,
                   onPanStart: (d) => _addPoint(d.localPosition),
                   onPanUpdate: (d) => _addPoint(d.localPosition),
                   onPanEnd: (_) => _addPoint(null),
