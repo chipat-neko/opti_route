@@ -349,6 +349,61 @@ class OptimTourneeActions {
     );
   }
 
+  /// Au démarrage d'une tournée (Noah n'utilise plus VROOM, qui le
+  /// faisait au moment d'optimiser) : si elle contient ≥2 arrêts
+  /// « EN 1ER » ou ≥2 « EN DERNIER », demande leur ordre en drag & drop
+  /// (même [OrdrePrioriteDialog] que l'ancienne optim), persiste
+  /// `ordrePriorite`, puis ré-applique l'ordre local (premiers → flexibles
+  /// → derniers). Retourne `false` si l'utilisateur annule un des dialogs
+  /// (→ l'appelant NE doit PAS démarrer la tournée). Retourne `true` (sans
+  /// rien demander) s'il y a moins de 2 arrêts dans chaque groupe.
+  static Future<bool> ensureOrdrePrioriteChoisi({
+    required BuildContext context,
+    required WidgetRef ref,
+    required Tournee tournee,
+  }) async {
+    final stopsRepo = ref.read(stopsRepositoryProvider);
+    final stops = await stopsRepo.getByTournee(tournee.id);
+    final firsts = stops
+        .where((s) => s.priorite == 'obligatoire_premier')
+        .toList()
+      ..sort(_existingOrdrePrio);
+    final lasts = stops
+        .where((s) => s.priorite == 'obligatoire_dernier')
+        .toList()
+      ..sort(_existingOrdrePrio);
+    if (firsts.length < 2 && lasts.length < 2) return true; // rien à choisir
+
+    if (firsts.length >= 2) {
+      if (!context.mounted) return false;
+      final ordered = await OrdrePrioriteDialog.showIfNeeded(
+        context,
+        titre: 'Ordre des arrets EN 1ER',
+        sousTitre: 'Tu as ${firsts.length} arrets a livrer en premier. '
+            'Glisse-les dans l\'ordre voulu : 1, 2, 3...',
+        stops: firsts,
+      );
+      if (ordered == null) return false; // annulé -> ne pas démarrer
+      await _persistOrdrePriorite(ref, ordered);
+    }
+    if (lasts.length >= 2) {
+      if (!context.mounted) return false;
+      final ordered = await OrdrePrioriteDialog.showIfNeeded(
+        context,
+        titre: 'Ordre des arrets EN DERNIER',
+        sousTitre: 'Tu as ${lasts.length} arrets a livrer en fin de '
+            'tournee. Glisse-les dans l\'ordre voulu.',
+        stops: lasts,
+      );
+      if (ordered == null) return false;
+      await _persistOrdrePriorite(ref, ordered);
+    }
+    // Applique le nouvel ordre des groupes premier/dernier à la tournée
+    // (même réordonnancement local que partout ailleurs dans l'app).
+    await ref.read(localReorderServiceProvider).reorder(tournee.id);
+    return true;
+  }
+
   /// Tri stable d'arrets par `ordrePriorite` (croissant). Null tombe a
   /// la fin -- les arrets non encore ordonnes apparaissent en queue,
   /// l'utilisateur les classera dans le dialog.
