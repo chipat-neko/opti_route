@@ -18,8 +18,8 @@ void main() {
   });
 
   group('Schema v48 (multi-tenant)', () {
-    test('schemaVersion = 50', () {
-      expect(db.schemaVersion, 50);
+    test('schemaVersion = 51', () {
+      expect(db.schemaVersion, 51);
     });
 
     test('Toutes les 6 nouvelles tables existent et acceptent les inserts',
@@ -35,6 +35,7 @@ void main() {
         nom: 'CALOTE Noah',
         siret: null,
         createdBy: userId,
+        plan: 'illimite',
         creeLe: DateTime.now(),
         updatedAt: DateTime.now(),
       ));
@@ -110,7 +111,7 @@ void main() {
 
       await repo.upsertEntreprise(Entreprise(
         cloudId: entrepriseId, nom: 'X', siret: null, createdBy: userId,
-        creeLe: DateTime.now(), updatedAt: DateTime.now(),
+        plan: 'illimite', creeLe: DateTime.now(), updatedAt: DateTime.now(),
       ));
       await repo.upsertEntrepot(Entrepot(
         cloudId: entrepotId, entrepriseId: entrepriseId, nom: 'A', adresse: null,
@@ -139,7 +140,7 @@ void main() {
       const userId = 'user-3';
       await repo.upsertEntreprise(Entreprise(
         cloudId: entrepriseId, nom: 'Y', siret: null, createdBy: userId,
-        creeLe: DateTime.now(), updatedAt: DateTime.now(),
+        plan: 'illimite', creeLe: DateTime.now(), updatedAt: DateTime.now(),
       ));
       // 1 actif + 1 revoque
       await repo.upsertEntrepriseUser(EntrepriseUser(

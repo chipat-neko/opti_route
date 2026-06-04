@@ -29,7 +29,7 @@ void main() {
   }) async {
     await repo.upsertEntreprise(Entreprise(
       cloudId: entrepriseId, nom: 'CALOTE', siret: null, createdBy: userId,
-      creeLe: now(), updatedAt: now(),
+      plan: 'illimite', creeLe: now(), updatedAt: now(),
     ));
     await repo.upsertEntrepot(Entrepot(
       cloudId: entrepotId, entrepriseId: entrepriseId, nom: 'Dépôt',
@@ -60,7 +60,7 @@ void main() {
       await seedParents(entrepriseId: 'ent-1');
       await repo.upsertEntreprise(Entreprise(
         cloudId: 'ent-2', nom: 'B', siret: null, createdBy: 'user-1',
-        creeLe: now(), updatedAt: now(),
+        plan: 'illimite', creeLe: now(), updatedAt: now(),
       ));
       await repo.upsertEntrepriseUser(EntrepriseUser(
         cloudId: 'eu-1', entrepriseId: 'ent-1', userId: 'user-1',
