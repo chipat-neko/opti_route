@@ -78,10 +78,13 @@
   <span class="eyebrow">Cadre legal & confidentialite</span>
   <h1>Mentions legales & vie privée.</h1>
   <p style="font-size: 1.05rem; margin: var(--space-22) 0 var(--space-40);">
-    Mise a jour : <strong>13 mai 2026</strong>. Cette page resume la
+    Mise a jour : <strong>4 juin 2026</strong>. Cette page resume la
     politique de confidentialite et les conditions d'utilisation de
-    l'application opti_route et de son site compagnon. Elle vaut pour
-    la version actuelle (Phase 1 — local, gratuit, sans backend).
+    l'application opti_route et de son site compagnon. Elle couvre le
+    mode <strong>local par défaut</strong> (aucune donnée ne quitte
+    l'appareil) ainsi que la <strong>synchronisation cloud optionnelle</strong>
+    (opt-in explicite, compte requis). Elle s'applique a l'application
+    distribuee sur le Google Play Store, le web et Windows.
   </p>
 
   <!-- Editeur -->
@@ -188,6 +191,20 @@
     <li><strong>Droit a l'effacement</strong> : Parametres &rarr; Cache &rarr; "Reinitialiser la base" supprime tout. Desinstaller l'app efface egalement la base.</li>
     <li><strong>Droit a la portabilite</strong> : exports CSV/vCard standards (RFC 4180, RFC 2426).</li>
     <li><strong>Droit d'opposition</strong> : ne pas installer l'app.</li>
+  </ul>
+
+  <h3 style="margin: var(--space-22) 0 var(--space-10);">3.5. Déclaration des données (Google Play « Sécurité des données »)</h3>
+  <p style="margin-bottom: var(--space-14);">
+    Pour la distribution sur le Play Store, voici un résumé clair de ce
+    qui est collecté (= envoyé hors de l'appareil) :
+  </p>
+  <ul style="margin-left: var(--space-22); line-height: 1.8; margin-bottom: var(--space-22);">
+    <li><strong>En mode local (défaut)</strong> : <strong>aucune donnée collectée</strong>. Tout reste sur l'appareil ; rien n'est envoyé à un serveur opti_route.</li>
+    <li><strong>Si la synchronisation cloud est activée (opt-in)</strong>, sont envoyées à Supabase (région UE) : adresse e-mail (compte), position GPS, adresses &amp; noms clients du carnet, données de tournées/arrêts, photos preuves et signatures.</li>
+    <li><strong>Finalité</strong> : uniquement le fonctionnement de l'app (multi-appareils, partage d'équipe, preuves de livraison). <strong>Aucune publicité, aucun courtage de données, aucun tracking analytique.</strong></li>
+    <li><strong>Partage à des tiers</strong> : aucun à des fins commerciales. Les seuls traitements externes sont techniques (géocodage d'adresses via APIs publiques, cf 3.2 ; hébergement Supabase).</li>
+    <li><strong>Sécurité</strong> : transit chiffré (HTTPS/TLS), accès restreint par Row Level Security (seul ton compte lit tes données).</li>
+    <li><strong>Suppression</strong> : tu peux supprimer ton compte et toutes les données serveur depuis l'app (Paramètres &gt; Compte cloud), et effacer les données locales (Paramètres &gt; Cache) ou en désinstallant.</li>
   </ul>
 
   <!-- Site -->
