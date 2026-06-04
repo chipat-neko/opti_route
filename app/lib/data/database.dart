@@ -98,7 +98,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 50;
+  int get schemaVersion => 51;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -434,6 +434,18 @@ class AppDatabase extends _$AppDatabase {
             // Signature du destinataire capturee a l'ecran au "Marquer
             // livre" (optionnelle). Chemin PNG local. Noah 2026-06-03.
             await _safeAddColumn(m, stops, stops.signaturePath);
+          }
+          if (from < 51) {
+            // Plan/abonnement de l'entreprise (#381-A, carte #388).
+            // DEFAULT 'illimite' = grandfathering : aucun bridage, les
+            // entreprises existantes restent illimitees. Backfill
+            // explicite car sqlite3.wasm (web) n'applique pas toujours
+            // le default constant aux lignes existantes (no-op sur
+            // Android natif). Le bridage reel = #381-C.
+            await _safeAddColumn(m, entreprises, entreprises.plan);
+            await customStatement(
+              "UPDATE entreprises SET plan = 'illimite' WHERE plan IS NULL",
+            );
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :

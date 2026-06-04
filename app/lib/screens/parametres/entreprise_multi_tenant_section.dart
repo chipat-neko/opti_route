@@ -6,6 +6,7 @@ import '../../data/cloud/cloud_membres_entreprise_sync.dart'
     show EntrepriseMembreInfo;
 import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
+import '../../data/plan.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -304,6 +305,10 @@ class _EntrepriseMultiTenantSectionState
                   ),
                 ),
               ),
+              // Badge du plan/abonnement (#381-A) : informatif uniquement,
+              // aucune limite appliquee a ce stade.
+              _BadgePlan(e.plan),
+              const SizedBox(width: AppSpacing.x4),
               if (isAdmin) const _BadgeAdmin(),
               // Menu sortie : Supprimer (admin) ou Quitter (membre).
               PopupMenuButton<String>(
@@ -730,6 +735,35 @@ class _RejoindreCodeDialogState extends State<_RejoindreCodeDialog> {
 
 /// Petit badge « Admin » affiché sur les entreprises dont l'utilisateur
 /// courant est le créateur.
+/// Badge informatif du plan/abonnement de l'entreprise (#381-A). Affiche
+/// le libellé court (Free / Tier 1 / ...). Aucune limite appliquée ici.
+class _BadgePlan extends StatelessWidget {
+  const _BadgePlan(this.code);
+
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = Plan.fromCode(code);
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.x8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.lime.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        plan.badge,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.ink,
+        ),
+      ),
+    );
+  }
+}
+
 class _BadgeAdmin extends StatelessWidget {
   const _BadgeAdmin();
 

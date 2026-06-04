@@ -9399,6 +9399,16 @@ class $EntreprisesTable extends Entreprises
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _planMeta = const VerificationMeta('plan');
+  @override
+  late final GeneratedColumn<String> plan = GeneratedColumn<String>(
+    'plan',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('illimite'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     cloudId,
@@ -9407,6 +9417,7 @@ class $EntreprisesTable extends Entreprises
     createdBy,
     creeLe,
     updatedAt,
+    plan,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9462,6 +9473,12 @@ class $EntreprisesTable extends Entreprises
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('plan')) {
+      context.handle(
+        _planMeta,
+        plan.isAcceptableOrUnknown(data['plan']!, _planMeta),
+      );
+    }
     return context;
   }
 
@@ -9495,6 +9512,10 @@ class $EntreprisesTable extends Entreprises
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      plan: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plan'],
+      )!,
     );
   }
 
@@ -9520,6 +9541,13 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
   final String createdBy;
   final DateTime creeLe;
   final DateTime updatedAt;
+
+  /// Code du plan/abonnement de l'entreprise (#381-A, carte #388).
+  /// Défaut `illimite` = grandfathering : les entreprises existantes ne
+  /// sont jamais bridées. AUCUNE limite n'est appliquée à ce stade
+  /// (le bridage = #381-C) — cette colonne sert seulement à exposer un
+  /// badge informatif. Valeurs : free | tier1 | tier2 | tier3 | illimite.
+  final String plan;
   const Entreprise({
     required this.cloudId,
     required this.nom,
@@ -9527,6 +9555,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
     required this.createdBy,
     required this.creeLe,
     required this.updatedAt,
+    required this.plan,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -9539,6 +9568,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
     map['created_by'] = Variable<String>(createdBy);
     map['cree_le'] = Variable<DateTime>(creeLe);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['plan'] = Variable<String>(plan);
     return map;
   }
 
@@ -9552,6 +9582,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
       createdBy: Value(createdBy),
       creeLe: Value(creeLe),
       updatedAt: Value(updatedAt),
+      plan: Value(plan),
     );
   }
 
@@ -9567,6 +9598,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
       createdBy: serializer.fromJson<String>(json['createdBy']),
       creeLe: serializer.fromJson<DateTime>(json['creeLe']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      plan: serializer.fromJson<String>(json['plan']),
     );
   }
   @override
@@ -9579,6 +9611,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
       'createdBy': serializer.toJson<String>(createdBy),
       'creeLe': serializer.toJson<DateTime>(creeLe),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'plan': serializer.toJson<String>(plan),
     };
   }
 
@@ -9589,6 +9622,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
     String? createdBy,
     DateTime? creeLe,
     DateTime? updatedAt,
+    String? plan,
   }) => Entreprise(
     cloudId: cloudId ?? this.cloudId,
     nom: nom ?? this.nom,
@@ -9596,6 +9630,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
     createdBy: createdBy ?? this.createdBy,
     creeLe: creeLe ?? this.creeLe,
     updatedAt: updatedAt ?? this.updatedAt,
+    plan: plan ?? this.plan,
   );
   Entreprise copyWithCompanion(EntreprisesCompanion data) {
     return Entreprise(
@@ -9605,6 +9640,7 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
       createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
       creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      plan: data.plan.present ? data.plan.value : this.plan,
     );
   }
 
@@ -9616,14 +9652,15 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
           ..write('siret: $siret, ')
           ..write('createdBy: $createdBy, ')
           ..write('creeLe: $creeLe, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('plan: $plan')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(cloudId, nom, siret, createdBy, creeLe, updatedAt);
+      Object.hash(cloudId, nom, siret, createdBy, creeLe, updatedAt, plan);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -9633,7 +9670,8 @@ class Entreprise extends DataClass implements Insertable<Entreprise> {
           other.siret == this.siret &&
           other.createdBy == this.createdBy &&
           other.creeLe == this.creeLe &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.plan == this.plan);
 }
 
 class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
@@ -9643,6 +9681,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
   final Value<String> createdBy;
   final Value<DateTime> creeLe;
   final Value<DateTime> updatedAt;
+  final Value<String> plan;
   final Value<int> rowid;
   const EntreprisesCompanion({
     this.cloudId = const Value.absent(),
@@ -9651,6 +9690,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
     this.createdBy = const Value.absent(),
     this.creeLe = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.plan = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EntreprisesCompanion.insert({
@@ -9660,6 +9700,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
     required String createdBy,
     this.creeLe = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.plan = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cloudId = Value(cloudId),
        nom = Value(nom),
@@ -9671,6 +9712,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
     Expression<String>? createdBy,
     Expression<DateTime>? creeLe,
     Expression<DateTime>? updatedAt,
+    Expression<String>? plan,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -9680,6 +9722,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
       if (createdBy != null) 'created_by': createdBy,
       if (creeLe != null) 'cree_le': creeLe,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (plan != null) 'plan': plan,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -9691,6 +9734,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
     Value<String>? createdBy,
     Value<DateTime>? creeLe,
     Value<DateTime>? updatedAt,
+    Value<String>? plan,
     Value<int>? rowid,
   }) {
     return EntreprisesCompanion(
@@ -9700,6 +9744,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
       createdBy: createdBy ?? this.createdBy,
       creeLe: creeLe ?? this.creeLe,
       updatedAt: updatedAt ?? this.updatedAt,
+      plan: plan ?? this.plan,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -9725,6 +9770,9 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (plan.present) {
+      map['plan'] = Variable<String>(plan.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -9740,6 +9788,7 @@ class EntreprisesCompanion extends UpdateCompanion<Entreprise> {
           ..write('createdBy: $createdBy, ')
           ..write('creeLe: $creeLe, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('plan: $plan, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -17800,6 +17849,7 @@ typedef $$EntreprisesTableCreateCompanionBuilder =
       required String createdBy,
       Value<DateTime> creeLe,
       Value<DateTime> updatedAt,
+      Value<String> plan,
       Value<int> rowid,
     });
 typedef $$EntreprisesTableUpdateCompanionBuilder =
@@ -17810,6 +17860,7 @@ typedef $$EntreprisesTableUpdateCompanionBuilder =
       Value<String> createdBy,
       Value<DateTime> creeLe,
       Value<DateTime> updatedAt,
+      Value<String> plan,
       Value<int> rowid,
     });
 
@@ -17936,6 +17987,11 @@ class $$EntreprisesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get plan => $composableBuilder(
+    column: $table.plan,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> entrepotsRefs(
     Expression<bool> Function($$EntrepotsTableFilterComposer f) f,
   ) {
@@ -18051,6 +18107,11 @@ class $$EntreprisesTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get plan => $composableBuilder(
+    column: $table.plan,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$EntreprisesTableAnnotationComposer
@@ -18079,6 +18140,9 @@ class $$EntreprisesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get plan =>
+      $composableBuilder(column: $table.plan, builder: (column) => column);
 
   Expression<T> entrepotsRefs<T extends Object>(
     Expression<T> Function($$EntrepotsTableAnnotationComposer a) f,
@@ -18195,6 +18259,7 @@ class $$EntreprisesTableTableManager
                 Value<String> createdBy = const Value.absent(),
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> plan = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntreprisesCompanion(
                 cloudId: cloudId,
@@ -18203,6 +18268,7 @@ class $$EntreprisesTableTableManager
                 createdBy: createdBy,
                 creeLe: creeLe,
                 updatedAt: updatedAt,
+                plan: plan,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -18213,6 +18279,7 @@ class $$EntreprisesTableTableManager
                 required String createdBy,
                 Value<DateTime> creeLe = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> plan = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntreprisesCompanion.insert(
                 cloudId: cloudId,
@@ -18221,6 +18288,7 @@ class $$EntreprisesTableTableManager
                 createdBy: createdBy,
                 creeLe: creeLe,
                 updatedAt: updatedAt,
+                plan: plan,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

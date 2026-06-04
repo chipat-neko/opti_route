@@ -262,6 +262,10 @@ class CloudEntrepriseSync {
               nom: row['nom'] as String,
               siret: Value(row['siret'] as String?),
               createdBy: row['created_by'] as String,
+              // Plan/abonnement (#381-A) : lecture seule cote app. Defaut
+              // 'illimite' si la colonne cloud n'existe pas encore (avant
+              // deploiement du SQL #381-A) -> jamais de bridage.
+              plan: Value(row['plan'] as String? ?? 'illimite'),
               creeLe: Value(_parseTs(row['cree_le'])),
               updatedAt: Value(_parseTs(row['updated_at'])),
             ),

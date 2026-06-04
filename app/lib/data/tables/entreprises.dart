@@ -33,6 +33,14 @@ class Entreprises extends Table {
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime)();
 
+  /// Code du plan/abonnement de l'entreprise (#381-A, carte #388).
+  /// Défaut `illimite` = grandfathering : les entreprises existantes ne
+  /// sont jamais bridées. AUCUNE limite n'est appliquée à ce stade
+  /// (le bridage = #381-C) — cette colonne sert seulement à exposer un
+  /// badge informatif. Valeurs : free | tier1 | tier2 | tier3 | illimite.
+  TextColumn get plan =>
+      text().withDefault(const Constant('illimite'))();
+
   @override
   Set<Column> get primaryKey => {cloudId};
 }
