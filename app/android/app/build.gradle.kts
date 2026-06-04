@@ -93,7 +93,17 @@ android {
     // hors-Play (sideload Noah / partage direct).
     splits {
         abi {
-            isEnable = true
+            // Le split ABI est utile pour les APK (sideload : 1 APK par
+            // archi, ~55-65 MB). MAIS il casse le build de bundle (AAB) :
+            // combiner split ABI + shrinkResources fait echouer
+            // :app:buildReleasePreBundle ("Multiple shrunk-resources",
+            // bug AGP issuetracker 402800800). Le bundle gere de toute
+            // facon lui-meme la separation par ABI cote Play Store. On
+            // desactive donc le split quand on build un bundle.
+            val isBundleBuild = gradle.startParameter.taskNames.any {
+                it.contains("bundle", ignoreCase = true)
+            }
+            isEnable = !isBundleBuild
             reset()
             include("armeabi-v7a", "arm64-v8a")
             isUniversalApk = true
