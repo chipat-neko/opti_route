@@ -43,27 +43,23 @@ class FranceGeocodingService implements GeocodingService {
     int limit = 10,
     String acceptLanguage = 'fr-FR',
   }) async {
-    // Strategie 2026-05-20 (style Spoke) : lance les 3 sources EN
-    // PARALLELE plutot qu'en cascade sequentielle. Gain de vitesse
-    // perçue 2-3x car la latence totale = max(t_ban, t_sirene,
-    // t_photon) au lieu de t_ban + t_sirene + t_photon.
+    // Cascade 2 etages (2026-06-11, audit quota). L'ancienne strategie
+    // 2026-05-20 lançait les 3 sources en parallele a CHAQUE recherche :
+    // latence percue optimale mais 3 quotas brules par frappe (apres
+    // debounce). La cascade ci-dessous garde la meme latence sur le cas
+    // dominant et ne consulte les sources secondaires que si la
+    // primaire ne donne rien de precis :
     //
-    // Trade-off : on consomme 3 quotas API au lieu d'1 en moyenne.
-    // Acceptable car les 3 APIs sont gratuites et tres genereuses
-    // (BAN gov.fr no limit officiel, SIRENE gov.fr, Photon Komoot
-    // 5 req/s).
+    // - Query adresse ("12 rue...") : BAN seul. Il couvre quasi 100%
+    //   des adresses postales France ; Photon/SIRENE n'apportent rien
+    //   de plus quand BAN a un hit precis. Fallback : Photon + SIRENE
+    //   en parallele si BAN ne retourne aucun hit precis.
+    // - Query nom ("Carrefour...") : SIRENE + Photon en parallele (ils
+    //   sont complementaires : noms legaux vs enseignes). BAN seulement
+    //   en secours si aucun hit precis.
     //
-    // Le `looksLikeAddress` reste utilise pour TRIER les resultats :
-    // l'ordre privilegie BAN si requete commence par chiffre, sinon
-    // entreprises en tete. Ca preserve la pertinence sans attendre
-    // la fin du 1er appel.
-    final looksLikeAddress = _looksLikeAddress(query);
-    final primaryOrder = looksLikeAddress
-        ? <GeocodingService>[ban, photon, entreprises]
-        : <GeocodingService>[entreprises, photon, ban];
-
-    // Lance les 3 en parallele. Chaque future swallow ses erreurs
-    // pour ne pas couler le Future.wait global.
+    // "Precis" = numero de rue OU POI nomme (meme critere que la
+    // cascade historique d'avant 2026-05-20).
     Future<List<AddressSuggestion>> safe(GeocodingService s) async {
       try {
         return await s.search(query, limit: limit);
@@ -71,19 +67,30 @@ class FranceGeocodingService implements GeocodingService {
         return const <AddressSuggestion>[];
       }
     }
-    final results = await Future.wait(primaryOrder.map(safe));
 
-    // Concatene dans l'ordre de priorite (results[0] = source la plus
-    // pertinente pour ce type de query) puis dedupe par coords.
-    final accumulated = <AddressSuggestion>[];
-    for (final r in results) {
-      accumulated.addAll(r);
+    if (_looksLikeAddress(query)) {
+      final banResults = await safe(ban);
+      if (banResults.any(_isPrecise)) return _dedupe(banResults);
+      final rest = await Future.wait([safe(photon), safe(entreprises)]);
+      return _dedupe([...banResults, ...rest[0], ...rest[1]]);
     }
-    return _dedupe(accumulated);
+
+    final firsts = await Future.wait([safe(entreprises), safe(photon)]);
+    final accumulated = [...firsts[0], ...firsts[1]];
+    if (accumulated.any(_isPrecise)) return _dedupe(accumulated);
+    final banResults = await safe(ban);
+    return _dedupe([...accumulated, ...banResults]);
   }
 
   bool _looksLikeAddress(String query) {
     return RegExp(r'^\s*\d', caseSensitive: false).hasMatch(query);
+  }
+
+  /// Hit "precis" : numero de rue (adresse complete) ou POI nomme.
+  static bool _isPrecise(AddressSuggestion s) {
+    final hn = s.houseNumber;
+    final poi = s.poiName;
+    return (hn != null && hn.isNotEmpty) || (poi != null && poi.isNotEmpty);
   }
 
   List<AddressSuggestion> _dedupe(List<AddressSuggestion> all) {

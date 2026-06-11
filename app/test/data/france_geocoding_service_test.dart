@@ -7,12 +7,11 @@ import 'package:opti_route/data/photon_service.dart';
 import 'package:opti_route/data/recherche_entreprises_service.dart';
 
 void main() {
-  group('FranceGeocodingService.search - parallel cascade', () {
-    test('query adresse : toutes les sources appelees en parallele, '
-        'BAN en tete pour la pertinence', () async {
-      // Strategie 2026-05-20 (Spoke parity) : on lance les 3 sources
-      // en parallele meme si BAN trouve un resultat precis, pour
-      // accelerer la latence perçue (max au lieu de somme des 3).
+  group('FranceGeocodingService.search - cascade 2 etages', () {
+    test('query adresse avec hit BAN precis : BAN seul appele '
+        '(economie de quota)', () async {
+      // Cascade 2026-06-11 : si BAN retourne un hit precis (numero de
+      // rue), Photon et SIRENE ne sont pas consultes du tout.
       final ban = _StubBan(returns: [_precise('12 rue X')]);
       final entr = _StubEntreprises(returns: [_poi('Marque')]);
       final photon = _StubPhoton(returns: [_poi('OSM Result')]);
@@ -22,16 +21,33 @@ void main() {
         photon: photon,
       );
       final r = await svc.search('12 rue X');
-      // Toutes appelees (vs ancienne cascade avec arret precoce).
       expect(ban.called, isTrue);
-      expect(photon.called, isTrue);
-      expect(entr.called, isTrue);
-      // BAN result doit etre en 1er (priorityOrder pour adresse).
+      expect(photon.called, isFalse);
+      expect(entr.called, isFalse);
       expect(r.first.houseNumber, '12');
     });
 
-    test('query nom d\'entreprise : toutes appelees, SIRENE en tete',
+    test('query adresse sans hit BAN precis : fallback Photon + SIRENE',
         () async {
+      final ban = _StubBan(returns: [_imprecise('rue X', lat: 47.0)]);
+      final entr = _StubEntreprises(returns: [_poi('Marque', lat: 48.5)]);
+      final photon = _StubPhoton(returns: [_poi('OSM Result', lat: 49.0)]);
+      final svc = FranceGeocodingService(
+        ban: ban,
+        entreprises: entr,
+        photon: photon,
+      );
+      final r = await svc.search('12 rue X');
+      expect(ban.called, isTrue);
+      expect(photon.called, isTrue);
+      expect(entr.called, isTrue);
+      // BAN reste en tete (ordre de pertinence adresse), puis Photon.
+      expect(r, hasLength(3));
+      expect(r.first.road, 'rue X');
+    });
+
+    test('query nom d\'entreprise : SIRENE + Photon, BAN pas appele '
+        'quand un hit precis existe', () async {
       final ban = _StubBan(returns: [_imprecise('rue Carrefour')]);
       final entr = _StubEntreprises(returns: [_poi('Carrefour Dreux')]);
       final photon = _StubPhoton(returns: [_poi('Carrefour OSM')]);
@@ -41,11 +57,28 @@ void main() {
         photon: photon,
       );
       final r = await svc.search('Carrefour Dreux');
-      expect(ban.called, isTrue);
-      expect(photon.called, isTrue);
       expect(entr.called, isTrue);
+      expect(photon.called, isTrue);
+      expect(ban.called, isFalse);
       // SIRENE en 1er pour les noms d'entreprise.
       expect(r.first.poiName, 'Carrefour Dreux');
+    });
+
+    test('query nom sans hit precis : BAN appele en secours', () async {
+      final ban = _StubBan(returns: [_imprecise('rue Carrefour')]);
+      final entr = _StubEntreprises();
+      final photon = _StubPhoton();
+      final svc = FranceGeocodingService(
+        ban: ban,
+        entreprises: entr,
+        photon: photon,
+      );
+      final r = await svc.search('Carrefour Dreux');
+      expect(entr.called, isTrue);
+      expect(photon.called, isTrue);
+      expect(ban.called, isTrue);
+      expect(r, hasLength(1));
+      expect(r.first.road, 'rue Carrefour');
     });
 
     test('agregation et dedupe par coords arrondies', () async {
