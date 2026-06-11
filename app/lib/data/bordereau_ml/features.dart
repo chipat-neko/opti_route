@@ -27,12 +27,19 @@
 ///   19 block_width
 library;
 
+// ⚠️ SYNC : ces constantes doivent etre IDENTIQUES a celles de
+// tools/train_classifier.py (exportees dans assets/ml/features.json au
+// training). Le modele a ete entraine avec ces valeurs : toute divergence
+// degrade silencieusement l'accuracy. Le test
+// test/data/bordereau_ml_features_sync_test.dart compare ce fichier au
+// features.json et echoue en cas d'ecart.
 const List<String> kTelKw = ['tel', 'tél', 'port', 'mob', 'fax', 'gsm'];
 
 const List<String> kRueKw = [
-  'rue', 'avenue', 'av.', 'bd', 'boulevard', 'impasse', 'imp.',
-  'chemin', 'route', 'rte', 'allee', 'allée', 'place', 'pl.',
-  'rn', 'rd', 'zone', 'za', 'zi', 'cours', 'quai',
+  'rue', 'avenue', 'av.', 'av ', 'bd', 'boulevard', 'impasse',
+  'chemin', 'route', 'rte', 'allee', 'allée', 'place', 'rn', 'rd',
+  'zone', 'za ', 'zi ', 'lotissement', 'lot.', 'cours', 'square',
+  'quai', 'sentier', 'voie', 'parc', 'residence', 'résidence',
 ];
 
 const List<String> kRefKw = ['fa ', 'ref', 'tracking', 'n°', 'numero', 'numéro'];
@@ -40,14 +47,16 @@ const List<String> kRefKw = ['fa ', 'ref', 'tracking', 'n°', 'numero', 'numéro
 const List<String> kParasiteKw = [
   'destinataire', 'ramasse', 'transporteur', 'expediteur', 'expéditeur',
   'colis', 'poids', 'regime', 'régime', 'instruction', 'fragile',
-  'signature', 'date', 'heure', 'page',
+  'signature', 'mesexp', 'colissimo', 'chronopost', 'bordereau',
+  'livraison', 'enlevement', 'enlèvement', 'code barre', 'code-barre',
 ];
 
-const String _punct = '.,;:!?-()[]{}/\\|@#&%*+=<>"\'';
+/// = `PUNCT` cote Python (set, l'ordre est sans importance).
+const String kPunctChars = '.,;:!?-_/\\()[]{}"\'';
 
-final RegExp _cpPattern = RegExp(r'\b\d{5}\b');
-final RegExp _phonePattern = RegExp(
-    r'(?:\+?33|0)\s?[1-9](?:[\s.-]?\d{2}){4}',
+final RegExp kCpPattern = RegExp(r'\b\d{5}\b');
+final RegExp kPhonePattern = RegExp(
+  r'(?:\+?33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}',
 );
 
 /// Calcule le vecteur de features pour une ligne OCR.
@@ -65,8 +74,11 @@ List<double> computeFeatures({
   final t = text;
   final tl = t.toLowerCase();
   final length = t.length;
-  final words = t.trim().isEmpty ? <String>[] : t.split(RegExp(r'\s+'));
-  final nWords = words.length;
+  // Python `t.split()` ignore les espaces de bord -> trim AVANT split,
+  // sinon "  abc" compterait 2 mots cote Dart et 1 cote Python.
+  final trimmed = t.trim();
+  final nWords =
+      trimmed.isEmpty ? 0 : trimmed.split(RegExp(r'\s+')).length;
 
   int upperLetters = 0;
   int letters = 0;
@@ -79,7 +91,7 @@ List<double> computeFeatures({
       if (_isUpperLetter(ch)) upperLetters++;
     } else if (_isDigit(ch)) {
       digits++;
-    } else if (_punct.contains(ch)) {
+    } else if (kPunctChars.contains(ch)) {
       punct++;
     }
   }
@@ -102,9 +114,9 @@ List<double> computeFeatures({
     _isDigit(firstChar) ? 1.0 : 0.0,
     _isDigit(lastChar) ? 1.0 : 0.0,
     digits.toDouble(),
-    _cpPattern.hasMatch(t) ? 1.0 : 0.0,
+    kCpPattern.hasMatch(t) ? 1.0 : 0.0,
     kTelKw.any(tl.contains) ? 1.0 : 0.0,
-    _phonePattern.hasMatch(t) ? 1.0 : 0.0,
+    kPhonePattern.hasMatch(t) ? 1.0 : 0.0,
     kRueKw.any(tl.contains) ? 1.0 : 0.0,
     kRefKw.any(tl.contains) ? 1.0 : 0.0,
     kParasiteKw.any(tl.contains) ? 1.0 : 0.0,
