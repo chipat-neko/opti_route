@@ -208,17 +208,12 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    // Cleanup local : tournee + stops (les FK ON DELETE CASCADE Drift
-    // s'occupent des stops normalement, mais on enleve explicitement
-    // pour etre sur).
+    // Cleanup local : tournee + stops via le repository (pas de SQL
+    // direct dans un screen — regle d'or ARCHITECTURE.md).
     try {
-      final db = ref.read(appDatabaseProvider);
-      await (db.delete(db.stops)
-            ..where((s) => s.tourneeId.equals(widget.tournee.id)))
-          .go();
-      await (db.delete(db.tournees)
-            ..where((t) => t.id.equals(widget.tournee.id)))
-          .go();
+      await ref
+          .read(tourneesRepositoryProvider)
+          .deleteWithStops(widget.tournee.id);
     } on Object {/* best-effort */}
     if (!mounted) return;
     messenger.showSnackBar(
