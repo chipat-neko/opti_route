@@ -8,7 +8,11 @@ Pre-requis :
     pip install scikit-learn pandas numpy onnx skl2onnx onnxruntime
 
 Output :
-    app/assets/ml/bordereau_classifier.onnx  (modele embeddable, ~100-200 KB)
+    tools/_bordereau_classifier.onnx         (artefact d'entrainement,
+                                              non embarque dans l'app —
+                                              l'inference Dart consomme
+                                              le JSON exporte par
+                                              export_forest_json.py)
     app/assets/ml/features.json              (specs pour reproduire les
                                               features cote Flutter)
     tools/_classifier_report.txt             (accuracy, confusion matrix)
@@ -229,7 +233,11 @@ def main():
         target_opset=15,
         options={id(clf): {'zipmap': False}},
     )
-    onnx_path = ML_DIR / 'bordereau_classifier.onnx'
+    # Artefact d'entrainement uniquement (gitignore *.onnx) : l'app
+    # n'embarque que le JSON (cf export_forest_json.py). Audit
+    # 2026-06-11 : avant, ce fichier sortait dans assets/ml/ et
+    # gonflait l'APK de 1,5 MB pour rien.
+    onnx_path = ROOT / 'tools' / '_bordereau_classifier.onnx'
     with open(onnx_path, 'wb') as f:
         f.write(onx.SerializeToString())
     print(f"\nONNX : {onnx_path} ({onnx_path.stat().st_size // 1024} KB)")
