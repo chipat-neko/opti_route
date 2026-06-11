@@ -350,4 +350,105 @@ void main() {
       expect(s.nbColis, 7);
     });
   });
+
+  group('StopsRepository.findByTrackingInTournee (pre-filtre SQL LIKE)', () {
+    late AppDatabase db;
+    late StopsRepository repo;
+    late int tourneeId;
+
+    setUp(() async {
+      db = AppDatabase(NativeDatabase.memory());
+      repo = StopsRepository(db);
+      tourneeId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'Scan',
+              date: DateTime(2026, 6, 11),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<int> stopWithTracking(List<String> trackings) {
+      return db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: '1 rue T',
+              trackingNumbers:
+                  Value('["${trackings.join('","')}"]'),
+            ),
+          );
+    }
+
+    test('trouve le stop qui contient exactement le numero', () async {
+      final sId = await stopWithTracking(['FA280001', 'FA280002']);
+      await stopWithTracking(['FA280003']);
+
+      final found =
+          await repo.findByTrackingInTournee(tourneeId, 'FA280002');
+      expect(found?.id, sId);
+    });
+
+    test('null si aucun stop ne contient le numero', () async {
+      await stopWithTracking(['FA280001']);
+      expect(
+        await repo.findByTrackingInTournee(tourneeId, 'FA289999'),
+        isNull,
+      );
+    });
+
+    test('une sous-chaine d\'un autre numero ne matche PAS', () async {
+      // 'FA28000' est une sous-chaine de 'FA280001' : le pre-filtre
+      // LIKE doit etre corrige par la verification d'egalite exacte.
+      await stopWithTracking(['FA280001']);
+      expect(
+        await repo.findByTrackingInTournee(tourneeId, 'FA28000'),
+        isNull,
+      );
+    });
+
+    test('ne cherche que dans la tournee demandee', () async {
+      final autreTournee = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'Autre',
+              date: DateTime(2026, 6, 12),
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'Depot',
+            ),
+          );
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: autreTournee,
+              adresseBrute: '2 rue U',
+              trackingNumbers: const Value('["FA280001"]'),
+            ),
+          );
+      expect(
+        await repo.findByTrackingInTournee(tourneeId, 'FA280001'),
+        isNull,
+      );
+    });
+
+    test('tolere un JSON tracking_numbers casse', () async {
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: '3 rue V',
+              trackingNumbers: const Value('pas-du-json"FA280001"'),
+            ),
+          );
+      // Le LIKE matche (guillemets presents) mais le parse JSON echoue
+      // -> liste vide -> pas de faux positif, pas de crash.
+      expect(
+        await repo.findByTrackingInTournee(tourneeId, 'FA280001'),
+        isNull,
+      );
+    });
+  });
 }
