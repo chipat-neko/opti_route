@@ -36,6 +36,7 @@
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildEmailHtml, genCode, validateBody } from './lib.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -43,107 +44,14 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-interface InviteBody {
-  email: string;
-  entreprise_id: string;
-  entrepot_id: string | null;
-  role: 'chef_entrepot' | 'employe';
-}
+// validateBody / genCode / roleLabel / escapeHtml / buildEmailHtml :
+// cf ./lib.ts (extraites pour les tests Deno, audit 2026-06-11).
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
   });
-}
-
-function validateBody(raw: unknown): InviteBody | string {
-  if (!raw || typeof raw !== 'object') return 'Body must be JSON object';
-  const b = raw as Record<string, unknown>;
-  if (typeof b.email !== 'string' || !b.email.includes('@')) {
-    return 'Invalid email';
-  }
-  if (typeof b.entreprise_id !== 'string' || b.entreprise_id.length < 30) {
-    return 'Invalid entreprise_id (expected UUID)';
-  }
-  if (b.entrepot_id !== null && typeof b.entrepot_id !== 'string') {
-    return 'Invalid entrepot_id (expected UUID or null)';
-  }
-  if (b.role !== 'chef_entrepot' && b.role !== 'employe') {
-    return 'Invalid role (expected chef_entrepot or employe)';
-  }
-  return {
-    email: b.email.trim().toLowerCase(),
-    entreprise_id: b.entreprise_id,
-    entrepot_id: (b.entrepot_id as string | null) ?? null,
-    role: b.role,
-  };
-}
-
-// Code à 6 chiffres, zéro-paddé — identique à generateInvitationCode()
-// côté Dart (cloud_sync_helpers.dart) pour une UX cohérente.
-//
-// ⚠️ Sécurité (durcissement nuit 2026-06-01) : on utilise le CSPRNG
-// `crypto.getRandomValues` (Web Crypto, dispo dans Deno) et PAS
-// `Math.random()` qui est prédictible — un attaquant pourrait sinon
-// deviner/réduire l'espace des codes d'invitation et brute-forcer
-// `accept_entreprise_invitation`. Cohérent avec Random.secure() côté Dart.
-// Rejection sampling pour éliminer le biais modulo sur [0, 1_000_000).
-function genCode(): string {
-  const max = 1_000_000;
-  // Plus grand multiple de `max` <= 2^32, au-delà on rejette le tirage.
-  const limit = Math.floor(0xffffffff / max) * max;
-  const buf = new Uint32Array(1);
-  let n: number;
-  do {
-    crypto.getRandomValues(buf);
-    n = buf[0];
-  } while (n >= limit);
-  return (n % max).toString().padStart(6, '0');
-}
-
-function roleLabel(role: string): string {
-  return role === 'chef_entrepot' ? "chef d'entrepôt" : 'employé';
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
-}
-
-function buildEmailHtml(params: {
-  entrepriseNom: string;
-  entrepotNom: string | null;
-  role: string;
-  code: string;
-}): string {
-  const { entrepriseNom, entrepotNom, role, code } = params;
-  const lieu = entrepotNom
-    ? `${escapeHtml(entrepriseNom)} — entrepôt ${escapeHtml(entrepotNom)}`
-    : escapeHtml(entrepriseNom);
-  return `
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;color:#0E1410;">
-    <h2 style="color:#0E7C5A;">Invitation à rejoindre une équipe</h2>
-    <p>Tu as été invité(e) à rejoindre <strong>${lieu}</strong> en tant que
-       <strong>${escapeHtml(roleLabel(role))}</strong> sur l'application
-       <strong>opti_route</strong>.</p>
-    <p>Pour rejoindre l'équipe :</p>
-    <ol style="line-height:1.6;">
-      <li>Ouvre l'application <strong>opti_route</strong> (mobile ou PC).</li>
-      <li>Connecte-toi avec <strong>cette adresse email</strong> (un code de
-          connexion te sera envoyé).</li>
-      <li>Va dans <strong>« Rejoindre une équipe »</strong> et saisis ce code :</li>
-    </ol>
-    <p style="text-align:center;margin:24px 0;">
-      <span style="display:inline-block;font-size:34px;font-weight:bold;
-        letter-spacing:8px;color:#0E7C5A;background:#D5EBE0;padding:14px 24px;
-        border-radius:12px;">${code}</span>
-    </p>
-    <p style="color:#5C6660;font-size:13px;">Ce code est valable 7 jours.
-       Si tu n'attendais pas cette invitation, ignore ce message.</p>
-  </div>`;
 }
 
 async function sendBrevoEmail(params: {
