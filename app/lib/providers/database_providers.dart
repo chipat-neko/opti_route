@@ -64,7 +64,8 @@ final workSessionsRepositoryProvider = Provider<WorkSessionsRepository>((ref) {
 
 /// Session de travail en cours (null si aucune ouverte). Stream pour
 /// que l'UI du toggle "Commencer / Terminer" se mette a jour en live.
-final currentWorkSessionProvider = StreamProvider<WorkSession?>((ref) {
+final currentWorkSessionProvider =
+    StreamProvider.autoDispose<WorkSession?>((ref) {
   return ref.watch(workSessionsRepositoryProvider).watchCurrent();
 });
 
@@ -148,13 +149,14 @@ final entrepriseRepositoryProvider = Provider<EntrepriseRepository>((ref) {
 
 /// Entreprises connues localement (miroir RLS-filtré du pull cloud) =
 /// en pratique les entreprises du user courant. Carte #364.
-final mesEntreprisesProvider = StreamProvider<List<Entreprise>>((ref) {
+final mesEntreprisesProvider =
+    StreamProvider.autoDispose<List<Entreprise>>((ref) {
   return ref.watch(entrepriseRepositoryProvider).watchAllEntreprises();
 });
 
 /// Entrepôts d'une entreprise donnée (stream local réactif). Carte #364.
-final entrepotsParEntrepriseProvider =
-    StreamProvider.family<List<Entrepot>, String>((ref, entrepriseId) {
+final entrepotsParEntrepriseProvider = StreamProvider.autoDispose
+    .family<List<Entrepot>, String>((ref, entrepriseId) {
   return ref
       .watch(entrepriseRepositoryProvider)
       .watchEntrepotsForEntreprise(entrepriseId);
@@ -162,18 +164,19 @@ final entrepotsParEntrepriseProvider =
 
 /// Flag "wizard migration carnet terminé" (carte #365). Sert au banner
 /// persistant : tant que false, on propose de partager les adresses.
-final carnetMigrationDoneProvider = StreamProvider<bool>((ref) {
+final carnetMigrationDoneProvider = StreamProvider.autoDispose<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchCarnetMigrationDone();
 });
 
 /// Nombre d'adresses du carnet encore privées (sans entreprise). Carte
 /// #365. Alimente le badge du banner « Tu as N adresses locales ».
-final carnetPriveesCountProvider = StreamProvider<int>((ref) {
+final carnetPriveesCountProvider = StreamProvider.autoDispose<int>((ref) {
   return ref.watch(savedDestinationsRepositoryProvider).watchCountPrivees();
 });
 
 /// Adresses privées du carnet (liste pour le wizard de migration #365).
-final carnetPriveesProvider = StreamProvider<List<SavedDestination>>((ref) {
+final carnetPriveesProvider =
+    StreamProvider.autoDispose<List<SavedDestination>>((ref) {
   return ref.watch(savedDestinationsRepositoryProvider).watchPrivees();
 });
 
@@ -262,32 +265,34 @@ final fraisRepositoryProvider = Provider<FraisRepository>((ref) {
 
 /// Stream de tous les frais, du plus recent au plus ancien. Sert a
 /// l'ecran liste principal.
-final fraisAllProvider = StreamProvider<List<Frai>>((ref) {
+final fraisAllProvider = StreamProvider.autoDispose<List<Frai>>((ref) {
   return ref.watch(fraisRepositoryProvider).watchAll();
 });
 
 /// Stream des frais d'un mois donne (year, month 1-12). Famille de
 /// providers pour permettre plusieurs filtres mois simultanes en cache.
-final fraisByMonthProvider =
-    StreamProvider.family<List<Frai>, (int, int)>((ref, ym) {
+final fraisByMonthProvider = StreamProvider.autoDispose
+    .family<List<Frai>, (int, int)>((ref, ym) {
   final (year, month) = ym;
   return ref.watch(fraisRepositoryProvider).watchByMonth(year, month);
 });
 
 /// Stream des frais rattaches a une tournee specifique. Pour la card
 /// "Frais imputes" dans l'ecran d'une tournee.
-final fraisByTourneeProvider =
-    StreamProvider.family<List<Frai>, int>((ref, tourneeId) {
+final fraisByTourneeProvider = StreamProvider.autoDispose
+    .family<List<Frai>, int>((ref, tourneeId) {
   return ref.watch(fraisRepositoryProvider).watchByTournee(tourneeId);
 });
 
 /// Coequipiers actifs (visibles dans le selecteur d'affectation).
-final coequipiersActifsProvider = StreamProvider<List<Coequipier>>((ref) {
+final coequipiersActifsProvider =
+    StreamProvider.autoDispose<List<Coequipier>>((ref) {
   return ref.watch(coequipiersRepositoryProvider).watchActifs();
 });
 
 /// Tous les coequipiers (actifs + archives) pour l'UI de gestion.
-final coequipiersAllProvider = StreamProvider<List<Coequipier>>((ref) {
+final coequipiersAllProvider =
+    StreamProvider.autoDispose<List<Coequipier>>((ref) {
   return ref.watch(coequipiersRepositoryProvider).watchAll();
 });
 
@@ -298,7 +303,8 @@ final coequipiersAllProvider = StreamProvider<List<Coequipier>>((ref) {
 /// Important : on inclut les archives car les stops historiques peuvent
 /// pointer sur un coequipier archive. Sans ca, les badges _StopRow
 /// afficheraient "?" alors qu'on a l'info en base.
-final coequipiersByIdProvider = Provider<Map<int, Coequipier>>((ref) {
+final coequipiersByIdProvider =
+    Provider.autoDispose<Map<int, Coequipier>>((ref) {
   final list = ref.watch(coequipiersAllProvider).asData?.value ?? const [];
   return {for (final c in list) c.id: c};
 });
@@ -315,7 +321,7 @@ final roleServiceProvider = Provider<RoleService>((ref) {
 /// Rôle courant (toggle local Paramètres). Stream pour gating UI
 /// réactif. L'override serveur est appliqué quand le caller fournit
 /// `serverRoleRaw` via `resolveCurrentRole` (cf RoleService).
-final currentRoleProvider = StreamProvider<AppRole>((ref) {
+final currentRoleProvider = StreamProvider.autoDispose<AppRole>((ref) {
   return ref.watch(roleServiceProvider).watchLocalRole();
 });
 
@@ -370,7 +376,7 @@ final securityServiceProvider = Provider<SecurityService>((ref) {
 /// Stream "verrou actif ET PIN defini". Combine `verrou_actif` + presence
 /// de `pin_hash`. Sert au routeur d'app pour decider d'afficher
 /// LockScreen au demarrage.
-final lockEnabledStreamProvider = StreamProvider<bool>((ref) {
+final lockEnabledStreamProvider = StreamProvider.autoDispose<bool>((ref) {
   // On reconstruit a chaque toggle du flag verrou_actif. La presence
   // du hash est verifiee a chaque emission (lecture async).
   return ref
