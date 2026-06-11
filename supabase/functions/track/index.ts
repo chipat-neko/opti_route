@@ -1,6 +1,7 @@
 // Edge Function Supabase : resout un code de suivi colis (lien court
 // 20 chars, ex https://optr.ro/abcd) en donnees de tracking pour la
-// page destinataire `site_docv2/suivi.html`. Carte Trello #81.
+// page destinataire `site_doc/suivi.html` (deployee par la CI sur
+// GitHub Pages sous /opti_route/site/suivi.html). Carte Trello #81.
 //
 // PUBLIQUE (verify_jwt = false) : le destinataire n'a pas de compte
 // opti_route. Le code 4 chars + expiration 24h tient lieu de secret
