@@ -17,7 +17,19 @@ $ApkPath = 'app\build\app\outputs\flutter-apk\app-release.apk'
 
 Push-Location $PSScriptRoot\..\app
 try {
-  Write-Host '[1/3] Build APK release...' -ForegroundColor Cyan
+  # Les fixtures OCR (assets/test_bordereaux/, ~24 MB) ne servent qu'au
+  # batch eval integration_test : on les retire du pubspec le temps du
+  # build release, puis on restaure (finally). Sans ca, l'APK Play Store
+  # embarque 24 MB d'images de test.
+  Copy-Item pubspec.yaml pubspec.yaml.release-bak -Force
+  $pubspec = Get-Content pubspec.yaml -Raw
+  $stripped = $pubspec -replace '(?m)^\s*-\s*assets/test_bordereaux/\s*\r?\n', ''
+  if ($stripped -eq $pubspec) {
+    Write-Host '   (note : assets/test_bordereaux/ absent du pubspec, rien a retirer)' -ForegroundColor Yellow
+  }
+  [System.IO.File]::WriteAllText("$PWD\pubspec.yaml", $stripped)
+
+  Write-Host '[1/3] Build APK release (sans fixtures test_bordereaux)...' -ForegroundColor Cyan
   & $Flutter build apk --release
   if ($LASTEXITCODE -ne 0) { throw 'Build APK echoue' }
 
@@ -39,5 +51,10 @@ try {
   Write-Host 'OK : opti_route installe. Ouvre l app sur le telephone.' -ForegroundColor Green
 }
 finally {
+  # Restaure le pubspec complet (fixtures test re-declarees pour le dev).
+  $bak = Join-Path $PSScriptRoot '..\app\pubspec.yaml.release-bak'
+  if (Test-Path $bak) {
+    Move-Item $bak (Join-Path $PSScriptRoot '..\app\pubspec.yaml') -Force
+  }
   Pop-Location
 }
