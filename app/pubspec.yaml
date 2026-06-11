@@ -126,6 +126,12 @@ dependencies:
   # ParametresRepository pour ne plus re-afficher apres validation.
   # Reset via Parametres > Aide > Reactiver les astuces.
   tutorial_coach_mark: ^1.2.11
+  # wakelock_plus : garde l'ecran allume pendant la navigation GPS
+  # "Suivre dans l'app" (NavigationScreen). Sans lui, la veille systeme
+  # eteint l'ecran en pleine tournee et le livreur doit le reveiller a
+  # chaque coup d'oeil. Active a l'ouverture de l'ecran, relache au
+  # dispose. Audit 2026-06-11.
+  wakelock_plus: ^1.2.8
   # light : lecture du capteur de luminosite ambiante (Android only) pour
   # le mode jour/nuit auto (carte Trello #95). Stream<int> en lux. Si le
   # capteur n'est pas dispo (rare sur Android, jamais sur iOS), le toggle

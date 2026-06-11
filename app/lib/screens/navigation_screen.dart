@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../data/database.dart';
 import '../data/location_service.dart';
@@ -113,6 +114,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   @override
   void initState() {
     super.initState();
+    // Garde l'ecran allume pendant la navigation : la veille systeme
+    // ne doit pas eteindre la carte en pleine tournee. Best-effort
+    // (no-op si la plateforme ne supporte pas), relache au dispose.
+    if (!kIsWeb) unawaited(WakelockPlus.enable());
     _bootstrap();
   }
 
@@ -181,6 +186,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   @override
   void dispose() {
+    if (!kIsWeb) unawaited(WakelockPlus.disable());
     _gpsTimeoutTimer?.cancel();
     _mapController.dispose();
     // Coupe toute annonce en cours et libere l'engine TTS. Best-effort :
