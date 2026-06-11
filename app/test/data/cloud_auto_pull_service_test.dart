@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/cloud_auto_pull_service.dart';
 import 'package:opti_route/data/cloud_sync_service.dart';
-import 'package:opti_route/data/cloud_sync_types.dart';
 
 /// Tests de l'auto-pull au sign-in (audit 2026-06-11). Le service est
 /// un wrapper fin de [CloudSyncService.pullAllForCurrentUser] : on
