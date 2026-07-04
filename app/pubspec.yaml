@@ -51,6 +51,12 @@ dependencies:
   # Lecture de la version installée pour le check d'update (#update_checker).
   package_info_plus: ^9.0.1
   geolocator: ^14.0.0
+  # geolocator_android : expose AndroidSettings (intervalDuration) pour
+  # plafonner la cadence des fixes GPS cote app = gain batterie sans
+  # exemption systeme (feat/opti-batterie). Deja tire en transitif par
+  # geolocator ; declare explicitement car on l'importe directement
+  # dans location_tuning.dart.
+  geolocator_android: ^5.0.0
   share_plus: ^12.0.0
   path_provider: ^2.1.5
   pdf: ^3.11.4
