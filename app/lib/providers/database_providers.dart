@@ -13,6 +13,7 @@ import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
 import '../data/app_role.dart';
 import '../data/parametres_repository.dart';
+import 'app_lifecycle_provider.dart';
 import '../data/role_service.dart';
 import '../data/resume_hebdo_service.dart';
 import '../data/chef_carte_service.dart';
@@ -517,6 +518,15 @@ final ambientLightThemeModeProvider = StreamProvider<ThemeMode>((ref) {
   if (!AmbientLightService.isSupported) {
     return const Stream<ThemeMode>.empty();
   }
+  // Batterie (feat/opti-batterie) : ne pas echantillonner le capteur de
+  // luminosite quand l'app est en arriere-plan (ecran non visible = aucun
+  // theme a ajuster). Le capteur `light` emet en continu a la cadence
+  // materielle ; le couper en fond evite des reveils CPU inutiles. Au
+  // retour au premier plan, le provider se reconstruit et re-souscrit.
+  final foreground = ref.watch(appForegroundProvider);
+  if (foreground == AppForeground.background) {
+    return const Stream<ThemeMode>.empty();
+  }
   final svc = AmbientLightService();
   return svc.themeModeStream();
 });
@@ -528,8 +538,12 @@ final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
   final autoOn =
       ref.watch(ambientLightAutoEnabledProvider).asData?.value ?? false;
   if (autoOn) {
-    final autoMode =
-        ref.watch(ambientLightThemeModeProvider).asData?.value;
+    // valueOrNull (et non asData?.value) : quand le capteur est suspendu
+    // en arriere-plan (stream vide -> etat "loading avec valeur
+    // precedente"), Riverpod conserve la derniere valeur. On garde donc
+    // le dernier theme ambiant au lieu de flasher vers le theme user au
+    // retour au premier plan (feat/opti-batterie).
+    final autoMode = ref.watch(ambientLightThemeModeProvider).valueOrNull;
     if (autoMode != null) return autoMode;
   }
   return ref.watch(themeModeProvider).asData?.value ?? ThemeMode.system;

@@ -14,6 +14,7 @@ import '../data/database.dart';
 import '../data/supabase_service.dart';
 import '../data/tournee_realtime_service.dart';
 import '../theme/app_tokens.dart';
+import '../providers/app_lifecycle_provider.dart';
 import '../providers/database_providers.dart';
 import '../providers/optimization_providers.dart';
 import '../providers/supabase_providers.dart';
@@ -246,6 +247,27 @@ class _TourneeDuJourScreenState extends ConsumerState<TourneeDuJourScreen> {
     // `invalidateOptimization` qui remet `optimiseeLe = null` et
     // ré-active le bouton.
     final dejaOptimisee = tournee.optimiseeLe != null;
+
+    // Batterie (feat/opti-batterie) : en arriere-plan, on met en pause le
+    // push GPS de presence live (stream GPS + timer 30s + WebSocket). Il
+    // n'a aucune valeur quand l'app n'est pas visible. On le relance au
+    // retour au premier plan si la tournee partagee est toujours en
+    // cours (memes conditions que le subscribe initial). Le channel
+    // Realtime de RECEPTION reste ouvert (cout faible, evite de manquer
+    // des events / une reconnexion fragile).
+    ref.listen<AppForeground>(appForegroundProvider, (_, next) {
+      final presence = ref.read(livePresenceServiceProvider);
+      if (next == AppForeground.background) {
+        presence.stop();
+      } else if (next == AppForeground.foreground) {
+        final svc = SupabaseService.instance;
+        final shared = tournee.cloudId != null &&
+            tournee.statut == 'en_cours' &&
+            svc.isConfigured &&
+            svc.currentUser != null;
+        if (shared) unawaited(presence.start());
+      }
+    });
 
     return Scaffold(
       drawer: const AppDrawer(),
