@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:geolocator/geolocator.dart';
 
 import 'location_service.dart';
+import 'location_tuning.dart';
 import 'tournee_realtime_service.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -53,8 +54,17 @@ class LivePresenceService {
     // ticker 30s relance le dernier push (utile si stationnaire pour
     // confirmer que le livreur est toujours la / sa derniere position
     // connue).
-    _positionSub = LocationService.positionStream(distanceFilterMeters: 50)
-        .listen((pos) {
+    //
+    // Profil `presence` (feat/opti-batterie) : precision MOYENNE (un
+    // marker de suivi chef n'a pas besoin de haute precision) +
+    // intervalle Android plafonne a 10 s. Moins gourmand que l'ancien
+    // `high` par defaut.
+    final profile = resolveGpsProfile(usage: GpsUsage.presence, eco: false);
+    _positionSub = LocationService.positionStream(
+      distanceFilterMeters: profile.distanceFilterMeters,
+      accuracy: profile.accuracy,
+      androidInterval: profile.androidInterval,
+    ).listen((pos) {
       _lastKnownPosition = pos;
       // Push immediat aussi sur deplacement (pas que sur tick 30s).
       _pushIfPossible();

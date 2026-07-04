@@ -12,6 +12,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../data/database.dart';
 import '../data/location_service.dart';
+import '../data/location_tuning.dart';
 import '../data/route_service.dart';
 import '../providers/database_providers.dart';
 import '../widgets/web_unsupported.dart';
@@ -63,11 +64,19 @@ enum _PermissionState {
   denied,
 }
 
-class _NavigationScreenState extends ConsumerState<NavigationScreen> {
+class _NavigationScreenState extends ConsumerState<NavigationScreen>
+    with WidgetsBindingObserver {
   final MapController _mapController = MapController();
 
   _PermissionState _permissionState = _PermissionState.asking;
   String? _permissionError;
+
+  /// Stream GPS de navigation (haute precision, 10 m, intervalle 2 s),
+  /// cree UNE fois ici et reutilise par le StreamBuilder. Avant
+  /// (feat/opti-batterie), le stream etait cree dans `build()` du
+  /// StreamBuilder -> recree/re-souscrit a chaque rebuild du widget,
+  /// ce qui relançait l'acquisition GPS inutilement (cout batterie).
+  late final Stream<Position> _navPositionStream;
 
   /// Position one-shot recuperee au mount, avant que le stream emette
   /// sa 1ere valeur. Permet d'afficher la carte immediatement au lieu
@@ -114,11 +123,43 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Stream GPS de navigation cree UNE fois (profil navigation : haute
+    // precision, 10 m, intervalle 2 s). Reutilise par le StreamBuilder.
+    _navPositionStream = LocationService.positionStream(
+      distanceFilterMeters: _navProfile.distanceFilterMeters,
+      accuracy: _navProfile.accuracy,
+      androidInterval: _navProfile.androidInterval,
+    );
     // Garde l'ecran allume pendant la navigation : la veille systeme
     // ne doit pas eteindre la carte en pleine tournee. Best-effort
-    // (no-op si la plateforme ne supporte pas), relache au dispose.
+    // (no-op si la plateforme ne supporte pas), relache au dispose ET
+    // quand l'app passe en arriere-plan (didChangeAppLifecycleState).
     if (!kIsWeb) unawaited(WakelockPlus.enable());
     _bootstrap();
+  }
+
+  static final GpsProfile _navProfile =
+      resolveGpsProfile(usage: GpsUsage.navigation, eco: false);
+
+  /// Relache le wakelock quand l'app quitte le premier plan (le livreur
+  /// bascule sur Maps/Waze, prend un appel, verrouille...) et le
+  /// re-active au retour si l'ecran nav est toujours affiche. Sans ca,
+  /// le wakelock restait demande en arriere-plan (cout batterie).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // De retour au premier plan : on re-arme le wakelock seulement si
+      // l'ecran nav est toujours utilisable (permission accordee). Au
+      // dispose, l'observer est retire, donc ce callback ne tire plus.
+      if (!kIsWeb && _permissionState == _PermissionState.granted) {
+        unawaited(WakelockPlus.enable());
+      }
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      if (!kIsWeb) unawaited(WakelockPlus.disable());
+    }
   }
 
   /// Sequence d'init :
@@ -186,6 +227,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (!kIsWeb) unawaited(WakelockPlus.disable());
     _gpsTimeoutTimer?.cancel();
     _mapController.dispose();
@@ -412,7 +454,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     final destination = LatLng(widget.stop.lat!, widget.stop.lng!);
 
     return StreamBuilder<Position>(
-      stream: LocationService.positionStream(distanceFilterMeters: 10),
+      stream: _navPositionStream,
       builder: (context, snapshot) {
         // Position prioritaire : stream (live), sinon fallback (one-shot
         // au boot), sinon null (loader).
