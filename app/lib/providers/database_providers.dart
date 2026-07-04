@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -518,17 +520,49 @@ final ambientLightThemeModeProvider = StreamProvider<ThemeMode>((ref) {
   if (!AmbientLightService.isSupported) {
     return const Stream<ThemeMode>.empty();
   }
-  // Batterie (feat/opti-batterie) : ne pas echantillonner le capteur de
-  // luminosite quand l'app est en arriere-plan (ecran non visible = aucun
-  // theme a ajuster). Le capteur `light` emet en continu a la cadence
-  // materielle ; le couper en fond evite des reveils CPU inutiles. Au
-  // retour au premier plan, le provider se reconstruit et re-souscrit.
-  final foreground = ref.watch(appForegroundProvider);
-  if (foreground == AppForeground.background) {
-    return const Stream<ThemeMode>.empty();
-  }
+  // Batterie (feat/opti-batterie) : on suspend l'ECHANTILLONNAGE du
+  // capteur `light` quand l'app est en arriere-plan (ecran non visible
+  // = aucun theme a ajuster), sans reconstruire ce provider. On passe
+  // par un StreamController pilote via `ref.listen` (et non
+  // `ref.watch`) : ainsi le stream expose reste vivant et conserve sa
+  // DERNIERE valeur de theme -> aucun flash au retour au premier plan.
+  final controller = StreamController<ThemeMode>();
   final svc = AmbientLightService();
-  return svc.themeModeStream();
+  StreamSubscription<ThemeMode>? sub;
+
+  void subscribe() {
+    sub ??= svc.themeModeStream().listen(
+      controller.add,
+      onError: controller.addError,
+    );
+  }
+
+  void unsubscribe() {
+    sub?.cancel();
+    sub = null;
+  }
+
+  // Etat initial selon le foreground courant (lu sans creer de
+  // dependance de rebuild).
+  if (ref.read(appForegroundProvider) == AppForeground.foreground) {
+    subscribe();
+  }
+  // Transitions foreground/background SANS rebuild du provider : on
+  // coupe/reprend juste la souscription au capteur.
+  ref.listen<AppForeground>(appForegroundProvider, (_, next) {
+    if (next == AppForeground.foreground) {
+      subscribe();
+    } else {
+      unsubscribe();
+    }
+  });
+
+  ref.onDispose(() {
+    unsubscribe();
+    controller.close();
+  });
+
+  return controller.stream;
 });
 
 /// ThemeMode effectivement applique. Si l'auto luminosite est ON et
@@ -538,12 +572,11 @@ final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
   final autoOn =
       ref.watch(ambientLightAutoEnabledProvider).asData?.value ?? false;
   if (autoOn) {
-    // valueOrNull (et non asData?.value) : quand le capteur est suspendu
-    // en arriere-plan (stream vide -> etat "loading avec valeur
-    // precedente"), Riverpod conserve la derniere valeur. On garde donc
-    // le dernier theme ambiant au lieu de flasher vers le theme user au
-    // retour au premier plan (feat/opti-batterie).
-    final autoMode = ref.watch(ambientLightThemeModeProvider).valueOrNull;
+    // Le stream ambiant reste vivant meme capteur suspendu (cf
+    // ambientLightThemeModeProvider) : sa derniere valeur persiste,
+    // donc asData?.value suffit et il n'y a pas de flash au retour au
+    // premier plan (feat/opti-batterie).
+    final autoMode = ref.watch(ambientLightThemeModeProvider).asData?.value;
     if (autoMode != null) return autoMode;
   }
   return ref.watch(themeModeProvider).asData?.value ?? ThemeMode.system;

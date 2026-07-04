@@ -45,11 +45,13 @@ class AppLifecycleNotifier extends Notifier<AppForeground>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
-    final next = isAppBackground(lifecycleState)
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final next = isAppBackground(state)
         ? AppForeground.background
         : AppForeground.foreground;
-    if (next != state) state = next;
+    // `state` (parametre) = etat de cycle de vie ; `this.state` = etat
+    // du Notifier (AppForeground).
+    if (next != this.state) this.state = next;
   }
 }
 
