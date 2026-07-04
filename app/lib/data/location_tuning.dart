@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
+// AndroidSettings est re-exporte par geolocator (pas besoin d'importer
+// geolocator_android directement).
 import 'package:geolocator/geolocator.dart';
-import 'package:geolocator_android/geolocator_android.dart' show AndroidSettings;
 
 /// Réglage GPS selon l'usage, pour maîtriser la consommation batterie
 /// SANS dépendre de l'exemption système Android "optimisation batterie"

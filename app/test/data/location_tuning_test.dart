@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geolocator_android/geolocator_android.dart';
 import 'package:opti_route/data/location_tuning.dart';
 
 /// Tests des profils GPS et du builder de LocationSettings
