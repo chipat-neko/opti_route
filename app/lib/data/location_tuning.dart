@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:geolocator/geolocator.dart';
 import 'package:geolocator_android/geolocator_android.dart' show AndroidSettings;
 
