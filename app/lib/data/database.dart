@@ -317,6 +317,54 @@ class AppDatabase extends _$AppDatabase {
             // l'ALTER TABLE de v25 avait silencieusement echoue. Cf
             // bloc v32 ci-dessous pour la vraie correction.)
           }
+          if (from < 32) {
+            // ════════════════════════════════════════════════════════
+            // VRAIE CAUSE TROUVEE 2026-05-19 :
+            // ════════════════════════════════════════════════════════
+            // La migration v25 essayait :
+            //   ALTER TABLE tournees ADD COLUMN updated_at INTEGER
+            //   NOT NULL DEFAULT (CAST(strftime('%s', CURRENT_TIMESTAMP)
+            //   AS INTEGER));
+            //
+            // SQLite refuse les DEFAULT non-constants dans ADD COLUMN.
+            // Resultat sur Drift Web : SqliteException(1) "Cannot add
+            // a column with non-constant default" -> migration v25
+            // a echoue silencieusement -> la colonne updated_at
+            // n'existe PAS sur les 4 tables -> tout fromRow crash sur
+            // `data['updated_at']!`.
+            //
+            // Sur Android natif sqlite3 a peut-etre une version plus
+            // permissive (ou throw differemment) qui a laisse passer.
+            //
+            // Fix : ADD COLUMN manuel avec DEFAULT CONSTANT (0), puis
+            // backfill avec timestamp en seconds via UPDATE.
+            // Idempotent : si la colonne existe deja (Android), le ADD
+            // COLUMN throws "duplicate column name" qu'on swallow.
+            //
+            // NOTE audit 2026-06-11 : ce bloc etait historiquement
+            // place APRES le bloc v51 (fin de onUpgrade) — il a ete
+            // remonte ici pour garder l'ordre chronologique. Le
+            // comportement est identique (blocs independants et
+            // idempotents), seule la lisibilite change.
+            final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+            const tables = ['tournees', 'stops', 'coequipiers',
+                'saved_destinations'];
+            for (final t in tables) {
+              try {
+                await customStatement(
+                  'ALTER TABLE $t ADD COLUMN updated_at INTEGER '
+                  'NOT NULL DEFAULT 0',
+                );
+              } on Object catch (_) {
+                // Colonne existe deja (Android natif ou retry). OK.
+              }
+              await customStatement(
+                'UPDATE $t SET updated_at = $nowSec '
+                "WHERE updated_at IS NULL OR updated_at = 0 "
+                "OR typeof(updated_at) != 'integer'",
+              );
+            }
+          }
           if (from < 33) {
             // Nouvelle table `frais` pour les notes de frais
             // (carburant / peages / parking / repas / autre).
@@ -344,6 +392,15 @@ class AppDatabase extends _$AppDatabase {
             // pour l'instant : `cloud_pushed` reste false tant que
             // l'Edge Function backend n'est pas deployee. Carte #141.
             await _safeCreateTable(m, trackingCodes);
+          }
+          if (from < 37) {
+            // Colonne `position_locked` (BOOL, default false) sur stops :
+            // verrouille un arret a sa position courante pour qu'il ne
+            // soit pas deplace par le tri rapide / l'optim VROOM / le
+            // drag&drop. Carte Trello #114. DEFAULT constant (false) ->
+            // compatible ADD COLUMN sur SQLite (cf note migration v32).
+            // (Remonte depuis la fin de onUpgrade, audit 2026-06-11.)
+            await _safeAddColumn(m, stops, stops.positionLocked);
           }
           if (from < 38) {
             // Table `tournee_recurrences` : recurrence automatique d'un
@@ -446,56 +503,6 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               "UPDATE entreprises SET plan = 'illimite' WHERE plan IS NULL",
             );
-          }
-          if (from < 37) {
-            // Colonne `position_locked` (BOOL, default false) sur stops :
-            // verrouille un arret a sa position courante pour qu'il ne
-            // soit pas deplace par le tri rapide / l'optim VROOM / le
-            // drag&drop. Carte Trello #114. DEFAULT constant (false) ->
-            // compatible ADD COLUMN sur SQLite (cf note migration v32).
-            await _safeAddColumn(m, stops, stops.positionLocked);
-          }
-          if (from < 32) {
-            // ════════════════════════════════════════════════════════
-            // VRAIE CAUSE TROUVEE 2026-05-19 :
-            // ════════════════════════════════════════════════════════
-            // La migration v25 essayait :
-            //   ALTER TABLE tournees ADD COLUMN updated_at INTEGER
-            //   NOT NULL DEFAULT (CAST(strftime('%s', CURRENT_TIMESTAMP)
-            //   AS INTEGER));
-            //
-            // SQLite refuse les DEFAULT non-constants dans ADD COLUMN.
-            // Resultat sur Drift Web : SqliteException(1) "Cannot add
-            // a column with non-constant default" -> migration v25
-            // a echoue silencieusement -> la colonne updated_at
-            // n'existe PAS sur les 4 tables -> tout fromRow crash sur
-            // `data['updated_at']!`.
-            //
-            // Sur Android natif sqlite3 a peut-etre une version plus
-            // permissive (ou throw differemment) qui a laisse passer.
-            //
-            // Fix : ADD COLUMN manuel avec DEFAULT CONSTANT (0), puis
-            // backfill avec timestamp en seconds via UPDATE.
-            // Idempotent : si la colonne existe deja (Android), le ADD
-            // COLUMN throws "duplicate column name" qu'on swallow.
-            final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-            const tables = ['tournees', 'stops', 'coequipiers',
-                'saved_destinations'];
-            for (final t in tables) {
-              try {
-                await customStatement(
-                  'ALTER TABLE $t ADD COLUMN updated_at INTEGER '
-                  'NOT NULL DEFAULT 0',
-                );
-              } on Object catch (_) {
-                // Colonne existe deja (Android natif ou retry). OK.
-              }
-              await customStatement(
-                'UPDATE $t SET updated_at = $nowSec '
-                "WHERE updated_at IS NULL OR updated_at = 0 "
-                "OR typeof(updated_at) != 'integer'",
-              );
-            }
           }
         },
         beforeOpen: (details) async {

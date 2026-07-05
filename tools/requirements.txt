@@ -1,0 +1,19 @@
+# Dependances des scripts ML (audit 2026-06-11 : versions epinglees
+# pour la reproductibilite de l'entrainement — le Random Forest depend
+# du comportement exact de scikit-learn, seed 42 ne suffit pas si la
+# version change).
+#
+# Installation : pip install -r tools/requirements.txt
+# (Python 3.11+ recommande)
+
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+
+# Export ONNX (artefact d'entrainement uniquement, non embarque) :
+onnx==1.17.0
+skl2onnx==1.17.0
+onnxruntime==1.20.1
+
+# labelize_via_gemini.py (appel Edge Function Supabase) :
+requests==2.32.3

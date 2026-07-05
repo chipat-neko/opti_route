@@ -119,6 +119,11 @@ class PreuvePhotoService {
   /// `app_documents/signatures/<stopId>_<ts>.png`. Retourne le chemin
   /// absolu, ou null si l'I/O echoue (best-effort). Demande Noah
   /// 2026-06-03 (signature au "Marquer livre").
+  ///
+  /// Les octets sont compresses avant ecriture (cf
+  /// [compressSignatureBytes]) : un canvas plein ecran genere des PNG
+  /// de plusieurs MB alors qu'une signature downscalee a 800px sur
+  /// fond blanc pese quelques dizaines de KB (audit 2026-06-11).
   Future<String?> saveSignature({
     required int stopId,
     required Uint8List png,
@@ -131,10 +136,37 @@ class PreuvePhotoService {
       }
       final ts = DateTime.now().millisecondsSinceEpoch;
       final destPath = '${dir.path}/${stopId}_$ts.png';
-      await File(destPath).writeAsBytes(png);
+      await File(destPath).writeAsBytes(compressSignatureBytes(png));
       return destPath;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Reduit une signature PNG : composite sur fond blanc (le canvas de
+  /// capture est transparent — un JPEG la rendrait noire, on RESTE en
+  /// PNG) puis downscale a [maxWidth] px de large max. Un trait noir
+  /// sur fond blanc compresse tres bien en PNG apres resize.
+  ///
+  /// Fonction PURE (pas d'I/O), exposee pour les tests. Best-effort :
+  /// si le decodage echoue, renvoie les octets d'entree inchanges.
+  static Uint8List compressSignatureBytes(
+    Uint8List png, {
+    int maxWidth = 800,
+  }) {
+    try {
+      final decoded = img.decodeImage(png);
+      if (decoded == null) return png;
+      // Fond blanc opaque (gere la transparence du canvas).
+      final canvas = img.Image(width: decoded.width, height: decoded.height);
+      img.fill(canvas, color: img.ColorRgb8(255, 255, 255));
+      img.compositeImage(canvas, decoded);
+      final resized = canvas.width > maxWidth
+          ? img.copyResize(canvas, width: maxWidth)
+          : canvas;
+      return Uint8List.fromList(img.encodePng(resized));
+    } catch (_) {
+      return png;
     }
   }
 

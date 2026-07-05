@@ -28,6 +28,7 @@
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkInvitation, deriveEntrepriseRole } from './lib.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -98,26 +99,17 @@ serve(async (req: Request) => {
   if (invErr || !inv) {
     return jsonResponse({ error: 'invitation introuvable' }, 404);
   }
-  if (inv.statut !== 'pending') {
-    return jsonResponse(
-      { error: `invitation déjà ${inv.statut}` },
-      410,
-    );
-  }
-  if (new Date(inv.expires_at) < new Date()) {
-    // Auto-expire
-    await adminClient
-      .from('entreprise_invitations')
-      .update({ statut: 'expired' })
-      .eq('cloud_id', body.invitation_id);
-    return jsonResponse({ error: 'invitation expirée' }, 410);
-  }
-  // Sécurité : email match
-  if (inv.email.toLowerCase() !== callerEmail) {
-    return jsonResponse(
-      { error: 'email mismatch (invitation destinée à un autre compte)' },
-      403,
-    );
+  // Garde statut / expiration / email match : cf ./lib.ts (extraite
+  // pour les tests Deno, audit 2026-06-11).
+  const check = checkInvitation(inv, callerEmail, new Date());
+  if (!check.ok) {
+    if (check.autoExpire) {
+      await adminClient
+        .from('entreprise_invitations')
+        .update({ statut: 'expired' })
+        .eq('cloud_id', body.invitation_id);
+    }
+    return jsonResponse({ error: check.error }, check.status);
   }
 
   // Insère entreprise_users si pas déjà membre
@@ -128,9 +120,7 @@ serve(async (req: Request) => {
     .eq('user_id', callerId)
     .maybeSingle();
 
-  // Détermine le role entreprise : admin_entreprise si role_target l'est,
-  // sinon membre (rôle générique entreprise, le rôle fin est sur entrepot_users)
-  const entRole = inv.role_target === 'admin_entreprise' ? 'admin_entreprise' : 'membre';
+  const entRole = deriveEntrepriseRole(inv.role_target);
 
   if (!existing) {
     const { error: euErr } = await adminClient

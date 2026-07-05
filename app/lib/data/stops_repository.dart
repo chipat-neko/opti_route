@@ -111,12 +111,22 @@ class StopsRepository {
   /// [trackingNumber] dans sa liste JSON tracking_numbers. Retourne null
   /// si aucun stop ne le contient. Utile pour decider entre incrementer
   /// un stop existant ou en creer un nouveau au scan code-barre.
+  ///
+  /// Perf (audit 2026-06-11) : pre-filtre cote SQLite via LIKE au lieu
+  /// de charger + JSON-parser tous les stops de la tournee a chaque
+  /// scan (100+ ms sur grosse tournee). Le LIKE peut sur-matcher (un
+  /// numero sous-chaine d'un autre), donc on re-verifie l'egalite
+  /// exacte dans la liste JSON des seuls candidats.
   Future<Stop?> findByTrackingInTournee(
     int tourneeId,
     String trackingNumber,
   ) async {
-    final stops = await getByTournee(tourneeId);
-    for (final s in stops) {
+    final candidates = await (_db.select(_db.stops)
+          ..where((s) =>
+              s.tourneeId.equals(tourneeId) &
+              s.trackingNumbers.like('%"$trackingNumber"%')))
+        .get();
+    for (final s in candidates) {
       final list = _parseTrackingList(s.trackingNumbers);
       if (list.contains(trackingNumber)) return s;
     }

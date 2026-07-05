@@ -45,6 +45,20 @@ class TourneesRepository {
     return (_db.delete(_db.tournees)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Supprime une tournee ET ses stops explicitement, dans une
+  /// transaction. Les FK `onDelete: cascade` couvrent normalement les
+  /// stops, mais ce nettoyage explicite sert aux chemins "best-effort"
+  /// (ex: ejection d'une tournee partagee, cf TourneeDuJourScreen) ou
+  /// on veut etre certain qu'il ne reste rien meme si les pragmas FK
+  /// n'etaient pas actifs.
+  Future<void> deleteWithStops(int id) {
+    return _db.transaction(() async {
+      await (_db.delete(_db.stops)..where((s) => s.tourneeId.equals(id)))
+          .go();
+      await (_db.delete(_db.tournees)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
   /// Toggle le marqueur "isTemplate" : transforme une tournee passee
   /// en modele reutilisable, qui apparait dans la section "Templates"
   /// de l'historique avec un bouton "Creer une tournee depuis ce

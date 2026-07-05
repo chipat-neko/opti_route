@@ -34,6 +34,10 @@ cloud.env.json
 # is commented out by default.
 #.vscode/
 
+# Sauvegarde temporaire du pubspec pendant un build release
+# (scripts/build-and-install.ps1 retire assets/test_bordereaux/ puis restaure).
+pubspec.yaml.release-bak
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id

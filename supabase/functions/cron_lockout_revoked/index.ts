@@ -28,6 +28,7 @@
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { timingSafeEqual } from './lib.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -42,21 +43,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-// Comparaison à temps constant (durcissement sécu nuit 2026-06-01).
-// Une comparaison `a !== b` standard court-circuite au premier octet
-// différent : le temps de réponse révèle combien de caractères de tête
-// sont corrects, ce qui permet de reconstituer le CRON_SECRET octet par
-// octet (timing attack). On XOR tous les octets pour un temps constant.
-function timingSafeEqual(a: string, b: string): boolean {
-  const ea = new TextEncoder().encode(a);
-  const eb = new TextEncoder().encode(b);
-  if (ea.length !== eb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < ea.length; i++) {
-    diff |= ea[i] ^ eb[i];
-  }
-  return diff === 0;
-}
+// timingSafeEqual : cf ./lib.ts (extraite pour les tests Deno).
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {

@@ -40,4 +40,57 @@ void main() {
     final junk = Uint8List.fromList([0, 1, 2, 3, 4, 5]);
     expect(PreuvePhotoService.applyWatermarkBytes(junk, 'X'), junk);
   });
+
+  group('compressSignatureBytes (audit 2026-06-11)', () {
+    /// Simule une signature de canvas plein écran : fond TRANSPARENT,
+    /// trait noir horizontal au milieu.
+    Uint8List signaturePng(int w, int h) {
+      final im = img.Image(width: w, height: h, numChannels: 4);
+      img.fill(im, color: img.ColorRgba8(0, 0, 0, 0));
+      img.fillRect(
+        im,
+        x1: 10,
+        y1: h ~/ 2,
+        x2: w - 10,
+        y2: h ~/ 2 + 6,
+        color: img.ColorRgba8(0, 0, 0, 255),
+      );
+      return Uint8List.fromList(img.encodePng(im));
+    }
+
+    test('downscale a 800px max et reduit le poids', () {
+      final src = signaturePng(1600, 900);
+      final out = PreuvePhotoService.compressSignatureBytes(src);
+      final decoded = img.decodeImage(out)!;
+      expect(decoded.width, 800);
+      expect(out.length, lessThan(src.length));
+    });
+
+    test('la transparence devient un fond blanc (pas noir)', () {
+      final src = signaturePng(400, 300);
+      final out = PreuvePhotoService.compressSignatureBytes(src);
+      final decoded = img.decodeImage(out)!;
+      // Coin haut-gauche = zone transparente d'origine -> doit être blanc.
+      final coin = decoded.getPixel(2, 2);
+      expect(coin.r, 255);
+      expect(coin.g, 255);
+      expect(coin.b, 255);
+      // Le trait du milieu doit rester sombre.
+      final trait = decoded.getPixel(decoded.width ~/ 2, 150 + 3);
+      expect(trait.r, lessThan(60));
+    });
+
+    test('image deja petite : pas d\'upscale', () {
+      final src = signaturePng(400, 300);
+      final out = PreuvePhotoService.compressSignatureBytes(src);
+      final decoded = img.decodeImage(out)!;
+      expect(decoded.width, 400);
+      expect(decoded.height, 300);
+    });
+
+    test('bytes non décodables -> renvoyés tels quels', () {
+      final junk = Uint8List.fromList([9, 8, 7, 6]);
+      expect(PreuvePhotoService.compressSignatureBytes(junk), junk);
+    });
+  });
 }

@@ -1,7 +1,8 @@
 # Edge Function `track` — suivi colis destinataire (#81)
 
 Résout un code de suivi court (`https://optr.ro/abcd`) en données de
-tracking pour la page destinataire [`site_docv2/suivi.html`](../../../site_docv2/suivi.html).
+tracking pour la page destinataire [`site_doc/suivi.html`](../../../site_doc/suivi.html)
+(déployée par la CI sur GitHub Pages sous `/opti_route/site/suivi.html`).
 
 ## Déploiement (à faire par Noah)
 

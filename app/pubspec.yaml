@@ -126,6 +126,12 @@ dependencies:
   # ParametresRepository pour ne plus re-afficher apres validation.
   # Reset via Parametres > Aide > Reactiver les astuces.
   tutorial_coach_mark: ^1.2.11
+  # wakelock_plus : garde l'ecran allume pendant la navigation GPS
+  # "Suivre dans l'app" (NavigationScreen). Sans lui, la veille systeme
+  # eteint l'ecran en pleine tournee et le livreur doit le reveiller a
+  # chaque coup d'oeil. Active a l'ouverture de l'ecran, relache au
+  # dispose. Audit 2026-06-11.
+  wakelock_plus: ^1.2.8
   # light : lecture du capteur de luminosite ambiante (Android only) pour
   # le mode jour/nuit auto (carte Trello #95). Stream<int> en lux. Si le
   # capteur n'est pas dispo (rare sur Android, jamais sur iOS), le toggle
@@ -177,6 +183,10 @@ dev_dependencies:
   # importer dans test/backup_service_test.dart.
   path_provider_platform_interface: ^2.1.2
   plugin_platform_interface: ^2.1.8
+  # Idem pour mocker Geolocator dans test/data/location_service_test.dart
+  # (GeolocatorPlatform.instance = mock). Dependance transitive de
+  # geolocator declaree explicitement pour pouvoir l'importer.
+  geolocator_platform_interface: ^4.2.6
   msix: ^3.16.13
 
 # App icon : pin lime + trace de route sur fond ink, designee via
@@ -234,10 +244,14 @@ flutter:
   assets:
     - assets/fonts/
     # Fixtures pour le harness de batch eval OCR (integration_test).
-    # 38 bordereaux MESEXP/ENLEVEMENT scannes par Noah le 2026-05-22,
-    # bundles dans l'APK debug pour contourner les restrictions
-    # scoped storage Android 16. **ATTENTION** : ~14 MB d'images,
-    # a NE PAS inclure dans le build release Play Store.
+    # Bordereaux scannes par Noah, bundles dans l'APK debug pour
+    # contourner les restrictions scoped storage Android 16.
+    # **ATTENTION** : ~24 MB d'images, a NE PAS inclure dans le build
+    # release Play Store. Le script scripts/build-and-install.ps1
+    # retire automatiquement cette ligne le temps du build release
+    # (pubspec.yaml.release-bak) puis la restaure. Pour un build
+    # release manuel : retirer la ligne ci-dessous avant `flutter
+    # build apk --release`, puis la remettre.
     - assets/test_bordereaux/
     # Modeles ML embarques (Random Forest ONNX) pour classer les lignes
     # OCR des bordereaux en NOM_CLIENT/RUE/CP_VILLE/TEL/REF/PARASITE.

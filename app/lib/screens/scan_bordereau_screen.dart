@@ -13,6 +13,7 @@ import '../data/bordereau_parser.dart';
 import '../data/chronopost_bordereau_parser.dart';
 import '../data/client_memory_service.dart';
 import '../data/colissimo_bordereau_parser.dart';
+import '../data/france_alliance_bordereau_parser.dart';
 import '../data/image_preprocess_service.dart';
 import '../data/ocr_llm_enhance_service.dart';
 import '../data/ocr_service.dart';
@@ -538,7 +539,8 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       _ocrDump('OCRDUMP === END ===');
 
       // Auto-detection format : Chronopost (tracking XR.../XE...FR)
-      // puis Colissimo (6A.../6L...), sinon parser MESEXP par defaut.
+      // puis Colissimo (6A.../6L...), puis France Alliance (etiquettes
+      // ALLIANCE PR / CSG / GETTYGO / FA28), sinon parser MESEXP par defaut.
       BordereauExtraction extraction;
       final String parserUsed;
       if (ChronopostBordereauParser.looksLikeChronopost(result.lines)) {
@@ -547,6 +549,10 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
       } else if (ColissimoBordereauParser.looksLikeColissimo(result.lines)) {
         extraction = ColissimoBordereauParser().parse(result.lines);
         parserUsed = 'colissimo';
+      } else if (FranceAllianceBordereauParser.looksLikeFranceAlliance(
+          result.lines)) {
+        extraction = FranceAllianceBordereauParser().parse(result.lines);
+        parserUsed = 'france_alliance';
       } else {
         // Nouvelle approche spatiale (feedback Noah 2026-05-23) :
         // 1. trouver le label "destinataire" / "a enlever chez"
