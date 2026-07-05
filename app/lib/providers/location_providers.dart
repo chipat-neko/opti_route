@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../data/location_service.dart';
+import '../data/location_tuning.dart';
 import 'database_providers.dart';
 
 /// Stream de la position GPS courante. Emet a chaque deplacement >= 25m
@@ -12,13 +13,22 @@ import 'database_providers.dart';
 /// `null` si la permission n'a pas encore ete accordee ou si on a
 /// jamais demande de position. L'ecran appelle `ensurePermission` au
 /// demarrage de la tournee pour declencher le stream.
-final currentPositionProvider = StreamProvider<Position?>((ref) async* {
+///
+/// **autoDispose** (feat/opti-batterie) : le GPS est le plus gros
+/// consommateur de batterie. Sans autoDispose, ce stream restait
+/// souscrit pour toute la vie du process des qu'une tournee etait
+/// ouverte une fois -> GPS actif meme apres avoir quitte l'ecran
+/// tournee. Avec autoDispose, le stream se ferme (et le GPS s'arrete)
+/// des qu'aucun widget ne l'observe (ex: on passe dans Parametres ou
+/// l'historique). Il se relance tout seul au retour sur la tournee.
+final currentPositionProvider =
+    StreamProvider.autoDispose<Position?>((ref) async* {
   // Mode eco batterie (carte #258) : en consultation passive, GPS moins
-  // precis/frequent (medium / 100 m vs high / 25 m). La navigation active
-  // (navigation_screen) garde son propre stream 10 m haute precision.
+  // precis/frequent. La navigation active (navigation_screen) garde son
+  // propre stream 10 m haute precision. Le profil plafonne aussi la
+  // cadence GPS Android (intervalDuration), meme hors mode eco.
   final eco = ref.watch(modeEcoProvider).value ?? false;
-  final filter = eco ? 100 : 25;
-  final accuracy = eco ? LocationAccuracy.medium : LocationAccuracy.high;
+  final profile = resolveGpsProfile(usage: GpsUsage.passive, eco: eco);
   try {
     final ok = await LocationService.ensurePermission();
     if (!ok) {
@@ -30,8 +40,9 @@ final currentPositionProvider = StreamProvider<Position?>((ref) async* {
       yield await LocationService.currentPosition();
     } catch (_) {/* on continue avec le stream */}
     yield* LocationService.positionStream(
-      distanceFilterMeters: filter,
-      accuracy: accuracy,
+      distanceFilterMeters: profile.distanceFilterMeters,
+      accuracy: profile.accuracy,
+      androidInterval: profile.androidInterval,
     );
   } on LocationPermissionDenied {
     yield null;

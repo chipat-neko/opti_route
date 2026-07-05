@@ -1,5 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 
+import 'location_tuning.dart';
+
 /// Encapsule la gestion des permissions et le stream de position GPS.
 /// Sert au mode 'tournee en cours' pour afficher la distance temps
 /// reel jusqu'au prochain arret.
@@ -38,14 +40,22 @@ abstract class LocationService {
   /// d'au moins [distanceFilterMeters] metres. 25m est un compromis
   /// raisonnable pour un livreur en voiture (precis sans bouffer la
   /// batterie).
+  ///
+  /// [androidInterval] plafonne la cadence des fixes GPS sur Android
+  /// (via AndroidSettings.intervalDuration) : gain batterie sans
+  /// exemption systeme (cf feat/opti-batterie). Les appelants passent
+  /// en general un [GpsProfile] via [resolveGpsProfile].
   static Stream<Position> positionStream({
     int distanceFilterMeters = 25,
     LocationAccuracy accuracy = LocationAccuracy.high,
+    Duration androidInterval = const Duration(seconds: 4),
   }) {
     return Geolocator.getPositionStream(
-      locationSettings: LocationSettings(
+      locationSettings: buildLocationSettings(
         accuracy: accuracy,
-        distanceFilter: distanceFilterMeters,
+        distanceFilterMeters: distanceFilterMeters,
+        androidInterval: androidInterval,
+        isAndroid: isAndroidRuntime,
       ),
     );
   }
