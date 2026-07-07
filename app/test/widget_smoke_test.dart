@@ -8,8 +8,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:opti_route/data/database.dart';
 import 'package:opti_route/providers/database_providers.dart';
 import 'package:opti_route/screens/carnet_adresses_screen.dart';
+import 'package:opti_route/screens/facturation_screen.dart';
+import 'package:opti_route/screens/frais_screen.dart';
 import 'package:opti_route/screens/home_screen.dart';
 import 'package:opti_route/screens/parametres_screen.dart';
+import 'package:opti_route/screens/resume_hebdo_screen.dart';
 import 'package:opti_route/screens/stats_screen.dart';
 import 'package:opti_route/theme/app_theme.dart';
 
@@ -68,6 +71,24 @@ void main() {
           brightness: Brightness.light);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('FraisScreen rend sans crash', (tester) async {
+      await _pumpScreen(tester, const FraisScreen(),
+          brightness: Brightness.light);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('FacturationScreen rend sans crash', (tester) async {
+      await _pumpScreen(tester, const FacturationScreen(),
+          brightness: Brightness.light);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('ResumeHebdoScreen rend sans crash', (tester) async {
+      await _pumpScreen(tester, const ResumeHebdoScreen(),
+          brightness: Brightness.light);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('Smoke render — mode sombre', () {
@@ -92,6 +113,26 @@ void main() {
     testWidgets('ParametresScreen rend sans crash en sombre',
         (tester) async {
       await _pumpScreen(tester, const ParametresScreen(),
+          brightness: Brightness.dark);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('FraisScreen rend sans crash en sombre', (tester) async {
+      await _pumpScreen(tester, const FraisScreen(),
+          brightness: Brightness.dark);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('FacturationScreen rend sans crash en sombre',
+        (tester) async {
+      await _pumpScreen(tester, const FacturationScreen(),
+          brightness: Brightness.dark);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('ResumeHebdoScreen rend sans crash en sombre',
+        (tester) async {
+      await _pumpScreen(tester, const ResumeHebdoScreen(),
           brightness: Brightness.dark);
       expect(tester.takeException(), isNull);
     });
