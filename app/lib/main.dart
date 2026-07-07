@@ -124,10 +124,18 @@ class OptiRouteApp extends ConsumerWidget {
     // Le Provider auto-appelle start() a la 1ere lecture.
     ref.read(offlineGeocodeAutomationProvider);
 
-    // Demarre la surveillance batterie (carte #258) : notif quand le
-    // niveau passe sous le seuil bas en tournee. Auto-start a la 1ere
-    // lecture, comme l'automate de re-geocodage.
-    ref.read(batteryMonitorServiceProvider);
+    // Surveillance batterie (carte #258) : notif quand le niveau passe
+    // sous le seuil bas. Ne tourne QUE lorsqu'une tournee est en cours
+    // (statut en_cours) -> hors tournee, aucun Timer ni subscription,
+    // zero cout. fireImmediately pour appliquer l'etat des le demarrage.
+    ref.listen<bool>(hasTourneeEnCoursProvider, (_, enTournee) {
+      final svc = ref.read(batteryMonitorServiceProvider);
+      if (enTournee) {
+        svc.start();
+      } else {
+        svc.stop();
+      }
+    }, fireImmediately: true);
 
     // Auto-backup local : check si la periode est echue et genere
     // un .zip dans /Android/data/.../files/auto_backups/. En arriere-
