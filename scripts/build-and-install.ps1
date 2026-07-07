@@ -1,18 +1,36 @@
 # Build APK release + installation sur le telephone connecte en ADB.
 #
-# Usage : `./scripts/build-and-install.ps1`
-# (depuis la racine du repo d:\opti_route)
+# Usage : `./scripts/build-and-install.ps1` (depuis la racine du repo)
 #
-# Pre-requis :
-# - Flutter dans C:\src\flutter\bin
-# - Android SDK platform-tools dans
-#   C:\Users\Noah\AppData\Local\Android\sdk\platform-tools
+# Pre-requis (auto-detectes, avec fallback sur l'install de Noah) :
+# - Flutter : $env:FLUTTER_ROOT, ou `flutter` dans le PATH
+# - adb : dans le PATH, ou $env:ANDROID_HOME / $env:ANDROID_SDK_ROOT
 # - Un telephone Android connecte en debug USB et autorise
 
 $ErrorActionPreference = 'Stop'
 
-$Flutter = 'C:\src\flutter\bin\flutter.bat'
-$Adb = 'C:\Users\Noah\AppData\Local\Android\sdk\platform-tools\adb.exe'
+# Flutter : priorite a $env:FLUTTER_ROOT, puis `flutter` dans le PATH,
+# sinon fallback sur l'install historique de Noah.
+$Flutter = if ($env:FLUTTER_ROOT -and (Test-Path "$env:FLUTTER_ROOT\bin\flutter.bat")) {
+  "$env:FLUTTER_ROOT\bin\flutter.bat"
+} elseif (Get-Command flutter -ErrorAction SilentlyContinue) {
+  (Get-Command flutter).Source
+} else {
+  'C:\src\flutter\bin\flutter.bat'
+}
+
+# adb : priorite au PATH, puis $env:ANDROID_HOME / $env:ANDROID_SDK_ROOT,
+# sinon fallback sur l'install historique de Noah.
+$Adb = if (Get-Command adb -ErrorAction SilentlyContinue) {
+  (Get-Command adb).Source
+} elseif ($env:ANDROID_HOME -and (Test-Path "$env:ANDROID_HOME\platform-tools\adb.exe")) {
+  "$env:ANDROID_HOME\platform-tools\adb.exe"
+} elseif ($env:ANDROID_SDK_ROOT -and (Test-Path "$env:ANDROID_SDK_ROOT\platform-tools\adb.exe")) {
+  "$env:ANDROID_SDK_ROOT\platform-tools\adb.exe"
+} else {
+  'C:\Users\Noah\AppData\Local\Android\sdk\platform-tools\adb.exe'
+}
+
 $ApkPath = 'app\build\app\outputs\flutter-apk\app-release.apk'
 
 Push-Location $PSScriptRoot\..\app

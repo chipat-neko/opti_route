@@ -42,10 +42,15 @@ class _CacheSectionState extends ConsumerState<CacheSection> {
     int? count;
     try {
       bytes = await ref.read(cachedTileProviderInstance).cacheSizeBytes();
-    } catch (_) {}
+    } catch (_) {
+      // best-effort : stats d'affichage. Si le calcul echoue, `bytes`
+      // reste null -> l'UI montre "..." au lieu de crasher.
+    }
     try {
       count = await ref.read(geocodeCacheRepositoryProvider).count();
-    } catch (_) {}
+    } catch (_) {
+      // best-effort idem : `count` reste null -> "..." affiche.
+    }
     if (!mounted) return;
     setState(() {
       _tilesCacheBytes = bytes;
