@@ -6,6 +6,51 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
+### Session 2026-07-05 (audit complet #499 + optimisations batterie #500)
+
+**Audit qualité complet (#499)** — corrections issues de l'audit
+2026-06-11 :
+- **OCR** : parser dédié **France Alliance** branché dans le routage de
+  détection de format, avec tests.
+- **ML classifier** : pipeline resynchronisé — l'app n'embarque plus
+  l'artefact ONNX (~1,5 MB) mais uniquement le JSON exporté ;
+  `app/assets/ml/features.json` fait foi et un test garde-fou
+  (`bordereau_ml_features_sync_test`) échoue en CI si l'inférence Dart
+  et le Python divergent.
+- **APK allégé (−24 MB)** : les fixtures OCR `assets/test_bordereaux/`
+  (scans de bordereaux clients réels) sont retirées du build APK release
+  (`scripts/build-and-install.ps1`).
+- **Mémoire/cycles** : `autoDispose` appliqué aux providers de flux qui
+  n'ont pas à survivre à leur écran.
+- **Ménage repo** : suppression des dossiers morts `opti_route_web/` et
+  `site_docv2/`.
+- **+68 tests** ; `flutter analyze` : 0 issue.
+
+**Optimisations batterie sans exemption système (#500)** :
+- Plafond de cadence GPS Android via `AndroidSettings.intervalDuration`
+  et profils d'usage (`lib/data/location_tuning.dart` :
+  navigation / présence / passive).
+- `currentPositionProvider` passé en `autoDispose` ; le stream GPS de
+  navigation est instancié une seule fois (hors `build`).
+- `wakelock_plus` relâché dès le passage en arrière-plan et réactivé au
+  retour au premier plan (`AppLifecycleState`).
+- Présence live du chef en précision moyenne ; capteur de luminosité et
+  push de présence suspendus en arrière-plan via `appForegroundProvider`
+  (fonction pure `isAppBackground` : `paused`/`hidden` = arrière-plan).
+- **+18 tests**. CI enrichie : job `deno test` (Edge Functions) +
+  `flutter test --coverage` avec artifact lcov.
+
+### Session 2026-06-04 (plans #381-A, confidentialité Play Store, fix AAB)
+
+- **Fondation « plans » #381-A** (#496) : socle neutre côté app, **aucun
+  bridage** de fonctionnalité (simple badge informatif). Release
+  **v2.9.2+8065** ; `msix_version` bumpée `2.9.2.13 → .14` pour permettre
+  la réinstallation Windows.
+- **Confidentialité Play Store** (#497) : politique de confidentialité
+  adaptée aux exigences Google Play (`site_doc/`).
+- **Fix build AAB** (#498) : désactivation du split ABI pour les bundles
+  Android (AAB).
+
 ### Session autonome 2026-05-29/30 (boucle nuit, 70+ PR mergées)
 
 Boucle autonome lancée par Noah au soir (PR #318 → #387+), objectif :

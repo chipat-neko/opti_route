@@ -3,47 +3,55 @@
 Document d'onboarding pour developpeurs (et reference pour Noah). Decrit
 l'architecture, les conventions, et les flows critiques.
 
-Derniere mise a jour : 2026-05-22 (Sprint 3.D refactor).
+Derniere mise a jour : 2026-07-07 (audit #499 + optis batterie #500 + passe docs).
 
 ## Stack
 
 | Couche | Technologie |
 |---|---|
 | **UI** | Flutter (Material) avec Riverpod 3 pour la gestion d'etat |
-| **DB locale** | Drift 2.33 (SQLite) - schema v34 |
+| **DB locale** | Drift 2.33 (SQLite) - schema v51 |
 | **Backend cloud** (optionnel) | Supabase (Auth + Storage + Edge Functions) |
 | **OCR** | Google ML Kit Text Recognition (on-device, gratuit) |
+| **Classifier OCR** | Random Forest entraine hors-ligne, embarque en JSON, inference pur Dart |
 | **Code-barre** | mobile_scanner 7 (camera live) |
 | **Routing** | OpenRouteService API + flutter_map (OSM) |
-| **Geocoding** | API BAN (gratuit, ~30k req/jour) + cache local |
+| **Geocoding** | Cascade France officielle : BAN + Recherche-Entreprises (SIRENE) + Photon (fallback) + cache local |
 
 ## Disposition des dossiers
 
 ```
 opti_route/
-├── app/                          # Application Flutter
+├── app/                          # Application Flutter (Android / Windows / Web)
 │   ├── lib/
 │   │   ├── data/                 # Services + repos + tables Drift
 │   │   │   ├── tables/           # Definitions Drift (1 fichier/table)
+│   │   │   ├── bordereau_ml/     # Classifier lignes OCR (inference pur Dart)
 │   │   │   ├── *_repository.dart # CRUD pur sur 1 table
 │   │   │   ├── *_service.dart    # Logique metier composee
 │   │   │   ├── *.g.dart          # Genere par drift_dev (ne pas editer)
+│   │   │   ├── location_tuning.dart  # Profils GPS (navigation/presence/passive)
 │   │   │   ├── bordereau_*       # Pipeline OCR bordereaux
 │   │   │   └── ocr_*             # Pipeline OCR generique
-│   │   ├── providers/            # Riverpod providers (orchestration DI)
-│   │   ├── screens/              # Ecrans (1 fichier/ecran principal)
+│   │   ├── providers/            # Riverpod providers (DI + app_lifecycle_provider)
+│   │   ├── screens/              # ~38 ecrans (1 fichier/ecran principal)
 │   │   │   └── <ecran>/          # Sous-widgets quand l'ecran est gros
 │   │   ├── widgets/              # Widgets reutilises cross-screens
 │   │   └── theme/                # Tokens design + palettes
-│   ├── test/                     # Tests unit + widget + integration
+│   ├── assets/
+│   │   ├── ml/                   # features.json + bordereau_classifier.json
+│   │   └── test_bordereaux/      # Fixtures OCR (donnees clients reelles),
+│   │                             #   retirees des builds release (cf CI)
+│   ├── test/                     # Tests unit + widget + integration (255 fichiers)
 │   └── integration_test/         # Tests e2e (camera, ML Kit reel)
-├── docs/                         # Site web statique + design handoff
-│   ├── website/                  # GitHub Pages (chipat-neko.github.io)
+├── docs/                         # Docs projet + design handoff + schemas SQL cloud
 │   ├── design/                   # Tokens + maquettes Claude Design
-│   └── supabase-schema.sql       # Schema cloud Postgres
-├── supabase/                     # Edge Functions + config Supabase
+│   └── supabase-schema*.sql      # 3 fichiers (schema + multi-tenant + plans-381a)
+├── site_doc/                     # Site vitrine statique -> GitHub Pages (/site)
+├── supabase/                     # Edge Functions + tests Deno
 │   └── functions/<name>/         # 1 dossier/function
-└── bordereaux_test/              # Photos test OCR + scripts analyse (gitignore)
+├── tools/                        # Pipeline ML Python (train + export JSON)
+└── scripts/                      # build-and-install.ps1, mirror-phone.ps1, ...
 ```
 
 ## Pattern d'architecture : Data / Provider / UI
@@ -142,11 +150,11 @@ repository via un provider. Cela rend les screens testables sans DB.
 | [ocr_service.dart](app/lib/data/ocr_service.dart) | ML Kit text recognition + rotations 0/90/180/270 |
 | [image_preprocess_service.dart](app/lib/data/image_preprocess_service.dart) | EXIF + contraste + crop + detectBlur (Sprint 2.C) |
 | [client_memory_service.dart](app/lib/data/client_memory_service.dart) | Fuzzy match carnet adresses (Sprint 2.A) |
-| [ocr_llm_enhance_service.dart](app/lib/data/ocr_llm_enhance_service.dart) | Edge Function Gemini (PR #202, pas deployee) |
+| [ocr_llm_enhance_service.dart](app/lib/data/ocr_llm_enhance_service.dart) | Edge Function Gemini `ocr-enhance` (deployee) |
 
 ## Migrations Drift
 
-Schema actuel : **v34**. Toute modification de table = augmenter `schemaVersion`
+Schema actuel : **v51**. Toute modification de table = augmenter `schemaVersion`
 + ajouter un bloc `if (from < N)` dans `onUpgrade`. Voir
 [database.dart](app/lib/data/database.dart) pour les patterns.
 
@@ -172,10 +180,11 @@ genere local au 1er push, sert d'idempotence. Last-write-wins via
 
 | Type | Couverture |
 |---|---|
-| **Unit (data)** | 73% (48/66 fichiers testes) ✅ |
-| **Integration** | 2 fichiers : `tournee_flow_test`, `bordereau_scan_flow_test` |
-| **Integration_test (camera reelle)** | `bordereau_batch_eval_test` (38 images) |
-| **Widget** | 3% (3/81 ecrans testes) ❌ axes amelioration prioritaire |
+| **Total** | 255 fichiers de tests (`app/test/`) |
+| **Unit (data)** | Large couverture des services / repos / modeles ✅ |
+| **Integration** | `tournee_flow`, `bordereau_scan_flow`, `frais_flow`, `carnet_auto_push`, `parcours_critiques` |
+| **Integration_test (camera reelle)** | `bordereau_batch_eval_test` (68 images) |
+| **Widget** | Partielle : smoke tests + quelques ecrans/widgets (38 ecrans au total) ❌ axe prioritaire |
 
 Lancer tous les tests :
 ```bash
@@ -207,8 +216,9 @@ flutter test integration_test/bordereau_batch_eval_test.dart -d <device-id> --da
 
 ## Ressources
 
-- **Audit complet 2026-05-22** : voir le rapport dans la conversation
-  qui a genere ce fichier (Sprint 3.D)
+- **Audit qualite 2026-06-11** : base des corrections #499 / #500 et de la
+  passe docs 2026-07-07.
 - **Plan OCR 85% win rate** : `docs/plan-ocr-85pct.md`
-- **Schema cloud** : `docs/supabase-schema.sql`
-- **Memory Claude** : `~/.claude/projects/d--opti-route/memory/`
+- **Schema cloud** : `docs/supabase-schema.sql` + `supabase-schema-multi-tenant.sql`
+  + `supabase-schema-plans-381a.sql` (l'etat reel = empilement des trois).
+- **Memory Claude** : `~/.claude/projects/e--opti-route/memory/`
