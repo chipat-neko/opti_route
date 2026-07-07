@@ -779,7 +779,11 @@ final distanceRestanteProvider =
 /// Reset auto au passage minuit (gere dans le repo). Affiche dans
 /// Parametres pour qu'on voie ou on en est par rapport au quota
 /// 500/jour du plan free ORS.
-final orsUsedTodayProvider = StreamProvider<int>((ref) {
+///
+/// autoDispose (item 16) : observe uniquement par la section ORS de
+/// Parametres (ecran secondaire) -> se libere hors de cet ecran,
+/// re-souscrit au retour. Aucun provider derive ne le watch.
+final orsUsedTodayProvider = StreamProvider.autoDispose<int>((ref) {
   return ref.watch(parametresRepositoryProvider).watchOrsUsedToday();
 });
 
