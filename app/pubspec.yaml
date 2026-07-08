@@ -16,7 +16,14 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.9.2+8065
+#
+# SOURCE DE VERITE du versionCode = le build-number ci-dessous. NE PAS
+# builder avec --build-number en ligne de commande : ca override cette
+# valeur et recree des faux downgrades (INSTALL_FAILED_VERSION_DOWNGRADE).
+# Regle : bumper ce nombre a chaque build distribue, et garder
+# msix_version aligne. Dernier versionCode distribue avant cette regle :
+# 10070 (build local output-metadata) / 10069 (device Noah).
+version: 2.9.3+10071
 
 environment:
   sdk: ^3.11.5
@@ -299,7 +306,7 @@ msix_config:
   display_name: opti_route (chef)
   publisher_display_name: CALOTE Noah
   identity_name: com.calote.optiroute
-  msix_version: 2.9.2.14
+  msix_version: 2.9.3.0
   capabilities: internetClient, location
   install_certificate: false
   # msix:create relance sinon `flutter build windows` SANS nos
