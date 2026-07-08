@@ -53,6 +53,15 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # Confidentialité (RGPD) : voir deploy-web.yml. Les fixtures OCR
+      # (assets/test_bordereaux/, ~24 MB de scans de bordereaux clients
+      # RÉELS) ne servent qu'au batch eval. Sans ce strip, l'exe/MSIX
+      # Windows distribué les embarque. On les retire du pubspec avant le
+      # build (idem APK). Le job tourne en `shell: bash` (Git Bash), donc
+      # `sed` est disponible sur le runner windows-latest.
+      - name: Strip test fixtures from pubspec (privacy)
+        run: sed -i '/test_bordereaux/d' pubspec.yaml
+
       # Inject le cloud.env.json depuis un GitHub Secret si défini.
       # Sans secret, on builde en mode local-only (la section "Sync
       # cloud" affichera "non disponible" mais l'app marche).

@@ -60,6 +60,18 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # Confidentialite (RGPD) : les fixtures OCR (assets/test_bordereaux/,
+      # ~24 MB) sont des scans de bordereaux clients REELS (noms, adresses,
+      # telephones). Elles ne servent qu'au batch eval integration_test.
+      # Sans ce strip, `flutter build web` les bundle dans l'app publiee sur
+      # GitHub Pages -> telechargeables par URL directe
+      # (…/opti_route/assets/assets/test_bordereaux/page_01.jpg). On les
+      # retire du pubspec avant le build (idem scripts/build-and-install.ps1
+      # pour l'APK). Il n'y a qu'une ligne `- assets/test_bordereaux/` a
+      # supprimer, le pattern est donc sans risque de sur-suppression.
+      - name: Strip test fixtures from pubspec (privacy)
+        run: sed -i '/test_bordereaux/d' pubspec.yaml
+
       # base-href "/opti_route/" : le site sera servi sous le
       # sous-chemin du nom du repo, donc tous les paths absolus
       # (assets, canvaskit, main.dart.js) doivent commencer par
