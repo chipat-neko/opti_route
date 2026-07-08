@@ -97,6 +97,17 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   /// si l'utilisateur drag/zoom.
   bool _autoFollow = true;
 
+  /// Derniere position sur laquelle la camera a ete recentree (item 13).
+  /// Sert a throttler le suivi auto : sous [_minCameraMoveMeters] de
+  /// deplacement, on evite le move() qui re-render la carte pour rien
+  /// (bruit GPS / immobilite au feu rouge). Le marker "moi" suit quand
+  /// meme via le rebuild du StreamBuilder.
+  Position? _lastCameraPos;
+
+  /// Seuil de deplacement (m) en dessous duquel on ne recentre pas la
+  /// camera automatiquement.
+  static const double _minCameraMoveMeters = 15;
+
   /// Donnees route ORS (polyline routière + steps d'instructions)
   /// recuperees une fois qu'on a une 1ere position GPS. Null tant que
   /// l'appel n'a pas reussi -- dans ce cas on affiche la ligne droite
@@ -298,6 +309,22 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     }
   }
 
+  /// Vrai si la position [pos] est a au moins [_minCameraMoveMeters] du
+  /// dernier recentrage camera (ou si aucun recentrage n'a encore eu
+  /// lieu). Cf item 13 : throttle le suivi camera pour eviter un
+  /// re-render carte a chaque micro-tick GPS immobile.
+  bool _movedEnoughForCamera(Position pos) {
+    final last = _lastCameraPos;
+    if (last == null) return true;
+    return LocationService.distanceMeters(
+          fromLat: last.latitude,
+          fromLng: last.longitude,
+          toLat: pos.latitude,
+          toLng: pos.longitude,
+        ) >=
+        _minCameraMoveMeters;
+  }
+
   /// Verifie a chaque tick GPS si l'utilisateur approche d'un step
   /// non encore annonce. Si oui, declenche le TTS (sauf quiet hours).
   ///
@@ -492,10 +519,15 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         // Premier centrage automatique sur la position courante.
         if (!_hasCenteredOnce) {
           _hasCenteredOnce = true;
+          _lastCameraPos = pos;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _mapController.move(me, 16);
           });
-        } else if (_autoFollow) {
+        } else if (_autoFollow && _movedEnoughForCamera(pos)) {
+          // Item 13 : ne recentre que si on a bouge d'au moins
+          // _minCameraMoveMeters depuis le dernier recentrage -> evite un
+          // re-render carte a chaque micro-tick GPS immobile.
+          _lastCameraPos = pos;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _mapController.move(me, _mapController.camera.zoom);
           });
