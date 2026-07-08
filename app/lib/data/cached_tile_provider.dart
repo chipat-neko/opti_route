@@ -139,7 +139,10 @@ class CachedTileProvider extends TileProvider {
       if (entity is File) {
         try {
           total += await entity.length();
-        } catch (_) {}
+        } catch (_) {
+          // best-effort : un fichier de cache disparu en cours de
+          // parcours ou illisible ne doit pas casser le calcul du total.
+        }
       }
     }
     return total;

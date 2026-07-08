@@ -39,6 +39,23 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
   bool _showLivre = true;
   bool _showEchec = true;
 
+  // Cache de la trace decodee : _decodeTrace re-parse le JSON a chaque
+  // build (pan / zoom / toggle de filtre). On memoise sur la string
+  // source : tant que `traceGeojson` ne change pas, on reutilise la
+  // liste deja decodee. (raw null == _traceRawCache null au depart ->
+  // pas de recalcul, et const [] est deja la bonne valeur.)
+  String? _traceRawCache;
+  List<LatLng> _tracePointsCache = const [];
+
+  List<LatLng> _tracePoints() {
+    final raw = widget.tournee.traceGeojson;
+    if (raw != _traceRawCache) {
+      _traceRawCache = raw;
+      _tracePointsCache = _decodeTrace(raw);
+    }
+    return _tracePointsCache;
+  }
+
   @override
   void dispose() {
     // Restore les barres systeme au cas ou l'utilisateur quitte
@@ -120,7 +137,7 @@ class _CarteScreenState extends ConsumerState<CarteScreen> {
       for (final s in stopsGeoreferenced) LatLng(s.lat!, s.lng!),
     ];
 
-    final tracePoints = _decodeTrace(widget.tournee.traceGeojson);
+    final tracePoints = _tracePoints();
 
     _currentFit = allPoints.length > 1
         ? CameraFit.bounds(
