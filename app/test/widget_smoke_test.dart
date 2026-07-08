@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:opti_route/data/database.dart';
 import 'package:opti_route/providers/database_providers.dart';
 import 'package:opti_route/screens/carnet_adresses_screen.dart';
+import 'package:opti_route/screens/facturation_screen.dart';
+import 'package:opti_route/screens/frais_screen.dart';
 import 'package:opti_route/screens/home_screen.dart';
 import 'package:opti_route/screens/parametres_screen.dart';
+import 'package:opti_route/screens/resume_hebdo_screen.dart';
 import 'package:opti_route/screens/stats_screen.dart';
 import 'package:opti_route/theme/app_theme.dart';
 
@@ -33,7 +37,7 @@ import 'package:opti_route/theme/app_theme.dart';
 /// TestWidgetsFlutterBinding).
 
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     // Empeche google_fonts de fetcher en HTTP (le main.dart le fait
     // deja, mais les tests court-circuitent main() donc on le refait
     // ici par defense). Les .ttf sont bundle en `assets/fonts/`.
@@ -43,6 +47,11 @@ void main() {
     // possibles). Ici les DBs sont isolees en memoire, on coupe le
     // warning pour ne pas polluer le log de test.
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    // Certains ecrans formatent des dates en fr_FR (Frais, Facturation,
+    // ResumeHebdo...) via DateFormat(..., 'fr_FR'). En prod, main()
+    // initialise les locales ; les smoke tests court-circuitent main(),
+    // d'ou une LocaleDataException sans cette init.
+    await initializeDateFormatting('fr_FR');
   });
 
   group('Smoke render — mode clair', () {
@@ -65,6 +74,24 @@ void main() {
 
     testWidgets('ParametresScreen rend sans crash', (tester) async {
       await _pumpScreen(tester, const ParametresScreen(),
+          brightness: Brightness.light);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('FraisScreen rend sans crash', (tester) async {
+      await _pumpScreen(tester, const FraisScreen(),
+          brightness: Brightness.light);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('FacturationScreen rend sans crash', (tester) async {
+      await _pumpScreen(tester, const FacturationScreen(),
+          brightness: Brightness.light);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('ResumeHebdoScreen rend sans crash', (tester) async {
+      await _pumpScreen(tester, const ResumeHebdoScreen(),
           brightness: Brightness.light);
       expect(tester.takeException(), isNull);
     });
@@ -92,6 +119,26 @@ void main() {
     testWidgets('ParametresScreen rend sans crash en sombre',
         (tester) async {
       await _pumpScreen(tester, const ParametresScreen(),
+          brightness: Brightness.dark);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('FraisScreen rend sans crash en sombre', (tester) async {
+      await _pumpScreen(tester, const FraisScreen(),
+          brightness: Brightness.dark);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('FacturationScreen rend sans crash en sombre',
+        (tester) async {
+      await _pumpScreen(tester, const FacturationScreen(),
+          brightness: Brightness.dark);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('ResumeHebdoScreen rend sans crash en sombre',
+        (tester) async {
+      await _pumpScreen(tester, const ResumeHebdoScreen(),
           brightness: Brightness.dark);
       expect(tester.takeException(), isNull);
     });
