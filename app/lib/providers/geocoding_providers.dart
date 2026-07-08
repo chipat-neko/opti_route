@@ -96,7 +96,12 @@ final offlineGeocodeAutomationProvider =
 /// COUNT(*) cote SQLite plutot que .map(.length) sur la liste des
 /// stops : evite de charger toutes les rows en RAM a chaque tick
 /// (sur 5000 stops sans GPS, ca devient sensible).
-final pendingGeocodeCountProvider = StreamProvider<int>((ref) {
+///
+/// autoDispose (item 16) : observe uniquement par OfflineGeocodeBanner
+/// (ecran Historique, secondaire) -> se libere quand l'ecran n'est plus
+/// affiche, re-souscrit au retour. Compteur DB simple, aucune perte,
+/// aucun provider derive ne le watch.
+final pendingGeocodeCountProvider = StreamProvider.autoDispose<int>((ref) {
   final db = ref.watch(appDatabaseProvider);
   final col = countAll();
   final query = db.selectOnly(db.stops)
