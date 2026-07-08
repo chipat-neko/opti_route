@@ -94,16 +94,28 @@ class BatteryMonitorService {
     }
   }
 
-  void dispose() {
+  /// Arrete la surveillance (idempotent). Reutilisable : un start()
+  /// ulterieur relance proprement. Appele quand plus aucune tournee
+  /// n'est en cours.
+  void stop() {
+    if (!_started) return;
+    _started = false;
     _stateSub?.cancel();
+    _stateSub = null;
     _pollTimer?.cancel();
+    _pollTimer = null;
+    _alerted = false;
   }
+
+  void dispose() => stop();
 }
 
-/// Demarre la surveillance batterie a la 1ere lecture (auto-start, comme
-/// l'automate de re-geocodage). `main.dart` fait `ref.read(...)` au build.
+/// Service de surveillance batterie (carte #258). Le demarrage/arret est
+/// pilote par `main.dart` selon qu'une tournee est `en_cours` (cf
+/// hasTourneeEnCoursProvider) : hors tournee, aucun Timer ne tourne, donc
+/// zero cout quand Noah n'est pas en livraison.
 final batteryMonitorServiceProvider = Provider<BatteryMonitorService>((ref) {
-  final svc = BatteryMonitorService()..start();
+  final svc = BatteryMonitorService();
   ref.onDispose(svc.dispose);
   return svc;
 });
