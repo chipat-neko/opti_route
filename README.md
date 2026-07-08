@@ -4,9 +4,9 @@ Application mobile d'optimisation de tournées pour livreur multi-points.
 
 ## État du projet
 
-🚧 **En développement actif** — Phase 1 (version gratuite, Android uniquement). Voir [docs/plan_free.md](docs/plan_free.md) pour le plan détaillé et [docs/user-guide.md](docs/user-guide.md) pour le guide utilisateur.
+🚧 **En développement actif** — Phase 1 (version gratuite). Cibles buildées en CI : **Android** (APK/AAB Play Store), **Windows** (MSIX) et **Web** (GitHub Pages). Voir [docs/plan_free.md](docs/plan_free.md) pour le plan détaillé et [docs/user-guide.md](docs/user-guide.md) pour le guide utilisateur.
 
-**~144 tests unitaires**, `flutter analyze` à 0 erreur, prêt pour publication Play Store côté technique (manque keystore + 25 USD compte Google).
+**255 fichiers de tests** (unit + widget + intégration), `flutter analyze` à 0 issue.
 
 ## Objectif
 
@@ -27,10 +27,10 @@ Aider un chauffeur-livreur à organiser sa tournée quotidienne :
 
 | Couche | Technologie |
 |---|---|
-| Framework | Flutter 3.x (Dart) — un code, iOS + Android |
+| Framework | Flutter (Dart, CI pinned 3.41.9) — un code, Android + Windows + Web |
 | Carte | `flutter_map` + tuiles OpenStreetMap |
 | Optimisation | OpenRouteService (free tier, basé sur VROOM) |
-| Géocodage | Nominatim |
+| Géocodage | Cascade France : BAN + Recherche-Entreprises (SIRENE) + Photon + cache local |
 | OCR | Google ML Kit (sur l'appareil, gratuit) |
 | Stockage | SQLite via `drift` |
 | État | Riverpod |
@@ -41,8 +41,12 @@ Une **version CB** ([docs/plan_cb.md](docs/plan_cb.md)) avec Google Maps Platfor
 
 ```
 opti_route/
-├── app/        ← projet Flutter (code applicatif)
-└── docs/       ← plans, documentation, scripts d'aide
+├── app/        ← projet Flutter (code applicatif, tests, assets)
+├── site_doc/   ← site vitrine statique (publié sur GitHub Pages)
+├── supabase/   ← Edge Functions (Deno) + tests
+├── tools/      ← pipeline ML Python (classifier OCR)
+├── scripts/    ← scripts de build/déploiement (PowerShell)
+└── docs/       ← plans, documentation, schémas SQL cloud
 ```
 
 ## Conventions de développement
