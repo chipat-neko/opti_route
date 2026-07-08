@@ -1,0 +1,11 @@
+# CODEOWNERS — reviewers par defaut des Pull Requests.
+#
+# Toute PR qui touche un fichier matche ci-dessous demande
+# automatiquement la review du owner correspondant.
+# Doc : https://docs.github.com/articles/about-code-owners
+#
+# Projet mono-mainteneur pour l'instant : tout est review par
+# @chipat-neko. Affiner par chemin (ex. `app/lib/data/ @autre`) le jour
+# ou d'autres contributeurs rejoignent le repo.
+
+*       @chipat-neko
