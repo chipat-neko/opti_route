@@ -6,6 +6,25 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
+### Session 2026-07-08 — Audit qualité appliqué (#501-#510) + release 2.9.3
+
+Audit qualité v2 appliqué en dix PR, clôturé par la release
+**2.9.3+10071** :
+- **#501** : strip des fixtures PII `test_bordereaux` dans les
+  workflows web/Windows (RGPD).
+- **#502** : documentation actualisée (`CHANGELOG` / `ARCHITECTURE` /
+  `README`).
+- **#503** : versioning **2.9.3+10071** (`pubspec` source de vérité du
+  `versionCode`) et msix **2.9.3.0**.
+- **#504** : hygiène (mémoïsation du tracé carte, script de build
+  portable, `catch` commentés).
+- **#505** : index `docs/README.md` et `CODEOWNERS`.
+- **#506** : battery monitor conditionné à la tournée active.
+- **#507** : seuil de 15 m avant recentrage caméra en navigation.
+- **#508** : +6 smoke tests widget.
+- **#509** : `autoDispose` sur `orsUsedToday` / `pendingGeocodeCount`.
+- **#510** : `supabase/migrations/` (schéma cloud rejouable).
+
 ### Session 2026-07-05 (audit complet #499 + optimisations batterie #500)
 
 **Audit qualité complet (#499)** — corrections issues de l'audit

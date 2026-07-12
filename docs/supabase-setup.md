@@ -95,6 +95,8 @@ Dart** dans ce sous-jalon, juste du SQL côté Supabase.
 1. Dashboard Supabase → **SQL Editor** → **New query**.
 2. Coller le contenu de [`docs/supabase-schema.sql`](supabase-schema.sql)
    (~200 lignes, idempotent).
+   > **Note :** ce fichier est désormais archivé. La source canonique des
+   > migrations est [`supabase/migrations/`](../supabase/migrations/) (cf #510).
 3. Cliquer **Run** (Ctrl + Entrée). Doit afficher
    `Success. No rows returned.`
 4. Vérifier dans **Table Editor** : les 4 tables `coequipiers`,

@@ -1,3 +1,4 @@
+-- ARCHIVE : source canonique = supabase/migrations/. Ne plus editer ici (cf #510).
 -- ══════════════════════════════════════════════════════════════════
 -- opti_route — Schema cloud Postgres (Phase 2, sous-jalon 2.A)
 -- ══════════════════════════════════════════════════════════════════

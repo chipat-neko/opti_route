@@ -22,7 +22,7 @@ from train_classifier import (
     FEATURE_NAMES, CLASSES, compute_features,
 )
 
-INPUT_CSV = ROOT / 'training_data_labeled_gemini.csv'
+INPUT_CSV = ROOT / 'tools' / 'data' / 'training_data_labeled_gemini.csv'
 OUT_JSON = ROOT / 'app' / 'assets' / 'ml' / 'bordereau_classifier.json'
 
 print(f'Loading {INPUT_CSV}...')

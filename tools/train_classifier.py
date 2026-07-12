@@ -2,7 +2,7 @@
 par Gemini et exporte en ONNX pour embarquer dans l'app Flutter.
 
 Usage:
-    python tools/train_classifier.py training_data_labeled.csv
+    python tools/train_classifier.py tools/data/training_data_labeled.csv
 
 Pre-requis :
     pip install scikit-learn pandas numpy onnx skl2onnx onnxruntime

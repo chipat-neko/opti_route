@@ -173,3 +173,87 @@ failles) et à traiter avec les cartes #57 (carnet équipe) / #71 (visualiser
 preuve) / #81 (tracking public). À ré-auditer quand : (a) le carnet devient
 partagé, (b) la fonction `track` est déployée, (c) toute nouvelle table
 cloud est ajoutée.
+
+---
+
+## 8. Multi-tenant entreprise / entrepôt (addendum — épopées #361 / #381)
+
+**Ajout postérieur à l'audit initial** (migrations
+[`supabase/migrations/20260531000000_multi_tenant.sql`](../supabase/migrations/20260531000000_multi_tenant.sql)
+et
+[`supabase/migrations/20260604000000_plans_381a.sql`](../supabase/migrations/20260604000000_plans_381a.sql)).
+Les §1–7 ci-dessus ne couvrent QUE les tables perso (tournées, carnet,
+Storage). Cette section documente l'isolation RLS des tables du modèle
+multi-tenant, comme appelé par le §7 (c).
+
+### 8.1 Principe d'isolation
+
+Un utilisateur ne voit et ne modifie **que les entreprises et entrepôts
+dont il est membre *actif***. L'appartenance est portée par deux tables de
+liaison, systématiquement filtrées sur `statut = 'actif'` :
+
+- `entreprise_users` — rôle global : `admin_entreprise` | `membre`
+- `entrepot_users` — rôle site (M:N user × entrepôt) : `chef_entrepot` | `employe`
+
+Toutes les policies passent par des helpers `SECURITY DEFINER`
+(`current_user_entreprise_ids()`, `current_user_entrepot_ids()`,
+`is_admin_entreprise()`, `is_chef_entrepot()`, `is_chef_of_entreprise()`,
+`is_super_admin()`). C'est **obligatoire** : une policy sur `entrepots` (ou
+`entreprise_users`) qui lirait directement sa propre table déclenche la
+récursion Postgres `42P17` (« infinite recursion detected in policy »). Le
+helper `definer` s'exécute hors RLS et casse la boucle. Chaque fonction
+porte `set search_path = public` (durcissement anti-détournement).
+
+Une révocation = `statut = 'revoque'` + `revoked_at` (RPC `revoke_employe`).
+Les helpers ne comptant que les lignes `'actif'`, l'accès tombe
+**immédiatement** à la requête suivante (le RLS est évalué à chaque requête,
+pas de cache).
+
+### 8.2 Matrice policies
+
+`admin` = `is_admin_entreprise(entreprise)`. `chef` = `is_chef_entrepot(entrepot)`.
+`membre actif` = présent + `statut='actif'` dans la table de liaison.
+
+| Table | SELECT | INSERT | UPDATE | DELETE |
+|---|---|---|---|---|
+| `entreprises` | membre actif OU `created_by` | ❌ `with check (false)` → RPC `create_entreprise` (code maître) | admin | admin |
+| `entrepots` | membre entrepôt OU admin entreprise | admin OU chef d'un entrepôt de l'entreprise (via RPC `create_entrepot`) | admin OU chef de l'entrepôt | admin |
+| `entreprise_users` | soi-même OU membre de l'entreprise | admin | admin | admin |
+| `entrepot_users` | soi-même OU membre entrepôt OU admin entreprise | chef entrepôt OU admin entreprise | idem | idem |
+| `entreprise_invitations` | `invited_by` OU membre de l'entreprise | `invited_by` ET (admin → tout rôle) OU (chef entrepôt → `chef_entrepot`/`employe` seulement) | ❌ (aucune) → RPC `accept_entreprise_invitation` | `invited_by` OU admin |
+| `plans` | ✅ tous (`authenticated`, `using(true)`) | super admin | super admin | super admin |
+| `app_config`, `app_admins` | ❌ RLS activé **sans policy** (accès uniquement via RPC `definer`) | ❌ | ❌ | ❌ |
+
+### 8.3 Garde-fous serveur (au-delà du RLS)
+
+- **Bootstrap œuf/poule** : le créateur d'une entreprise ne peut pas
+  s'auto-insérer dans `entreprise_users` (la policy `ins_eu` exige déjà
+  `admin`). Le trigger `handle_new_entreprise` (`SECURITY DEFINER`) l'inscrit
+  `admin_entreprise` juste après l'INSERT.
+- **Invitations par email (nominatives)** : `email` non null → l'invitation
+  ne peut être acceptée QUE par le compte portant cet email (`EMAIL_MISMATCH`
+  dans `accept_entreprise_invitation`). Sans ce garde, un code à 6 chiffres
+  deviné laisserait rejoindre l'équipe — voire devenir admin. Les invitations
+  **par code** (email null, lien partageable) ne sont volontairement pas
+  concernées.
+- **Anti-escalade de privilège** : un chef d'entrepôt ne peut inviter QUE
+  `chef_entrepot`/`employe`, jamais `admin_entreprise` (policy `ins_inv`).
+- **Création d'entreprise bridée** : l'INSERT direct est fermé
+  (`with check (false)`) ; seule la RPC `create_entreprise` crée, en exigeant
+  le **code maître** vérifié serveur (jamais exposé à l'app). Le super admin
+  (`app_admins`) en est dispensé.
+- **Révocation d'admin refusée** : `revoke_employe` lève `CANNOT_REVOKE_ADMIN`
+  (évite l'échec silencieux 0-ligne où l'app croyait avoir révoqué).
+- **`plans` en lecture seule** : catalogue lisible par tous les authentifiés
+  (`using(true)` justifié : besoin d'afficher les paliers) ; écriture réservée
+  au super admin. Aucune limite appliquée à ce stade (grandfathering
+  `plan = 'illimite'` sur les comptes existants).
+
+### 8.4 À ré-auditer
+
+- Tests « deny » des accès croisés **entreprise A / entreprise B** (même
+  méthode qu'au §6, avec deux comptes membres d'entreprises distinctes).
+- Carnet partagé : la policy permissive `sd_select_extended_multi_tenant`
+  **ajoute** la visibilité entreprise/entrepôt aux policies perso de
+  `saved_destinations` — vérifier qu'aucune policy perso ne fait `using(true)`
+  qui annulerait le cloisonnement.

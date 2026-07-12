@@ -1,8 +1,8 @@
 """Labelise les lignes OCR par regex + position spatiale, sans LLM.
 
 Usage:
-    python tools/labelize_heuristic.py training_data.csv \
-        training_data_labeled.csv
+    python tools/labelize_heuristic.py tools/data/training_data.csv \
+        tools/data/training_data_labeled.csv
 
 Strategie :
 1. Pass 1 (regex strict) : TEL, CP_VILLE, REF, RUE -> label sur

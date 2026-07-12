@@ -1,7 +1,7 @@
 """Labellise les lignes OCR d'un bordereau via Gemini 2.5 Flash.
 
 Usage:
-    python tools/labelize_via_gemini.py training_data.csv training_data_labeled_gemini.csv [--max N]
+    python tools/labelize_via_gemini.py tools/data/training_data.csv tools/data/training_data_labeled_gemini.csv [--max N]
 
 Pre-requis : GEMINI_API_KEY dans app/gemini.env.json (fichier dedie,
 gitignore). NE PAS la mettre dans cloud.env.json : ce dernier alimente
