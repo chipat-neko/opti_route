@@ -1,121 +1,140 @@
-# Edge Functions multi-tenant (carte #363)
+# Edge Function `invite_employee`
 
-Trois Edge Functions Supabase liées à l'épopée multi-tenant #361 :
+Invite un employé ou un chef d'entrepôt à rejoindre une entreprise / un
+entrepôt. Fait partie de l'épopée multi-tenant (#361, cartes #363 + #60).
 
-1. **`invite_employee`** — Envoie un mail magic link pour inviter un employé
-2. **`accept_invitation`** — Appelée par l'app au boot quand l'utilisateur revient sur le lien magic
-3. **`cron_lockout_revoked`** — Job planifié (cron J+1 → 3h UTC) qui expire les `revoked` après 30 jours
+> **Refonte « Option B » (2026-06-01)** — On n'envoie **plus** de magic
+> link Supabase (qui imposait la version web connectée au cloud). À la
+> place, la fonction **génère un code à 6 chiffres** et l'envoie par email
+> via **Brevo** (API transactionnelle). L'employé saisit ce code dans
+> l'app. Marche sur toutes les plateformes (mobile / PC) sans dépendre du
+> web.
 
-## Pré-requis
+## Flux réel
 
-- Schéma SQL multi-tenant déployé (`docs/supabase-schema-multi-tenant.sql`)
-- Supabase CLI installé : `npm i -g supabase`
-- Logged in : `supabase login`
-- Linked au projet : `supabase link --project-ref <ref>`
+1. Le **chef d'entrepôt ou l'admin** (connecté, `verify_jwt = true`)
+   appelle la fonction avec son JWT.
+2. La fonction vérifie le token puis les **permissions** du caller dans
+   l'entreprise / l'entrepôt cible :
+   - inviter un `chef_entrepot` → réservé à `admin_entreprise` ;
+   - inviter un `employe` → `admin_entreprise` **ou** `chef_entrepot` de
+     l'entrepôt visé.
+3. Elle génère un **code à 6 chiffres** (CSPRNG `crypto.getRandomValues`,
+   rejection sampling anti-biais) et **insère l'invitation** dans
+   `entreprise_invitations` (statut `pending`, `expires_at = now + 7 jours`).
+4. Elle envoie un **email via Brevo** (API transactionnelle) contenant le
+   code et la marche à suivre.
+5. L'employé ouvre l'app, se **connecte par OTP** avec cette adresse
+   email, va dans **« Rejoindre une équipe »** et saisit le code →
+   RPC `accept_entreprise_invitation(code)`.
+
+## Requête
+
+```
+POST /functions/v1/invite_employee
+Authorization: Bearer <JWT du chef/admin>
+Content-Type: application/json
+```
+
+### Body attendu
+
+```json
+{
+  "email": "marc@example.com",
+  "entreprise_id": "<uuid>",
+  "entrepot_id": "<uuid|null>",
+  "role": "employe"
+}
+```
+
+| Champ | Type | Détail |
+|---|---|---|
+| `email` | `string` | Email de l'invité (normalisé en minuscules). |
+| `entreprise_id` | `string` (UUID) | Entreprise cible. |
+| `entrepot_id` | `string` (UUID) \| `null` | Entrepôt cible, ou `null` pour une invitation au niveau entreprise. |
+| `role` | `'chef_entrepot'` \| `'employe'` | Rôle attribué à l'invité. |
+
+### Réponse (`201`)
+
+```json
+{
+  "invitation_id": "<uuid>",
+  "email": "marc@example.com",
+  "code": "048213",
+  "expires_at": "2026-07-19T10:00:00.000Z",
+  "email_sent": true,
+  "email_error": null
+}
+```
+
+| Champ | Détail |
+|---|---|
+| `invitation_id` | `cloud_id` de la ligne `entreprise_invitations`. |
+| `email` | Email invité (normalisé). |
+| `code` | Code à 6 chiffres à communiquer à l'invité. |
+| `expires_at` | Expiration de l'invitation (J+7). |
+| `email_sent` | `true` si Brevo a accepté l'envoi, sinon `false`. |
+| `email_error` | Message d'erreur si l'envoi a échoué, sinon `null`. |
+
+> **Note — l'envoi du mail peut échouer sans bloquer.** Le `code` est
+> **toujours** renvoyé dans la réponse, même si `email_sent = false` (clé
+> Brevo manquante, expéditeur non vérifié, spam, quota, etc.). Dans ce cas
+> le chef / admin peut **communiquer le code manuellement** à l'employé.
+
+### Codes d'erreur
+
+| Statut | Cas |
+|---|---|
+| `400` | JSON invalide ou body non conforme (email, UUID, role). |
+| `401` | Header `Authorization` manquant ou JWT invalide. |
+| `403` | Le caller n'a pas les permissions pour ce rôle / cet entrepôt. |
+| `405` | Méthode autre que `POST`. |
+| `500` | Échec de l'insertion de l'invitation. |
+
+## Secrets requis
+
+À configurer dans **Dashboard → Edge Functions → Secrets** :
+
+| Secret | Fourni par | Détail |
+|---|---|---|
+| `SUPABASE_URL` | Supabase (auto) | URL du projet. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase (auto) | Clé service role (bypass RLS côté serveur, jamais exposée au client). |
+| `BREVO_API_KEY` | Toi | Clé API v3 Brevo (Brevo → Settings → SMTP & API → API Keys). |
+| `BREVO_SENDER_EMAIL` | Toi | Adresse **expéditeur vérifiée** dans Brevo. |
+| `BREVO_SENDER_NAME` | Toi (optionnel) | Nom d'expéditeur affiché (défaut : `opti_route`). |
+
+Si `BREVO_API_KEY` **ou** `BREVO_SENDER_EMAIL` est absent, l'invitation est
+quand même créée et le code renvoyé, mais `email_sent = false`.
 
 ## Déploiement
 
-```bash
-# Depuis la racine du repo
-supabase functions deploy invite_employee
-supabase functions deploy accept_invitation
-supabase functions deploy cron_lockout_revoked --no-verify-jwt
-```
-
-## Variables d'environnement (Supabase Dashboard → Edge Functions → Secrets)
-
-| Variable | Pour | Valeur exemple |
-|---|---|---|
-| `APP_INVITE_REDIRECT_URL` | invite_employee | `https://chipat-neko.github.io/opti_route/` |
-| `CRON_SECRET` | cron_lockout_revoked | Random 32 chars (`openssl rand -hex 32`) |
-
-`SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont fournis automatiquement par Supabase.
-
-## Mail templates (Supabase Dashboard → Authentication → Email Templates → "Invite user")
-
-Customiser :
-- **Subject** : `Tu es invité sur opti_route`
-- **Body** : 
-```html
-<h2>Bienvenue sur opti_route !</h2>
-<p>Tu as été invité à rejoindre une entreprise/entrepôt.</p>
-<p><a href="{{ .ConfirmationURL }}">Accepter l'invitation</a></p>
-<p>Ce lien expire dans 7 jours.</p>
-```
-
-## Cron Supabase (Dashboard → Database → Cron)
-
-```sql
--- Tous les jours à 03:00 UTC, expire les revoked > 30j
-select cron.schedule(
-  'cron_lockout_revoked_daily',
-  '0 3 * * *',
-  $$
-    select net.http_post(
-      url := 'https://<project-ref>.supabase.co/functions/v1/cron_lockout_revoked',
-      headers := jsonb_build_object('X-Cron-Secret', '<your CRON_SECRET>')
-    );
-  $$
-);
-```
-
-## Tests manuels
-
-### Test invite_employee
+`verify_jwt = true` (auth obligatoire) : ne pas utiliser `--no-verify-jwt`.
 
 ```bash
-TOKEN="<JWT d'un admin_entreprise>"
+npx supabase functions deploy invite_employee
+```
+
+## Test manuel
+
+```bash
+TOKEN="<JWT d'un admin_entreprise ou chef_entrepot>"
 curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "marc@example.com",
     "entreprise_id": "<uuid>",
-    "entrepot_id": "<uuid>",
+    "entrepot_id": "<uuid|null>",
     "role": "employe"
   }' \
-  https://<project>.supabase.co/functions/v1/invite_employee
+  https://<project-ref>.supabase.co/functions/v1/invite_employee
 ```
 
-Attendu : `201 { "invitation_id": "...", "email": "...", "expires_at": "..." }`
+Attendu : `201` avec le `code` à transmettre à l'invité.
 
-### Test accept_invitation
+## Fichiers
 
-Marc reçoit le mail, clique le lien, atterrit sur l'app qui détecte `?invitation_id=` et appelle :
-
-```bash
-TOKEN="<JWT de Marc>"
-curl -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"invitation_id": "<uuid>"}' \
-  https://<project>.supabase.co/functions/v1/accept_invitation
-```
-
-Attendu : `200 { "entreprise_id": "...", "entrepot_id": "...", "role": "employe" }`
-
-Marc est maintenant dans `entreprise_users` (membre) + `entrepot_users` (employe).
-
-### Test cron_lockout_revoked manuel
-
-```bash
-curl -X POST \
-  -H "X-Cron-Secret: <secret>" \
-  https://<project>.supabase.co/functions/v1/cron_lockout_revoked
-```
-
-Attendu : `200 { "entreprise_users_expired": N, ... }`
-
-## Sécurité
-
-- `invite_employee` et `accept_invitation` : JWT obligatoire, check email match
-- `cron_lockout_revoked` : protégé par CRON_SECRET partagé
-- Toutes les fonctions utilisent SERVICE_ROLE_KEY côté serveur pour bypass RLS — la clé n'est JAMAIS exposée au client
-- Validation stricte des inputs (UUID, format email, role enum)
-- Les FK et UNIQUE constraints en DB empêchent les insertions doublons
-
-## Limites connues
-
-- Pas de rate limiting (Edge Functions Supabase n'en propose pas natif). Un attaquant pourrait spammer `invite_employee` pour épuiser le quota mail 100/j Supabase. À surveiller post-déploiement.
-- Le mail template par défaut Supabase n'est pas brandé. Customisation manuelle dans Dashboard.
-- `inviteUserByEmail` peut échouer silencieusement si user existe déjà — l'invitation reste pending et le user devra se reconnecter pour la voir.
+- `index.ts` — handler HTTP : auth, permissions, insertion, envoi Brevo.
+- `lib.ts` — unités pures testables (`validateBody`, `genCode`,
+  `roleLabel`, `escapeHtml`, `buildEmailHtml`).
+- Tests : `supabase/functions/_tests/invite_employee_test.ts`.
