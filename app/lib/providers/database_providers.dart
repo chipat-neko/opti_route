@@ -449,7 +449,7 @@ final resumeHebdoServiceProvider = Provider<ResumeHebdoService>((ref) {
 /// Resume hebdomadaire pour la semaine contenant [reference] (default
 /// = maintenant). Recharge a chaque modif de tournee / stop.
 final resumeHebdoProvider =
-    FutureProvider.family<ResumeHebdo, DateTime?>((ref, reference) async {
+    FutureProvider.autoDispose.family<ResumeHebdo, DateTime?>((ref, reference) async {
   ref.watch(tourneesStreamProvider);
   return ref.read(resumeHebdoServiceProvider).computeWeek(
         reference: reference,
@@ -791,7 +791,7 @@ final orsUsedTodayProvider = StreamProvider.autoDispose<int>((ref) {
 /// Recalcule a chaque changement du parametre `coutCarburantLitre` ou
 /// `consoLitresPar100Km` (via watchAll des parametres).
 final coutCarburantProvider =
-    FutureProvider.family<double, int>((ref, distanceMeters) async {
+    FutureProvider.autoDispose.family<double, int>((ref, distanceMeters) async {
   return ref
       .read(parametresRepositoryProvider)
       .estimerCoutCarburant(distanceMeters: distanceMeters);
@@ -814,7 +814,14 @@ final statsProvider =
 /// n'executer **qu'une** paire de requetes Drift au lieu de 6 (2 par
 /// card x 3 cards). Les TourneeStats par fenetre sont derives in-memory
 /// via [StatsService.computeFromBundle].
-final statsBundleProvider = FutureProvider<StatsBundle>((ref) async {
+///
+/// autoDispose : recalcule ~365j de stats a chaque write DB (watch
+/// `tourneesStreamProvider`). Sans consommateur (StatsScreen ferme) on
+/// se libere pour ne plus recomputer a chaque write. Les deux providers
+/// derives ([statsFromBundleProvider], [statsPreviousWindowProvider])
+/// sont eux aussi autoDispose : keep-alive, ils garderaient ce provider
+/// vif et neutraliseraient l'autoDispose.
+final statsBundleProvider = FutureProvider.autoDispose<StatsBundle>((ref) async {
   ref.watch(tourneesStreamProvider);
   final since = DateTime.now().subtract(const Duration(days: 365));
   return ref.read(statsServiceProvider).computeBundle(since: since);
@@ -824,7 +831,7 @@ final statsBundleProvider = FutureProvider<StatsBundle>((ref) async {
 /// [statsBundleProvider] (filtrage in-memory). Remplace le calcul a
 /// part par card -- 0 query Drift supplementaire.
 final statsFromBundleProvider =
-    Provider.family<AsyncValue<TourneeStats>, int>((ref, days) {
+    Provider.autoDispose.family<AsyncValue<TourneeStats>, int>((ref, days) {
   final bundle = ref.watch(statsBundleProvider);
   return bundle.whenData((b) => StatsService.computeFromBundle(
         b,
@@ -837,7 +844,7 @@ final statsFromBundleProvider =
 /// Utilise pour comparer S vs S-1 dans StatsCard (carte Trello #99).
 /// 0 query Drift, derive du bundle 365j deja en cache.
 final statsPreviousWindowProvider =
-    Provider.family<AsyncValue<TourneeStats>, int>((ref, days) {
+    Provider.autoDispose.family<AsyncValue<TourneeStats>, int>((ref, days) {
   final bundle = ref.watch(statsBundleProvider);
   return bundle.whenData((b) {
     final now = DateTime.now();

@@ -60,6 +60,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
   final Set<int> _selectedIds = {};
 
   void _exitSelection() {
+    if (!mounted) return;
     setState(() {
       _selectionMode = false;
       _selectedIds.clear();
@@ -1020,7 +1021,7 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
       'ÿ': 'y', 'ý': 'y',
       'ñ': 'n',
-      'Å“': 'oe', 'æ': 'ae',
+      'œ': 'oe', 'æ': 'ae',
     };
     final buf = StringBuffer();
     for (final ch in lower.split('')) {

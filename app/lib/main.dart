@@ -9,7 +9,6 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'data/backup_service.dart';
 import 'data/battery_monitor_service.dart';
-import 'data/bordereau_ml/classifier.dart';
 import 'data/notifications_service.dart';
 import 'data/persist_storage.dart';
 import 'data/share_intent_service.dart';
@@ -37,11 +36,6 @@ Future<void> main() async {
   // sous pression de quota = perte totale des tournees du user PWA.
   // No-op sur les autres plateformes.
   unawaited(requestPersistentStorage());
-  // Charge le classifier ML bordereau au boot (~1.9 MB JSON parse +
-  // RandomForest 100 arbres). Async, non-bloquant : si pas encore
-  // pret quand le 1er scan arrive, le caller fallback sur ses
-  // heuristiques. accuracy_test = 0.932.
-  unawaited(BordereauMlClassifier.instance.load());
   // **CRITIQUE** : applique un eventuel restore en attente AVANT
   // d'ouvrir Drift. Si un fichier `.pending_restore` est present
   // (cf BackupService.prepareRestore), il sera swap a la place de la

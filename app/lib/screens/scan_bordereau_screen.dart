@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/bordereau_extraction.dart';
+import '../data/bordereau_ml/classifier.dart';
 import '../data/pdf_page_render_service.dart';
 import '../data/bordereau_parser.dart';
 import '../data/chronopost_bordereau_parser.dart';
@@ -79,6 +80,19 @@ class _ScanBordereauScreenState extends ConsumerState<ScanBordereauScreen> {
 
   /// Lot accumule en mode batch (#119).
   final List<BordereauExtraction> _batch = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Chargement paresseux du classifier ML bordereau (~1.9 MB JSON +
+    // RandomForest 100 arbres) : declenche a l'ouverture de l'ecran de
+    // scan plutot qu'au boot de l'app (audit perf F7b). Async, non-
+    // bloquant et idempotent (load() no-op si deja charge). Si le 1er
+    // scan arrive avant la fin du chargement, classify() retourne null
+    // tant que !isLoaded et le pipeline parser fallback sur ses
+    // heuristiques.
+    unawaited(BordereauMlClassifier.instance.load());
+  }
 
   @override
   Widget build(BuildContext context) {

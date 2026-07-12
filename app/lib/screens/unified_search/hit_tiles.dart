@@ -65,11 +65,15 @@ class TourneeHitTile extends StatelessWidget {
   final String query;
   final VoidCallback onBeforeOpen;
 
+  /// DateFormat reutilise entre frames (au lieu d'en reconstruire un a
+  /// chaque build de tile). Locale 'fr'.
+  static final DateFormat _dateFormat = DateFormat('d MMM yyyy', 'fr');
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final t = hit.tournee;
-    final df = DateFormat('d MMM yyyy', 'fr').format(t.date);
+    final df = _dateFormat.format(t.date);
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: p.creamSoft,

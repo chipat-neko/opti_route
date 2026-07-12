@@ -49,12 +49,15 @@ class CarnetTile extends ConsumerWidget {
   /// "Livre N fois - dernier le J/M/A" (ou juste "Livre N fois" si la
   /// derniere date est null). Donne du contexte temporel en une ligne
   /// dans la liste sans cliquer pour ouvrir la fiche.
+  /// DateFormat reutilise entre frames (au lieu d'en reconstruire un a
+  /// chaque build de tile). Locale 'fr'.
+  static final DateFormat _dateFormat = DateFormat('d MMM yy', 'fr');
+
   static String _formatLivreLine(SavedDestination e) {
     final base = e.useCount > 1
         ? 'Livre ${e.useCount} fois'
         : 'Livre 1 fois';
-    final df = DateFormat('d MMM yy', 'fr');
-    return '$base - dernier ${df.format(e.lastUsedAt)}';
+    return '$base - dernier ${_dateFormat.format(e.lastUsedAt)}';
   }
 
   @override

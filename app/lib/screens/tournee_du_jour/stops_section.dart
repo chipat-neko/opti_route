@@ -328,7 +328,7 @@ class _StopsSectionState extends ConsumerState<StopsSection> {
       'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
       'ÿ': 'y', 'ý': 'y',
       'ñ': 'n',
-      'Å“': 'oe', 'æ': 'ae',
+      'œ': 'oe', 'æ': 'ae',
     };
     final buf = StringBuffer();
     for (final ch in lower.split('')) {
