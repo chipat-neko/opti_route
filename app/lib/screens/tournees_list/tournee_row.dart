@@ -28,10 +28,13 @@ class TourneeRow extends ConsumerWidget {
 
   final Tournee tournee;
 
+  /// DateFormat reutilise entre frames (au lieu d'en reconstruire un a
+  /// chaque build de row). Locale 'fr'.
+  static final DateFormat _dateFormat = DateFormat('EEE d MMM', 'fr');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
-    final dateFormat = DateFormat('EEE d MMM', 'fr');
     final isTerminee = tournee.statut == 'terminee';
     final hasStats = isTerminee &&
         tournee.distanceTotaleM != null &&
@@ -97,7 +100,7 @@ class TourneeRow extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              dateFormat.format(tournee.date),
+                              _dateFormat.format(tournee.date),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: p.textMute,
