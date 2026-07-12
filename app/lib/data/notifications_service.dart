@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -81,6 +82,49 @@ class NotificationsService {
     _initialized = true;
   }
 
+  /// Programme une notif planifiee en essayant d'abord le mode EXACT
+  /// (exactAllowWhileIdle), avec repli automatique en INEXACT.
+  ///
+  /// Android 12+ : si l'utilisateur a revoque l'autorisation "Alarmes et
+  /// rappels", ou sur Android 14+ ou USE_EXACT_ALARM a ete retire (#512)
+  /// et SCHEDULE_EXACT_ALARM n'est pas accordee, le plugin throw une
+  /// PlatformException sur un schedule exact. Plutot que de laisser
+  /// crasher tout le rappel, on re-tente en inexactAllowWhileIdle : la
+  /// notif se declenche a quelques minutes pres, ce qui reste acceptable
+  /// pour un rappel de tournee.
+  ///
+  /// id / title / body / when / details sont passes verbatim (notifs
+  /// ponctuelles uniquement, comme les 4 appelants actuels).
+  Future<void> _zonedScheduleSafe({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime when,
+    required NotificationDetails notificationDetails,
+  }) async {
+    try {
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: when,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } on PlatformException catch (e) {
+      debugPrint(
+          '[NotificationsService] exact alarm refuse ($e) - fallback inexact');
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: when,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    }
+  }
+
   /// Notification de test : se declenche apres [seconds] secondes.
   /// Sert a verifier sur l'appareil que le plugin / permission /
   /// channel marche bien.
@@ -88,12 +132,12 @@ class NotificationsService {
     await init();
     final when = tz.TZDateTime.now(tz.local)
         .add(Duration(seconds: seconds));
-    await _plugin.zonedSchedule(
+    await _zonedScheduleSafe(
       id: _testId,
       title: 'Test notification opti_route',
       body:
           'Bravo, les notifs locales marchent ! (declenchee a ${_format(when)})',
-      scheduledDate: when,
+      when: when,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
@@ -103,7 +147,6 @@ class NotificationsService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
@@ -130,11 +173,11 @@ class NotificationsService {
       // Date passee : on n'avait que la cancellation a faire.
       return;
     }
-    await _plugin.zonedSchedule(
+    await _zonedScheduleSafe(
       id: notifId,
       title: 'Tournee a preparer : $nomTournee',
       body: 'C\'est l\'heure de demarrer ta tournee dans opti_route.',
-      scheduledDate: tzWhen,
+      when: tzWhen,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
@@ -144,7 +187,6 @@ class NotificationsService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
@@ -178,11 +220,11 @@ class NotificationsService {
     final tzWhen = tz.TZDateTime.from(when, tz.local);
     final now = tz.TZDateTime.now(tz.local);
     if (!tzWhen.isAfter(now)) return;
-    await _plugin.zonedSchedule(
+    await _zonedScheduleSafe(
       id: notifId,
       title: 'Demain : $nomTournee',
       body: 'Pense a preparer tes colis ce soir.',
-      scheduledDate: tzWhen,
+      when: tzWhen,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
@@ -192,7 +234,6 @@ class NotificationsService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
@@ -224,12 +265,12 @@ class NotificationsService {
     final tzWhen = tz.TZDateTime.from(when, tz.local);
     final now = tz.TZDateTime.now(tz.local);
     if (!tzWhen.isAfter(now)) return;
-    await _plugin.zonedSchedule(
+    await _zonedScheduleSafe(
       id: notifId,
       title: 'Tournee encore active : $nomTournee',
       body: 'Elle tourne depuis plus de ${seuil.inHours}h. '
           'Pense a la cloturer si elle est finie.',
-      scheduledDate: tzWhen,
+      when: tzWhen,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
@@ -239,7 +280,6 @@ class NotificationsService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
