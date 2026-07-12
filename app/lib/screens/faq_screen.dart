@@ -144,14 +144,6 @@ const List<_FaqItem> _faq = [
         'par l\'adresse à laquelle elle a été envoyée.',
   ),
   _FaqItem(
-    Icons.share_location_outlined,
-    'Le destinataire peut-il suivre sa livraison ?',
-    'Un lien de suivi peut être généré pour un arrêt : le destinataire voit '
-        'le statut et une position approximative, sans avoir besoin de compte. '
-        'Par respect de la vie privée, seules des informations réduites sont '
-        'partagées (prénom + initiale, zone approximative), et le lien expire.',
-  ),
-  _FaqItem(
     Icons.local_gas_station_outlined,
     'Comment sont gérés le carburant et mes frais ?',
     'Le prix du carburant peut être pré-rempli automatiquement à partir des '

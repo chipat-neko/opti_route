@@ -34,7 +34,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Planification de notif a heure exacte (Android 12+). -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <!-- Survie au reboot pour les notifs deja planifiees. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 

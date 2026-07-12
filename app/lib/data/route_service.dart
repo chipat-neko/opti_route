@@ -23,6 +23,10 @@ class RouteService {
   final String apiKey;
   final http.Client _client;
 
+  /// Ferme le [http.Client] sous-jacent. A appeler via `ref.onDispose`
+  /// du provider, comme [OsrmRouteService] / [BanGeocodingService].
+  void close() => _client.close();
+
   /// Recupere la route routière + les instructions textuelles entre
   /// [from] et [to] via l'API ORS Directions GeoJSON. Retourne null
   /// si l'API ne repond pas ou retourne une erreur (timeout, quota,

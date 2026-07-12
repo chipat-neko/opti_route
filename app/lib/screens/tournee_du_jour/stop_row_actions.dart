@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
 import '../../data/location_service.dart';
 import '../../data/notifications_service.dart';
@@ -16,7 +15,6 @@ import '../../data/preuve_photo_service.dart';
 import '../../data/stop_types.dart';
 import '../../data/stops_repository.dart';
 import '../../data/tournees_repository.dart';
-import '../../data/tracking_codes_repository.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/supabase_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -157,27 +155,6 @@ class StopRowActions {
         await SharePlus.instance.share(
           ShareParams(text: adresse, subject: 'Adresse de livraison'),
         );
-      case GenerateTrackingLinkAction():
-        final trackingRepo = ref.read(trackingCodesRepositoryProvider);
-        try {
-          final tc = await trackingRepo.generateForStop(stop.id);
-          final url = TrackingCodesRepository.buildUrl(tc.code);
-          // Carte #81 : pousse le code au cloud pour que l'Edge Function
-          // `track` puisse resoudre le lien. Best-effort silencieux (no-op
-          // si pas connecte / stop pas encore sync / function pas deployee).
-          try {
-            await ref
-                .read(cloudSyncServiceProvider)
-                .pushTrackingCode(tc.code, stop.id);
-          } on Object {/* offline / stop pas sync : lien local quand meme */}
-          await Clipboard.setData(ClipboardData(text: url));
-          unawaited(HapticFeedback.lightImpact());
-          messenger.showSuccess('Lien tracking copie : $url');
-        } catch (e) {
-          messenger.showError(
-            'Generation lien echouee : ${humanizeAnyError(e)}',
-          );
-        }
       case OpenInMapsAction():
         final adresse = stop.adresseNormalisee ?? stop.adresseBrute;
         final uri = Uri.parse(
