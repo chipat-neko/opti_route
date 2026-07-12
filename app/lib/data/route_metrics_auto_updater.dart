@@ -88,6 +88,17 @@ class RouteMetricsAutoUpdater {
       final result = await _osrm.fetchRoute(waypoints);
       if (result == null) return;
 
+      // 2bis. Idempotence : si distance + duree calculees sont identiques
+      // a ce qui est deja en base, on NE re-ecrit PAS. Un write drift
+      // notifie le stream tournee meme sans changement de valeur, ce qui
+      // rebuild Body -> re-appelle requestUpdate -> nouvelle requete OSRM :
+      // boucle write->rebuild->write superflue. On la coupe a la source.
+      // `tournee` est deja charge en debut de methode (etape 1).
+      if (tournee.distanceTotaleM == result.meters &&
+          tournee.dureeTotaleS == result.seconds) {
+        return;
+      }
+
       // 3. Update la DB. On ne touche pas optimiseeLe / traceGeojson
       // pour ne pas faire croire qu'on a re-optimise via VROOM.
       await (_db.update(_db.tournees)..where((t) => t.id.equals(tourneeId)))
