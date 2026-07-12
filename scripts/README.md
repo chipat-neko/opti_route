@@ -70,16 +70,15 @@ Si tu installes opti_route chef sur **un nouveau PC** :
    ```
 2. Activer **Dev Mode Windows** (Réglages > Espace développeurs)
 3. Installer **VS Build Tools 2022** avec le composant C++ ATL
-4. Télécharger nuget.exe et le mettre dans `C:\Users\Noah\nugettools\`
+4. Télécharger nuget.exe et le mettre dans un dossier local de ton
+   choix (par exemple `%USERPROFILE%\nugettools\`, soit
+   `C:\Users\Noah\nugettools\` sur le poste de Noah — c'est un
+   exemple, pas un chemin imposé)
 5. Copier `cloud.env.json` dans `E:\opti_route\app\` (credentials Supabase, jamais commit)
 6. Copier `Installer_optiroute_chef.bat` sur le bureau
 7. Lancer `E:\opti_route\scripts\Creer_raccourci_bureau.bat` une fois
    (crée le raccourci "MAJ opti_route chef" sur le bureau)
 8. Double-clic sur le raccourci → premier build complet + install
-
-Détails dans la mémoire de session
-[[feedback-windows-build-exfat]] (build) et
-[[project-logiciel-chef-88]] (#88·5).
 
 ---
 

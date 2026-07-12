@@ -6,8 +6,8 @@ CP_VILLE / TEL / REF / PARASITE) de chaque ligne OCR d'un bordereau.
 ## Étapes
 
 ```
-1. batch_eval_test.dart                     -> training_data.csv (lignes OCR + positions)
-2. tools/labelize_via_gemini.py             -> training_data_labeled.csv (+ classes)
+1. batch_eval_test.dart                     -> tools/data/training_data.csv (lignes OCR + positions)
+2. tools/labelize_via_gemini.py             -> tools/data/training_data_labeled_gemini.csv (+ classes)
 3. tools/train_classifier.py                -> features.json (+ report + onnx d'archive)
 4. tools/export_forest_json.py              -> app/assets/ml/bordereau_classifier.json
 5. app/lib/data/bordereau_ml/classifier.dart-> inference Flutter (pur Dart)
@@ -18,7 +18,7 @@ CP_VILLE / TEL / REF / PARASITE) de chaque ligne OCR d'un bordereau.
 ```bash
 cd app
 flutter test integration_test/bordereau_batch_eval_test.dart -d <device-id> --dart-define-from-file=cloud.env.json
-adb pull /data/data/com.optiroute.opti_route/app_flutter/training_data.csv
+adb pull /data/data/com.optiroute.opti_route/app_flutter/training_data.csv ../tools/data/
 ```
 
 Output : ~1500-2000 lignes OCR (68 images x ~20-30 lignes/image).
@@ -34,7 +34,7 @@ page_01.jpg,0,1,"31 RUE ARISTIDE BRIAND",100,250,500,300,400,50
 ## 2. Labelliser via Gemini (Edge Function Supabase deja deployee)
 
 ```bash
-python tools/labelize_via_gemini.py training_data.csv training_data_labeled.csv
+python tools/labelize_via_gemini.py tools/data/training_data.csv tools/data/training_data_labeled_gemini.csv
 ```
 
 Le script appelle l'Edge Function `ocr-enhance` pour CHAQUE image
@@ -55,7 +55,7 @@ Toi tu valides 50-100 lignes au hasard et tu corriges (~20 min).
 
 ```bash
 pip install -r tools/requirements.txt
-python tools/train_classifier.py training_data_labeled.csv
+python tools/train_classifier.py tools/data/training_data_labeled_gemini.csv
 ```
 
 Output :
@@ -93,5 +93,5 @@ onnxruntime. Re-committer le JSON apres chaque re-entrainement.
 ## Iteration
 
 Quand Noah corrige des scans dans l'app, on enregistre les lignes
-corrigees dans `corrections.csv`. Periodique re-training du modele avec
+corrigees dans `tools/data/corrections.csv`. Periodique re-training du modele avec
 ces corrections en plus du dataset initial.

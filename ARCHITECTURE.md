@@ -48,8 +48,9 @@ opti_route/
 │   ├── design/                   # Tokens + maquettes Claude Design
 │   └── supabase-schema*.sql      # 3 fichiers (schema + multi-tenant + plans-381a)
 ├── site_doc/                     # Site vitrine statique -> GitHub Pages (/site)
-├── supabase/                     # Edge Functions + tests Deno
-│   └── functions/<name>/         # 1 dossier/function
+├── supabase/                     # Edge Functions + tests Deno + migrations SQL
+│   ├── functions/<name>/         # 1 dossier/function
+│   └── migrations/               # 3 fichiers SQL (source canonique, cf #510)
 ├── tools/                        # Pipeline ML Python (train + export JSON)
 └── scripts/                      # build-and-install.ps1, mirror-phone.ps1, ...
 ```
@@ -218,7 +219,6 @@ flutter test integration_test/bordereau_batch_eval_test.dart -d <device-id> --da
 
 - **Audit qualite 2026-06-11** : base des corrections #499 / #500 et de la
   passe docs 2026-07-07.
-- **Plan OCR 85% win rate** : `docs/plan-ocr-85pct.md`
 - **Schema cloud** : `docs/supabase-schema.sql` + `supabase-schema-multi-tenant.sql`
   + `supabase-schema-plans-381a.sql` (l'etat reel = empilement des trois).
 - **Memory Claude** : `~/.claude/projects/e--opti-route/memory/`

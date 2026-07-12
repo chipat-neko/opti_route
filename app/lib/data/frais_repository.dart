@@ -69,8 +69,12 @@ class FraisRepository {
   }
 
   /// Edition d'un frais. Tous les champs sont optionnels sauf l'id.
-  /// On ne touche pas a `creeLe`. Met `updatedAt = now` automatiquement
-  /// via le trigger AFTER UPDATE (cf database.dart _createUpdatedAtTriggers).
+  /// On ne touche pas a `creeLe`. Attention : contrairement a tournees/
+  /// stops/coequipiers/saved_destinations, la table `frais` n'a PAS de
+  /// trigger `AFTER UPDATE` (cf database.dart _createUpdatedAtTriggers,
+  /// qui ne couvre pas frais). `updatedAt` n'est donc pas rafraichi par
+  /// cette methode et conserve la valeur posee a l'insertion. Sans impact
+  /// tant que frais reste 100% local (pas de sync last-write-wins).
   Future<int> update(
     int id, {
     DateTime? date,

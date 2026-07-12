@@ -1,3 +1,4 @@
+-- ARCHIVE : source canonique = supabase/migrations/. Ne plus editer ici (cf #510).
 -- ═════════════════════════════════════════════════════════════════
 -- Supabase schema : Plans / abonnements — ÉTAPE A (fondation neutre)
 -- Carte Trello #388 ([381-A], épopée #381)

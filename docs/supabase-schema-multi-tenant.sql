@@ -1,3 +1,4 @@
+-- ARCHIVE : source canonique = supabase/migrations/. Ne plus editer ici (cf #510).
 -- ═════════════════════════════════════════════════════════════════
 -- Supabase schema : Multi-tenant entreprise + entrepôt + employé
 -- Carte Trello #362 (épopée #361)

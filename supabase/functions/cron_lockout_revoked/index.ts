@@ -104,12 +104,19 @@ serve(async (req: Request) => {
   }
 
   // Aussi : expire les invitations pending dont expires_at est passé
-  const { data: invExpired } = await adminClient
+  const { data: invExpired, error: invErr } = await adminClient
     .from('entreprise_invitations')
     .update({ statut: 'expired' })
     .eq('statut', 'pending')
     .lt('expires_at', new Date().toISOString())
     .select('cloud_id');
+
+  if (invErr) {
+    return jsonResponse(
+      { error: `entreprise_invitations update failed: ${invErr.message}` },
+      500,
+    );
+  }
 
   return jsonResponse({
     entreprise_users_expired: entUpdated?.length ?? 0,
