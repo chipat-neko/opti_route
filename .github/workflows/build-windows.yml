@@ -32,6 +32,15 @@ jobs:
     # Build Windows Flutter prend ~8-12 min. Timeout 20 min pour
     # absorber un setup Flutter long ou un cache miss.
     timeout-minutes: 20
+    # L'image windows-latest est passée à CMake 4.x, qui refuse le
+    # cmake_minimum_required(<3.5) du sous-build pdfium téléchargé par le
+    # plugin pdfx (via DownloadProject.cmake → execute_process). CMake >=4.0
+    # lit CMAKE_POLICY_VERSION_MINIMUM depuis l'ENVIRONNEMENT et l'hérite dans
+    # le cmake enfant du sous-build → rétablit la policy min 3.5. Un flag -D de
+    # haut niveau ne se propagerait PAS à ce sous-processus. Cf. release notes
+    # CMake 4.0. (À retirer quand pdfx/pdfium relèvera son cmake_minimum_required.)
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
     defaults:
       run:
         working-directory: app
