@@ -38,17 +38,19 @@ jobs:
     # Build Windows Flutter prend ~8-12 min. Timeout 20 min pour
     # absorber un setup Flutter long ou un cache miss.
     timeout-minutes: 20
-    # Garde-fous (harmless sur windows-2022, utiles si l'image évolue) :
-    # - CMAKE_POLICY_VERSION_MINIMUM : CMake >=4.0 refuse le
-    #   cmake_minimum_required(<3.5) du sous-build pdfium (plugin pdfx, via
-    #   DownloadProject → execute_process). Lu depuis l'ENV et hérité par le
-    #   cmake enfant (un flag -D ne s'y propagerait pas). Cf. release notes 4.0.
-    # - CL : MSVC 14.51 transforme la dépréciation de <experimental/coroutine>
-    #   en erreur dure (STL1011), cassant flutter_local_notifications_windows et
-    #   local_auth_windows. La var d'env CL préfixe ce /D à chaque appel cl.exe.
+    # Garde-fou défensif (inoffensif sur windows-2022 dont CMake est en 3.x,
+    # utile si l'image venait à passer en CMake >=4.0) : CMAKE_POLICY_VERSION_MINIMUM
+    # rétablit la policy min du sous-build pdfium (plugin pdfx, via DownloadProject
+    # → execute_process). Lu depuis l'ENV et hérité par le cmake enfant (un flag -D
+    # ne s'y propagerait pas). Cf. release notes CMake 4.0.
+    #
+    # NB : on N'injecte PAS de var d'env `CL` (ex. pour silencer STL1011 sur
+    # <experimental/coroutine>) : d'une part le MSVC 14.4x de windows-2022 ne
+    # transforme pas cette dépréciation en erreur (contrairement au 14.51 de
+    # windows-latest), d'autre part `CL` fait échouer la détection du compilateur
+    # par CMake (« No CMAKE_CXX_COMPILER could be found »).
     env:
       CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-      CL: "/D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
     defaults:
       run:
         working-directory: app
