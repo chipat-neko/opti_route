@@ -28,5 +28,7 @@ final optimizationServiceProvider = Provider<OptimizationService?>((ref) {
 final routeServiceProvider = Provider<RouteService?>((ref) {
   final apiKey = ref.watch(orsApiKeyProvider).asData?.value;
   if (apiKey == null || apiKey.isEmpty) return null;
-  return RouteService(apiKey: apiKey);
+  final service = RouteService(apiKey: apiKey);
+  ref.onDispose(service.close);
+  return service;
 });

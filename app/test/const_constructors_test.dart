@@ -115,7 +115,6 @@ void main() {
             ShareAdresseAction() => 'share_adresse',
             OpenInMapsAction() => 'open_in_maps',
             OpenStreetviewAction() => 'open_streetview',
-            GenerateTrackingLinkAction() => 'gen_tracking_link',
             MoveToTourneeAction() => 'move',
             ConvertTypeAction() => 'convert_type',
             ToggleLockPositionAction() => 'toggle_lock',
@@ -132,7 +131,6 @@ void main() {
       expect(label(const ShareAdresseAction()), 'share_adresse');
       expect(label(const OpenInMapsAction()), 'open_in_maps');
       expect(label(const OpenStreetviewAction()), 'open_streetview');
-      expect(label(const GenerateTrackingLinkAction()), 'gen_tracking_link');
       expect(label(const MoveToTourneeAction(42)), 'move');
       expect(label(const ConvertTypeAction('ramasse')), 'convert_type');
       expect(label(const ToggleLockPositionAction(true)), 'toggle_lock');
