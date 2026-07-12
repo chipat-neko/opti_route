@@ -44,6 +44,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # aligne sur ci.yml (bumper les 3 fichiers ensemble)
+          flutter-version: 3.41.9
           channel: stable
           cache: true
 
