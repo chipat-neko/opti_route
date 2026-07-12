@@ -137,6 +137,35 @@ void main() {
           .getSingle();
       expect(t.distanceTotaleM, 1500);
     });
+
+    test('valeurs identiques a la base : pas de re-write drift (idempotence)',
+        () async {
+      final tId = await seedTournee();
+      final s1 = await seedStop(tId, lat: 48.01, lng: 1.01);
+      final s2 = await seedStop(tId, lat: 48.02, lng: 1.02);
+      // Pre-seed exactement ce que OSRM va renvoyer.
+      await (db.update(db.tournees)..where((t) => t.id.equals(tId)))
+          .write(const TourneesCompanion(
+        distanceTotaleM: Value(5000),
+        dureeTotaleS: Value(600),
+      ));
+      var emissions = 0;
+      final sub = (db.select(db.tournees)..where((t) => t.id.equals(tId)))
+          .watchSingle()
+          .listen((_) => emissions++);
+      await pumpEventQueue();
+      final base = emissions; // 1re emission = valeur pre-seed
+      final osrm = OsrmRouteService(
+        client:
+            MockClient((req) async => http.Response(okBody(5000, 600), 200)),
+      );
+      final updater = RouteMetricsAutoUpdater(db: db, osrm: osrm);
+      await updater.forceUpdate(tId, [s1, s2]);
+      await pumpEventQueue();
+      expect(emissions, base,
+          reason: 'aucun write drift si distance + duree identiques');
+      await sub.cancel();
+    });
   });
 
   group('RouteMetricsAutoUpdater.requestUpdate — debounce', () {
