@@ -1,0 +1,28 @@
+# Dependabot (F14) : ouvre des PR hebdomadaires de mise a jour des
+# dependances. Deux ecosystemes : les packages Dart/Flutter (pubspec dans
+# app/) et les actions GitHub des workflows.
+# Doc : https://docs.github.com/code-security/dependabot/dependabot-version-updates
+version: 2
+updates:
+  # ── Packages Dart / Flutter ─────────────────────────────────────
+  - package-ecosystem: "pub"
+    directory: "/app" # le pubspec.yaml est dans app/
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    ignore:
+      # Pin DELIBERE (cf. commentaire pubspec) : receive_sharing_intent est
+      # fige a 1.8.0 car la v1.8.1+ compile en JVM 21 et casse la build
+      # Android ('Inconsistent JVM-target compatibility'). Ne pas bumper.
+      - dependency-name: "receive_sharing_intent"
+      # Override DELIBERE vers 0.5.41 (dependency_overrides) : la 0.6.0+eol
+      # est un stub vide (native assets non embarquees en APK release sous
+      # Flutter 3.41) -> crash au boot. Ne pas laisser dependabot le bouger.
+      - dependency-name: "sqlite3_flutter_libs"
+
+  # ── Actions GitHub des workflows (.github/workflows/) ────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
