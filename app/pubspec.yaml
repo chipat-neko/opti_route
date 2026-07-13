@@ -194,6 +194,11 @@ dev_dependencies:
   # (GeolocatorPlatform.instance = mock). Dependance transitive de
   # geolocator declaree explicitement pour pouvoir l'importer.
   geolocator_platform_interface: ^4.2.6
+  # fake_async : horloge virtuelle pour tester les timeouts/Timer sans
+  # attente reelle (route_service_test : timeout interne de 15s). Deja
+  # tiree transitivement par flutter_test, declaree ici pour l'importer
+  # sans warning depend_on_referenced_packages.
+  fake_async: ^1.3.0
   msix: ^3.16.13
 
 # App icon : pin lime + trace de route sur fond ink, designee via
