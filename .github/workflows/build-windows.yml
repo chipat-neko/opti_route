@@ -28,10 +28,29 @@ concurrency:
 jobs:
   build:
     name: Build Windows release
-    runs-on: windows-latest
+    # On ÉPINGLE l'image sur windows-2022 (VS 2022 / MSVC 14.4x / CMake 3.x)
+    # au lieu de windows-latest : ce dernier est passé sur un toolchain de
+    # préversion (VS 18 / MSVC 14.51 / CMake 4.x) qui casse le build (voir les
+    # deux env ci-dessous). Pour un artefact de release distribué, un toolchain
+    # figé et reproductible vaut mieux que le bleeding-edge. (Réévaluer quand les
+    # plugins auront rattrapé le nouveau MSVC ; windows-2022 reste supporté.)
+    runs-on: windows-2022
     # Build Windows Flutter prend ~8-12 min. Timeout 20 min pour
     # absorber un setup Flutter long ou un cache miss.
     timeout-minutes: 20
+    # Garde-fou défensif (inoffensif sur windows-2022 dont CMake est en 3.x,
+    # utile si l'image venait à passer en CMake >=4.0) : CMAKE_POLICY_VERSION_MINIMUM
+    # rétablit la policy min du sous-build pdfium (plugin pdfx, via DownloadProject
+    # → execute_process). Lu depuis l'ENV et hérité par le cmake enfant (un flag -D
+    # ne s'y propagerait pas). Cf. release notes CMake 4.0.
+    #
+    # NB : on N'injecte PAS de var d'env `CL` (ex. pour silencer STL1011 sur
+    # <experimental/coroutine>) : d'une part le MSVC 14.4x de windows-2022 ne
+    # transforme pas cette dépréciation en erreur (contrairement au 14.51 de
+    # windows-latest), d'autre part `CL` fait échouer la détection du compilateur
+    # par CMake (« No CMAKE_CXX_COMPILER could be found »).
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
     defaults:
       run:
         working-directory: app
