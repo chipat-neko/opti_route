@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -44,20 +45,37 @@ void main() {
       expect(data, isNull);
     });
 
-    test('timeout -> null (swallow exception)', () async {
-      final mock = MockClient((req) async {
-        await Future<void>.delayed(const Duration(seconds: 20));
-        return http.Response('', 200);
+    test('timeout interne (15s) -> null, en temps VIRTUEL (pas d\'attente '
+        'reelle)', () {
+      // Le timeout interne de fetchRoute (15s) est teste via fakeAsync :
+      // on avance l'horloge virtuelle au-dela des 15s sans attendre en vrai
+      // (le test tournait ~15s reelles avant). Le serveur mock "traine"
+      // au-dela du timeout -> fetchRoute doit resoudre a null (exception
+      // avalee), et non attendre la reponse a 30s.
+      fakeAsync((async) {
+        final mock = MockClient((req) async {
+          await Future<void>.delayed(const Duration(seconds: 30));
+          return http.Response('', 200);
+        });
+        final svc = RouteService(apiKey: 'k', client: mock);
+        RouteData? data;
+        var resolved = false;
+        svc
+            .fetchRoute(
+          from: const LatLng(48.0, 1.0),
+          to: const LatLng(48.5, 1.5),
+        )
+            .then((d) {
+          data = d;
+          resolved = true;
+        });
+        // Avance au-dela du timeout interne (15s) mais avant la reponse (30s).
+        async.elapse(const Duration(seconds: 16));
+        expect(resolved, isTrue,
+            reason: 'fetchRoute doit avoir resolu via son timeout');
+        expect(data, isNull);
       });
-      final svc = RouteService(apiKey: 'k', client: mock);
-      // fetchRoute a un timeout interne de 15s. Le test doit se terminer
-      // sans throw mais retourner null.
-      final data = await svc.fetchRoute(
-        from: const LatLng(48.0, 1.0),
-        to: const LatLng(48.5, 1.5),
-      );
-      expect(data, isNull);
-    }, timeout: const Timeout(Duration(seconds: 25)));
+    });
 
     test('JSON mal forme (features vide) -> null', () async {
       final mock = MockClient((req) async {
