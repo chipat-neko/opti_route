@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,12 +31,10 @@ import '../data/recurrence_service.dart';
 import '../data/recurrences_repository.dart';
 import '../data/saved_destinations_repository.dart';
 import '../data/secure_screen_service.dart';
-import '../data/sheets_repository.dart';
 import '../data/stats_service.dart';
 import '../data/stops_repository.dart';
 import '../data/template_share_service.dart';
 import '../data/tournees_repository.dart';
-import '../data/tracking_codes_repository.dart';
 import '../data/unified_search_service.dart';
 import '../data/work_sessions_repository.dart';
 import '../theme/app_tokens.dart';
@@ -50,10 +47,6 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 final tourneesRepositoryProvider = Provider<TourneesRepository>((ref) {
   return TourneesRepository(ref.watch(appDatabaseProvider));
-});
-
-final sheetsRepositoryProvider = Provider<SheetsRepository>((ref) {
-  return SheetsRepository(ref.watch(appDatabaseProvider));
 });
 
 final stopsRepositoryProvider = Provider<StopsRepository>((ref) {
@@ -177,12 +170,6 @@ final carnetPriveesCountProvider = StreamProvider.autoDispose<int>((ref) {
   return ref.watch(savedDestinationsRepositoryProvider).watchCountPrivees();
 });
 
-/// Adresses privées du carnet (liste pour le wizard de migration #365).
-final carnetPriveesProvider =
-    StreamProvider.autoDispose<List<SavedDestination>>((ref) {
-  return ref.watch(savedDestinationsRepositoryProvider).watchPrivees();
-});
-
 /// Lookup async du telephone client par nom (case-insensitive).
 /// Retourne null si pas de match dans le carnet. Sert au bouton
 /// "Appeler client" dans StopActionSheet (QW4 2026-05-31).
@@ -217,11 +204,6 @@ final clientConsignesByNomProvider = FutureProvider.family
         : entry.preferencePersonnalisee?.trim(),
     photoObligatoire: entry.photoObligatoire,
   );
-});
-
-final trackingCodesRepositoryProvider =
-    Provider<TrackingCodesRepository>((ref) {
-  return TrackingCodesRepository(ref.watch(appDatabaseProvider));
 });
 
 /// Carnet complet, charge UNE seule fois et partage entre tous les
@@ -266,25 +248,12 @@ final fraisRepositoryProvider = Provider<FraisRepository>((ref) {
   return FraisRepository(ref.watch(appDatabaseProvider));
 });
 
-/// Stream de tous les frais, du plus recent au plus ancien. Sert a
-/// l'ecran liste principal.
-final fraisAllProvider = StreamProvider.autoDispose<List<Frai>>((ref) {
-  return ref.watch(fraisRepositoryProvider).watchAll();
-});
-
 /// Stream des frais d'un mois donne (year, month 1-12). Famille de
 /// providers pour permettre plusieurs filtres mois simultanes en cache.
 final fraisByMonthProvider = StreamProvider.autoDispose
     .family<List<Frai>, (int, int)>((ref, ym) {
   final (year, month) = ym;
   return ref.watch(fraisRepositoryProvider).watchByMonth(year, month);
-});
-
-/// Stream des frais rattaches a une tournee specifique. Pour la card
-/// "Frais imputes" dans l'ecran d'une tournee.
-final fraisByTourneeProvider = StreamProvider.autoDispose
-    .family<List<Frai>, int>((ref, tourneeId) {
-  return ref.watch(fraisRepositoryProvider).watchByTournee(tourneeId);
 });
 
 /// Coequipiers actifs (visibles dans le selecteur d'affectation).
@@ -621,12 +590,6 @@ final modeEcoProvider = StreamProvider<bool>((ref) {
   return ref.watch(parametresRepositoryProvider).watchModeEco();
 });
 
-/// Nom de l'entreprise du chef d'equipe (optionnel, affiche dans les
-/// exports PDF / texte).
-final entrepriseNomProvider = StreamProvider<String?>((ref) {
-  return ref.watch(parametresRepositoryProvider).watchEntrepriseNom();
-});
-
 /// Compteurs motivants (cumul annuel + streak sans echec). Recalcule
 /// a chaque changement des tournees pour rester en sync.
 final motivationStatsProvider = FutureProvider<MotivationStats>((ref) async {
@@ -921,22 +884,6 @@ final tourneeMembresCountProvider =
   final query = db.select(db.tourneeMembres)
     ..where((m) => m.tourneeCloudId.equals(tourneeCloudId));
   return query.watch().map((rows) => rows.length);
-});
-
-/// Stream des rows TourneeMembres (cache local) pour une tournee
-/// donnee (jalon 3.B). Sert a la section "Coequipiers" de l'ecran
-/// tournee pour afficher owner/member badges sans round-trip cloud.
-/// Pour l'email reel des membres (que Drift n'a pas), passer par la
-/// RPC `listTourneeMembers` du CloudSyncService.
-final tourneeMembresProvider =
-    StreamProvider.family<List<TourneeMembre>, String>((ref, tourneeCloudId) {
-  final db = ref.watch(appDatabaseProvider);
-  final query = db.select(db.tourneeMembres)
-    ..where((m) => m.tourneeCloudId.equals(tourneeCloudId))
-    ..orderBy([
-      (m) => OrderingTerm.asc(m.joinedAt),
-    ]);
-  return query.watch();
 });
 
 /// Toutes les tournees datees d'aujourd'hui (peu importe leur statut).

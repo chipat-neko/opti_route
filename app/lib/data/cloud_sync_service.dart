@@ -491,31 +491,6 @@ class CloudSyncService {
     );
   }
 
-  /// Pousse un code de suivi colis (carte #81) vers la table cloud
-  /// `tracking_codes` pour que l'Edge Function `track` puisse le
-  /// resoudre. Best-effort : no-op si le stop n'a pas encore de cloudId
-  /// (il faut le pousser au cloud d'abord). Idempotent : upsert sur le
-  /// code (PK) -> re-generer le meme lien ne cree pas de doublon.
-  ///
-  /// Throws [CloudSyncException] uniquement sur erreur de config / auth.
-  Future<void> pushTrackingCode(String code, int localStopId) async {
-    final client = _client();
-    _requireUserId();
-    final stop = await (_db.select(_db.stops)
-          ..where((s) => s.id.equals(localStopId)))
-        .getSingleOrNull();
-    final stopCloudId = stop?.cloudId;
-    if (stopCloudId == null) {
-      // Stop jamais sync : impossible de lier le code. Le caller doit
-      // pousser la tournee/stop au cloud avant. No-op silencieux.
-      return;
-    }
-    await client.from('tracking_codes').upsert({
-      'code': code,
-      'stop_id': stopCloudId,
-    });
-  }
-
   // ─── Mode équipe live (jalon 3.A) ───────────────────────────────
 
   /// Crée une invitation à 6 chiffres pour la tournée locale donnée.

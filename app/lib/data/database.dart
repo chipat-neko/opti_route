@@ -13,13 +13,11 @@ import 'tables/geocode_cache.dart';
 import 'tables/parametres.dart';
 import 'tables/saved_destination_notes_perso.dart';
 import 'tables/saved_destinations.dart';
-import 'tables/sheets.dart';
 import 'tables/stop_history.dart';
 import 'tables/stops.dart';
 import 'tables/tournee_membres.dart';
 import 'tables/tournee_recurrences.dart';
 import 'tables/tournees.dart';
-import 'tables/tracking_codes.dart';
 import 'tables/work_sessions.dart';
 
 // Re-export des tables pour que les modules historiques qui faisaient
@@ -36,13 +34,11 @@ export 'tables/geocode_cache.dart';
 export 'tables/parametres.dart';
 export 'tables/saved_destination_notes_perso.dart';
 export 'tables/saved_destinations.dart';
-export 'tables/sheets.dart';
 export 'tables/stop_history.dart';
 export 'tables/stops.dart';
 export 'tables/tournee_membres.dart';
 export 'tables/tournee_recurrences.dart';
 export 'tables/tournees.dart';
-export 'tables/tracking_codes.dart';
 export 'tables/work_sessions.dart';
 
 part 'database.g.dart';
@@ -52,14 +48,12 @@ part 'database.g.dart';
     Tournees,
     Stops,
     Parametres,
-    Sheets,
     GeocodeCache,
     SavedDestinations,
     StopHistory,
     Coequipiers,
     TourneeMembres,
     Frais,
-    TrackingCodes,
     TourneeRecurrences,
     WorkSessions,
     // Epopee multi-tenant (carte #361/#362, 2026-05-31)
@@ -98,7 +92,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 51;
+  int get schemaVersion => 52;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -107,13 +101,17 @@ class AppDatabase extends _$AppDatabase {
           // Indexes utiles aux requetes frequentes -- cf migration v22
           // ci-dessous pour les motifs et les gains de perf attendus.
           await _createPerfIndexes();
+          // Index cloud_id (F19) : separes de _createPerfIndexes (qui
+          // tourne aussi en v22, avant que cloud_id existe). Idem v52.
+          await _createCloudIdIndexes();
           // Triggers `AFTER UPDATE` qui maintiennent updated_at a jour
           // automatiquement -- cf migration v25 ci-dessous.
           await _createUpdatedAtTriggers();
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
-            await _safeCreateTable(m, sheets);
+            // Table `sheets` supprimee en v52 (F29, feature morte) : on ne
+            // la cree plus. La migration v52 la DROP si elle existe.
           }
           if (from < 3) {
             await _safeCreateTable(m, geocodeCache);
@@ -386,12 +384,9 @@ class AppDatabase extends _$AppDatabase {
             await _safeAddColumn(m, savedDestinations, savedDestinations.telephone);
           }
           if (from < 36) {
-            // Table `tracking_codes` : codes courts (4 chars) attribues
-            // a un stop pour generer un lien tracking 20 chars lisible
-            // par le client final (Amazon Auneau). MVP scaffold local
-            // pour l'instant : `cloud_pushed` reste false tant que
-            // l'Edge Function backend n'est pas deployee. Carte #141.
-            await _safeCreateTable(m, trackingCodes);
+            // Table `tracking_codes` supprimee en v52 (F5, suivi colis
+            // abandonne) : on ne la cree plus. La migration v52 la DROP
+            // si elle existe.
           }
           if (from < 37) {
             // Colonne `position_locked` (BOOL, default false) sur stops :
@@ -504,6 +499,16 @@ class AppDatabase extends _$AppDatabase {
               "UPDATE entreprises SET plan = 'illimite' WHERE plan IS NULL",
             );
           }
+          if (from < 52) {
+            // Purge des features mortes : suivi colis `tracking_codes`
+            // (F5) et `sheets` (F29). DROP idempotent (IF EXISTS) : sans
+            // effet si la table n'a jamais ete creee.
+            await customStatement('DROP TABLE IF EXISTS tracking_codes');
+            await customStatement('DROP TABLE IF EXISTS sheets');
+            // Index cloud_id manquants (F19) sur les tables sync :
+            // accelere le lookup par cloud_id du pull last-write-wins.
+            await _createCloudIdIndexes();
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -535,6 +540,19 @@ class AppDatabase extends _$AppDatabase {
         'CREATE INDEX IF NOT EXISTS idx_stop_history_stop_id ON stop_history(stop_id)');
     await customStatement(
         'CREATE INDEX IF NOT EXISTS idx_geocode_cache_expire_le ON geocode_cache(expire_le)');
+  }
+
+  /// Index sur les colonnes `cloud_id` (ajoutees en v23). Separes de
+  /// [_createPerfIndexes] car celui-ci tourne aussi en migration v22 --
+  /// avant que `cloud_id` existe, un CREATE INDEX dessus echouerait.
+  /// Appele en onCreate (toutes colonnes presentes) et en migration v52.
+  Future<void> _createCloudIdIndexes() async {
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_stops_cloud_id ON stops(cloud_id)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_tournees_cloud_id ON tournees(cloud_id)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_coequipiers_cloud_id ON coequipiers(cloud_id)');
   }
 
   /// Triggers SQLite qui maintiennent automatiquement `updated_at` a

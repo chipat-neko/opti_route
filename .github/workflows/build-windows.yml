@@ -74,6 +74,12 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # Regenere le code Drift (.g.dart) avant le build : evite qu'un
+      # .g.dart committe desynchronise du schema casse `flutter build windows`
+      # (le build ne regenere pas tout seul le code genere).
+      - name: dart run build_runner build
+        run: dart run build_runner build --delete-conflicting-outputs
+
       # Confidentialité (RGPD) : voir deploy-web.yml. Les fixtures OCR
       # (assets/test_bordereaux/, ~24 MB de scans de bordereaux clients
       # RÉELS) ne servent qu'au batch eval. Sans ce strip, l'exe/MSIX

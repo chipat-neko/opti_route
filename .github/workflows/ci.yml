@@ -141,6 +141,12 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # Regenere le code Drift (.g.dart) : sinon `flutter build` compile le
+      # .g.dart committe tel quel et casse s'il est desynchronise du schema
+      # (cf le job flutter qui, lui, regenere avant analyze/test).
+      - name: dart run build_runner build
+        run: dart run build_runner build --delete-conflicting-outputs
+
       # Confidentialite (RGPD) : voir deploy-web.yml. On retire les
       # fixtures OCR (scans clients reels) du pubspec avant le build.
       - name: Strip test fixtures from pubspec (privacy)
