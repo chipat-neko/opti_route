@@ -124,7 +124,7 @@ jobs:
 
       # Upload le contenu de build/web/ comme artifact dedie Pages.
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: app/build/web
 
