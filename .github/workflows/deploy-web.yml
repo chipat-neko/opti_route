@@ -120,7 +120,7 @@ jobs:
       # Setup Pages : prepare la configuration GitHub Pages (cree
       # l'environnement si premiere fois, recupere l'URL de deploy).
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       # Upload le contenu de build/web/ comme artifact dedie Pages.
       - name: Upload Pages artifact
