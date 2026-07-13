@@ -17,7 +17,7 @@ name: Deploy site web (Flutter Web -> GitHub Pages)
 
 # Permissions necessaires pour publier sur GitHub Pages via Actions :
 # - pages: write     -> ecrire le deploiement
-# - id-token: write  -> requis par actions/deploy-pages@v4 (OIDC)
+# - id-token: write  -> requis par actions/deploy-pages@v5 (OIDC)
 # - contents: read   -> checkout du repo
 permissions:
   pages: write
@@ -143,4 +143,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
