@@ -98,7 +98,7 @@ dependencies:
   # sur SharedPreferences en clair -> token long-lived volable sur device
   # roote/vole (audit #179). Branche via un LocalStorage custom dans
   # SupabaseService.init.
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^10.3.1
   # uuid : generation cote app de UUIDs v4 servant de cle primaire dans
   # le schema cloud Supabase (sous-jalon 2.B). Indispensable pour
   # generer l'id LOCALEMENT avant l'INSERT cloud, puis le persister
