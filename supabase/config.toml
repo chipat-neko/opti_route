@@ -10,13 +10,6 @@ verify_jwt = true
 # Authorization pour appeler la function. Empeche l'abus de quota
 # Gemini par des bots qui auraient l'URL publique.
 
-[functions.track]
-verify_jwt = false
-# verify_jwt = false : le destinataire d'un colis n'a PAS de compte
-# opti_route. Le lien de suivi est public par nature. Le code 4 chars
-# + expiration 24h tient lieu de secret (carte #81). La function lit
-# tracking_codes + stops via la service role key cote serveur.
-
 [functions.cron_lockout_revoked]
 verify_jwt = false
 # verify_jwt = false : appelee par le cron Supabase via net.http_post qui

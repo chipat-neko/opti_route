@@ -89,8 +89,8 @@ class TourneesRepository {
     return row.read(count) ?? 0;
   }
 
-  /// Supprime les tournees datees avant [olderThan]. Les stops/sheets
-  /// associees sont supprimees en cascade via la FK `onDelete: cascade`
+  /// Supprime les tournees datees avant [olderThan]. Les stops associes
+  /// sont supprimes en cascade via la FK `onDelete: cascade`
   /// du schema. Retourne le nombre de tournees effacees.
   Future<int> deleteOlderThan(DateTime olderThan) async {
     return (_db.delete(_db.tournees)

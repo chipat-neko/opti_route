@@ -305,7 +305,6 @@ class ParametresRepository {
   /// SIRET et un slogan court pour personnaliser les bordereaux
   /// imprimables qu'il distribue a ses coequipiers.
   Future<String?> getEntrepriseNom() => _readKey(_kEntrepriseNom);
-  Stream<String?> watchEntrepriseNom() => _watchKey(_kEntrepriseNom);
   Future<void> setEntrepriseNom(String v) =>
       _write(_kEntrepriseNom, v.trim());
   Future<int> clearEntrepriseNom() => _delete(_kEntrepriseNom);

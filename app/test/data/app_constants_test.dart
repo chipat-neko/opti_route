@@ -3,27 +3,9 @@ import 'package:opti_route/data/app_constants.dart';
 
 // Verrouille les invariants metier des constantes globales. Un test
 // echoue si quelqu'un modifie une de ces constantes sans verifier la
-// contrainte associee (ex: lien tracking > 20 chars).
+// contrainte associee (ex: seuils geo coherents, timeouts ordonnes).
 void main() {
   group('app_constants — contraintes metier', () {
-    test('lien tracking total : "https://<domaine>/<code>" <= 20 chars', () {
-      // Contrainte stricte logiciel Amazon Auneau (cf doc carte #141).
-      final lien = 'https://$kTrackingDomain/${'x' * kTrackingCodeLength}';
-      expect(lien.length, lessThanOrEqualTo(20),
-          reason: 'depasser 20 chars casse Amazon Auneau, cf #141');
-    });
-
-    test('kTrackingDomain non vide et sans https://', () {
-      expect(kTrackingDomain, isNotEmpty);
-      expect(kTrackingDomain.contains('://'), isFalse,
-          reason: 'le schema est ajoute par le caller, pas dans la constante');
-    });
-
-    test('kTrackingCodeLength >= 3 (collisions raisonnables)', () {
-      // 3 chars [a-z0-9] = 36^3 = 46656 combinaisons, deja confortable.
-      expect(kTrackingCodeLength, greaterThanOrEqualTo(3));
-    });
-
     test('seuils geo coherents : doublon < geocodeCache', () {
       // Deux points a moins de 30m sont consideres doublons. Le cache
       // tolere jusqu'a 50m pour la reutilisation. Inverser casserait
