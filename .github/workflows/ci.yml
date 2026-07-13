@@ -61,6 +61,30 @@ jobs:
       - name: flutter test
         run: flutter test --coverage --reporter expanded
 
+      # F16 — resume de couverture dans le recap du job (onglet Summary).
+      # Parse le lcov : LF = lignes trouvables, LH = lignes couvertes.
+      # Best-effort : ne fait JAMAIS echouer le job (if: always + garde
+      # sur l'absence du fichier).
+      - name: Coverage summary
+        if: always()
+        run: |
+          f=coverage/lcov.info
+          if [ -f "$f" ]; then
+            read lh lf <<< "$(awk -F: '/^LH:/{h+=$2} /^LF:/{t+=$2} END{print h+0, t+0}' "$f")"
+            if [ "${lf:-0}" -gt 0 ]; then
+              pct=$(awk "BEGIN{printf \"%.1f\", ${lh:-0}*100/${lf:-0}}")
+            else
+              pct="n/a"
+            fi
+            {
+              echo "## Couverture de tests"
+              echo ""
+              echo "**${lh:-0} / ${lf:-0} lignes couvertes** (${pct} %)"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "lcov.info absent — pas de resume de couverture." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload coverage (lcov)
         uses: actions/upload-artifact@v4
         with:
@@ -88,3 +112,39 @@ jobs:
 
       - name: deno test
         run: deno test supabase/functions/_tests/
+
+  # ────────────────────────────────────────────────────────────────
+  # F13 — Build web en PR uniquement : detecte une casse du build
+  # Flutter Web des la PR (deploy-web.yml, lui, ne tourne que sur push
+  # main -> une regression web n'etait vue qu'apres merge). Pas de
+  # deploy ni d'upload Pages ici, juste `flutter build web`.
+  # ────────────────────────────────────────────────────────────────
+  build-web:
+    name: build web (verif PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # aligne sur ci.yml/deploy-web/build-windows (bumper les 3 fichiers ensemble)
+          flutter-version: 3.41.9
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      # Confidentialite (RGPD) : voir deploy-web.yml. On retire les
+      # fixtures OCR (scans clients reels) du pubspec avant le build.
+      - name: Strip test fixtures from pubspec (privacy)
+        run: sed -i '/test_bordereaux/d' pubspec.yaml
+
+      - name: flutter build web (release, sans deploy)
+        run: flutter build web --release
