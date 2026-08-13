@@ -25,6 +25,16 @@ class ClientWindowSuggestion {
   /// Suggestion seulement si on a >= 3 hits (sinon pas assez fiable).
   static const int minHitsForSuggestion = 3;
 
+  /// Fin de fenêtre quand la dernière livraison tombe à 23 h : l'heure
+  /// englobante serait 24 h, qui n'existe pas au format "HH:MM"
+  /// (`EtaCalculator.crossWindow` rejette toute heure > 23 et retomberait
+  /// sur « pas de fenêtre »). L'ancien `clamp(0, 23)` rendait "23:00",
+  /// soit une fenêtre "23:00"-"23:00" vide : le badge early/ok/late
+  /// classait alors en `late` toute arrivée après 23:00 pile, y compris
+  /// aux heures mêmes où le client a toujours été livré. On borne donc à
+  /// la dernière minute du jour.
+  static const String finDeJournee = '23:59';
+
   /// Calcule la suggestion à partir de l'historique. Retourne null si
   /// pas assez d'historique livre.
   static ClientWindowSuggestion? compute(List<Stop> historicalStops) {
@@ -37,8 +47,9 @@ class ClientWindowSuggestion {
     final maxH = hours.last + 1; // +1 pour englober la dernière heure
     return ClientWindowSuggestion(
       fenetreDebut: '${minH.toString().padLeft(2, '0')}:00',
-      fenetreFin:
-          '${maxH.clamp(0, 23).toString().padLeft(2, '0')}:00',
+      fenetreFin: maxH > 23
+          ? finDeJournee
+          : '${maxH.toString().padLeft(2, '0')}:00',
       basedOnHits: hits.length,
     );
   }

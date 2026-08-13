@@ -40,8 +40,11 @@ class CarnetFilters {
   final String? periode;
 
   /// Filtre regularite (`useCount`). Null = pas de filtre.
-  /// 'reguliers' = useCount >= 5, 'uniques' = useCount == 1.
-  /// Carte Trello #105.
+  /// 'reguliers' = useCount >= 5, 'uniques' = useCount <= 1 (chip
+  /// "jamais reutilises"). Le compteur demarre a 1 a la creation de la
+  /// fiche (1re livraison) et n'est incremente qu'aux livraisons
+  /// suivantes : une fiche jamais reutilisee vaut donc 1, et 0 pour les
+  /// rares fiches arrivees du cloud sans usage. Carte Trello #105.
   final String? regularite;
 
   /// Compte les filtres actifs hors recherche texte (utilise pour le
@@ -89,15 +92,50 @@ class CarnetFilters {
       );
 }
 
-/// Borne inferieure du filtre periode.
-DateTime periodeCutoff(String periode) {
-  final now = DateTime.now();
+/// Borne inferieure du filtre periode. [now] n'est la que pour les
+/// tests (par defaut : l'instant courant).
+///
+/// '6m' et '1y' reculent en arithmetique CALENDAIRE. Avant, ils
+/// soustrayaient 30 * 6 = 180 jours et 365 jours : 6 mois calendaires
+/// font en realite 181 a 184 jours selon la periode de l'annee, et une
+/// annee bissextile en fait 366. La borne tombait donc jusqu'a 4 jours
+/// trop tard (trop recente), soit une fenetre d'autant plus courte que
+/// ce que le libelle du chip promet. '30d' reste une vraie duree de
+/// 30 jours : c'est exactement ce que son libelle annonce.
+///
+/// Debordement de quantieme : quand le jour n'existe pas dans le mois
+/// cible, on le borne au DERNIER jour de ce mois. 31 aout - 6 mois =
+/// 28 fevrier (et non le 3 mars, ce que donnerait la normalisation
+/// automatique de `DateTime(2026, 2, 31)`, qui raccourcirait encore la
+/// fenetre au lieu de l'elargir).
+DateTime periodeCutoff(String periode, {DateTime? now}) {
+  final ref = now ?? DateTime.now();
   return switch (periode) {
-    '30d' => now.subtract(const Duration(days: 30)),
-    '6m' => now.subtract(const Duration(days: 30 * 6)),
-    '1y' => now.subtract(const Duration(days: 365)),
+    '30d' => ref.subtract(const Duration(days: 30)),
+    '6m' => _reculeDeMois(ref, 6),
+    '1y' => _reculeDeMois(ref, 12),
     _ => DateTime(1970),
   };
+}
+
+/// Recule [mois] mois calendaires depuis [from] en gardant l'heure, avec
+/// le quantieme borne au dernier jour du mois cible (cf [periodeCutoff]).
+DateTime _reculeDeMois(DateTime from, int mois) {
+  final total = from.year * 12 + (from.month - 1) - mois;
+  final annee = total ~/ 12;
+  final moisCible = total % 12 + 1;
+  // Jour 0 du mois suivant = dernier jour du mois cible (28/29/30/31).
+  final dernierJour = DateTime(annee, moisCible + 1, 0).day;
+  return DateTime(
+    annee,
+    moisCible,
+    from.day < dernierJour ? from.day : dernierJour,
+    from.hour,
+    from.minute,
+    from.second,
+    from.millisecond,
+    from.microsecond,
+  );
 }
 
 /// Applique [filters] puis la recherche texte [query] a la liste
@@ -137,7 +175,11 @@ List<SavedDestination> filterCarnet(
   if (rf == 'reguliers') {
     filtered = filtered.where((d) => d.useCount >= 5);
   } else if (rf == 'uniques') {
-    filtered = filtered.where((d) => d.useCount == 1);
+    // Chip "jamais reutilises" : useCount part a 1 des la creation de la
+    // fiche, donc 1 = livre une seule fois. Le `== 1` d'origine laissait
+    // echapper les fiches a 0 (jamais utilisees du tout), qui sont a
+    // plus forte raison jamais reutilisees.
+    filtered = filtered.where((d) => d.useCount <= 1);
   }
   if (query.isEmpty) return filtered.toList();
   final norm = normalizeText(query);
