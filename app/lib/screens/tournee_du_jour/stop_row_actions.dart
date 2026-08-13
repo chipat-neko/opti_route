@@ -52,18 +52,30 @@ class StopRowActions {
     final markLivreService = ref.read(markLivreServiceProvider);
     final pos = await captureGpsBestEffort();
     await repo.markLivre(stop.id, position: pos);
-    if (!context.mounted) return;
-    unawaited(HapticFeedback.mediumImpact());
-    messenger.showSuccess(
-      '${_primaryLine(stop)} '
-      'marque ${stopActionVerbParticipe(stop.type)}',
-      action: SnackBarAction(
-        label: 'Photo preuve',
-        textColor: AppColors.ink,
-        onPressed: () => _capturerPreuve(ref, stop),
-      ),
-    );
-    await markLivreService.syncStatutTournee(stop.tourneeId);
+
+    // La cloture est lancee AVANT la garde de montage, et volontairement
+    // pas attendue tout de suite : elle ne depend pas de l'ecran, alors
+    // que le retour utilisateur, lui, en depend.
+    //
+    // L'ordre inverse (garde puis cloture) avait un trou : swiper le
+    // DERNIER arret puis fermer l'ecran dans la foulee faisait sortir
+    // sur le `return`, et la tournee ne basculait jamais en 'terminee'
+    // -- ni recap de fin de tournee, ni annulation des deux rappels.
+    final cloture = markLivreService.syncStatutTournee(stop.tourneeId);
+
+    if (context.mounted) {
+      unawaited(HapticFeedback.mediumImpact());
+      messenger.showSuccess(
+        '${_primaryLine(stop)} '
+        'marque ${stopActionVerbParticipe(stop.type)}',
+        action: SnackBarAction(
+          label: 'Photo preuve',
+          textColor: AppColors.ink,
+          onPressed: () => _capturerPreuve(ref, stop),
+        ),
+      );
+    }
+    await cloture;
   }
 
   /// "Marquer livre" en 1 tap, sans passer par la bottom sheet : le
