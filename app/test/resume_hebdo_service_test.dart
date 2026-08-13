@@ -1,8 +1,9 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/database.dart';
 import 'package:opti_route/data/resume_hebdo_service.dart';
+
+import 'helpers/test_db.dart';
 
 /// Tests du ResumeHebdoService (carte Trello #101).
 void main() {
@@ -40,8 +41,12 @@ void main() {
     late ResumeHebdoService svc;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      svc = ResumeHebdoService(db);
+      db = makeTestDb();
+      // Horloge figee (F8a) : ces tests passent tous une `reference`
+      // explicite, mais on coupe quand meme le service de l'horloge
+      // systeme pour qu'aucun ajout futur ne redevienne dependant du
+      // jour de run.
+      svc = ResumeHebdoService(db, now: () => DateTime(2026, 5, 27, 9));
     });
 
     tearDown(() async {
@@ -237,6 +242,86 @@ void main() {
       // Pas de semaine precedente seedee
       expect(r.variationVsPrev('nb_livres'), isNull);
       expect(r.previousValue('nb_livres'), isNull);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // F8a — `computeWeek()` SANS reference : c'est le seul chemin qui
+  // lisait l'horloge. Avant l'injection, ces cas n'etaient pas
+  // testables : le resultat dependait du jour (et de l'heure) ou
+  // tournait la suite -- un run le dimanche a 23h59 ne resumait pas la
+  // meme semaine qu'une minute plus tard.
+  // ────────────────────────────────────────────────────────────────
+  group('ResumeHebdoService.computeWeek - horloge injectee (F8a)', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = makeTestDb();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    /// Service cale sur une horloge figee a [fixed].
+    ResumeHebdoService svcAt(DateTime fixed) =>
+        ResumeHebdoService(db, now: () => fixed);
+
+    /// Un arret livre sur la tournee [tourneeId].
+    Future<void> seedLivre(int tourneeId) async {
+      await db.into(db.stops).insert(
+            StopsCompanion.insert(
+              tourneeId: tourneeId,
+              adresseBrute: 'A',
+              statutLivraison: const Value('livre'),
+            ),
+          );
+    }
+
+    test('sans reference : cale sur la semaine de l horloge injectee',
+        () async {
+      // Mardi 26 mai 2026, 09h00 -> semaine du lundi 25/05.
+      final r = await svcAt(DateTime(2026, 5, 26, 9)).computeWeek();
+      expect(r.semaineDebut, DateTime(2026, 5, 25));
+      expect(r.semaineFin, DateTime(2026, 5, 31, 23, 59, 59));
+    });
+
+    test('dimanche 23h59 et lundi 00h00 : deux semaines distinctes',
+        () async {
+      // Une seule tournee, le dimanche 31/05.
+      final tId = await seedTournee(db, date: DateTime(2026, 5, 31));
+      await seedLivre(tId);
+
+      final avantMinuit =
+          await svcAt(DateTime(2026, 5, 31, 23, 59, 59)).computeWeek();
+      expect(avantMinuit.semaineDebut, DateTime(2026, 5, 25));
+      expect(avantMinuit.nbTournees, 1);
+      expect(avantMinuit.nbLivres, 1);
+
+      // Une minute plus tard, on a bascule de semaine : la semaine
+      // courante est vide et la tournee du dimanche est comptee dans
+      // la semaine PRECEDENTE.
+      final apresMinuit = await svcAt(DateTime(2026, 6, 1)).computeWeek();
+      expect(apresMinuit.semaineDebut, DateTime(2026, 6, 1));
+      expect(apresMinuit.isEmpty, isTrue);
+      expect(apresMinuit.previousValue('nb_livres'), 1);
+      expect(apresMinuit.variationVsPrev('nb_livres'), closeTo(-1.0, 0.001));
+    });
+
+    test('semaine a cheval sur deux mois (29 juin -> 5 juillet)', () async {
+      // Le lundi 29/06/2026 et le mercredi 01/07/2026 sont dans la
+      // MEME semaine : le calage lundi ne doit pas se faire couper par
+      // la fin de mois.
+      final tJuin = await seedTournee(db, date: DateTime(2026, 6, 30));
+      await seedLivre(tJuin);
+      final tJuillet = await seedTournee(db, date: DateTime(2026, 7, 1));
+      await seedLivre(tJuillet);
+
+      final r = await svcAt(DateTime(2026, 7, 1, 8)).computeWeek();
+      expect(r.semaineDebut, DateTime(2026, 6, 29));
+      expect(r.semaineFin, DateTime(2026, 7, 5, 23, 59, 59));
+      expect(r.nbTournees, 2);
+      expect(r.nbLivres, 2);
     });
   });
 }
