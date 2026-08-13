@@ -17,6 +17,14 @@ Desktop.ini
 .env
 .env.*
 
+# Keystores de signature + mots de passe (ceinture au niveau racine : app/
+# et app/android/ ont déjà leurs règles, celle-ci couvre le cas où un de ces
+# fichiers atterrit ailleurs dans l'arbre). Cf docs/keystore-release.md :
+# l'emplacement recommandé est ~/keystores/opti_route/, hors du repo.
+*.jks
+*.keystore
+key.properties
+
 # Outils
 __pycache__/
 *.pyc

@@ -1,3 +1,11 @@
+# F14 — Actions tierces EPINGLEES par SHA de commit.
+# Un tag flottant (`@v4`) est mutable : le proprietaire de l'action peut le
+# repointer sur n'importe quel commit, qui s'executerait alors avec les
+# secrets et le token du workflow (ici : SUPABASE_*, et le droit de publier
+# sur Pages). Un SHA, lui, est immuable.
+# Le `# vX.Y.Z` en bout de ligne n'est qu'une aide de lecture : c'est le SHA
+# qui fait foi. Dependabot (.github/dependabot.yml, ecosysteme
+# "github-actions") ouvre chaque semaine la PR qui bumpe SHA + commentaire.
 name: Deploy site web (Flutter Web -> GitHub Pages)
 
 # Declenchement :
@@ -49,10 +57,10 @@ jobs:
         working-directory: app
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           # aligne sur ci.yml (bumper les 3 fichiers ensemble)
           flutter-version: 3.41.9
@@ -126,11 +134,11 @@ jobs:
       # Setup Pages : prepare la configuration GitHub Pages (cree
       # l'environnement si premiere fois, recupere l'URL de deploy).
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
 
       # Upload le contenu de build/web/ comme artifact dedie Pages.
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: app/build/web
 
@@ -149,4 +157,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
