@@ -11,19 +11,35 @@ import 'geo_utils.dart';
 class PoiDetour {
   PoiDetour._();
 
-  /// Retourne l'index optimal d'insertion (entre 0 et pending.length
-  /// inclus). 0 = avant le 1er pending, length = apres le dernier.
+  /// Retourne l'index optimal d'insertion DANS [pending] (entre 0 et
+  /// pending.length inclus). 0 = avant le 1er pending, length = apres le
+  /// dernier.
   ///
   /// [origin] : point de depart actuel (typiquement la position GPS
-  /// courante). [pending] = stops a livrer (avec coords). [poi] =
+  /// courante). [pending] = stops a livrer, dans l'ordre courant. [poi] =
   /// coords du POI a inserer.
+  ///
+  /// Les stops sans coordonnees ne peuvent pas participer au calcul du
+  /// detour (on ignore ou ils sont) mais ils comptent dans l'index
+  /// retourne : celui-ci se rapporte toujours a [pending] telle que
+  /// l'appelant la connait. Avant ce remappage, l'index designait une
+  /// position dans la liste filtree, donc un seul stop non geocode en
+  /// amont suffisait a decaler l'insertion. Convention retenue : on
+  /// insere juste AVANT le stop geocode retenu, ou en fin de liste si le
+  /// POI vient apres le dernier d'entre eux.
   static int bestInsertionIndex({
     required (double lat, double lng) origin,
     required List<Stop> pending,
     required (double lat, double lng) poi,
   }) {
-    final geo = pending.where((s) => s.lat != null && s.lng != null).toList();
-    if (geo.isEmpty) return 0;
+    // Index (dans `pending`) des stops exploitables pour le calcul.
+    final geoIdx = <int>[];
+    for (var i = 0; i < pending.length; i++) {
+      final s = pending[i];
+      if (s.lat != null && s.lng != null) geoIdx.add(i);
+    }
+    if (geoIdx.isEmpty) return 0;
+    final geo = [for (final i in geoIdx) pending[i]];
     double bestDelta = double.infinity;
     int bestIdx = 0;
     // candidat : insertion a l'index i = entre geo[i-1] et geo[i].
@@ -60,7 +76,9 @@ class PoiDetour {
       final delta = (viaPoiPrev + viaPoiNext) - directBefore;
       if (delta < bestDelta) {
         bestDelta = delta;
-        bestIdx = i;
+        // Retour a l'index dans `pending` : devant le i-eme stop
+        // geocode, ou en fin de liste s'il n'y en a plus apres.
+        bestIdx = i == geo.length ? pending.length : geoIdx[i];
       }
     }
     return bestIdx;
