@@ -2,9 +2,12 @@
 // (audit 2026-06-11).
 import {
   assertEquals,
+  assertNotEquals,
 } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import {
+  ALLOWED_ORIGINS,
   checkInvitation,
+  corsHeaders,
   deriveEntrepriseRole,
   type InvitationRow,
 } from '../accept_invitation/lib.ts';
@@ -89,4 +92,57 @@ Deno.test('deriveEntrepriseRole : admin passe, le reste -> membre', () => {
   assertEquals(deriveEntrepriseRole('admin_entreprise'), 'admin_entreprise');
   assertEquals(deriveEntrepriseRole('chef_entrepot'), 'membre');
   assertEquals(deriveEntrepriseRole('employe'), 'membre');
+});
+
+// ── CORS restreint (F39) ─────────────────────────────────────────────
+
+function reqWithOrigin(origin?: string): Request {
+  const headers = origin ? { origin } : undefined;
+  return new Request('https://x.test/accept_invitation', { headers });
+}
+
+Deno.test('corsHeaders : plus de wildcard `*` (F39)', () => {
+  for (const origin of [undefined, 'https://chipat-neko.github.io', 'https://evil.example.com']) {
+    const h = corsHeaders(reqWithOrigin(origin));
+    assertEquals(h['Access-Control-Allow-Origin'] === '*', false);
+  }
+});
+
+Deno.test('corsHeaders : origine prod autorisée renvoyée telle quelle', () => {
+  const h = corsHeaders(reqWithOrigin('https://chipat-neko.github.io'));
+  assertEquals(h['Access-Control-Allow-Origin'], 'https://chipat-neko.github.io');
+  assertEquals(h['Vary'], 'Origin');
+});
+
+Deno.test('corsHeaders : localhost avec port autorisé (dev web)', () => {
+  const h = corsHeaders(reqWithOrigin('http://localhost:8080'));
+  assertEquals(h['Access-Control-Allow-Origin'], 'http://localhost:8080');
+});
+
+Deno.test('corsHeaders : origine inconnue -> pas d\'écho', () => {
+  const h = corsHeaders(reqWithOrigin('https://evil.example.com'));
+  // Jamais l'origine du tiers : le navigateur bloquera la lecture.
+  assertNotEquals(h['Access-Control-Allow-Origin'], 'https://evil.example.com');
+  assertEquals(h['Access-Control-Allow-Origin'], ALLOWED_ORIGINS[0]);
+});
+
+Deno.test('corsHeaders : un préfixe du domaine prod ne suffit pas', () => {
+  const h = corsHeaders(reqWithOrigin('https://chipat-neko.github.io.evil.com'));
+  assertEquals(h['Access-Control-Allow-Origin'], ALLOWED_ORIGINS[0]);
+});
+
+Deno.test('corsHeaders : sans en-tête Origin (mobile/desktop) -> réponse valide', () => {
+  // Un client natif n'envoie pas d'Origin et n'est pas soumis au CORS :
+  // la restriction ne doit pas casser ce flux (en-têtes bien formés,
+  // méthode POST toujours annoncée).
+  const h = corsHeaders(reqWithOrigin());
+  assertEquals(h['Access-Control-Allow-Origin'], ALLOWED_ORIGINS[0]);
+  assertEquals(h['Access-Control-Allow-Methods'], 'POST, OPTIONS');
+});
+
+Deno.test('corsHeaders : préflight accepte les en-têtes du client Supabase', () => {
+  const h = corsHeaders(reqWithOrigin('https://chipat-neko.github.io'));
+  for (const name of ['authorization', 'x-client-info', 'apikey', 'content-type']) {
+    assertEquals(h['Access-Control-Allow-Headers'].includes(name), true, name);
+  }
 });

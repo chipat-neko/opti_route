@@ -50,7 +50,7 @@ opti_route/
 ├── site_doc/                     # Site vitrine statique -> GitHub Pages (/site)
 ├── supabase/                     # Edge Functions + tests Deno + migrations SQL
 │   ├── functions/<name>/         # 1 dossier/function
-│   └── migrations/               # 3 fichiers SQL (source canonique, cf #510)
+│   └── migrations/               # 4 fichiers SQL (source canonique, cf #510)
 ├── tools/                        # Pipeline ML Python (train + export JSON)
 └── scripts/                      # build-and-install.ps1, mirror-phone.ps1, ...
 ```

@@ -168,6 +168,47 @@
     <a href="https://keepachangelog.com/fr/">Keep a Changelog</a>.
   </p>
 
+  <!-- =================== Non publie (2026-07-13) =================== -->
+  <article class="release">
+    <div class="release-head">
+      <span class="release-tag">Non publié</span>
+      <span class="release-date">2026-07-13</span>
+      <span class="release-pill">En cours</span>
+    </div>
+    <div class="release-title">Qualité interne : batterie, démarrage &amp; chaîne de build</div>
+
+    <div class="changes-group added">
+      <h4>Ajoute</h4>
+      <ul>
+        <li><strong>Garde-fous de livraison</strong> : le build web est désormais vérifié dès l'ouverture d'une proposition de modification, un résumé de la couverture de tests est publié à chaque passage d'intégration continue, et les mises à jour de dépendances sont proposées automatiquement chaque semaine.</li>
+        <li><strong>Test d'intégrité du schéma local</strong> : vérifie que toutes les tables de la base sont réellement créées à l'ouverture, sans liste écrite à la main. Nouvel outillage de tests partagé pour la base en mémoire.</li>
+      </ul>
+    </div>
+
+    <div class="changes-group changed">
+      <h4>Modifie</h4>
+      <ul>
+        <li><strong>Batterie</strong> : la position GPS d'ambiance (celle qui alimente les distances affichées dans l'app) n'est plus écoutée quand l'app passe en arrière-plan, et reprend au retour au premier plan sans perdre la dernière distance affichée. La navigation en cours, qui a son propre suivi, n'est pas concernée.</li>
+        <li><strong>Démarrage plus rapide</strong> : le modèle de reconnaissance des bordereaux (~1,9 Mo) n'est plus chargé au lancement de l'app mais à l'ouverture de l'écran de scan.</li>
+        <li><strong>Statistiques</strong> : l'écran ne recalcule plus une année de données en arrière-plan une fois fermé. Moins de calculs répétés aussi sur le coût carburant et le résumé hebdo.</li>
+        <li><strong>Métriques de tournée</strong> : distance et durée ne sont plus réécrites quand elles n'ont pas changé — ce qui déclenchait des recalculs d'itinéraire en boucle.</li>
+        <li><strong>Suivi colis par lien public retiré</strong> de l'app et du site : la fonctionnalité était abandonnée et les liens générés ne menaient nulle part. Le scan des codes-barres colis dans la tournée n'est pas concerné.</li>
+        <li><strong>Base locale allégée</strong> : deux tables inutilisées supprimées et index manquants ajoutés (schéma local migré en v52).</li>
+        <li><strong>Chaîne de build</strong> : version de Flutter figée pour les artefacts livrés (site web et exécutable Windows), et code généré systématiquement régénéré avant chaque build.</li>
+        <li>Documentation technique du projet remise à jour (installation, base de données, scripts).</li>
+      </ul>
+    </div>
+
+    <div class="changes-group fixed">
+      <h4>Corrige</h4>
+      <ul>
+        <li><strong>Recherche « œ »</strong> dans le carnet d'adresses et la liste d'arrêts : le caractère n'était pas reconnu, si bien que chercher « oeuvre » ne trouvait pas « Œuvre ».</li>
+        <li><strong>Rappels de tournée</strong> : si l'autorisation « Alarmes et rappels » est refusée sur Android, le rappel est désormais programmé en mode approximatif au lieu d'échouer.</li>
+        <li><strong>Build Windows</strong> réparé : l'image de compilation avait changé de chaîne d'outils, l'exécutable est de nouveau produit automatiquement.</li>
+      </ul>
+    </div>
+  </article>
+
   <!-- =================== v2.9.2+8065 (2026-06-04) =================== -->
   <article class="release latest">
     <div class="release-head">

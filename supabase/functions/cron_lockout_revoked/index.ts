@@ -28,26 +28,23 @@
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { timingSafeEqual } from './lib.ts';
+import { PREFLIGHT_HEADERS, timingSafeEqual } from './lib.ts';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'x-cron-secret, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
+// Pas d'`Access-Control-Allow-Origin` du tout (F39) : appelée par
+// pg_cron côté serveur, jamais depuis un navigateur. Cf ./lib.ts.
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json' },
   });
 }
 
-// timingSafeEqual : cf ./lib.ts (extraite pour les tests Deno).
+// timingSafeEqual / PREFLIGHT_HEADERS : cf ./lib.ts (extraits pour les
+// tests Deno).
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: PREFLIGHT_HEADERS });
   }
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method not allowed' }, 405);

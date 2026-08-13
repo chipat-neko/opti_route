@@ -4,10 +4,13 @@ import {
   assert,
   assertEquals,
   assertMatch,
+  assertNotEquals,
   assertStringIncludes,
 } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import {
+  ALLOWED_ORIGINS,
   buildEmailHtml,
+  corsHeaders,
   escapeHtml,
   genCode,
   roleLabel,
@@ -96,4 +99,56 @@ Deno.test('buildEmailHtml : entrepôt mentionné quand fourni', () => {
   });
   assertStringIncludes(html, 'entrepôt Chartres Nord');
   assertStringIncludes(html, "chef d'entrepôt");
+});
+
+// ── CORS restreint (F39) ─────────────────────────────────────────────
+
+function reqWithOrigin(origin?: string): Request {
+  const headers = origin ? { origin } : undefined;
+  return new Request('https://x.test/invite_employee', { headers });
+}
+
+Deno.test('corsHeaders : plus de wildcard `*` (F39)', () => {
+  for (const origin of [undefined, 'https://chipat-neko.github.io', 'https://evil.example.com']) {
+    const h = corsHeaders(reqWithOrigin(origin));
+    assertEquals(h['Access-Control-Allow-Origin'] === '*', false);
+  }
+});
+
+Deno.test('corsHeaders : origine prod autorisée renvoyée telle quelle', () => {
+  const h = corsHeaders(reqWithOrigin('https://chipat-neko.github.io'));
+  assertEquals(h['Access-Control-Allow-Origin'], 'https://chipat-neko.github.io');
+  assertEquals(h['Vary'], 'Origin');
+});
+
+Deno.test('corsHeaders : localhost avec port autorisé (dev web)', () => {
+  const h = corsHeaders(reqWithOrigin('http://localhost:8080'));
+  assertEquals(h['Access-Control-Allow-Origin'], 'http://localhost:8080');
+});
+
+Deno.test('corsHeaders : origine inconnue -> pas d\'écho', () => {
+  const h = corsHeaders(reqWithOrigin('https://evil.example.com'));
+  // Jamais l'origine du tiers : le navigateur bloquera la lecture.
+  assertNotEquals(h['Access-Control-Allow-Origin'], 'https://evil.example.com');
+  assertEquals(h['Access-Control-Allow-Origin'], ALLOWED_ORIGINS[0]);
+});
+
+Deno.test('corsHeaders : un préfixe du domaine prod ne suffit pas', () => {
+  const h = corsHeaders(reqWithOrigin('https://chipat-neko.github.io.evil.com'));
+  assertEquals(h['Access-Control-Allow-Origin'], ALLOWED_ORIGINS[0]);
+});
+
+Deno.test('corsHeaders : sans en-tête Origin (mobile/desktop) -> réponse valide', () => {
+  // `inviteByMail` est appelée depuis l'app native (mobile/MSIX) : pas
+  // d'Origin, pas de CORS -> la restriction ne casse pas ce flux.
+  const h = corsHeaders(reqWithOrigin());
+  assertEquals(h['Access-Control-Allow-Origin'], ALLOWED_ORIGINS[0]);
+  assertEquals(h['Access-Control-Allow-Methods'], 'POST, OPTIONS');
+});
+
+Deno.test('corsHeaders : préflight accepte les en-têtes du client Supabase', () => {
+  const h = corsHeaders(reqWithOrigin('https://chipat-neko.github.io'));
+  for (const name of ['authorization', 'x-client-info', 'apikey', 'content-type']) {
+    assertEquals(h['Access-Control-Allow-Headers'].includes(name), true, name);
+  }
 });

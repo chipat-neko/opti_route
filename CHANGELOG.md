@@ -6,6 +6,148 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
+### Session 2026-07-12 — Audit v2 appliqué (#511-#532)
+
+Suite de l'audit qualité (référentiel `fable.md` F1-F47 / `task.md`),
+appliquée en **douze PR mergées** entre le 2026-07-12 et le 2026-07-13
+(#511 à #521, puis #532). Aucune release : `pubspec` reste en
+**2.9.3+10071**, aucun tag créé.
+
+**CI/CD**
+- **#511** (2026-07-12) : `deploy-web.yml` et `build-windows.yml`
+  épinglés sur **Flutter 3.41.9** — le site Pages et l'exe Windows
+  livrés étaient compilés avec un `channel: stable` flottant jamais
+  passé par `analyze`/`test`. `ci.yml` durci au passage
+  (`permissions: contents: read`, bloc `concurrency` avec
+  `cancel-in-progress` en PR, `timeout-minutes` sur les deux jobs).
+- **#519** (2026-07-13) : **build Windows réparé** (rouge depuis
+  ~2026-07-05, indépendamment de l'audit). `runs-on` épinglé sur
+  **`windows-2022`** : le toolchain de `windows-latest` était passé en
+  préversion (VS 18 / MSVC 14.51), qui transforme la dépréciation de
+  `<experimental/coroutine>` en erreur dure STL1011 et cassait
+  `flutter_local_notifications_windows` et `local_auth_windows`. Le
+  garde-fou `CMAKE_POLICY_VERSION_MINIMUM=3.5` est conservé pour le
+  sous-build pdfium, refusé par CMake 4.x.
+- **#520** (2026-07-13) : nouveau job `build-web` déclenché **dès la
+  PR** (`deploy-web.yml` ne tourne que sur push `main`), étape
+  « Coverage summary » qui parse le lcov (LH/LF) dans
+  `$GITHUB_STEP_SUMMARY`, et `.github/dependabot.yml` (écosystèmes
+  `pub` sur `/app` et `github-actions` sur `/`, hebdo, avec `ignore`
+  sur les pins délibérés `receive_sharing_intent` et
+  `sqlite3_flutter_libs`).
+- **#532** (2026-07-13, volet CI) : `dart run build_runner build
+  --delete-conflicting-outputs` ajouté avant les **trois workflows de
+  build** (`build-web` de `ci.yml`, `deploy-web`, `build-windows`), qui
+  compilaient jusque-là le `database.g.dart` commité **sans le
+  régénérer** — un `.g.dart` désynchronisé du schéma source cassait ces
+  builds alors que le schéma était correct. Le job `flutter` le faisait
+  déjà avant `analyze`/`test`.
+
+**Sécurité / confidentialité**
+- **#512** (2026-07-12) : `USE_EXACT_ALARM` retiré du manifest Android
+  (permission réservée aux apps réveil/agenda, risque de rejet Play
+  Store) ; `SCHEDULE_EXACT_ALARM` et
+  `requestExactAlarmsPermission()` conservés.
+- **#516** (2026-07-12) : les quatre `zonedSchedule` ne partaient plus
+  en `exactAllowWhileIdle` sans garde — sur Android 12+ (autorisation
+  « Alarmes et rappels » révoquée) et 14+ le plugin remontait une
+  `PlatformException` non gérée qui faisait crasher le rappel. Helper
+  `_zonedScheduleSafe` : repli en `inexactAllowWhileIdle`.
+- **#514** (2026-07-12) : `.env*` ajouté au `.gitignore` racine ;
+  capture de l'erreur du 3ᵉ update dans `cron_lockout_revoked`
+  (invitations).
+
+**Performance / fiabilité**
+- **#515** (2026-07-12) : `statsBundleProvider` et ses deux dérivés
+  (`statsFromBundle`, `statsPreviousWindow`) passés en `autoDispose`
+  **ensemble** — plus de recalcul de 365 j de stats à chaque écriture
+  DB quand `StatsScreen` est fermé ; `BordereauMlClassifier` (~1,9 Mo
+  de JSON, 100 arbres) chargé en lazy à l'ouverture de l'écran de scan
+  au lieu du boot de l'app ; `coutCarburantProvider` et
+  `resumeHebdoProvider` passés en `autoDispose.family` (fuite
+  d'instances par valeur de clé) ; garde `mounted` dans
+  `_exitSelection` du carnet et `DateFormat` hissés en `static final`.
+- **#515** : correction du bug de recherche **« œ »** — la clé `'œ'` de
+  `_normalize` était un mojibake de 2 caractères jamais matché par
+  `split('')`, si bien que chercher « oeuvre » ne trouvait pas
+  « Œuvre » (carnet d'adresses et liste d'arrêts).
+- **#517** (2026-07-12) : `currentPositionProvider` (StreamProvider
+  passif, distinct du stream haute précision de `navigation_screen`)
+  restait souscrit au GPS app en arrière-plan. Souscription geolocator
+  coupée en background et reprise au premier plan via
+  `ref.listen(appForegroundProvider)`, en conservant la dernière
+  `Position` pour éviter un flash de distance au retour.
+- **#518** (2026-07-12) : `route_metrics_auto_updater` réécrivait
+  distance/durée même identiques à la base ; le write drift renotifiait
+  le stream tournée, ce qui relançait une requête OSRM en boucle. Garde
+  d'idempotence + test de non-régression sur le compte d'émissions du
+  stream. Le volet 2 (sortir `requestUpdate` du `build` via
+  `ref.listen`) est volontairement différé.
+- **#512** : `RouteService.close()` + `ref.onDispose` sur
+  `routeServiceProvider` — son `http.Client` n'était jamais fermé,
+  contrairement aux autres services.
+
+**Purge de code mort**
+- **#512** : l'action `GenerateTrackingLinkAction` retirée de l'UI — la
+  feature « lien de suivi colis » est abandonnée (domaine jamais
+  acheté) et le bouton copiait encore des liens morts. La couche
+  Drift/repo/Edge restait en place à ce stade.
+- **#532** : purge complète en trois volets.
+  - *Suivi colis (F5)* : suppression de `tracking_codes_repository`,
+    `tables/tracking_codes.dart` et leurs tests, de
+    `supabase/functions/track/` et son test Deno, de
+    `site_doc/suivi.html`, des constantes `kTrackingDomain` /
+    `kTrackingCodeLength`, de `pushTrackingCode`, du provider et de la
+    section `[functions.track]` de `config.toml`. Le scan colis vivant
+    (`tracking_numbers` / `bordereau_patterns`) n'est **pas** touché.
+  - *Table `sheets` (F29)*, morte depuis la v2 : repo, table et tests
+    supprimés, sortie du `@DriftDatabase`.
+  - *Providers morts (F30)* : `carnetPrivees`, `fraisAll`,
+    `fraisByTournee`, `entrepriseNom`, `tourneeMembres`,
+    `sheetsRepository` et `watchEntrepriseNom`.
+- **#532** — **migration Drift v52** (`schemaVersion` 51 → 52) :
+  `DROP TABLE IF EXISTS tracking_codes` et `sheets`, plus la création
+  des **index `cloud_id`** manquants (F19) via un helper
+  `_createCloudIdIndexes` appelé aussi en `onCreate`. Sentinelles de
+  migration 51 → 52 mises à jour.
+- **Reste à faire hors CI** (documenté dans la PR #532) : régénérer
+  `database.g.dart` sur PC (`dart run build_runner build
+  --delete-conflicting-outputs`) et le commiter pour que les builds
+  locaux soient cohérents ; côté Supabase, supprimer la fonction
+  `track` déployée et jouer le `drop table` en prod. Différés : F28
+  (modules morts) et F34 (Edge `accept_invitation`).
+
+**Tests**
+- **#521** (2026-07-13) : helper `app/test/helpers/test_db.dart`
+  (`makeTestDb()` + `seedTournee()`) pour arrêter de recopier
+  `AppDatabase(NativeDatabase.memory())` partout (F46) ;
+  `app/test/data/schema_integrity_test.dart` qui vérifie via
+  `db.allTables` vs `sqlite_master` que toutes les tables du
+  `@DriftDatabase` sont bien créées à l'ouverture, en auto-adaptatif
+  (pas de liste codée en dur) + round-trip + `schemaVersion` (F18) ; le
+  test de timeout de `route_service_test`, qui tournait ~15 s réelles,
+  passé en `fake_async` (F45) — `fake_async` déclaré en
+  `dev_dependency`.
+
+**Documentation**
+- **#513** (2026-07-12) : README de l'Edge Function `invite_employee`
+  réécrit — il documentait encore le flux magic-link supprimé lors de
+  la refonte du 2026-06-01 et ne mentionnait aucun des secrets Brevo
+  requis par le code, si bien qu'une réinstallation en le suivant
+  cassait l'invitation d'employé. Le vrai flux (code à 6 chiffres
+  CSPRNG, envoi Brevo, RPC `accept_entreprise_invitation`), le body, la
+  réponse, le tableau des secrets, `verify_jwt=true` et la commande de
+  déploiement sont désormais décrits.
+- **#514** : nettoyage documentaire — section 2026-07-08 du CHANGELOG,
+  `ARCHITECTURE` (lien mort `docs/plan-ocr-85pct.md` retiré,
+  `supabase/migrations/` ajouté à l'arborescence), `docs/*.sql` marqués
+  ARCHIVE (source canonique = `supabase/migrations/`), section RLS
+  multi-tenant ajoutée à `docs/supabase-rls.md`, wiki-links morts
+  retirés de `scripts/README`, chemins CSV du pipeline ML corrigés vers
+  `tools/data/`, `web/index.html` débrandé et raccourcis PWA morts
+  retirés du manifest, commentaire erroné corrigé dans
+  `frais_repository`.
+
 ### Session 2026-07-08 — Audit qualité appliqué (#501-#510) + release 2.9.3
 
 Audit qualité v2 appliqué en dix PR, clôturé par la release
