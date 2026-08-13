@@ -26,6 +26,15 @@ import 'package:share_plus/share_plus.dart';
 /// L'utilisateur peut meme inspecter le contenu manuellement si
 /// besoin de debug.
 class BackupService {
+  /// [now] : horloge injectable (F8a). Par defaut l'heure systeme ;
+  /// les tests passent une horloge figee pour obtenir un nom de zip et
+  /// un `exportedAt` deterministes.
+  BackupService({DateTime Function() now = DateTime.now}) : _now = now;
+
+  /// Source de l'heure courante. Ne jamais rappeler `DateTime.now()`
+  /// directement dans ce service : passer par `_now()`.
+  final DateTime Function() _now;
+
   /// Genere un fichier `opti_route_backup_<timestamp>.zip` dans le
   /// dossier temp, contenant DB + photos preuves + manifest, puis
   /// declenche le share natif Android (Drive, mail, etc.).
@@ -41,7 +50,7 @@ class BackupService {
 
     final encoder = ZipFileEncoder();
     final tmpDir = await getTemporaryDirectory();
-    final ts = DateTime.now()
+    final ts = _now()
         .toIso8601String()
         .split('.')
         .first

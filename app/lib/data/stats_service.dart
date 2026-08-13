@@ -13,9 +13,18 @@ import 'stop_types.dart';
 /// - Distance totale parcourue (somme des `distanceTotaleM`)
 /// - Duree totale (somme des `dureeTotaleS`)
 class StatsService {
-  StatsService(this._db);
+  /// [now] : horloge injectable (F8a). Par defaut l'heure systeme ;
+  /// les tests passent une horloge figee pour rendre deterministes les
+  /// calculs bornes par "maintenant" (comparatif de fenetres, cumul
+  /// depuis le 1er janvier).
+  StatsService(this._db, {DateTime Function() now = DateTime.now})
+      : _now = now;
 
   final AppDatabase _db;
+
+  /// Source de l'heure courante. Ne jamais rappeler `DateTime.now()`
+  /// directement dans ce service : passer par `_now()`.
+  final DateTime Function() _now;
 
   /// Calcule **toutes** les metriques de la fenetre en 1 seul appel :
   /// stats globales + colis par jour de semaine + heures par jour. Sert
@@ -213,7 +222,7 @@ class StatsService {
     required int days,
     String metric = 'colis_livres',
   }) async {
-    final now = DateTime.now();
+    final now = _now();
     final currentStart = now.subtract(Duration(days: days));
     final previousStart = now.subtract(Duration(days: 2 * days));
 
@@ -301,7 +310,7 @@ class StatsService {
   /// terminees a 100% (aucun echec). Sert au tile "Tu as parcouru X km
   /// cette annee" dans l'ecran Stats.
   Future<MotivationStats> compteursMotivants() async {
-    final now = DateTime.now();
+    final now = _now();
     final yearStart = DateTime(now.year, 1, 1);
 
     final tournees = await (_db.select(_db.tournees)

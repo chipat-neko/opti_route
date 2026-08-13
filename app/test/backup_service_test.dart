@@ -8,7 +8,6 @@
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/auto_backup_service.dart';
 import 'package:opti_route/data/backup_service.dart';
@@ -16,6 +15,19 @@ import 'package:opti_route/data/database.dart';
 import 'package:opti_route/data/parametres_repository.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+import 'helpers/test_db.dart';
+
+/// Horloge figee de la suite (F8a) : mercredi 13 mai 2026, 10h30.
+/// Injectee dans [AutoBackupService] via `now:` pour rendre le seuil de
+/// periode (7j / 30j) et l'horodatage du zip independants de la date
+/// reelle de la machine.
+final kNow = DateTime(2026, 5, 13, 10, 30);
+
+/// Nom de fichier attendu quand le backup est genere a [kNow] :
+/// l'horodatage vient de `now().toIso8601String()` avec les `:`
+/// remplaces par des `-`.
+const kZipNameAtNow = 'opti_route_auto_2026-05-13T10-30-00.zip';
 
 void main() {
   late _FakePathProvider fakePaths;
@@ -219,7 +231,7 @@ void main() {
     late ParametresRepository params;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
+      db = makeTestDb();
       params = ParametresRepository(db);
     });
 
@@ -227,12 +239,16 @@ void main() {
       await db.close();
     });
 
+    /// Service cale sur une horloge figee ([kNow] par defaut).
+    AutoBackupService svcAt([DateTime? fixed]) =>
+        AutoBackupService(params, now: () => fixed ?? kNow);
+
     test('period "jamais" : ne genere rien', () async {
       // Pose une fausse DB pour ne pas avoir Exception "DB introuvable"
       await File('${fakePaths.docsDir.path}/opti_route.sqlite')
           .writeAsBytes([1, 2, 3]);
 
-      final svc = AutoBackupService(params);
+      final svc = svcAt();
       // Periode par defaut = 'jamais', pas besoin de la set
       await svc.maybeRunAutoBackup();
 
@@ -251,11 +267,10 @@ void main() {
           .writeAsBytes([1, 2, 3]);
       await params.setAutoBackupPeriod('hebdo');
       // Dernier backup il y a 2 jours -> on est pas encore a 7j
-      final twoDaysAgo =
-          DateTime.now().subtract(const Duration(days: 2));
+      final twoDaysAgo = kNow.subtract(const Duration(days: 2));
       await params.setLastAutoBackupAt(twoDaysAgo);
 
-      final svc = AutoBackupService(params);
+      final svc = svcAt();
       await svc.maybeRunAutoBackup();
 
       final dir = Directory('${fakePaths.externalDir.path}/auto_backups');
@@ -265,7 +280,7 @@ void main() {
       );
       // lastAt n'a pas bouge
       final newLastAt = await params.getLastAutoBackupAt();
-      expect(newLastAt?.day, twoDaysAgo.day);
+      expect(newLastAt, twoDaysAgo);
     });
 
     test('period "hebdo" + lastAt > 7j : genere un backup', () async {
@@ -274,10 +289,10 @@ void main() {
       await params.setAutoBackupPeriod('hebdo');
       // Dernier backup il y a 10 jours
       await params.setLastAutoBackupAt(
-        DateTime.now().subtract(const Duration(days: 10)),
+        kNow.subtract(const Duration(days: 10)),
       );
 
-      final svc = AutoBackupService(params);
+      final svc = svcAt();
       await svc.maybeRunAutoBackup();
 
       final dir = Directory('${fakePaths.externalDir.path}/auto_backups');
@@ -288,14 +303,15 @@ void main() {
           .where((f) => f.path.toLowerCase().endsWith('.zip'))
           .toList();
       expect(zips, hasLength(1));
-      // lastAt mis a jour
-      final newLastAt = await params.getLastAutoBackupAt();
-      expect(newLastAt, isNotNull);
-      // Dans la fenetre de 5 secondes
+      // Le nom du zip est horodate par l'horloge injectee : plus besoin
+      // d'une assertion floue sur "un nom qui commence par...".
       expect(
-        DateTime.now().difference(newLastAt!).inSeconds < 10,
-        true,
+        zips.single.path.split(Platform.pathSeparator).last,
+        kZipNameAtNow,
       );
+      // lastAt mis a jour, exactement a l'instant injecte (avant : une
+      // tolerance de 10 secondes sur l'horloge reelle).
+      expect(await params.getLastAutoBackupAt(), kNow);
     });
 
     test('rotation : garde seulement les 5 derniers backups', () async {
@@ -304,27 +320,28 @@ void main() {
       await params.setAutoBackupPeriod('hebdo');
 
       // Pose 7 anciens zips a la main dans le dossier auto_backups,
-      // avec mtime distincts (croissants)
+      // avec des mtime distincts et croissants. Dates fixes tres
+      // anciennes : le mtime du zip genere par le service vient du
+      // systeme de fichiers (pas de l'horloge injectee), il sera donc
+      // forcement le plus recent des 8.
       final dir =
           Directory('${fakePaths.externalDir.path}/auto_backups');
       await dir.create(recursive: true);
-      final now = DateTime.now();
       for (var i = 0; i < 7; i++) {
         final f = File(
           '${dir.path}${Platform.pathSeparator}opti_route_auto_old_$i.zip',
         );
         await f.writeAsBytes([i]);
-        // Met une date plus ancienne pour les premiers (i=0 = plus vieux)
-        final date = now.subtract(Duration(days: 30 - i));
-        await f.setLastModified(date);
+        // i = 0 est le plus vieux, i = 6 le plus recent.
+        await f.setLastModified(DateTime(2020, 1, 1).add(Duration(days: i)));
       }
 
       // Force le run en posant lastAt il y a 100 jours
       await params.setLastAutoBackupAt(
-        now.subtract(const Duration(days: 100)),
+        kNow.subtract(const Duration(days: 100)),
       );
 
-      final svc = AutoBackupService(params);
+      final svc = svcAt();
       await svc.maybeRunAutoBackup();
 
       final zips = dir
@@ -334,12 +351,85 @@ void main() {
           .toList();
       // 7 anciens + 1 nouveau = 8, rotation a 5 -> il en reste 5
       expect(zips, hasLength(5));
-      // Les 2 plus vieux ont ete supprimes (i=0, i=1)
       final names = zips
           .map((f) => f.path.split(Platform.pathSeparator).last)
           .toSet();
+      // Le nouveau est conserve, les 3 plus vieux sont supprimes.
+      expect(names, contains(kZipNameAtNow));
       expect(names.any((n) => n.contains('old_0.zip')), false);
       expect(names.any((n) => n.contains('old_1.zip')), false);
+      expect(names.any((n) => n.contains('old_2.zip')), false);
+    });
+
+    // ──────────────────────────────────────────────────────────────
+    // F8a — bornes exactes de la periode. Avant l'injection d'horloge
+    // ces cas etaient intestables : `_isPeriodExceeded` comparait
+    // `lastAt` a l'heure reelle, donc un `lastAt` pose "il y a
+    // exactement 7 jours" glissait de quelques microsecondes entre
+    // l'ecriture et la lecture.
+    // ──────────────────────────────────────────────────────────────
+    test('hebdo : 6j23h -> skip, exactement 7j -> genere', () async {
+      await File('${fakePaths.docsDir.path}/opti_route.sqlite')
+          .writeAsBytes([1, 2, 3]);
+      await params.setAutoBackupPeriod('hebdo');
+      final dir = Directory('${fakePaths.externalDir.path}/auto_backups');
+
+      // 6 jours et 23 heures : le seuil (inDays >= 7) n'est pas atteint.
+      await params.setLastAutoBackupAt(
+        kNow.subtract(const Duration(days: 6, hours: 23)),
+      );
+      await svcAt().maybeRunAutoBackup();
+      expect(!await dir.exists() || dir.listSync().isEmpty, true);
+
+      // Exactement 7 jours : le seuil est atteint (comparaison >=).
+      await params.setLastAutoBackupAt(
+        kNow.subtract(const Duration(days: 7)),
+      );
+      await svcAt().maybeRunAutoBackup();
+      expect(dir.listSync().whereType<File>(), hasLength(1));
+      expect(await params.getLastAutoBackupAt(), kNow);
+    });
+
+    test('mensuel : le seuil de 30j se compte en jours reels, pas en '
+        'mois calendaires', () async {
+      await File('${fakePaths.docsDir.path}/opti_route.sqlite')
+          .writeAsBytes([1, 2, 3]);
+      await params.setAutoBackupPeriod('mensuel');
+      await params.setLastAutoBackupAt(DateTime(2026, 1, 31, 8));
+      final dir = Directory('${fakePaths.externalDir.path}/auto_backups');
+
+      // 1er mars : fevrier 2026 ne fait que 28 jours -> 29 jours
+      // ecoules seulement, donc pas encore de backup malgre le
+      // changement de mois.
+      await svcAt(DateTime(2026, 3, 1, 8)).maybeRunAutoBackup();
+      expect(!await dir.exists() || dir.listSync().isEmpty, true);
+      expect(await params.getLastAutoBackupAt(), DateTime(2026, 1, 31, 8));
+
+      // 2 mars : 30 jours pleins -> backup.
+      await svcAt(DateTime(2026, 3, 2, 8)).maybeRunAutoBackup();
+      expect(dir.listSync().whereType<File>(), hasLength(1));
+      expect(await params.getLastAutoBackupAt(), DateTime(2026, 3, 2, 8));
+    });
+
+    test('runBackupNow ignore la periode et horodate a l horloge',
+        () async {
+      await File('${fakePaths.docsDir.path}/opti_route.sqlite')
+          .writeAsBytes([1, 2, 3]);
+      // Periode 'jamais' : maybeRunAutoBackup ne ferait rien.
+      await svcAt().runBackupNow();
+
+      final dir = Directory('${fakePaths.externalDir.path}/auto_backups');
+      final zips = dir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith('.zip'))
+          .toList();
+      expect(zips, hasLength(1));
+      expect(
+        zips.single.path.split(Platform.pathSeparator).last,
+        kZipNameAtNow,
+      );
+      expect(await params.getLastAutoBackupAt(), kNow);
     });
   });
 }

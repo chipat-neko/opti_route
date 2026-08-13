@@ -17,19 +17,28 @@ import 'database.dart';
 /// complexe) car les volumes de Noah sont petits (~30 tournees max par
 /// semaine, ~30 stops par tournee = 900 rows max).
 class ResumeHebdoService {
-  ResumeHebdoService(this._db);
+  /// [now] : horloge injectable (F8a). Par defaut l'heure systeme ;
+  /// les tests passent une horloge figee pour que le calage sur le
+  /// lundi ne depende plus du jour ou tourne la suite (un test lance
+  /// un dimanche a 23h59 basculait de semaine sans raison).
+  ResumeHebdoService(this._db, {DateTime Function() now = DateTime.now})
+      : _now = now;
 
   final AppDatabase _db;
+
+  /// Source de l'heure courante. Ne jamais rappeler `DateTime.now()`
+  /// directement dans ce service : passer par `_now()`.
+  final DateTime Function() _now;
 
   /// Calcule le resume pour la semaine contenant [reference] (par
   /// defaut : maintenant). La semaine commence le lundi 00:00:00.
   ///
   /// [reference] sert au lundi-calage : si on appelle avec un mardi,
   /// on resume la semaine "lundi-dimanche" qui contient ce mardi.
-  /// Pour la semaine derniere, passer `DateTime.now().subtract(
-  /// const Duration(days: 7))`.
+  /// Pour la semaine derniere, passer une reference reculee de 7 jours
+  /// (`maintenant - Duration(days: 7)`).
   Future<ResumeHebdo> computeWeek({DateTime? reference}) async {
-    final ref = reference ?? DateTime.now();
+    final ref = reference ?? _now();
     final lundi = weekStart(ref);
     final dimancheFin = lundi.add(const Duration(days: 7));
 

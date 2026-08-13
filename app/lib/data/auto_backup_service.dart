@@ -33,9 +33,18 @@ import 'parametres_repository.dart';
 /// s'execute en arriere-plan (unawaited) pour ne pas bloquer le
 /// lancement. Si la periode n'est pas atteinte, no-op silencieux.
 class AutoBackupService {
-  AutoBackupService(this._params);
+  /// [now] : horloge injectable (F8a). Par defaut l'heure systeme ;
+  /// les tests passent une horloge figee pour verifier le seuil de
+  /// periode (7j / 30j) et l'horodatage du zip sans dependre de la
+  /// date reelle de la machine.
+  AutoBackupService(this._params, {DateTime Function() now = DateTime.now})
+      : _now = now;
 
   final ParametresRepository _params;
+
+  /// Source de l'heure courante. Ne jamais rappeler `DateTime.now()`
+  /// directement dans ce service : passer par `_now()`.
+  final DateTime Function() _now;
 
   /// Nombre de backups auto conserves dans le dossier. Au-dela, on
   /// supprime le plus vieux a chaque nouvelle generation.
@@ -49,7 +58,7 @@ class AutoBackupService {
       final period = await _params.getAutoBackupPeriod();
       if (period == 'jamais') return;
       final lastAt = await _params.getLastAutoBackupAt();
-      final now = DateTime.now();
+      final now = _now();
       if (lastAt != null && !_isPeriodExceeded(period, lastAt, now)) {
         return; // dernier backup encore frais, on attend
       }
@@ -76,7 +85,9 @@ class AutoBackupService {
   /// runtime mais on prefere une erreur explicite).
   Future<void> runBackupNow() async {
     await _runBackup();
-    await _params.setLastAutoBackupAt(DateTime.now());
+    // Evalue apres le backup (et non a la construction du service) :
+    // c'est bien l'instant de fin de generation qu'on horodate.
+    await _params.setLastAutoBackupAt(_now());
   }
 
   /// Genere effectivement le zip dans le dossier external/auto_backups/.
@@ -90,7 +101,7 @@ class AutoBackupService {
     }
 
     final outDir = await _getOrCreateAutoBackupDir();
-    final ts = DateTime.now()
+    final ts = _now()
         .toIso8601String()
         .split('.')
         .first
