@@ -11,6 +11,7 @@ import 'banners.dart';
 import 'header.dart';
 import 'prochain_arret_card.dart';
 import 'progress_banner.dart';
+import 'proximite_banner.dart';
 import 'recap_depot_card.dart';
 import 'stat_row.dart';
 import 'stops_list.dart';
@@ -207,6 +208,10 @@ class _BodyState extends ConsumerState<Body> {
           RecapDepotCard(stops: stops),
         ],
         if (tournee.statut == 'en_cours') ...[
+          // Carte #285 : "Tu es a X m de <client>" des qu'un arret a
+          // livrer entre dans le rayon GPS. Auto-masque (et sans
+          // espacement) le reste du temps -- il porte son propre padding.
+          ProximiteBanner(tourneeId: tournee.id),
           const SizedBox(height: AppSpacing.x12),
           ProchainArretCard(stops: stops),
         ],
