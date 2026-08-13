@@ -17,6 +17,7 @@ import '../data/app_role.dart';
 import '../data/parametres_repository.dart';
 import 'app_lifecycle_provider.dart';
 import '../data/role_service.dart';
+import '../data/scan_duplicate_service.dart';
 import '../data/resume_hebdo_service.dart';
 import '../data/chef_carte_service.dart';
 import '../data/chef_stats_service.dart';
@@ -395,6 +396,15 @@ final secureScreenEnabledProvider = StreamProvider<bool>((ref) {
 final batchScanCommitServiceProvider =
     Provider<BatchScanCommitService>((ref) {
   return BatchScanCommitService(ref.watch(stopsRepositoryProvider));
+});
+
+/// Controles anti-doublon du scan colis (carte #315), branches dans
+/// `ScanColisScreen` : re-livraison (tracking deja livre dans les 30
+/// derniers jours, toutes tournees) et erreur d'arret (code-barre du
+/// voisin quand le scan a un arret attendu). Les deux alertes sont
+/// informatives -- elles ne bloquent jamais la validation.
+final scanDuplicateServiceProvider = Provider<ScanDuplicateService>((ref) {
+  return ScanDuplicateService(ref.watch(stopsRepositoryProvider));
 });
 
 /// Repository des recurrences de tournee (carte #113).
