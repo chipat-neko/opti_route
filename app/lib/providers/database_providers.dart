@@ -134,8 +134,9 @@ final localReorderServiceProvider = Provider<LocalReorderService>((ref) {
 
 /// Validation "arret livre" + cloture automatique de la tournee.
 /// Source unique de verite partagee par la bottom sheet d'actions, le
-/// swipe de ligne et les boutons 1 tap (ProchainArretCard,
-/// ProximiteBanner) -- cf [MarkLivreService].
+/// swipe de ligne, les boutons 1 tap (ProchainArretCard,
+/// ProximiteBanner), "Tout livrer" (StopsBulkActions) et la commande
+/// vocale "livre" (VoiceCommandFab) -- cf [MarkLivreService].
 final markLivreServiceProvider = Provider<MarkLivreService>((ref) {
   return MarkLivreService(
     ref.watch(stopsRepositoryProvider),

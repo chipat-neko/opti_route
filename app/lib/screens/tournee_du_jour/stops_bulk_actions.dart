@@ -7,8 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/cloud_error_humanizer.dart';
 import '../../data/database.dart';
-import '../../data/location_service.dart';
-import '../../data/notifications_service.dart';
+import '../../data/mark_livre_service.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/geocoding_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -25,6 +24,10 @@ class StopsBulkActions {
   /// en statut 'a_livrer'. Capture GPS one-shot pour tout le batch.
   /// Bascule auto la tournee en 'terminee' si tous les arrets sont
   /// valides apres l'action.
+  ///
+  /// Confirmation, haptique et SnackBar "Annuler" restent ici ; la
+  /// sequence GPS + validation + cloture vit dans [MarkLivreService],
+  /// partagee avec les autres entrees "marquer livre" de l'ecran.
   static Future<void> batchLivre({
     required BuildContext context,
     required WidgetRef ref,
@@ -33,6 +36,7 @@ class StopsBulkActions {
     final messenger = ScaffoldMessenger.of(context);
     final stopsRepo = ref.read(stopsRepositoryProvider);
     final tourneesRepo = ref.read(tourneesRepositoryProvider);
+    final markLivreService = ref.read(markLivreServiceProvider);
     final all = await stopsRepo.getByTournee(tournee.id);
     final pending =
         all.where((s) => s.statutLivraison == 'a_livrer').toList();
@@ -68,34 +72,16 @@ class StopsBulkActions {
     );
     if (confirmed != true || !context.mounted) return;
 
-    // Capture GPS une fois pour tout le batch (best-effort).
-    ({double lat, double lng})? pos;
-    try {
-      final ok = await LocationService.ensurePermission();
-      if (ok) {
-        final p = await LocationService.currentPosition()
-            .timeout(const Duration(seconds: 4));
-        pos = (lat: p.latitude, lng: p.longitude);
-      }
-    } catch (_) {/* best-effort GPS */}
-
     final pendingIds = pending.map((s) => s.id).toList(growable: false);
-    for (final s in pending) {
-      await stopsRepo.markLivre(s.id, position: pos);
-    }
-    // Bascule auto en 'terminee' (tous les arrets valides maintenant).
-    final refreshed = await stopsRepo.getByTournee(tournee.id);
-    final tousValides = refreshed.every(
-      (s) => s.statutLivraison == 'livre' || s.statutLivraison == 'echec',
-    );
-    final statutAvant = tournee.statut;
-    if (tousValides) {
-      await tourneesRepo.update(
-        tournee.id,
-        const TourneesCompanion(statut: Value('terminee')),
-      );
-      await NotificationsService.instance.cancelTourneeRappel(tournee.id);
-    }
+    // Capture GPS one-shot + validation du lot + bascule auto en
+    // 'terminee' : tout est dans [MarkLivreService]. Avant, cette
+    // methode refaisait sa propre sequence, qui oubliait le recap de
+    // fin de tournee et le rappel "tournee non terminee >8h".
+    final res = await markLivreService.markLivreBatch(pending);
+    // Statut de la tournee AVANT la bascule : sert a l'undo ci-dessous.
+    // Non null des que la tournee a bascule en 'terminee'.
+    final statutAvant = res.statutAvant;
+    final aCloture = res.change == StatutTourneeChange.terminee;
     if (!context.mounted) return;
     // Pulse heavy : batch complet -> evenement marquant.
     unawaited(HapticFeedback.heavyImpact());
@@ -110,7 +96,7 @@ class StopsBulkActions {
         textColor: AppColors.cream,
         onPressed: () async {
           await stopsRepo.markAaLivrerBatch(pendingIds);
-          if (tousValides && statutAvant != 'terminee') {
+          if (aCloture && statutAvant != null) {
             await tourneesRepo.update(
               tournee.id,
               TourneesCompanion(statut: Value(statutAvant)),

@@ -155,9 +155,15 @@ class _VoiceCommandFabState extends ConsumerState<VoiceCommandFab> {
 
   Future<void> _handleCommand(VoiceCommand cmd, Stop next) async {
     final repo = ref.read(stopsRepositoryProvider);
+    final markLivreService = ref.read(markLivreServiceProvider);
     switch (cmd) {
       case VoiceCommand.livre:
-        await repo.markLivre(next.id);
+        // Passe par MarkLivreService, comme les boutons de l'ecran, et
+        // pas par un `repo.markLivre` nu : c'est lui qui capture la
+        // preuve GPS et qui cloture la tournee quand le dernier arret
+        // vient d'etre valide. Avant, un "livre" dicte n'enregistrait
+        // aucune position et ne terminait jamais la tournee.
+        await markLivreService.markLivre(next);
         _snack('Marque livre : ${next.nomClient ?? next.adresseBrute}');
       case VoiceCommand.echec:
         await repo.markEchec(next.id, 'autre');

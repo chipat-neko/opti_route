@@ -19,12 +19,16 @@ void main() {
   late TourneesRepository tourneesRepo;
   late _FakeNotifications notifs;
   late int tId;
+  // Nombre d'appels au capteur GPS : le batch doit n'en faire qu'UN
+  // seul pour tout le lot.
+  late int gpsCalls;
 
   setUp(() async {
     db = makeTestDb();
     stopsRepo = StopsRepository(db);
     tourneesRepo = TourneesRepository(db);
     notifs = _FakeNotifications();
+    gpsCalls = 0;
     tId = await seedTournee(db);
     await tourneesRepo.update(
       tId,
@@ -42,7 +46,10 @@ void main() {
     return MarkLivreService(
       stopsRepo,
       tourneesRepo,
-      capturerGps: () async => position,
+      capturerGps: () async {
+        gpsCalls++;
+        return position;
+      },
       notifications: notifs,
     );
   }
@@ -128,6 +135,105 @@ void main() {
 
       expect(statutPendantSignature, 'a_livrer');
       expect((await stopsRepo.getById(stop.id))!.statutLivraison, 'livre');
+    });
+  });
+
+  group('markLivreBatch', () {
+    test('tout le lot livre avec UNE SEULE capture GPS', () async {
+      final lot = [
+        await insertStop(),
+        await insertStop(),
+        await insertStop(),
+      ];
+
+      final res = await makeService(position: (lat: 48.5, lng: 1.5))
+          .markLivreBatch(lot);
+
+      // Un seul fix pour les 3 arrets : l'utilisateur n'a pas bouge, et
+      // 3 fix a 4 s de timeout, c'est 12 s d'attente pour rien.
+      expect(gpsCalls, 1);
+      for (final s in lot) {
+        final relu = await stopsRepo.getById(s.id);
+        expect(relu!.statutLivraison, 'livre');
+        expect(relu.livreLat, 48.5);
+        expect(relu.livreLng, 1.5);
+      }
+      expect(res.change, StatutTourneeChange.terminee);
+      expect(await statutTournee(), 'terminee');
+      // Ce que l'ancienne copie de batchLivre oubliait : le recap et le
+      // rappel "tournee non terminee >8h" (elle n'annulait que le
+      // rappel du matin).
+      expect(notifs.recaps, hasLength(1));
+      expect(notifs.recaps.single.nbLivres, 3);
+      expect(notifs.rappelsAnnules, [tId]);
+      expect(notifs.nonTermineeAnnules, [tId]);
+    });
+
+    test('rend le statut de la tournee AVANT la bascule', () async {
+      await tourneesRepo.update(
+        tId,
+        const TourneesCompanion(statut: Value('optimisee')),
+      );
+      final lot = [await insertStop()];
+
+      final res = await makeService().markLivreBatch(lot);
+
+      // Rendu tel quel, pas normalise : l'undo doit pouvoir remettre la
+      // tournee dans l'etat exact d'ou elle vient.
+      expect(res.statutAvant, 'optimisee');
+      expect(res.change, StatutTourneeChange.terminee);
+    });
+
+    test('il reste un arret hors du lot -> statut inchange', () async {
+      final lot = [await insertStop()];
+      await insertStop(); // pas dans le lot
+
+      final res = await makeService().markLivreBatch(lot);
+
+      expect(res.change, StatutTourneeChange.inchange);
+      expect(res.statutAvant, 'en_cours');
+      expect(await statutTournee(), 'en_cours');
+      expect(notifs.recaps, isEmpty);
+      expect(notifs.rappelsAnnules, isEmpty);
+      expect(notifs.nonTermineeAnnules, isEmpty);
+    });
+
+    test('lot vide -> aucune capture GPS, rien touche', () async {
+      final seul = await insertStop();
+
+      final res = await makeService().markLivreBatch([]);
+
+      expect(gpsCalls, 0);
+      expect(res.change, StatutTourneeChange.inchange);
+      expect(res.statutAvant, isNull);
+      expect((await stopsRepo.getById(seul.id))!.statutLivraison, 'a_livrer');
+      expect(await statutTournee(), 'en_cours');
+    });
+
+    test('le resultat permet de rejouer l\'undo du batch (#115)', () async {
+      // Deroule ce que fait le SnackBar "Annuler" de StopsBulkActions :
+      // markAaLivrerBatch + restauration du statut d'avant. Le lot doit
+      // revenir a l'etat initial exact, pas a 'optimisee'.
+      final lot = [await insertStop(), await insertStop()];
+
+      final res = await makeService().markLivreBatch(lot);
+      expect(res.change, StatutTourneeChange.terminee);
+      expect(await statutTournee(), 'terminee');
+
+      await stopsRepo.markAaLivrerBatch(lot.map((s) => s.id).toList());
+      final statutAvant = res.statutAvant;
+      final aCloture = res.change == StatutTourneeChange.terminee;
+      if (aCloture && statutAvant != null) {
+        await tourneesRepo.update(
+          tId,
+          TourneesCompanion(statut: Value(statutAvant)),
+        );
+      }
+
+      expect(await statutTournee(), 'en_cours');
+      for (final s in lot) {
+        expect((await stopsRepo.getById(s.id))!.statutLivraison, 'a_livrer');
+      }
     });
   });
 
