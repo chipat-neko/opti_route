@@ -1,8 +1,16 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/database.dart';
 import 'package:opti_route/data/stats_service.dart';
+
+import 'helpers/test_db.dart';
+
+/// Horloge figee de toute la suite (F8a) : mercredi 13 mai 2026, 10h30.
+/// Injectee dans [StatsService] via `now:` pour que les calculs bornes
+/// par "maintenant" (cumul depuis le 1er janvier, comparatif de
+/// fenetres) ne dependent plus de la date de la machine qui lance les
+/// tests.
+final kNow = DateTime(2026, 5, 13, 10, 30);
 
 void main() {
   group('StatsService.computeBundle + computeFromBundle', () {
@@ -10,8 +18,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -27,7 +35,7 @@ void main() {
 
     test('computeFromBundle filtre in-memory sur sous-fenetre', () async {
       // 3 tournees : J-1, J-10, J-100. Bundle sur 365j.
-      final now = DateTime.now();
+      final now = kNow;
       Future<int> seed(int daysAgo, int colis) async {
         final tId = await db.into(db.tournees).insert(
               TourneesCompanion.insert(
@@ -96,8 +104,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -142,17 +150,17 @@ void main() {
     test('aucune tournee dans la fenetre -> stats empty', () async {
       // Tournee vieille de 2 ans, on demande les 7 derniers jours.
       await seedTournee(
-        date: DateTime.now().subtract(const Duration(days: 730)),
+        date: kNow.subtract(const Duration(days: 730)),
       );
       final s = await stats.compute(
-        since: DateTime.now().subtract(const Duration(days: 7)),
+        since: kNow.subtract(const Duration(days: 7)),
       );
       expect(s.nbTournees, 0);
       expect(s.nbColisLivres, 0);
     });
 
     test('agregations correctes sur 2 tournees recentes', () async {
-      final now = DateTime.now();
+      final now = kNow;
       final t1 = await seedTournee(
         date: now.subtract(const Duration(days: 2)),
         distanceM: 50000,
@@ -191,7 +199,7 @@ void main() {
     });
 
     test('exclu les tournees hors fenetre', () async {
-      final now = DateTime.now();
+      final now = kNow;
       // Une dans la fenetre 7j
       final t1 = await seedTournee(
         date: now.subtract(const Duration(days: 3)),
@@ -216,7 +224,7 @@ void main() {
     });
 
     test('tauxReussite = 0 quand aucune tentative validee', () async {
-      final now = DateTime.now();
+      final now = kNow;
       final t = await seedTournee(date: now.subtract(const Duration(days: 1)));
       // Que des arrets a livrer (pas encore valides).
       await seedStop(tourneeId: t, statut: 'a_livrer');
@@ -232,8 +240,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -315,8 +323,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -378,8 +386,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -438,8 +446,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -493,8 +501,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -505,7 +513,7 @@ void main() {
       return db.into(db.tournees).insert(
             TourneesCompanion.insert(
               nom: 'T',
-              date: DateTime.now(),
+              date: kNow,
               pointDepartLat: 48.0,
               pointDepartLng: 1.0,
               pointDepartLabel: 'D',
@@ -690,8 +698,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -706,7 +714,7 @@ void main() {
     });
 
     test('1 tournee terminee 100% : streak = 1', () async {
-      final now = DateTime.now();
+      final now = kNow;
       final id = await db.into(db.tournees).insert(
             TourneesCompanion.insert(
               nom: 'T',
@@ -734,7 +742,7 @@ void main() {
     });
 
     test('tournee avec un echec : streak = 0', () async {
-      final now = DateTime.now();
+      final now = kNow;
       final id = await db.into(db.tournees).insert(
             TourneesCompanion.insert(
               nom: 'T',
@@ -792,7 +800,7 @@ void main() {
 
     test('compteursMotivants populate nbLivresAnnee + nbEchecsAnnee',
         () async {
-      final now = DateTime.now();
+      final now = kNow;
       final id = await db.into(db.tournees).insert(
             TourneesCompanion.insert(
               nom: 'T',
@@ -834,8 +842,8 @@ void main() {
     late StatsService stats;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
-      stats = StatsService(db);
+      db = makeTestDb();
+      stats = StatsService(db, now: () => kNow);
     });
 
     tearDown(() async {
@@ -846,7 +854,7 @@ void main() {
       return db.into(db.tournees).insert(
             TourneesCompanion.insert(
               nom: 'T',
-              date: DateTime.now(),
+              date: kNow,
               pointDepartLat: 48.0,
               pointDepartLng: 1.0,
               pointDepartLabel: 'D',
@@ -975,6 +983,147 @@ void main() {
       expect(s.distanceMeters, 0);
       expect(s.durationSeconds, 0);
       expect(s.tauxReussite, 0);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // F8a — cas de bord temporels rendus deterministes par l'horloge
+  // injectee. Aucun de ces tests n'etait ecrivable avant : le service
+  // lisait l'horloge systeme, donc le resultat dependait du jour ou
+  // tournait la suite (bascule d'annee, fevrier a 28 jours...).
+  // ────────────────────────────────────────────────────────────────
+  group('StatsService - horloge injectee (F8a)', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = makeTestDb();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    /// Insere une tournee + [nbLivres] arrets livres (1 colis chacun)
+    /// et [nbEchecs] arrets en echec. Retourne l'id de la tournee.
+    Future<int> seedJournee(
+      DateTime date, {
+      int nbLivres = 1,
+      int nbEchecs = 0,
+      int distanceM = 0,
+      String statut = 'terminee',
+    }) async {
+      final tId = await db.into(db.tournees).insert(
+            TourneesCompanion.insert(
+              nom: 'T-${date.toIso8601String()}',
+              date: date,
+              pointDepartLat: 48.0,
+              pointDepartLng: 1.0,
+              pointDepartLabel: 'D',
+              statut: Value(statut),
+              distanceTotaleM: Value(distanceM),
+            ),
+          );
+      for (var i = 0; i < nbLivres; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'livre-$i',
+                statutLivraison: const Value('livre'),
+              ),
+            );
+      }
+      for (var i = 0; i < nbEchecs; i++) {
+        await db.into(db.stops).insert(
+              StopsCompanion.insert(
+                tourneeId: tId,
+                adresseBrute: 'echec-$i',
+                statutLivraison: const Value('echec'),
+              ),
+            );
+      }
+      return tId;
+    }
+
+    test('compteursMotivants : le 1er janvier a 00h05, le cumul annuel '
+        'repart de zero', () async {
+      // 31 decembre 2025 : grosse journee. 1er janvier 2026 : 1 arret.
+      await seedJournee(
+        DateTime(2025, 12, 31),
+        nbLivres: 20,
+        distanceM: 120000,
+      );
+      await seedJournee(DateTime(2026, 1, 1), nbLivres: 1, distanceM: 5000);
+
+      final stats = StatsService(db, now: () => DateTime(2026, 1, 1, 0, 5));
+      final m = await stats.compteursMotivants();
+      expect(m.tourneesAnnee, 1, reason: '2025 est hors de l annee courante');
+      expect(m.nbLivresAnnee, 1);
+      expect(m.kmAnnee, 5.0);
+    });
+
+    test('compteursMotivants : le streak ne remonte pas avant le '
+        '1er janvier', () async {
+      await seedJournee(DateTime(2025, 12, 29), nbLivres: 5);
+      await seedJournee(DateTime(2025, 12, 30), nbLivres: 5);
+      await seedJournee(DateTime(2025, 12, 31), nbLivres: 5);
+      await seedJournee(DateTime(2026, 1, 2), nbLivres: 5);
+
+      final stats = StatsService(db, now: () => DateTime(2026, 1, 2, 20));
+      final m = await stats.compteursMotivants();
+      expect(
+        m.streakSansEchec,
+        1,
+        reason: 'le streak est borne a la fenetre annuelle',
+      );
+    });
+
+    test('compteursMotivants : un echec du 31 decembre ne casse pas le '
+        'streak de la nouvelle annee', () async {
+      await seedJournee(DateTime(2025, 12, 31), nbLivres: 2, nbEchecs: 3);
+      await seedJournee(DateTime(2026, 1, 1), nbLivres: 4);
+      await seedJournee(DateTime(2026, 1, 2), nbLivres: 4);
+
+      final stats = StatsService(db, now: () => DateTime(2026, 1, 2, 20));
+      final m = await stats.compteursMotivants();
+      expect(m.streakSansEchec, 2);
+      expect(m.nbEchecsAnnee, 0);
+    });
+
+    test('comparatifMoisPrecedent : fenetres ancrees sur l horloge',
+        () async {
+      // Horloge : mercredi 13 mai 2026 10h30.
+      //   courante   = [06/05 10h30, ->[      -> la tournee du 11/05
+      //   precedente = [29/04 10h30, 06/05 10h30[ -> celle du 02/05
+      await seedJournee(DateTime(2026, 5, 11), nbLivres: 10);
+      await seedJournee(DateTime(2026, 5, 2), nbLivres: 5);
+
+      final stats = StatsService(db, now: () => kNow);
+      expect(
+        await stats.comparatifMoisPrecedent(days: 7),
+        closeTo(2.0, 0.001),
+      );
+    });
+
+    test('comparatifMoisPrecedent : 0 si la periode precedente est vide',
+        () async {
+      await seedJournee(DateTime(2026, 5, 11), nbLivres: 3);
+      final stats = StatsService(db, now: () => kNow);
+      expect(await stats.comparatifMoisPrecedent(days: 7), 0);
+    });
+
+    test('comparatifMoisPrecedent : fenetre 30j a cheval sur fevrier',
+        () async {
+      // Horloge : 1er mars 2026 08h00. Fevrier ne fait que 28 jours,
+      //   courante   = [30/01 08h00, ->[            -> tournee du 15/02
+      //   precedente = [31/12 08h00, 30/01 08h00[   -> tournee du 20/01
+      await seedJournee(DateTime(2026, 2, 15), nbLivres: 12);
+      await seedJournee(DateTime(2026, 1, 20), nbLivres: 4);
+
+      final stats = StatsService(db, now: () => DateTime(2026, 3, 1, 8));
+      expect(
+        await stats.comparatifMoisPrecedent(days: 30),
+        closeTo(3.0, 0.001),
+      );
     });
   });
 }
