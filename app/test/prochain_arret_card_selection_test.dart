@@ -1,10 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opti_route/data/database.dart';
-import 'package:opti_route/screens/tournee_du_jour/prochain_arret_card.dart';
+import 'package:opti_route/data/stop_selection.dart';
 
 /// Tests de la fonction de selection `firstAlivrerWithCoords` utilisee
 /// par `ProchainArretCard` pour determiner le prochain stop (carte
-/// Trello #149).
+/// Trello #149), et par `arretsProchesProvider` pour exclure du bandeau
+/// de proximite l'arret que la card affiche deja.
 ///
 /// Scenario du bug Noah :
 ///   1. Le card affiche stop1 -> Maps lance la nav vers stop1 OK
