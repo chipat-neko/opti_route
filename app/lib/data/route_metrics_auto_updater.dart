@@ -12,8 +12,11 @@ import 'osrm_route_service.dart';
 /// d'une tournee a chaque modif d'arrets, via OSRM.
 /// ════════════════════════════════════════════════════════════════
 ///
-/// **Trigger** : appele par l'UI ([Body] de tournee_du_jour) qui watch
-/// les stops via Riverpod et appelle [requestUpdate] a chaque emit.
+/// **Trigger** : appele par l'UI ([Body] de tournee_du_jour) quand la
+/// sequence ordonnee des arrets geocodes -- ou le point de depart --
+/// change reellement (F25 volet 2). Avant, l'appel etait fait dans le
+/// `build()` du widget, donc rejoue a chaque rebuild meme quand
+/// l'itineraire etait identique.
 ///
 /// **Debounce 500ms** : si Noah ajoute / supprime / reorganise plusieurs
 /// arrets rapidement, on n'appelle OSRM qu'une seule fois 500ms apres
@@ -48,6 +51,17 @@ class RouteMetricsAutoUpdater {
   void requestUpdate(int tourneeId, List<Stop> stops) {
     _timer?.cancel();
     _timer = Timer(_debounce, () {
+      // Une requete OSRM est deja en vol : [_runUpdate] jetterait cette
+      // demande (garde `_running`). Avant F25 volet 2 c'etait sans
+      // consequence, l'UI rappelait requestUpdate a chaque rebuild -- donc
+      // le write de la requete en cours rejouait la demande perdue. Depuis
+      // volet 2, l'UI n'appelle plus que sur changement d'itineraire :
+      // personne ne la rejouerait et les metriques resteraient celles de
+      // l'itineraire precedent. On re-arme donc le debounce.
+      if (_running) {
+        requestUpdate(tourneeId, stops);
+        return;
+      }
       // Pas d'await ici - le Timer.callback est synchrone, on lance
       // la requete en arriere-plan et on ne bloque pas.
       _runUpdate(tourneeId, stops);

@@ -14,6 +14,7 @@ import '../data/saved_destinations_repository.dart';
 import '../providers/database_providers.dart';
 import '../providers/geocoding_providers.dart';
 import '../theme/app_tokens.dart';
+import '../utils/text_normalize.dart';
 import '../widgets/voice_input_button.dart';
 import 'carnet_adresses/carnet_migration_banner.dart';
 import 'carnet_adresses/carnet_tile.dart';
@@ -965,9 +966,9 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       filtered = filtered.where((d) => d.useCount == 1);
     }
     if (q.isEmpty) return filtered.toList();
-    final norm = _normalize(q);
+    final norm = normalizeText(q);
     return filtered.where((d) {
-      final hay = _normalize([
+      final hay = normalizeText([
         d.nomClient ?? '',
         d.adresseDisplay,
         d.ville ?? '',
@@ -1008,26 +1009,6 @@ class _CarnetAdressesScreenState extends ConsumerState<CarnetAdressesScreen> {
       _periodeFilter = null;
       _regulariteFilter = null;
     });
-  }
-
-  static String _normalize(String s) {
-    final lower = s.toLowerCase().trim();
-    const map = {
-      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
-      'ç': 'c',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
-      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
-      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
-      'ÿ': 'y', 'ý': 'y',
-      'ñ': 'n',
-      'œ': 'oe', 'æ': 'ae',
-    };
-    final buf = StringBuffer();
-    for (final ch in lower.split('')) {
-      buf.write(map[ch] ?? ch);
-    }
-    return buf.toString();
   }
 }
 

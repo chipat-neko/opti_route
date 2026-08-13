@@ -1,3 +1,4 @@
+import '../utils/text_normalize.dart';
 import 'database.dart';
 import 'geo_utils.dart';
 
@@ -46,11 +47,13 @@ class StopGrouping {
       );
       if (d < sameSpotMeters) return true;
     }
-    final na = _normalize(a.adresseBrute);
-    final nb = _normalize(b.adresseBrute);
+    // normalizeKey (et pas normalizeText) : reprend a l'identique le
+    // comportement d'avant la factorisation (trim + minuscules +
+    // espaces aplatis, accents CONSERVES). Passer a normalizeText
+    // regrouperait "rue de Luce" avec "rue de Lucé" : ce serait un
+    // changement de comportement, pas une simple factorisation.
+    final na = normalizeKey(a.adresseBrute);
+    final nb = normalizeKey(b.adresseBrute);
     return na.isNotEmpty && na == nb;
   }
-
-  static String _normalize(String s) =>
-      s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 }

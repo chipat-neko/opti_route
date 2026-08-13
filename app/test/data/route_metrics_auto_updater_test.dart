@@ -196,6 +196,51 @@ void main() {
       expect(callCount, 1);
     });
 
+    // Non-regression F25 volet 2 : l'UI n'appelle plus requestUpdate a
+    // chaque rebuild, elle n'appelle que quand l'itineraire change. Une
+    // demande qui arrive pendant qu'une requete OSRM est encore en vol ne
+    // doit donc plus etre jetee par la garde `_running` : plus personne ne
+    // la rejouerait et la tournee garderait les metriques de l'itineraire
+    // precedent.
+    test('demande pendant une requete en vol : rejouee, pas perdue',
+        () async {
+      final tId = await seedTournee();
+      final s1 = await seedStop(tId, lat: 48.01, lng: 1.01);
+      final s2 = await seedStop(tId, lat: 48.02, lng: 1.02);
+
+      var callCount = 0;
+      final osrm = OsrmRouteService(
+        client: MockClient((req) async {
+          callCount++;
+          final n = callCount;
+          // Requete lente : la 1re est encore en vol quand la 2e demande
+          // arrive. Chaque appel renvoie des valeurs distinctes pour
+          // pouvoir verifier laquelle a gagne en base.
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+          return http.Response(okBody(n * 1000, n * 100), 200);
+        }),
+      );
+      final updater = RouteMetricsAutoUpdater(
+        db: db,
+        osrm: osrm,
+        debounce: const Duration(milliseconds: 20),
+      );
+
+      updater.requestUpdate(tId, [s1]);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(callCount, 1, reason: '1re requete partie et encore en vol');
+
+      updater.requestUpdate(tId, [s1, s2]);
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      expect(callCount, 2, reason: '2e demande rejouee apres la 1re');
+
+      final t = await (db.select(db.tournees)..where((t) => t.id.equals(tId)))
+          .getSingle();
+      expect(t.distanceTotaleM, 2000,
+          reason: 'la base porte le resultat de la 2e requete');
+      updater.dispose();
+    });
+
     test('dispose annule un debounce en cours', () async {
       final tId = await seedTournee();
       final s = await seedStop(tId, lat: 48.01, lng: 1.01);
