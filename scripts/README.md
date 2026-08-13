@@ -58,6 +58,23 @@ Installe le MSIX déjà buildé (certutil + Add-AppxPackage, auto-élève
 en admin via UAC). Appelé automatiquement à l'étape 6 de la MAJ.
 Garde-le sur ton bureau : `copy E:\opti_route\scripts\Installer_optiroute_chef.bat %USERPROFILE%\Desktop\`
 
+### `build-and-install.ps1`
+Build APK release + installation ADB sur le téléphone connecté.
+Avec `-Bundle`, produit l'AAB Play Store à la place et vérifie qu'aucune
+fixture client n'y a été embarquée. Dans les deux cas, les fixtures OCR
+sont retirées du pubspec le temps du build puis restaurées.
+Cf [docs/keystore-release.md](../docs/keystore-release.md).
+
+### `handoff-pc.ps1`
+Enchaîne les actions d'audit qui exigent Flutter en local et qui
+s'accumulent quand le travail se fait depuis une machine sans Flutter :
+régénération de `database.g.dart`, mise à jour de `pubspec.lock`,
+déplacement de la keystore hors de l'arbre du repo (copie vérifiée par
+SHA-256 avant toute suppression). Ne commit rien : il affiche la
+commande à lancer. `-WhatIf` pour voir sans agir.
+Le reste — actions en console Supabase / GitHub — est dans
+[docs/handoff-pc-console.md](../docs/handoff-pc-console.md).
+
 ---
 
 ## Installation initiale
