@@ -16,6 +16,12 @@ import '../helpers/test_db.dart';
 /// (test/data/proximity_checker_test.dart) : on ne les rejoue pas, on
 /// verifie uniquement ce qui s'ajoute par-dessus (selection du plus
 /// proche, comptage des autres, garde-fous du provider).
+///
+/// Deux arbitrages du proprietaire y sont documentes :
+/// - la PAUSE ne masque plus le bandeau ;
+/// - le PROCHAIN arret planifie (`firstAlivrerWithCoords`, la source de
+///   verite de `ProchainArretCard`) est exclu : le bandeau ne parle que
+///   d'un arret proche hors sequence.
 void main() {
   group('selectArretsProches (fonction pure)', () {
     late AppDatabase db;
@@ -99,6 +105,41 @@ void main() {
       expect(res.autresCount, 0);
     });
 
+    test('arret exclu : ni plus proche, ni compte dans les autres',
+        () async {
+      // L'arret exclu est le prochain arret planifie : `ProchainArretCard`
+      // affiche deja sa distance juste en dessous du bandeau. On passe
+      // donc au suivant des proches, et le compteur "+N autres" ne doit
+      // pas le compter non plus (sinon il ne correspond plus a ce qui
+      // est affiche).
+      final tresProche = await _insertStop(db, tId, lat: 48.00005, lng: 1.0);
+      final moyen = await _insertStop(db, tId, lat: 48.0003, lng: 1.0);
+      final autre = await _insertStop(db, tId, lat: 48.0004, lng: 1.0);
+      final res = selectArretsProches(
+        lat: 48.0,
+        lng: 1.0,
+        stops: [tresProche, moyen, autre],
+        exclureStopId: tresProche.id,
+      );
+      expect(res, isNotNull);
+      expect(res!.plusProche.id, moyen.id);
+      expect(res.autresCount, 1);
+    });
+
+    test('exclure le seul arret proche -> null (rien a apprendre)',
+        () async {
+      final seul = await _insertStop(db, tId, lat: 48.00005, lng: 1.0);
+      expect(
+        selectArretsProches(
+          lat: 48.0,
+          lng: 1.0,
+          stops: [seul],
+          exclureStopId: seul.id,
+        ),
+        isNull,
+      );
+    });
+
     test('rayon personnalise respecte', () async {
       // ~111 m : hors du rayon par defaut (80 m), dedans a 200 m.
       final stop = await _insertStop(db, tId, lat: 48.001, lng: 1.0);
@@ -164,9 +205,18 @@ void main() {
       return container;
     }
 
+    /// Insere le prochain arret PLANIFIE (premier `a_livrer` geocode de
+    /// la liste, cf `firstAlivrerWithCoords`) tres loin de la position de
+    /// test : il ne rentre jamais dans le rayon, et il absorbe le role de
+    /// "prochain arret" pour que les arrets proches inseres ensuite
+    /// soient bien des arrets HORS SEQUENCE.
+    Future<Stop> insererProchainPlanifieLoin() =>
+        _insertStop(db, tId, lat: 49.0, lng: 1.0);
+
     test('tournee en cours + position sur place -> arret proche expose',
         () async {
       await demarrerTournee();
+      await insererProchainPlanifieLoin();
       final proche = await _insertStop(
         db,
         tId,
@@ -174,7 +224,6 @@ void main() {
         lng: 1.0,
         nomClient: 'Dupont',
       );
-      await _insertStop(db, tId, lat: 49.0, lng: 1.0);
 
       final container = makeContainer(position: (lat: 48.0, lng: 1.0));
       final res =
@@ -187,34 +236,68 @@ void main() {
     });
 
     test('tournee pas demarree -> rien, meme en etant sur place', () async {
+      await insererProchainPlanifieLoin();
       await _insertStop(db, tId, lat: 48.0, lng: 1.0);
       final container = makeContainer(position: (lat: 48.0, lng: 1.0));
 
       final res =
-          await _bandeauApresChargement(container, tId, stopsAttendus: 1);
+          await _bandeauApresChargement(container, tId, stopsAttendus: 2);
       expect(res, isNull);
     });
 
-    test('tournee en pause -> rien (on ne relance pas le livreur)',
-        () async {
+    test('tournee en pause -> bandeau toujours affiche', () async {
+      // Arbitrage du proprietaire : la pause ne masque plus le bandeau.
+      // Noah coupe souvent son dej juste devant un client -- l'info reste
+      // vraie, c'est lui qui decide s'il y va tout de suite.
       await demarrerTournee();
       await (db.update(db.tournees)..where((t) => t.id.equals(tId))).write(
         TourneesCompanion(pauseeLe: Value(DateTime(2026, 5, 30, 12))),
       );
-      await _insertStop(db, tId, lat: 48.0, lng: 1.0);
+      await insererProchainPlanifieLoin();
+      final proche = await _insertStop(db, tId, lat: 48.0, lng: 1.0);
 
       final container = makeContainer(position: (lat: 48.0, lng: 1.0));
       final res =
-          await _bandeauApresChargement(container, tId, stopsAttendus: 1);
-      expect(res, isNull);
+          await _bandeauApresChargement(container, tId, stopsAttendus: 2);
+      expect(res, isNotNull);
+      expect(res!.plusProche.id, proche.id);
     });
 
     test('position absente (permission refusee / pas de fix) -> rien',
         () async {
       await demarrerTournee();
+      await insererProchainPlanifieLoin();
       await _insertStop(db, tId, lat: 48.0, lng: 1.0);
 
       final container = makeContainer(position: null);
+      final res =
+          await _bandeauApresChargement(container, tId, stopsAttendus: 2);
+      expect(res, isNull);
+    });
+
+    test('le plus proche est le prochain planifie -> on passe au suivant',
+        () async {
+      // `ProchainArretCard` affiche deja "PROCHAIN + 5 m" pour le premier
+      // arret de la sequence : le bandeau ne le repete pas et annonce
+      // l'autre arret a portee, que rien d'autre ne signale.
+      await demarrerTournee();
+      await _insertStop(db, tId, lat: 48.00005, lng: 1.0);
+      final horsSequence = await _insertStop(db, tId, lat: 48.0003, lng: 1.0);
+
+      final container = makeContainer(position: (lat: 48.0, lng: 1.0));
+      final res =
+          await _bandeauApresChargement(container, tId, stopsAttendus: 2);
+      expect(res, isNotNull);
+      expect(res!.plusProche.id, horsSequence.id);
+      expect(res.autresCount, 0);
+    });
+
+    test('seul le prochain planifie est a proximite -> rien (doublon)',
+        () async {
+      await demarrerTournee();
+      await _insertStop(db, tId, lat: 48.00005, lng: 1.0);
+
+      final container = makeContainer(position: (lat: 48.0, lng: 1.0));
       final res =
           await _bandeauApresChargement(container, tId, stopsAttendus: 1);
       expect(res, isNull);

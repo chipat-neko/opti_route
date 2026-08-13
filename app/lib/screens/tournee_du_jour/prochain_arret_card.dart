@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,31 +5,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/database.dart';
 import '../../data/location_service.dart';
 import '../../data/navigation_service.dart';
-import '../../data/notifications_service.dart';
+import '../../data/stop_selection.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/location_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
-import '../../widgets/signature_pad_dialog.dart';
+import 'stop_row_actions.dart';
 
-/// Selectionne le **premier** stop encore `a_livrer` qui a des coords
-/// GPS dans [list]. Centralise la regle pour que build() ET les
-/// boutons Maps/Waze utilisent strictement la meme logique de
-/// selection (carte Trello #149 -- evite la divergence entre "ce que
-/// l'UI affiche comme prochain" et "ce que le tap Maps/Waze lance").
-///
-/// Expose en top-level pour etre testable directement sans avoir a
-/// pump le widget complet.
-Stop? firstAlivrerWithCoords(List<Stop> list) {
-  for (final s in list) {
-    if (s.statutLivraison == 'a_livrer' &&
-        s.lat != null &&
-        s.lng != null) {
-      return s;
-    }
-  }
-  return null;
-}
+// `firstAlivrerWithCoords` vit dans data/stop_selection.dart : cette
+// card et arretsProchesProvider s'en servent tous les deux, et un
+// import providers/ -> screens/ inverserait le sens des couches.
 
 /// ════════════════════════════════════════════════════════════════
 /// Card "Prochain arret" — encart noir mis en avant en haut de
@@ -260,6 +244,10 @@ class ProchainArretCard extends ConsumerWidget {
           // sheet pour valider. Capture la position GPS comme preuve
           // et passe au prochain arret. Le ProgressBanner se met a
           // jour automatiquement (watch via Riverpod).
+          //
+          // Meme chemin que le bouton du ProximiteBanner : tout vit
+          // dans [StopRowActions.markLivreRapide] (qui delegue la
+          // partie base de donnees a `MarkLivreService`).
           const SizedBox(height: AppSpacing.x10),
           FilledButton.icon(
             style: FilledButton.styleFrom(
@@ -267,7 +255,8 @@ class ProchainArretCard extends ConsumerWidget {
               foregroundColor: p.paper,
               minimumSize: const Size(double.infinity, 48),
             ),
-            onPressed: () => _markLivreFromCard(context, ref, prochain),
+            onPressed: () =>
+                StopRowActions(prochain).markLivreRapide(context, ref),
             icon: const Icon(Icons.check_circle, size: 20),
             label: const Text(
               'Marquer livre',
@@ -278,79 +267,6 @@ class ProchainArretCard extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Marque le stop comme livre en capturant la position GPS courante
-  /// comme preuve de passage. Si tous les arrets ont alors un statut
-  /// definitif, bascule la tournee en 'terminee' et annule le rappel.
-  ///
-  /// Best-effort sur le GPS (timeout 4 s) : si le device est offline
-  /// ou la permission refusee, on enregistre quand meme le statut
-  /// sans coords plutot que d'echouer.
-  static Future<void> _markLivreFromCard(
-    BuildContext context,
-    WidgetRef ref,
-    Stop stop,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    // Capture GPS lancee en ARRIERE-PLAN (best-effort, 4 s max) : elle
-    // tourne PENDANT que l'utilisateur signe. Avant, on attendait le fix
-    // GPS (LocationAccuracy.high, lent en interieur) AVANT d'ouvrir le
-    // canva -> grosse latence. Maintenant le pad s'affiche instantanement
-    // et le GPS a le temps de se capturer pendant la signature. Retour
-    // Noah dev2 2026-06-03.
-    final gpsFuture = () async {
-      try {
-        final ok = await LocationService.ensurePermission();
-        if (!ok) return null;
-        final p = await LocationService.currentPosition()
-            .timeout(const Duration(seconds: 4));
-        return (lat: p.latitude, lng: p.longitude);
-      } catch (_) {
-        return null; // best-effort : on continue sans coords
-      }
-    }();
-
-    // Signature du destinataire (facultative) — s'ouvre tout de suite.
-    if (context.mounted) {
-      await captureSignatureForStop(context, ref, stop.id);
-    }
-
-    await ref
-        .read(stopsRepositoryProvider)
-        .markLivre(stop.id, position: await gpsFuture);
-
-    // Bascule auto en 'terminee' si tous les arrets ont un statut.
-    // Meme logique que _TourneeDuJourScreenState._maybeFinishTournee
-    // (qu'on duplique ici car cette methode est static).
-    final stopsRepo = ref.read(stopsRepositoryProvider);
-    final tourneesRepo = ref.read(tourneesRepositoryProvider);
-    final allStops = await stopsRepo.getByTournee(stop.tourneeId);
-    final tousValides = allStops.isNotEmpty &&
-        allStops.every((s) =>
-            s.statutLivraison == 'livre' || s.statutLivraison == 'echec');
-    if (tousValides) {
-      await tourneesRepo.update(
-        stop.tourneeId,
-        const TourneesCompanion(statut: Value('terminee')),
-      );
-      // Bascule automatique vers terminee : on annule le rappel s'il
-      // y en avait un encore programme (la tournee est faite).
-      await NotificationsService.instance
-          .cancelTourneeRappel(stop.tourneeId);
-    }
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          stop.nomClient?.isNotEmpty == true
-              ? '${stop.nomClient} marque livre'
-              : 'Arret marque livre',
-        ),
-        backgroundColor: AppColors.emerald,
-        duration: const Duration(seconds: 2),
       ),
     );
   }

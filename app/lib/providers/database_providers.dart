@@ -12,6 +12,7 @@ import '../data/fuel_price_service.dart';
 import '../data/auto_backup_service.dart';
 import '../data/eta_calculator.dart';
 import '../data/local_reorder_service.dart';
+import '../data/mark_livre_service.dart';
 import '../data/app_role.dart';
 import '../data/parametres_repository.dart';
 import 'app_lifecycle_provider.dart';
@@ -126,6 +127,17 @@ final unifiedSearchProvider = FutureProvider.autoDispose
 /// optimisation VROOM reste declenchee par le bouton "Optimiser".
 final localReorderServiceProvider = Provider<LocalReorderService>((ref) {
   return LocalReorderService(
+    ref.watch(stopsRepositoryProvider),
+    ref.watch(tourneesRepositoryProvider),
+  );
+});
+
+/// Validation "arret livre" + cloture automatique de la tournee.
+/// Source unique de verite partagee par la bottom sheet d'actions, le
+/// swipe de ligne et les boutons 1 tap (ProchainArretCard,
+/// ProximiteBanner) -- cf [MarkLivreService].
+final markLivreServiceProvider = Provider<MarkLivreService>((ref) {
+  return MarkLivreService(
     ref.watch(stopsRepositoryProvider),
     ref.watch(tourneesRepositoryProvider),
   );

@@ -21,13 +21,19 @@ import 'stop_row_actions.dart';
 /// Toute la logique de selection vit dans `arretsProchesProvider`
 /// (cf `providers/location_providers.dart`) : ce widget ne fait que la
 /// mettre en forme. Quand le provider rend null -- tournee pas en cours,
-/// pas de position, aucun arret dans le rayon -- le bandeau ne s'affiche
-/// pas DU TOUT (pas de bandeau vide, ni meme son espacement).
+/// pas de position, aucun arret dans le rayon, ou seulement le prochain
+/// arret planifie (deja annonce par `ProchainArretCard`) -- le bandeau ne
+/// s'affiche pas DU TOUT (pas de bandeau vide, ni meme son espacement).
+/// Il reste en revanche visible pendant la PAUSE : l'info reste vraie.
 ///
-/// Tap = exactement le meme geste que sur une ligne de la liste :
-/// [StopRowActions.handleTap] ouvre la bottom sheet d'actions de l'arret
-/// (marquer livre / echec / details / photo...). On ne duplique donc ni la
-/// navigation ni la logique de validation.
+/// Deux gestes, cote a cote et jamais imbriques (sinon le bouton et le
+/// corps se voleraient le tap) :
+///   - tap sur le corps = exactement le meme geste que sur une ligne de
+///     la liste, [StopRowActions.handleTap] ouvre la bottom sheet
+///     d'actions (marquer livre / echec / details / photo...) ;
+///   - bouton "Marquer livre" = validation en 1 tap,
+///     [StopRowActions.markLivreRapide], strictement le meme chemin que
+///     le bouton de `ProchainArretCard`.
 class ProximiteBanner extends ConsumerWidget {
   const ProximiteBanner({super.key, required this.tourneeId});
 
@@ -40,6 +46,7 @@ class ProximiteBanner extends ConsumerWidget {
 
     final p = context.palette;
     final stop = proches.plusProche;
+    const radius = BorderRadius.all(Radius.circular(AppRadius.r14));
     // L'espacement vit DANS le widget (comme AnomaliesBanner) : quand le
     // bandeau est masque, il ne laisse aucun trou dans la pile du body.
     return Padding(
@@ -52,88 +59,128 @@ class ProximiteBanner extends ConsumerWidget {
       // bandeau -> tap sans aucun retour visuel.
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.r14),
+          borderRadius: radius,
           border: Border.all(
             color: AppColors.emerald.withValues(alpha: 0.4),
           ),
         ),
         child: Material(
           color: AppColors.emerald.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(AppRadius.r14),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.r14),
-            onTap: () => StopRowActions(stop).handleTap(context, ref),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.x12),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.my_location,
-                    color: AppColors.emerald,
-                    size: 20,
-                  ),
-                  const SizedBox(width: AppSpacing.x10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              const TextSpan(text: 'Tu es a '),
+          borderRadius: radius,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ─── Corps tappable : ouvre la feuille d'actions ───────
+              // L'InkWell ne couvre QUE cette ligne : le bouton plus bas
+              // est un frere, pas un enfant, donc aucun conflit d'arene
+              // de gestes entre les deux.
+              InkWell(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.r14),
+                ),
+                onTap: () => StopRowActions(stop).handleTap(context, ref),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.x12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.my_location,
+                        color: AppColors.emerald,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.x10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text.rich(
                               TextSpan(
-                                text: '${proches.distanceMeters} m',
-                                style: appMonoStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: p.ink,
+                                children: [
+                                  const TextSpan(text: 'Tu es a '),
+                                  TextSpan(
+                                    text: '${proches.distanceMeters} m',
+                                    style: appMonoStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: p.ink,
+                                    ),
+                                  ),
+                                  TextSpan(text: ' de ${_labelStop(stop)}'),
+                                ],
+                              ),
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.35,
+                                fontWeight: FontWeight.w600,
+                                color: p.ink,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (proches.autresCount > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '+${proches.autresCount} autre'
+                                  '${proches.autresCount > 1 ? "s" : ""} '
+                                  'a proximite',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: p.textMute,
+                                  ),
                                 ),
                               ),
-                              TextSpan(text: ' de ${_labelStop(stop)}'),
-                            ],
-                          ),
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.35,
-                            fontWeight: FontWeight.w600,
-                            color: p.ink,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          ],
                         ),
-                        if (proches.autresCount > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              '+${proches.autresCount} autre'
-                              '${proches.autresCount > 1 ? "s" : ""} '
-                              'a proximite',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: p.textMute,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: AppSpacing.x8),
+                      const Text(
+                        'Ouvrir',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.emerald,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: AppColors.emerald,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.x8),
-                  const Text(
-                    'Ouvrir',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.emerald,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 20,
-                    color: AppColors.emerald,
-                  ),
-                ],
+                ),
               ),
-            ),
+              // ─── Validation en 1 tap ──────────────────────────────
+              // Meme chemin que le bouton de ProchainArretCard : on est
+              // devant la porte, pas besoin d'ouvrir la feuille
+              // d'actions pour valider.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x12,
+                  0,
+                  AppSpacing.x12,
+                  AppSpacing.x12,
+                ),
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.emerald,
+                    foregroundColor: p.paper,
+                    minimumSize: const Size(double.infinity, 42),
+                  ),
+                  onPressed: () =>
+                      StopRowActions(stop).markLivreRapide(context, ref),
+                  icon: const Icon(Icons.check_circle, size: 18),
+                  label: const Text(
+                    'Marquer livre',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
