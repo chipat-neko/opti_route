@@ -35,6 +35,7 @@ forcément l'état courant du code.
 ## Build & release
 
 - [keystore-release.md](keystore-release.md) — génération de la keystore + signature
+- [handoff-pc-console.md](handoff-pc-console.md) — ce qui reste à faire sur le PC principal et en console (Supabase, GitHub)
 - [windows-update.md](windows-update.md) — procédure de mise à jour Windows (MSIX)
 - [_build_pdf.py](_build_pdf.py) — génération PDF des docs Markdown
 
