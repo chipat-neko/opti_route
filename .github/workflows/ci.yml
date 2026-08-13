@@ -1,3 +1,11 @@
+# F14 — Actions tierces EPINGLEES par SHA de commit.
+# Un tag flottant (`@v4`) est mutable : le proprietaire de l'action peut le
+# repointer sur n'importe quel commit, qui s'executerait alors dans le job
+# (ici : aucun secret expose, mais le GITHUB_TOKEN et la main sur le code
+# teste et build). Un SHA, lui, est immuable.
+# Le `# vX.Y.Z` en bout de ligne n'est qu'une aide de lecture : c'est le SHA
+# qui fait foi. Dependabot (.github/dependabot.yml, ecosysteme
+# "github-actions") ouvre chaque semaine la PR qui bumpe SHA + commentaire.
 name: CI
 
 on:
@@ -23,10 +31,10 @@ jobs:
         working-directory: app
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           # Aligne EXACTEMENT sur l'environnement de Noah (Flutter local
           # 3.41.9). Sans version pinnee, `channel: stable` prenait le
@@ -86,7 +94,7 @@ jobs:
           fi
 
       - name: Upload coverage (lcov)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-lcov
           path: app/coverage/lcov.info
@@ -103,10 +111,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: v2.x
 
@@ -128,10 +136,10 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           # aligne sur ci.yml/deploy-web/build-windows (bumper les 3 fichiers ensemble)
           flutter-version: 3.41.9

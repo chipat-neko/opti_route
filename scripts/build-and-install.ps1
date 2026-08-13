@@ -1,11 +1,24 @@
-# Build APK release + installation sur le telephone connecte en ADB.
+# Build APK release + installation sur le telephone connecte en ADB,
+# ou build de l'AAB Play Store avec -Bundle.
 #
-# Usage : `./scripts/build-and-install.ps1` (depuis la racine du repo)
+# Usage (depuis la racine du repo) :
+#   ./scripts/build-and-install.ps1            # APK release + install ADB
+#   ./scripts/build-and-install.ps1 -Bundle    # AAB release pour le Play Store
+#
+# Dans les deux cas, les fixtures OCR (scans clients reels) sont retirees du
+# pubspec le temps du build puis restaurees. Cf docs/keystore-release.md.
 #
 # Pre-requis (auto-detectes, avec fallback sur l'install de Noah) :
 # - Flutter : $env:FLUTTER_ROOT, ou `flutter` dans le PATH
 # - adb : dans le PATH, ou $env:ANDROID_HOME / $env:ANDROID_SDK_ROOT
-# - Un telephone Android connecte en debug USB et autorise
+#   (inutile avec -Bundle)
+# - Un telephone Android connecte en debug USB et autorise (mode APK)
+
+param(
+  # Construit l'App Bundle (.aab) a uploader sur la Play Console au lieu de
+  # l'APK, et saute l'installation sur le device.
+  [switch]$Bundle
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -32,6 +45,7 @@ $Adb = if (Get-Command adb -ErrorAction SilentlyContinue) {
 }
 
 $ApkPath = 'app\build\app\outputs\flutter-apk\app-release.apk'
+$AabPath = 'app\build\app\outputs\bundle\release\app-release.aab'
 
 Push-Location $PSScriptRoot\..\app
 try {
@@ -46,6 +60,36 @@ try {
     Write-Host '   (note : assets/test_bordereaux/ absent du pubspec, rien a retirer)' -ForegroundColor Yellow
   }
   [System.IO.File]::WriteAllText("$PWD\pubspec.yaml", $stripped)
+
+  if ($Bundle) {
+    Write-Host '[1/2] Build AAB release (sans fixtures test_bordereaux)...' -ForegroundColor Cyan
+    & $Flutter build appbundle --release
+    if ($LASTEXITCODE -ne 0) { throw 'Build AAB echoue' }
+
+    Write-Host '[2/2] Verifie que l AAB ne contient aucune fixture...' -ForegroundColor Cyan
+    Pop-Location
+    Push-Location $PSScriptRoot\..
+    if (-not (Test-Path $AabPath)) { throw "AAB introuvable : $AabPath" }
+
+    # Garde-fou : si le strip a rate, on refuse de laisser croire que l AAB
+    # est publiable (il contiendrait des scans clients reels).
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $AabPath).Path)
+    try {
+      $leak = @($zip.Entries | Where-Object { $_.FullName -match 'test_bordereaux' })
+    }
+    finally {
+      $zip.Dispose()
+    }
+    if ($leak.Count -gt 0) {
+      throw "L AAB contient $($leak.Count) fixture(s) test_bordereaux : NE PAS UPLOADER. Verifie le strip du pubspec."
+    }
+
+    Write-Host ''
+    Write-Host "OK : $AabPath (aucune fixture embarquee)." -ForegroundColor Green
+    Write-Host 'Uploade-le sur la Play Console. Cf docs/keystore-release.md.' -ForegroundColor Green
+    return
+  }
 
   Write-Host '[1/3] Build APK release (sans fixtures test_bordereaux)...' -ForegroundColor Cyan
   & $Flutter build apk --release

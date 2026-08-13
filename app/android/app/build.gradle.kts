@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.io.File
 import java.io.FileInputStream
 
 plugins {
@@ -8,15 +9,58 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Lecture du keystore release depuis android/key.properties s'il existe.
-// Ce fichier est gitignored : Noah le genere localement avec sa keystore
-// privee quand il prepare une publication Play Store.
-// Cf docs/keystore-release.md pour la procedure.
+// Lecture du keystore release. Le fichier key.properties (mots de passe en
+// clair) et la keystore .jks sont gitignored, mais tant qu'ils vivent DANS
+// l'arbre du repo ils restent a portee d'un `git add -f`, d'un zip du dossier
+// ou d'une sauvegarde du disque. On les cherche donc d'abord hors du repo.
+//
+// Ordre de resolution (premier trouve gagne) :
+//   1. $OPTIROUTE_KEY_PROPERTIES  -> chemin complet du fichier (CI / machine
+//      atypique) ;
+//   2. ~/keystores/opti_route/key.properties  -> emplacement recommande,
+//      hors de l'arbre du repo ;
+//   3. android/key.properties  -> emplacement historique, conserve pour ne
+//      pas casser les machines pas encore migrees.
+// Cf docs/keystore-release.md pour la procedure de migration.
+val keystoreCandidates = listOfNotNull(
+    System.getenv("OPTIROUTE_KEY_PROPERTIES")?.takeIf { it.isNotBlank() }?.let { File(it) },
+    File(System.getProperty("user.home"), "keystores/opti_route/key.properties"),
+    rootProject.file("key.properties"),
+)
+val keystorePropertiesFile = keystoreCandidates.firstOrNull { it.isFile }
+val hasReleaseKeystore = keystorePropertiesFile != null
 val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-val hasReleaseKeystore = keystorePropertiesFile.exists()
-if (hasReleaseKeystore) {
+if (keystorePropertiesFile != null) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    logger.lifecycle("Signing release : key.properties lu depuis ${keystorePropertiesFile.absolutePath}")
+}
+
+// `storeFile` peut etre absolu, ou relatif. Historiquement il etait relatif a
+// android/app/ (comportement de `file(...)` dans ce script). Depuis que le
+// key.properties peut vivre hors de l'arbre, un chemin relatif se lit d'abord
+// par rapport au dossier qui contient ce key.properties. On essaie les deux
+// bases pour que les deux conventions continuent de marcher.
+val resolveStoreFile: (String) -> File = { raw ->
+    val direct = File(raw)
+    if (direct.isAbsolute) {
+        direct
+    } else {
+        val bases = listOfNotNull(keystorePropertiesFile?.parentFile, projectDir)
+        bases.map { File(it, raw) }.firstOrNull { it.isFile }
+            ?: run {
+                // Pas d'echec ici : ce bloc est evalue a la configuration, donc
+                // meme pour un `flutter run` debug. On garde l'ancien
+                // comportement (chemin relatif a android/app/) et on previent ;
+                // c'est la signature du build release qui echouera, comme avant.
+                logger.warn(
+                    "Keystore introuvable : storeFile=\"$raw\" (cherche dans " +
+                        bases.joinToString(", ") { it.absolutePath } + "). " +
+                        "Le build release ne sera pas signe correctement. " +
+                        "Voir docs/keystore-release.md.",
+                )
+                File(projectDir, raw)
+            }
+    }
 }
 
 android {
@@ -59,7 +103,7 @@ android {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
+                storeFile = resolveStoreFile(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }
