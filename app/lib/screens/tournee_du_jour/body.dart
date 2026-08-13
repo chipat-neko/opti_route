@@ -25,10 +25,12 @@ import 'stops_section.dart';
 /// OptimisedBanner, ProgressBanner, ProchainArretCard, StopsSection.
 ///
 /// Extrait de `tournee_du_jour_screen.dart` pour symetrie avec les
-/// autres widgets du dossier `tournee_du_jour/`. Pure stateless :
-/// l'etat de la tournee + ses stops sont passes en parametre par
-/// l'ecran parent qui les watch via Riverpod.
-class Body extends ConsumerWidget {
+/// autres widgets du dossier `tournee_du_jour/`. L'etat de la tournee
+/// + ses stops sont passes en parametre par l'ecran parent qui les
+/// watch via Riverpod ; l'etat local se limite a la memoire de ce qui
+/// a deja ete soumis a OSRM (cf [_BodyState._maybeRequestMetricsUpdate]),
+/// qui evite de relancer une requete a chaque rebuild.
+class Body extends ConsumerStatefulWidget {
   const Body({
     super.key,
     required this.tournee,
@@ -39,13 +41,104 @@ class Body extends ConsumerWidget {
   final List<Stop> stops;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Trigger OSRM auto-update a chaque rebuild (= a chaque modif de
-    // stops via le watch Riverpod parent). Debounce 500ms cote service
-    // pour eviter le spam quand on reorganise plusieurs arrets vite.
-    // Best-effort : si OSRM down, la DB reste avec valeurs precedentes
-    // et le fallback haversine ci-dessous affiche `~`.
-    ref.read(routeMetricsAutoUpdaterProvider).requestUpdate(tournee.id, stops);
+  ConsumerState<Body> createState() => _BodyState();
+}
+
+/// Signature de l'itineraire soumis a OSRM : point de depart de la
+/// tournee + sequence ORDONNEE des coordonnees des arrets geocodes.
+///
+/// C'est exactement ce que [RouteMetricsAutoUpdater] consomme pour
+/// construire ses waypoints. Tout le reste d'un arret (nom du client,
+/// nb de colis, notes, statut de livraison, priorite...) ne change pas
+/// la route : le modifier ne doit donc pas rappeler OSRM.
+///
+/// Les arrets non geocodes (lat ou lng null) sont ignores : le service
+/// les filtre deja, en ajouter ou en supprimer ne modifie pas le
+/// trace. Deux arrets distincts aux memes coordonnees donnent la meme
+/// signature, ce qui est correct (meme trace, memes metriques).
+///
+/// Publique (et hors de la classe State) pour etre testable directement,
+/// sans monter tout l'ecran : cf
+/// `test/screens/tournee_du_jour_body_signature_test.dart`.
+String routeSignature(Tournee tournee, List<Stop> stops) {
+  final buf = StringBuffer()
+    ..write(tournee.id)
+    ..write('@')
+    ..write(tournee.pointDepartLat)
+    ..write(',')
+    ..write(tournee.pointDepartLng);
+  for (final s in stops) {
+    final lat = s.lat;
+    final lng = s.lng;
+    if (lat == null || lng == null) continue;
+    buf
+      ..write('|')
+      ..write(lat)
+      ..write(',')
+      ..write(lng);
+  }
+  return buf.toString();
+}
+
+class _BodyState extends ConsumerState<Body> {
+  /// Signature du dernier itineraire pour lequel on a demande un
+  /// recalcul OSRM. Null tant qu'on n'a rien demande.
+  String? _lastRouteSignature;
+
+  /// La tournee etait-elle sans metriques au passage precedent ? Sert a
+  /// detecter le moment ou `invalidateOptimization` vient de les effacer
+  /// (distance/duree remises a null) alors que l'itineraire, lui, n'a
+  /// pas bouge -- typiquement l'edition d'un arret qui ne touche pas aux
+  /// coordonnees.
+  bool _metricsEtaientManquantes = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeRequestMetricsUpdate();
+  }
+
+  @override
+  void didUpdateWidget(covariant Body oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _maybeRequestMetricsUpdate();
+  }
+
+  /// Demande au service un recalcul OSRM de la distance + duree, mais
+  /// UNIQUEMENT quand ca sert a quelque chose :
+  /// - au 1er affichage de l'ecran ;
+  /// - quand l'itineraire change reellement : ordre des arrets, coords,
+  ///   point de depart (cf [routeSignature]) ;
+  /// - quand distance/duree viennent d'etre effacees par
+  ///   `invalidateOptimization` sans que l'itineraire bouge.
+  ///
+  /// F25 volet 2 : avant, l'appel etait fait dans `build()`, donc rejoue
+  /// a chaque rebuild (changement de theme, scroll, rebuild du parent,
+  /// simple passage d'un arret en "livre"...) alors que le trace etait
+  /// identique. Le debounce 500ms cote service reste en place pour le
+  /// cas "on reorganise plusieurs arrets d'affilee".
+  ///
+  /// Best-effort : si OSRM est down, la DB garde ses valeurs precedentes
+  /// et le fallback haversine de [build] affiche `~`. On ne re-tente pas
+  /// tant que rien ne change (nouvelle tentative au prochain changement
+  /// d'itineraire ou a la reouverture de l'ecran).
+  void _maybeRequestMetricsUpdate() {
+    final signature = routeSignature(widget.tournee, widget.stops);
+    final manquantes = (widget.tournee.distanceTotaleM ?? 0) <= 0;
+    final itineraireChange = signature != _lastRouteSignature;
+    final metricsEffacees = manquantes && !_metricsEtaientManquantes;
+    _lastRouteSignature = signature;
+    _metricsEtaientManquantes = manquantes;
+    if (!itineraireChange && !metricsEffacees) return;
+    ref
+        .read(routeMetricsAutoUpdaterProvider)
+        .requestUpdate(widget.tournee.id, widget.stops);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tournee = widget.tournee;
+    final stops = widget.stops;
 
     // Fallback : si distanceTotaleM est null ou 0 (jamais calcule),
     // on affiche une estimation locale haversine en attendant que OSRM

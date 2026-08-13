@@ -1,3 +1,4 @@
+import '../utils/text_normalize.dart';
 import 'bordereau_extraction.dart';
 import 'database.dart';
 import 'levenshtein.dart';
@@ -76,7 +77,7 @@ class ClientMemoryService {
     int maxDistance = defaultMaxDistance,
     double minRatio = defaultMinRatio,
   }) {
-    final normalized = _normalize(nomDestinataire);
+    final normalized = normalizeText(nomDestinataire);
     if (normalized.length < 3) return null;
     if (all.isEmpty) return null;
 
@@ -86,7 +87,7 @@ class ClientMemoryService {
     for (final d in all) {
       final candidate = d.nomClient;
       if (candidate == null || candidate.isEmpty) continue;
-      final candNorm = _normalize(candidate);
+      final candNorm = normalizeText(candidate);
       if (candNorm.length < 3) continue;
       final dist = Levenshtein.distance(normalized, candNorm);
       final maxLen = normalized.length > candNorm.length
@@ -100,7 +101,7 @@ class ClientMemoryService {
       // (penalise les autres en augmentant artificiellement leur dist)
       var effectiveDist = dist;
       if (ville != null && d.ville != null) {
-        if (_normalize(ville) == _normalize(d.ville!)) {
+        if (normalizeText(ville) == normalizeText(d.ville!)) {
           effectiveDist = effectiveDist - 5; // bonus
         }
       }
@@ -144,26 +145,5 @@ class ClientMemoryService {
       format: extraction.format,
       source: ExtractionSource.clientMemory,
     );
-  }
-
-  /// Lowercase + strip diacritiques (compat avec [_normalize] du repo).
-  static String _normalize(String s) {
-    final lower = s.toLowerCase().trim();
-    const map = {
-      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
-      'ç': 'c',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
-      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
-      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
-      'ÿ': 'y', 'ý': 'y',
-      'ñ': 'n',
-      'œ': 'oe', 'æ': 'ae',
-    };
-    final buf = StringBuffer();
-    for (final ch in lower.split('')) {
-      buf.write(map[ch] ?? ch);
-    }
-    return buf.toString();
   }
 }

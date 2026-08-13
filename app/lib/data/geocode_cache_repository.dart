@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../utils/text_normalize.dart';
 import 'address_suggestion.dart';
 import 'database.dart';
 
@@ -16,12 +17,14 @@ class GeocodeCacheRepository {
 
   static const Duration defaultTtl = Duration(days: 30);
 
-  String _normalize(String query) =>
-      query.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  // La cle de cache est `normalizeKey(query)` : minuscules + trim +
+  // espaces aplatis, accents CONSERVES. Ne pas passer a normalizeText
+  // (repli des accents) : les cles sont persistees en base, replier les
+  // accents rendrait orphelines toutes les lignes deja ecrites.
 
   /// Lit le cache si non expire, sinon `null`.
   Future<List<AddressSuggestion>?> read(String query) async {
-    final key = _normalize(query);
+    final key = normalizeKey(query);
     final row = await (_db.select(_db.geocodeCache)
           ..where((c) => c.query.equals(key)))
         .getSingleOrNull();
@@ -66,7 +69,7 @@ class GeocodeCacheRepository {
     List<AddressSuggestion> results, {
     Duration ttl = defaultTtl,
   }) {
-    final key = _normalize(query);
+    final key = normalizeKey(query);
     final encoded = jsonEncode(results.map(_encode).toList());
     return _db.into(_db.geocodeCache).insertOnConflictUpdate(
           GeocodeCacheCompanion.insert(

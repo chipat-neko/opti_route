@@ -1,3 +1,5 @@
+import '../utils/text_normalize.dart';
+
 /// Commande vocale reconnue par le mode mains-libres (carte #273).
 /// Resultat de [VoiceCommandParser.parse] sur une transcription brute
 /// venue de speech_to_text.
@@ -36,25 +38,16 @@ class VoiceCommandParser {
 
   static VoiceCommand parse(String transcript) {
     if (transcript.isEmpty) return VoiceCommand.unknown;
-    final t = _normalize(transcript);
+    // normalizeText : minuscules + trim + repli des accents. Garde les
+    // espaces internes et la ponctuation, dont _containsWord se sert
+    // comme delimiteurs de mots.
+    final t = normalizeText(transcript);
 
     if (_containsWord(t, _stopWords)) return VoiceCommand.stop;
     if (_containsWord(t, _echecWords)) return VoiceCommand.echec;
     if (_containsWord(t, _livreWords)) return VoiceCommand.livre;
     if (_containsWord(t, _passerWords)) return VoiceCommand.passer;
     return VoiceCommand.unknown;
-  }
-
-  /// Lowercase + remplace les accents francais courants. Garde les
-  /// espaces et la ponctuation simple (pour le matching de mots
-  /// entiers).
-  static String _normalize(String s) {
-    final lower = s.toLowerCase();
-    final buf = StringBuffer();
-    for (final c in lower.runes) {
-      buf.writeCharCode(_accentMap[c] ?? c);
-    }
-    return buf.toString();
   }
 
   /// True si la chaine [haystack] contient au moins un des mots-cles
@@ -108,27 +101,4 @@ class VoiceCommandParser {
     'arreter',
     'cancel',
   ];
-
-  /// Map des codepoints accentues -> ASCII equivalent. Suffit pour le
-  /// francais (a/e/i/o/u + cedille).
-  static const Map<int, int> _accentMap = {
-    0xE0: 0x61, // à
-    0xE1: 0x61, // á
-    0xE2: 0x61, // â
-    0xE3: 0x61, // ã
-    0xE4: 0x61, // ä
-    0xE7: 0x63, // ç
-    0xE8: 0x65, // è
-    0xE9: 0x65, // é
-    0xEA: 0x65, // ê
-    0xEB: 0x65, // ë
-    0xEE: 0x69, // î
-    0xEF: 0x69, // ï
-    0xF4: 0x6F, // ô
-    0xF6: 0x6F, // ö
-    0xF9: 0x75, // ù
-    0xFB: 0x75, // û
-    0xFC: 0x75, // ü
-    0xFF: 0x79, // ÿ
-  };
 }

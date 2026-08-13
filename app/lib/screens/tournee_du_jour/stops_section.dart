@@ -8,6 +8,7 @@ import '../../providers/database_providers.dart';
 import '../../providers/location_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
+import '../../utils/text_normalize.dart';
 import 'stops_list.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -304,10 +305,14 @@ class _StopsSectionState extends ConsumerState<StopsSection> {
   }
 
   static List<Stop> _filter(List<Stop> stops, String query) {
-    final norm = _normalize(query.trim());
+    // normalizeText trim aussi le foin, ce que l'ancienne copie locale
+    // ne faisait pas : sans effet ici, `norm` ne peut ni commencer ni
+    // finir par un espace (query deja trimee) donc aucune occurrence ne
+    // peut chevaucher les espaces de bordure retires.
+    final norm = normalizeText(query);
     if (norm.isEmpty) return stops;
     return stops.where((s) {
-      final hay = _normalize([
+      final hay = normalizeText([
         s.nomClient ?? '',
         s.adresseBrute,
         s.adresseNormalisee ?? '',
@@ -315,26 +320,6 @@ class _StopsSectionState extends ConsumerState<StopsSection> {
       ].join(' '));
       return hay.contains(norm);
     }).toList();
-  }
-
-  static String _normalize(String s) {
-    final lower = s.toLowerCase();
-    const map = {
-      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
-      'ç': 'c',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
-      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
-      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
-      'ÿ': 'y', 'ý': 'y',
-      'ñ': 'n',
-      'œ': 'oe', 'æ': 'ae',
-    };
-    final buf = StringBuffer();
-    for (final ch in lower.split('')) {
-      buf.write(map[ch] ?? ch);
-    }
-    return buf.toString();
   }
 }
 

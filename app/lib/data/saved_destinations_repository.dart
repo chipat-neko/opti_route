@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../utils/text_normalize.dart';
 import 'database.dart';
 
 /// Carnet d'adresses local : chaque arret valide ajoute (ou rafraichit)
@@ -131,7 +132,7 @@ class SavedDestinationsRepository {
   /// Acceptable car le carnet reste petit (< 1000 entrees typiquement).
   /// Retourne les plus utilisees d'abord, puis les plus recentes.
   Future<List<SavedDestination>> search(String query, {int limit = 5}) async {
-    final q = _normalize(query);
+    final q = normalizeText(query);
     if (q.length < 2) return const [];
 
     final all = await (_db.select(_db.savedDestinations)
@@ -143,35 +144,14 @@ class SavedDestinationsRepository {
 
     final matched = all.where((d) {
       final hay = [
-        _normalize(d.nomClient ?? ''),
-        _normalize(d.adresseDisplay),
-        _normalize(d.ville ?? ''),
+        normalizeText(d.nomClient ?? ''),
+        normalizeText(d.adresseDisplay),
+        normalizeText(d.ville ?? ''),
       ].join(' ');
       return hay.contains(q);
     }).toList();
 
     return matched.take(limit).toList();
-  }
-
-  /// Lowercase + retire les diacritiques (NFD-style minimal).
-  static String _normalize(String s) {
-    final lower = s.toLowerCase().trim();
-    const map = {
-      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
-      'ç': 'c',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
-      'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
-      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
-      'ÿ': 'y', 'ý': 'y',
-      'ñ': 'n',
-      'œ': 'oe', 'æ': 'ae',
-    };
-    final buf = StringBuffer();
-    for (final ch in lower.split('')) {
-      buf.write(map[ch] ?? ch);
-    }
-    return buf.toString();
   }
 
   /// Renvoie tout le carnet en une fois (pour les services qui font
