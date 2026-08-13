@@ -36,23 +36,13 @@
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { buildEmailHtml, genCode, validateBody } from './lib.ts';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { buildEmailHtml, corsHeaders, genCode, validateBody } from './lib.ts';
 
 // validateBody / genCode / roleLabel / escapeHtml / buildEmailHtml :
 // cf ./lib.ts (extraites pour les tests Deno, audit 2026-06-11).
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
-  });
-}
+// corsHeaders : allow-list d'origines navigateur (F39). Les en-têtes
+// dépendent de l'Origin de la requête, donc ils se calculent par requête
+// et non dans une constante de module.
 
 async function sendBrevoEmail(params: {
   apiKey: string;
@@ -88,8 +78,15 @@ async function sendBrevoEmail(params: {
 }
 
 serve(async (req: Request) => {
+  const cors = corsHeaders(req);
+  const jsonResponse = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, 'content-type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: cors });
   }
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method not allowed' }, 405);

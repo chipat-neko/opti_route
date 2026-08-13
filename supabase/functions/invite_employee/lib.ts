@@ -98,3 +98,46 @@ export function buildEmailHtml(params: {
        Si tu n'attendais pas cette invitation, ignore ce message.</p>
   </div>`;
 }
+
+// ── CORS restreint (F39) ─────────────────────────────────────────────
+// Remplace l'ancien `Access-Control-Allow-Origin: *`. Le vrai garde-fou
+// reste le JWT (`verify_jwt = true` dans supabase/config.toml) + le
+// contrôle des droits du caller dans index.ts ; l'allow-list n'est
+// qu'une couche de plus, qui empêche une page tierce de faire créer une
+// invitation par le navigateur d'un chef connecté.
+//
+// Origines légitimes (mêmes que ocr-enhance/lib.ts #183 — garder les
+// deux listes en phase si un domaine bouge) :
+//   - https://chipat-neko.github.io : app Flutter Web + site vitrine
+//     publiés par .github/workflows/deploy-web.yml. Le base-href est
+//     `/opti_route/` mais une Origin ne contient jamais le chemin :
+//     c'est bien le domaine nu qu'envoie le navigateur.
+//   - http://localhost(:port) : `flutter run -d chrome` en dev.
+// L'appelant réel est `CloudMembresEntrepriseSync.inviteByMail`
+// (client.functions.invoke) : sur mobile natif et desktop (MSIX) il n'y
+// a pas d'en-tête Origin ni de CORS, donc ces flux ne sont pas touchés.
+export const ALLOWED_ORIGINS = [
+  'https://chipat-neko.github.io', // app web + site (GitHub Pages)
+  'http://localhost', // dev web local (port quelconque)
+];
+
+// Origine dans l'allow-list -> on l'écho. Origine inconnue (ou absente,
+// cas mobile) -> on renvoie l'origine prod, qui ne matchera pas celle du
+// navigateur tiers : c'est lui qui bloquera la lecture de la réponse.
+// `Vary: Origin` évite qu'un cache intermédiaire serve la réponse d'une
+// origine à une autre.
+export function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? '';
+  const allowed = ALLOWED_ORIGINS.some(
+    (o) => origin === o || origin.startsWith(`${o}:`),
+  );
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGINS[0],
+    // `x-client-info` / `apikey` sont ajoutés par le client Supabase :
+    // sans eux dans l'allow-list le préflight échouerait côté web.
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+}

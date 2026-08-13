@@ -28,13 +28,11 @@
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { checkInvitation, deriveEntrepriseRole } from './lib.ts';
+import { checkInvitation, corsHeaders, deriveEntrepriseRole } from './lib.ts';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// CORS : allow-list d'origines navigateur, cf ./lib.ts (F39). Les
+// en-têtes dépendent de l'Origin de la requête, donc ils se calculent
+// par requête et non dans une constante de module.
 
 interface AcceptBody {
   invitation_id: string;
@@ -46,16 +44,16 @@ interface AcceptResponse {
   role: string;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
-  });
-}
-
 serve(async (req: Request) => {
+  const cors = corsHeaders(req);
+  const jsonResponse = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, 'content-type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: cors });
   }
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method not allowed' }, 405);
