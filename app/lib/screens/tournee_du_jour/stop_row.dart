@@ -24,7 +24,7 @@ export 'stop_row_visuals.dart' show IndexChip, StopTag, CoequipierAvatar, EtaBad
 /// gauche = supprime (via callback parent). Swipe droite = marque
 /// livre directement.
 ///
-/// La logique des 15 actions du sealed [StopAction] est extraite
+/// La logique des actions du sealed [StopAction] est extraite
 /// dans `stop_row_actions.dart` ([StopRowActions]), les widgets
 /// visuels dans `stop_row_visuals.dart` (carte Trello #150).
 class StopRow extends ConsumerWidget {

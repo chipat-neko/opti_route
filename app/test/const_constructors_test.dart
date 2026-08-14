@@ -112,6 +112,7 @@ void main() {
             ViewPreuvePhotoAction() => 'view_preuve_photo',
             ViewSignatureAction() => 'view_signature',
             ScanColisPourArretAction() => 'scan_colis_arret',
+            OpenDossierLitigeAction() => 'dossier_litige',
             CopyAdresseAction() => 'copy_adresse',
             ShareAdresseAction() => 'share_adresse',
             OpenInMapsAction() => 'open_in_maps',
@@ -129,6 +130,7 @@ void main() {
       expect(label(const ViewPreuvePhotoAction()), 'view_preuve_photo');
       expect(label(const ViewSignatureAction()), 'view_signature');
       expect(label(const ScanColisPourArretAction()), 'scan_colis_arret');
+      expect(label(const OpenDossierLitigeAction()), 'dossier_litige');
       expect(label(const CopyAdresseAction()), 'copy_adresse');
       expect(label(const ShareAdresseAction()), 'share_adresse');
       expect(label(const OpenInMapsAction()), 'open_in_maps');
