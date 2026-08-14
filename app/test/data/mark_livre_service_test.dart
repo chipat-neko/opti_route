@@ -138,6 +138,64 @@ void main() {
     });
   });
 
+  group('markEchec', () {
+    test('dernier arret -> tournee terminee (un echec est definitif)',
+        () async {
+      await insertStop(statut: 'livre');
+      final dernier = await insertStop();
+
+      final res = await makeService(position: (lat: 48.5, lng: 1.5))
+          .markEchec(dernier, 'absent');
+
+      // La re-synchronisation compte 'livre' ET 'echec' : echouer sur le
+      // dernier arret cloture la tournee comme le livrer. Avant, la
+      // commande vocale "echec" appelait le repository nu, donc dire
+      // "echec" sur le dernier arret ne terminait jamais la tournee.
+      expect(res, StatutTourneeChange.terminee);
+      expect(await statutTournee(), 'terminee');
+      final relu = await stopsRepo.getById(dernier.id);
+      expect(relu!.statutLivraison, 'echec');
+      expect(relu.raisonEchec, 'absent');
+      // Position transmise au repository : preuve de passage, meme sur
+      // un echec (le vocal n'en enregistrait aucune).
+      expect(gpsCalls, 1);
+      expect(relu.livreLat, 48.5);
+      expect(relu.livreLng, 1.5);
+      expect(notifs.recaps, hasLength(1));
+      expect(notifs.recaps.single.nbLivres, 1);
+      expect(notifs.recaps.single.nbEchecs, 1);
+      expect(notifs.rappelsAnnules, [tId]);
+      expect(notifs.nonTermineeAnnules, [tId]);
+    });
+
+    test('il reste un arret -> statut inchange, aucune notif', () async {
+      final premier = await insertStop();
+      await insertStop();
+
+      final res = await makeService().markEchec(premier, 'absent');
+
+      expect(res, StatutTourneeChange.inchange);
+      expect(await statutTournee(), 'en_cours');
+      expect((await stopsRepo.getById(premier.id))!.statutLivraison, 'echec');
+      expect(notifs.recaps, isEmpty);
+      expect(notifs.rappelsAnnules, isEmpty);
+      expect(notifs.nonTermineeAnnules, isEmpty);
+    });
+
+    test('GPS indisponible -> echec quand meme enregistre, sans coords',
+        () async {
+      final stop = await insertStop();
+
+      await makeService().markEchec(stop, 'refuse');
+
+      final relu = await stopsRepo.getById(stop.id);
+      expect(relu!.statutLivraison, 'echec');
+      expect(relu.raisonEchec, 'refuse');
+      expect(relu.livreLat, isNull);
+      expect(relu.livreLng, isNull);
+    });
+  });
+
   group('markLivreBatch', () {
     test('tout le lot livre avec UNE SEULE capture GPS', () async {
       final lot = [
@@ -267,6 +325,55 @@ void main() {
 
     test('tournee sans aucun arret -> no-op', () async {
       final res = await makeService().syncStatutTournee(tId);
+
+      expect(res, StatutTourneeChange.inchange);
+      expect(await statutTournee(), 'en_cours');
+      expect(notifs.recaps, isEmpty);
+    });
+  });
+
+  // Deroule ce que fait `StopsBulkActions.undoLastStatus` : revert du
+  // dernier statut pose, puis re-synchronisation. C'est ce dernier
+  // appel qui manquait -- l'undo fabriquait l'etat degenere "tournee
+  // terminee alors qu'il reste un arret a livrer".
+  group('undo du dernier statut', () {
+    test('tournee terminee -> revert -> la tournee rouvre', () async {
+      final premier = await insertStop();
+      final dernier = await insertStop();
+      final service = makeService();
+      await service.markLivre(premier);
+      expect(await service.markLivre(dernier), StatutTourneeChange.terminee);
+      expect(await statutTournee(), 'terminee');
+
+      // revertStatus, l'appel exact de l'undo (et pas markAaLivrer :
+      // seul le label d'historique differe). On vise l'arret
+      // directement plutot que via getLastTransitionedStop, dont le tri
+      // repose sur un timestamp a la seconde -- deux transitions posees
+      // dans le meme test seraient a egalite.
+      await stopsRepo.revertStatus(dernier.id);
+      final res = await service.syncStatutTournee(tId);
+
+      expect(res, StatutTourneeChange.rouverte);
+      expect(await statutTournee(), 'optimisee');
+      expect(
+        (await stopsRepo.getById(dernier.id))!.statutLivraison,
+        'a_livrer',
+      );
+    });
+
+    test('tournee encore ouverte -> revert -> statut inchange', () async {
+      // L'autre sens : la re-synchronisation ajoutee a l'undo ne doit
+      // rien changer quand la tournee n'avait jamais ete cloturee. Une
+      // tournee 'en_cours' ne doit pas se retrouver en 'optimisee' au
+      // passage.
+      final premier = await insertStop();
+      await insertStop();
+      final service = makeService();
+      await service.markLivre(premier);
+      expect(await statutTournee(), 'en_cours');
+
+      await stopsRepo.revertStatus(premier.id);
+      final res = await service.syncStatutTournee(tId);
 
       expect(res, StatutTourneeChange.inchange);
       expect(await statutTournee(), 'en_cours');

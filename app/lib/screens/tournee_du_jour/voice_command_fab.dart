@@ -154,7 +154,6 @@ class _VoiceCommandFabState extends ConsumerState<VoiceCommandFab> {
   }
 
   Future<void> _handleCommand(VoiceCommand cmd, Stop next) async {
-    final repo = ref.read(stopsRepositoryProvider);
     final markLivreService = ref.read(markLivreServiceProvider);
     switch (cmd) {
       case VoiceCommand.livre:
@@ -166,7 +165,13 @@ class _VoiceCommandFabState extends ConsumerState<VoiceCommandFab> {
         await markLivreService.markLivre(next);
         _snack('Marque livre : ${next.nomClient ?? next.adresseBrute}');
       case VoiceCommand.echec:
-        await repo.markEchec(next.id, 'autre');
+        // Meme raison que pour "livre" juste au-dessus : le service
+        // capture la preuve GPS et re-synchronise le statut de la
+        // tournee. Un echec est un statut definitif pour la cloture,
+        // donc dire "echec" sur le DERNIER arret doit terminer la
+        // tournee -- avant, le `repo.markEchec` nu ne le faisait jamais
+        // et n'enregistrait aucune position.
+        await markLivreService.markEchec(next, 'autre');
         _snack('Marque echec : ${next.nomClient ?? next.adresseBrute}');
       case VoiceCommand.passer:
         _snack('Arret passe. Tap a nouveau pour le suivant.');

@@ -142,6 +142,12 @@ class _PluginNotifications implements MarkLivreNotifications {
 /// sa maniere : "Tout livrer" oubliait le recap et le rappel >8h, et la
 /// commande vocale n'avait ni preuve GPS ni cloture du tout.
 ///
+/// Porte aussi [markEchec] (commande vocale "echec"), parce qu'un echec
+/// est un statut definitif au meme titre qu'un "livre" : il doit
+/// declencher la meme cloture. Les autres changements de statut
+/// (bottom sheet, retour en 'a_livrer', undo du dernier statut) gardent
+/// leur ecriture cote appelant et appellent [syncStatutTournee] apres.
+///
 /// Ne touche a rien d'autre : le retour utilisateur (haptique, SnackBar,
 /// signature du destinataire) reste cote widget, ou il differe
 /// legitimement d'un appelant a l'autre.
@@ -174,6 +180,26 @@ class MarkLivreService {
     final gpsFuture = _capturerGps();
     if (pendantCaptureGps != null) await pendantCaptureGps();
     await _stops.markLivre(stop.id, position: await gpsFuture);
+    return syncStatutTournee(stop.tourneeId);
+  }
+
+  /// Marque [stop] en echec avec [raison] et la position GPS courante
+  /// comme preuve, puis re-synchronise le statut de la tournee.
+  ///
+  /// Un echec est un statut DEFINITIF pour la cloture : la
+  /// re-synchronisation compte 'livre' ET 'echec' (cf
+  /// [_syncStatutTournee]), donc echouer sur le DERNIER arret termine
+  /// la tournee exactement comme le livrer -- recap et annulation des
+  /// deux rappels compris.
+  ///
+  /// Pas de crochet `pendantCaptureGps` ici, contrairement a
+  /// [markLivre] : il n'existe que pour ouvrir le pad de signature du
+  /// destinataire pendant le fix, ce qui n'a pas de sens sur un echec.
+  /// Le fix est donc simplement attendu avant l'ecriture, comme le
+  /// faisait deja la bottom sheet d'actions.
+  Future<StatutTourneeChange> markEchec(Stop stop, String raison) async {
+    final pos = await _capturerGps();
+    await _stops.markEchec(stop.id, raison, position: pos);
     return syncStatutTournee(stop.tourneeId);
   }
 

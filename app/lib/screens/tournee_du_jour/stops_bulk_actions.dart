@@ -113,7 +113,7 @@ class StopsBulkActions {
 
   /// Annule le dernier statut (livre ou echec) pose dans cette tournee.
   /// Retrouve le stop via `getLastTransitionedStop` puis le repasse en
-  /// 'a_livrer'.
+  /// 'a_livrer', et re-synchronise le statut de la tournee.
   static Future<void> undoLastStatus({
     required BuildContext context,
     required WidgetRef ref,
@@ -122,6 +122,7 @@ class StopsBulkActions {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final repo = ref.read(stopsRepositoryProvider);
+      final markLivreService = ref.read(markLivreServiceProvider);
       final last = await repo.getLastTransitionedStop(tournee.id);
       if (!context.mounted) return;
       if (last == null) {
@@ -129,6 +130,13 @@ class StopsBulkActions {
         return;
       }
       await repo.revertStatus(last.id);
+      // Il reste desormais un arret a livrer : si la tournee avait ete
+      // cloturee automatiquement, elle repasse en 'optimisee'. Sans ca,
+      // ce chemin fabriquait l'etat degenere "tournee terminee avec un
+      // arret encore a livrer". Attendu AVANT la garde de montage :
+      // fermer l'ecran juste apres l'undo ne doit pas sauter la
+      // re-synchronisation. No-op quand la tournee etait deja ouverte.
+      await markLivreService.syncStatutTournee(tournee.id);
       if (!context.mounted) return;
       unawaited(HapticFeedback.lightImpact());
       final label = last.nomClient?.trim().isNotEmpty == true
