@@ -193,7 +193,7 @@ dev_dependencies:
   # Idem pour mocker Geolocator dans test/data/location_service_test.dart
   # (GeolocatorPlatform.instance = mock). Dependance transitive de
   # geolocator declaree explicitement pour pouvoir l'importer.
-  geolocator_platform_interface: ^4.2.6
+  geolocator_platform_interface: ^4.2.8
   # fake_async : horloge virtuelle pour tester les timeouts/Timer sans
   # attente reelle (route_service_test : timeout interne de 15s). Deja
   # tiree transitivement par flutter_test, declaree ici pour l'importer
