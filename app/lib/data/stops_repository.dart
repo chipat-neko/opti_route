@@ -133,6 +133,52 @@ class StopsRepository {
     return null;
   }
 
+  /// Tous les arrets deja LIVRES dont la validation date de [cutoff] ou
+  /// plus recent, **toutes tournees confondues** (contrairement a
+  /// [findByTrackingInTournee] qui reste scope a une seule tournee).
+  /// Tries du plus recent au plus ancien.
+  ///
+  /// Sert a la detection de RE-LIVRAISON au scan colis (carte #315) :
+  /// c'est le jeu de stops que
+  /// `ScanDuplicateCheck.findRecentDelivered` compare au tracking
+  /// scanne. Voir `ScanDuplicateService`.
+  ///
+  /// Perf : statut + fenetre temporelle sont filtres cote SQLite, pas
+  /// en Dart apres coup -- l'historique grossit d'une tournee par jour
+  /// et on ne veut pas le charger en entier a chaque code-barre. Les
+  /// stops sans `livreLe` sont exclus par la comparaison SQL (NULL >= x
+  /// est faux), ce qui est le comportement voulu : sans horodatage on
+  /// ne sait pas dater la livraison.
+  ///
+  /// [trackingNumber] (optionnel) : ne garde que les arrets dont la
+  /// liste JSON `tracking_numbers` contient ce numero. Meme technique
+  /// que [findByTrackingInTournee] : pre-filtre LIKE cote SQLite puis
+  /// egalite exacte sur les seuls candidats, car le LIKE sur-matche
+  /// ("FA28000" est une sous-chaine de "FA280001"). Comparaison
+  /// insensible a la casse, comme le fait le check pur en aval.
+  Future<List<Stop>> getDeliveredSince(
+    DateTime cutoff, {
+    String? trackingNumber,
+  }) async {
+    final saisi = trackingNumber?.trim();
+    final tracking = (saisi == null || saisi.isEmpty) ? null : saisi;
+    final rows = await (_db.select(_db.stops)
+          ..where((s) {
+            final base = s.statutLivraison.equals('livre') &
+                s.livreLe.isBiggerOrEqualValue(cutoff);
+            if (tracking == null) return base;
+            return base & s.trackingNumbers.like('%"$tracking"%');
+          })
+          ..orderBy([(s) => OrderingTerm.desc(s.livreLe)]))
+        .get();
+    if (tracking == null) return rows;
+    final needle = tracking.toUpperCase();
+    return rows
+        .where((s) => _parseTrackingList(s.trackingNumbers)
+            .any((t) => t.toUpperCase() == needle))
+        .toList();
+  }
+
   /// Parse la liste JSON de tracking numbers d'un stop. Format
   /// `["FA28...","FA28..."]`. Tolere null / format casse en retournant
   /// liste vide.

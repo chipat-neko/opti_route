@@ -113,6 +113,16 @@ class ShareAdresseAction extends StopAction {
   const ShareAdresseAction();
 }
 
+/// Ouvre le scanner code-barre AVEC cet arret comme arret attendu :
+/// "est-ce bien le colis de ce client ?". Le caller ouvre
+/// `ScanColisScreen(expectedStop: stop)`, qui previent alors si le code
+/// scanne appartient a un AUTRE arret de la tournee et propose de
+/// basculer dessus. Sans arret attendu (scan libre depuis la tournee),
+/// ce controle n'a pas lieu d'etre.
+class ScanColisPourArretAction extends StopAction {
+  const ScanColisPourArretAction();
+}
+
 /// Verrouille / deverrouille l'arret a sa position courante (carte
 /// #114). Le caller appelle `StopsRepository.setPositionLocked(stopId,
 /// locked)`. Un arret verrouille n'est pas deplace par le tri rapide,
@@ -669,6 +679,16 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       ? 'Refaire la photo preuve'
                       : 'Prendre une photo preuve',
                 ),
+              ),
+              // Scan "cible" : contrairement au scan libre du FAB, il sait
+              // quel arret est attendu, donc il peut prevenir qu'on est en
+              // train de flasher le colis du voisin.
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: p.ink),
+                onPressed: () => Navigator.of(context)
+                    .pop(const ScanColisPourArretAction()),
+                icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
+                label: const Text('Scanner le colis de cet arret'),
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: p.ink),
