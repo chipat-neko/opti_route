@@ -75,7 +75,7 @@ dependencies:
   # Connectivity_plus : observe les changements wifi/mobile/none pour
   # declencher automatiquement le re-geocodage des arrets ajoutes en
   # mode hors-ligne (cf OfflineGeocodeAutomation).
-  connectivity_plus: ^7.1.0
+  connectivity_plus: ^7.3.1
   # battery_plus : niveau + etat (charge/decharge) de la batterie pour
   # l'alerte "batterie faible" en tournee (carte #258). Gratuit, on-device,
   # pas de cle. Sert aussi a l'indicateur batterie de l'en-tete tournee.
