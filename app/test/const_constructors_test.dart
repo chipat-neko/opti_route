@@ -99,10 +99,10 @@ void main() {
   });
 
   group('Sealed types - exhaustivite StopAction', () {
-    /// Ce switch verifie qu'on couvre bien les 15 sous-types. Si on ajoute
-    /// un 16e sous-type a StopAction, Dart fait echouer la compilation
+    /// Ce switch verifie qu'on couvre bien tous les sous-types. Si on
+    /// ajoute un sous-type a StopAction, Dart fait echouer la compilation
     /// jusqu'a ce qu'on l'ajoute ici aussi (sealed -> switch exhaustif).
-    test('switch exhaustif sur les 15 actions', () {
+    test('switch exhaustif sur les actions', () {
       String label(StopAction a) => switch (a) {
             MarkLivreAction() => 'livre',
             MarkEchecAction() => 'echec',
@@ -111,6 +111,7 @@ void main() {
             TakePreuvePhotoAction() => 'preuve_photo',
             ViewPreuvePhotoAction() => 'view_preuve_photo',
             ViewSignatureAction() => 'view_signature',
+            ScanColisPourArretAction() => 'scan_colis_arret',
             CopyAdresseAction() => 'copy_adresse',
             ShareAdresseAction() => 'share_adresse',
             OpenInMapsAction() => 'open_in_maps',
@@ -127,6 +128,7 @@ void main() {
       expect(label(const TakePreuvePhotoAction()), 'preuve_photo');
       expect(label(const ViewPreuvePhotoAction()), 'view_preuve_photo');
       expect(label(const ViewSignatureAction()), 'view_signature');
+      expect(label(const ScanColisPourArretAction()), 'scan_colis_arret');
       expect(label(const CopyAdresseAction()), 'copy_adresse');
       expect(label(const ShareAdresseAction()), 'share_adresse');
       expect(label(const OpenInMapsAction()), 'open_in_maps');

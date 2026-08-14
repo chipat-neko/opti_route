@@ -19,6 +19,7 @@ import '../../widgets/snack.dart';
 import '../../widgets/stop_action_sheet.dart';
 import '../ajout_arret_screen.dart';
 import '../preuve_photo_viewer_screen.dart';
+import '../scan_colis_screen.dart';
 import 'stop_row_visuals.dart';
 
 /// ════════════════════════════════════════════════════════════════
@@ -169,6 +170,22 @@ class StopRowActions {
         unawaited(HapticFeedback.lightImpact());
       case TakePreuvePhotoAction():
         await _capturerPreuve(ref, stop);
+      case ScanColisPourArretAction():
+        // Scan "cible" : l'ecran connait l'arret attendu, il previent donc
+        // si le code flashe appartient a un autre arret de la tournee et
+        // propose de basculer dessus. Le rattachement (+1 colis) est fait
+        // par l'ecran lui-meme ; ici on ne fait que confirmer.
+        final res = await navigator.push<ScanColisResult?>(
+          MaterialPageRoute(
+            builder: (_) => ScanColisScreen(expectedStop: stop),
+          ),
+        );
+        final rattache = res?.matchedStop;
+        if (rattache == null) return;
+        messenger.showSuccess(
+          '${_primaryLine(rattache)} : colis rattache '
+          '(${rattache.nbColis + 1} au total)',
+        );
       case ViewPreuvePhotoAction():
         final path = stop.preuvePhotoPath;
         if (path == null) return;
