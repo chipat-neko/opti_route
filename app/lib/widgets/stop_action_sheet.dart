@@ -123,6 +123,17 @@ class ScanColisPourArretAction extends StopAction {
   const ScanColisPourArretAction();
 }
 
+/// Ouvre le dossier litige opposable de cet arret (carte #311) : texte
+/// horodate + GPS de passage + reference de la photo preuve, scelle par
+/// un hash SHA-256. Le caller push [DossierLitigeScreen] avec le stop.
+///
+/// N'a de sens que sur un arret au statut DEFINITIF (livre ou echec) :
+/// un dossier de litige sur un arret pas encore traite ne prouve rien.
+/// La feuille d'actions ne propose donc l'entree que dans ce cas.
+class OpenDossierLitigeAction extends StopAction {
+  const OpenDossierLitigeAction();
+}
+
 /// Verrouille / deverrouille l'arret a sa position courante (carte
 /// #114). Le caller appelle `StopsRepository.setPositionLocked(stopId,
 /// locked)`. Un arret verrouille n'est pas deplace par le tri rapide,
@@ -661,6 +672,18 @@ class _StopActionSheetState extends ConsumerState<StopActionSheet> {
                       .pop(const ViewSignatureAction()),
                   icon: const Icon(Icons.draw_outlined, size: 18),
                   label: const Text('Voir la signature'),
+                ),
+              // Dossier litige : au meme endroit que les autres preuves,
+              // mais uniquement sur un arret deja tranche (livre/echec).
+              // Sur un arret "a livrer" il n'y aurait ni horodatage, ni
+              // GPS de passage, ni photo -- rien d'opposable.
+              if (hasStatut)
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: p.ink),
+                  onPressed: () => Navigator.of(context)
+                      .pop(const OpenDossierLitigeAction()),
+                  icon: const Icon(Icons.description_outlined, size: 18),
+                  label: const Text('Dossier litige'),
                 ),
               TextButton.icon(
                 style: TextButton.styleFrom(

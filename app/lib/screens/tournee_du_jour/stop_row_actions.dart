@@ -18,6 +18,7 @@ import '../../widgets/signature_pad_dialog.dart';
 import '../../widgets/snack.dart';
 import '../../widgets/stop_action_sheet.dart';
 import '../ajout_arret_screen.dart';
+import '../dossier_litige_screen.dart';
 import '../preuve_photo_viewer_screen.dart';
 import '../scan_colis_screen.dart';
 import 'stop_row_visuals.dart';
@@ -27,7 +28,7 @@ import 'stop_row_visuals.dart';
 /// ════════════════════════════════════════════════════════════════
 ///
 /// Extrait de `stop_row.dart` (carte Trello #150). Concentre les
-/// 15 actions du sealed [StopAction] + le swipe livre + le dialog
+/// actions du sealed [StopAction] + le swipe livre + le dialog
 /// preview (long-press). Pas d'etat -- juste un wrapper autour d'un
 /// [Stop] qui expose 4 entry points :
 ///   - [handleSwipeLivre] : swipe gauche -> droite marque livre
@@ -200,6 +201,15 @@ class StopRowActions {
         await navigator.push<void>(
           MaterialPageRoute(
             builder: (_) => PreuvePhotoViewerScreen(photoPath: path),
+          ),
+        );
+      case OpenDossierLitigeAction():
+        // Ecran plein : compose le dossier (lecture de la photo preuve
+        // comprise, pour que le hash couvre l'image) et l'affiche. Rien
+        // ne sort de l'app sans la confirmation de l'ecran.
+        await navigator.push<void>(
+          MaterialPageRoute(
+            builder: (_) => DossierLitigeScreen(stop: stop),
           ),
         );
       case CopyAdresseAction():
