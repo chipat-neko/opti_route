@@ -79,7 +79,7 @@ dependencies:
   # battery_plus : niveau + etat (charge/decharge) de la batterie pour
   # l'alerte "batterie faible" en tournee (carte #258). Gratuit, on-device,
   # pas de cle. Sert aussi a l'indicateur batterie de l'en-tete tournee.
-  battery_plus: ^6.2.1
+  battery_plus: ^7.1.1
   # Archive : creation / lecture de zip pour le backup complet
   # (DB SQLite + photos preuves) en un seul fichier partageable.
   archive: ^4.0.7
