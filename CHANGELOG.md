@@ -6,6 +6,84 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 ## [Non publié]
 
+### Session 2026-08-13 — Fin de l'audit v2 + branchements (#533-#548)
+
+Seize PR mergées les 2026-08-13 et 2026-08-14. Aucune release :
+`pubspec` reste en **2.9.3+10071**, mais le tag **`v2.9.3`** manquant a
+été posé rétroactivement sur `1514866` (le repo n'avait aucun tag, on
+ne pouvait donc pas retrouver le commit exact d'un build livré).
+
+**Sécurité et chaîne de build**
+- **#533** : les **15 références `uses:`** des trois workflows sont
+  épinglées par SHA de commit. Les refs flottants résolvaient déjà sur
+  ces commits, donc le changement est iso-comportement. À noter :
+  `denoland/setup-deno@v2` n'était pas un tag mais une **branche**,
+  encore plus mutable qu'un tag. Nouveau `build-android.yml`
+  (`workflow_dispatch`) : c'était le seul chemin de build qui ne
+  strippait pas les fixtures OCR, et il **échoue désormais si l'AAB en
+  contient encore**. `build.gradle.kts` sait lire le `key.properties`
+  depuis `~/keystores/opti_route/` ou `$OPTIROUTE_KEY_PROPERTIES`, ce
+  qui permet de sortir la keystore de l'arbre du repo machine par
+  machine.
+- **#548** : AGP monté à **8.12.1**, prérequis de `battery_plus` 7. Le
+  bump Dependabot aurait cassé le build Android sans qu'aucun job de CI
+  ne le voie.
+
+**Cloud**
+- **#535** : CORS restreint sur les trois Edge Functions (allow-list +
+  `Vary: Origin`) ; `cron_lockout_revoked` n'émet plus d'en-tête du
+  tout, étant appelée par pg_cron. Le job pg_cron est enfin versionné
+  dans une migration : une recréation de base le perdait en silence.
+  ⚠️ Ne prend effet qu'après redéploiement manuel des fonctions.
+
+**Code mort**
+- **#537** : suppression de **9 modules** de `lib/data/` sans aucune
+  référence hors tests, chacun doublonnant du code vivant — 466 lignes
+  de lib et 478 de test. Retire au passage une collision de type
+  (`FuelStation` était déclarée deux fois). Le triage complet des 36
+  modules concernés est dans
+  [`docs/modules-non-branches.md`](docs/modules-non-branches.md) ; il
+  corrige le constat d'origine, qui annonçait trois doublons dont un
+  seul en était réellement un.
+
+**Fonctionnalités branchées** (modules qui existaient sans appelant)
+- **#539, #542** : bandeau « tu es à X m d'un arrêt à livrer », avec
+  bouton « marquer livré » en 1 tap. Masqué quand l'arrêt le plus
+  proche est déjà celui de la carte du prochain arrêt.
+- **#545** : au scan d'un colis, alerte si le numéro de suivi a déjà
+  été livré, et contrôle du bon arrêt via la nouvelle entrée « scanner
+  le colis de cet arrêt ». L'alerte prévient, elle ne bloque jamais.
+- **#547** : dossier litige opposable depuis un arrêt livré. Le hash
+  SHA-256 couvre désormais **les octets de la photo** et plus seulement
+  le texte — sans quoi la preuve pouvait être remplacée sans que la
+  signature bouge. Rien ne quitte l'app sans confirmation explicite.
+
+**Corrections**
+- **#540** : quatre bugs préexistants — `periodeCutoff('6m')` valait
+  180 jours et non 6 mois calendaires, le filtre « jamais réutilisés »
+  ratait les fiches à `useCount = 0`, une livraison à 23 h produisait
+  une fenêtre horaire vide, et `poi_detour` rendait un index dans sa
+  liste filtrée. Deux autres anomalies suspectées n'en étaient pas et
+  sont documentées comme telles.
+- **#543** : un swipe sur le dernier arrêt suivi d'une fermeture
+  d'écran ne clôturait jamais la tournée.
+- **#544, #546** : « Tout livrer » et les commandes vocales passent par
+  le service commun. Corrige au passage que la voix n'enregistrait
+  aucune position GPS et ne terminait jamais une tournée, et que
+  l'annulation d'un statut laissait une tournée « terminée » avec un
+  arrêt à livrer.
+
+**Structure et tests**
+- **#538** : `carnet_adresses_screen` passe de 1080 à 220 lignes et
+  `entreprise_multi_tenant_section` de 1137 à 319, sur le modèle de
+  `tournee_du_jour/`. Les quatre services de sauvegarde, statistiques
+  et résumé hebdomadaire acceptent une horloge injectable, ce qui rend
+  testables des cas de bord qui ne l'étaient pas.
+- **#541** : `scripts/handoff-pc.ps1` et
+  [`docs/handoff-pc-console.md`](docs/handoff-pc-console.md)
+  regroupent ce qui ne peut être fait que sur le PC principal ou en
+  console.
+
 ### Session 2026-07-12 — Audit v2 appliqué (#511-#532)
 
 Suite de l'audit qualité (référentiel `fable.md` F1-F47 / `task.md`),
