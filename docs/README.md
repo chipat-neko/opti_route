@@ -36,6 +36,7 @@ forcément l'état courant du code.
 
 - [keystore-release.md](keystore-release.md) — génération de la keystore + signature
 - [handoff-pc-console.md](handoff-pc-console.md) — ce qui reste à faire sur le PC principal et en console (Supabase, GitHub)
+- [modules-non-branches.md](modules-non-branches.md) — triage des modules de `lib/data/` que rien n'appelle : supprimés, branchés, ou en attente
 - [windows-update.md](windows-update.md) — procédure de mise à jour Windows (MSIX)
 - [_build_pdf.py](_build_pdf.py) — génération PDF des docs Markdown
 
