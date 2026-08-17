@@ -53,7 +53,7 @@ dependencies:
   flutter_map: ^8.3.0
   latlong2: ^0.9.1
   google_mlkit_text_recognition: ^0.15.1
-  image_picker: ^1.2.2
+  image_picker: ^1.2.3
   url_launcher: ^6.3.1
   # Lecture de la version installée pour le check d'update (#update_checker).
   package_info_plus: ^9.0.1
